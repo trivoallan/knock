@@ -1,0 +1,15 @@
+{
+	"id": "RETENTION_ID",
+	"algorithm": "or",
+	"rules": [],
+	"trigger": {
+		"kind": "Schedule",
+		"settings": {
+			"cron": ""
+		}
+	},
+	"scope": {
+		"level": "project",
+		"ref": "PROJECT_ID"
+	}
+}
