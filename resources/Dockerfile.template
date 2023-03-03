@@ -1,5 +1,6 @@
 # Get certificates
-FROM alpine AS certs
+FROM curlimages/curl AS certs
+RUN curl -k https://repos.it.sncf.fr/saltstack/storage_account/ca-racine-sncf.pem --output /usr/local/share/ca-certificates/ca-racine-sncf.crt
 COPY certs /usr/local/share/ca-certificates/
 RUN apk update && \
     apk add --no-cache ca-certificates curl && \
@@ -8,7 +9,7 @@ RUN apk update && \
 # Get keyring deb
 FROM ${PULL_COMMAND}:${TAG_NAME} as keyring
 USER root
-COPY certs /usr/local/share/ca-certificates/
+COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 RUN --mount=type=bind,target=/tmp/context \
     sh /tmp/context/add_sncf_http_sources.sh && \
@@ -31,7 +32,7 @@ LABEL fr.sncf.num_inc=
 LABEL Digest.external=${ORIGIN_DIGEST}
 
 USER root
-COPY certs /usr/local/share/ca-certificates/
+COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 RUN --mount=type=bind,target=/tmp/context --mount=type=bind,from=keyring,source=/tmp,target=/tmp/keyring \
     sh /tmp/context/add_sncf_http_sources.sh && \
