@@ -1,6 +1,7 @@
 # Get certificates
 FROM curlimages/curl AS certs
-RUN curl -k https://repos.it.sncf.fr/saltstack/storage_account/ca-racine-sncf.pem --output /usr/local/share/ca-certificates/ca-racine-sncf.crt
+USER root
+RUN mkdir -p /usr/local/share/ca-certificates && curl -k https://repos.it.sncf.fr/saltstack/storage_account/ca-racine-sncf.pem --output /usr/local/share/ca-certificates/ca-racine-sncf.crt
 RUN apk update && \
     apk add --no-cache ca-certificates curl && \
     update-ca-certificates
