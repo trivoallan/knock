@@ -1,41 +1,45 @@
-# Get certificates
-FROM curlimages/curl AS certs
-USER root
-RUN mkdir -p /usr/local/share/ca-certificates && curl -k https://repos.it.sncf.fr/saltstack/storage_account/ca-racine-sncf.pem --output /usr/local/share/ca-certificates/ca-racine-sncf.crt
-RUN apk update && \
-    apk add --no-cache ca-certificates curl && \
-    update-ca-certificates
-
-# Get keyring deb
-FROM ${PULL_COMMAND}:${TAG_NAME} as keyring
-USER root
-COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
-COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-RUN --mount=type=bind,target=/tmp/context \
-    sh /tmp/context/add_sncf_http_sources.sh && \
-    sh /tmp/context/get_sncf_keyring.sh
-
-# Final stage
-FROM ${PULL_COMMAND}:${TAG_NAME} as final
-
-LABEL fr.sncf.h2h.date_1ereDispo=${CREATION_DATE}
-LABEL fr.sncf.h2h.build-date=${BUILD_DATE}
-LABEL fr.sncf.h2h.version=${HCR_TAG}
-LABEL fr.sncf.h2h.version_editeur=${ORIGIN_TAG}
-LABEL fr.sncf.h2h.product=${PRODUCT}
-LABEL fr.sncf.h2h.maintainer=${MAINTAINER}
-LABEL fr.sncf.h2h.dockerfile=${DOCKERFILE}
-LABEL fr.sncf.h2h.urldockerhub=${DOCKERHUB_URL}
-LABEL fr.sncf.niv_exploit=${EXPLOIT_LEVEL}
-LABEL fr.sncf.source_type=h2h
-LABEL fr.sncf.num_inc=
-LABEL Digest.external=${ORIGIN_DIGEST}
+FROM registry-docker.apps.eul.sncf.fr/hub/alpine:3.17
 
 USER root
-COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
-COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-RUN --mount=type=bind,target=/tmp/context --mount=type=bind,from=keyring,source=/tmp,target=/tmp/keyring \
-    sh /tmp/context/add_sncf_http_sources.sh && \
-    sh /tmp/context/install_sncf_keyring.sh && \
-    sh /tmp/context/add_sncf_https_sources.sh && \
-    sh /tmp/context/update_keystore.sh
+
+# # Get certificates
+# FROM curlimages/curl AS certs
+# USER root
+# RUN mkdir -p /usr/local/share/ca-certificates && curl -k https://repos.it.sncf.fr/saltstack/storage_account/ca-racine-sncf.pem --output /usr/local/share/ca-certificates/ca-racine-sncf.crt
+# RUN apk update && \
+#     apk add --no-cache ca-certificates curl && \
+#     update-ca-certificates
+
+# # Get keyring deb
+# FROM ${PULL_COMMAND}:${TAG_NAME} as keyring
+# USER root
+# COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
+# COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# RUN --mount=type=bind,target=/tmp/context \
+#     sh /tmp/context/add_sncf_http_sources.sh && \
+#     sh /tmp/context/get_sncf_keyring.sh
+
+# # Final stage
+# FROM ${PULL_COMMAND}:${TAG_NAME} as final
+
+# LABEL fr.sncf.h2h.date_1ereDispo=${CREATION_DATE}
+# LABEL fr.sncf.h2h.build-date=${BUILD_DATE}
+# LABEL fr.sncf.h2h.version=${HCR_TAG}
+# LABEL fr.sncf.h2h.version_editeur=${ORIGIN_TAG}
+# LABEL fr.sncf.h2h.product=${PRODUCT}
+# LABEL fr.sncf.h2h.maintainer=${MAINTAINER}
+# LABEL fr.sncf.h2h.dockerfile=${DOCKERFILE}
+# LABEL fr.sncf.h2h.urldockerhub=${DOCKERHUB_URL}
+# LABEL fr.sncf.niv_exploit=${EXPLOIT_LEVEL}
+# LABEL fr.sncf.source_type=h2h
+# LABEL fr.sncf.num_inc=
+# LABEL Digest.external=${ORIGIN_DIGEST}
+
+# USER root
+# COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
+# COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# RUN --mount=type=bind,target=/tmp/context --mount=type=bind,from=keyring,source=/tmp,target=/tmp/keyring \
+#     sh /tmp/context/add_sncf_http_sources.sh && \
+#     sh /tmp/context/install_sncf_keyring.sh && \
+#     sh /tmp/context/add_sncf_https_sources.sh && \
+#     sh /tmp/context/update_keystore.sh
