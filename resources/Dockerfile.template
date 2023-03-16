@@ -1,4 +1,7 @@
-# Get certificates
+##################################################################
+## Ajout des certificats SNCF ####################################
+##################################################################
+
 FROM ${DOCKERHUB_PROXY}/curlimages/curl AS certs
 USER root
 RUN mkdir -p /usr/local/share/ca-certificates && curl -k https://repos.it.sncf.fr/saltstack/storage_account/ca-racine-sncf.pem --output /usr/local/share/ca-certificates/ca-racine-sncf.crt
@@ -6,7 +9,10 @@ RUN apk update && \
     apk add --no-cache ca-certificates curl && \
     update-ca-certificates
 
-# Get keyring deb
+##################################################################
+## Récupération du Keyring SNCF ##################################
+##################################################################
+
 FROM ${PULL_COMMAND}:${TAG_NAME} as keyring
 USER root
 COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
@@ -15,7 +21,10 @@ RUN --mount=type=bind,target=/tmp/context \
     sh /tmp/context/add_sncf_http_sources.sh && \
     sh /tmp/context/get_sncf_keyring.sh
 
-# Final stage
+##################################################################
+## Construction de l'image finale ################################
+##################################################################
+
 FROM ${PULL_COMMAND}:${TAG_NAME} as final
 
 LABEL fr.sncf.h2h.date_1ereDispo=${CREATION_DATE}
