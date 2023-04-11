@@ -24,7 +24,7 @@
 				},
 				{
 					"name": "Up to date Tags:",
-					"value": "${DELAYED_TAGS}"
+					"value": "${UP_TO_DATE_TAGS}"
 				},
 				{
 					"name": "Delayed Tags:",
