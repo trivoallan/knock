@@ -1,0 +1,73 @@
+{
+	"@type": "MessageCard",
+	"@context": "https://schema.org/extensions",
+	"summary": "jenkins notifications",
+	"themeColor": "__THEME__",
+	"title": "__TITLE__",
+	"sections": [
+		{
+			"activityTitle": "__ACTIVITY_TITLE__",
+			"activitySubtitle": "__DATE__",			
+			"facts": [
+				{
+					"name": "Category:",
+					"value": "__CATEGORY__"
+				},				
+				{
+					"name": "Image:",
+					"value": "__DOCKER_IMAGE__"
+				},
+				{
+					"name": "Tag:",
+					"value": "__DOCKER_TAG__"
+				},
+				{
+					"name": "Git:",
+					"value": "__GIT_REPO__"
+				}
+			],
+			"text": "__DESCRIPTION__"
+		},
+		{
+            "activityTitle":  "__SECURITE__",
+            "facts": [
+            {
+                "name": "Image no_root:",
+                "value": "__NO_ROOT__"
+			}
+		   ]
+		}   
+	],
+	"potentialAction": [
+		{
+			"@type": "OpenUri",
+			"name": "View in Jenkins",
+			"targets": [
+				{
+					"os": "default",
+					"uri": "__JENKINS_URL__"
+				}				
+			]
+		},
+		{
+			"@type": "OpenUri",
+			"name": "Gitlab Repo",
+			"targets": [
+				{
+					"os": "default",
+					"uri": "__GIT_REPO__"
+				}				
+			]
+		},
+		{
+			"@type": "OpenUri",
+			"name": "Dive Report",
+			"targets": [
+				{
+					"os": "default",
+					"uri": "__JENKINS_URL__/_5bDOCKER_5d_20Build_20Analysis/"
+				}				
+			]
+		}			
+	]
+}
