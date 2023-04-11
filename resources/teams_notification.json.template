@@ -1,0 +1,62 @@
+{
+	"@type": "MessageCard",
+	"@context": "https://schema.org/extensions",
+	"summary": "jenkins notifications",
+	"themeColor": "${THEME_COLOR}",
+	"title": "${CATEGORY} - ${IMAGE}",
+	"sections": [
+		{
+			"activityTitle": "${JOB_NAME} - ${STATUS}",
+			"activitySubtitle": "${DATE}",
+			"text": "${DESCRIPTION}",
+			"facts": [
+				{
+					"name": "Category:",
+					"value": "${CATEGORY}"
+				},
+				{
+					"name": "Image:",
+					"value": "${IMAGE}"
+				},
+				{
+					"name": "Imported Tags:",
+					"value": "${IMPORTED_TAGS}"
+				},
+				{
+					"name": "Delayed Tags:",
+					"value": "${DELAYED_TAGS}"
+				},
+				{
+					"name": "Failed Tags:",
+					"value": "${FAILED_TAGS}"
+				},
+				{
+					"name": "Is not root image ?",
+					"value": "${NON_ROOT_FLAG}"
+				}
+			]
+		}
+	],
+	"potentialAction": [
+		{
+			"@type": "OpenUri",
+			"name": "View in Jenkins",
+			"targets": [
+				{
+					"os": "default",
+					"uri": "${JENKINS_URL}"
+				}
+			]
+		},
+		{
+			"@type": "OpenUri",
+			"name": "Gitlab Repo",
+			"targets": [
+				{
+					"os": "default",
+					"uri": "${GITLAB_URL}"
+				}
+			]
+		}
+	]
+}
