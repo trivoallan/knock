@@ -58,16 +58,6 @@
 					"uri": "__GIT_REPO__"
 				}				
 			]
-		},
-		{
-			"@type": "OpenUri",
-			"name": "Dive Report",
-			"targets": [
-				{
-					"os": "default",
-					"uri": "__JENKINS_URL__/_5bDOCKER_5d_20Build_20Analysis/"
-				}				
-			]
 		}			
 	]
 }
