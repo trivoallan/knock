@@ -23,6 +23,10 @@
 					"value": "${IMPORTED_TAGS}"
 				},
 				{
+					"name": "Up to date Tags:",
+					"value": "${DELAYED_TAGS}"
+				},
+				{
 					"name": "Delayed Tags:",
 					"value": "${DELAYED_TAGS}"
 				},
