@@ -7,8 +7,8 @@
 	"sections": [
 		{
 			"activityTitle": "${JOB_NAME} - ${STATUS}",
-			"activitySubtitle": "${DATE}",
-			"text": "${DESCRIPTION}",
+			"activitySubtitle": "${DESCRIPTION}",
+			"text": "${MESSAGE}",
 			"facts": [
 				{
 					"name": "Category:",
