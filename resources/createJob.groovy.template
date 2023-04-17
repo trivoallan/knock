@@ -1,11 +1,11 @@
-pipelineJob('$jobPath') {
+pipelineJob('${JOB_PATH}') {
     definition {
         cpsScm {
             scm {
                 git {
                     branch('master')
                     remote {
-                        url('$reposUrl')
+                        url('${REPOS_URL}')
                         credentials('pic-socle-dosn')
                     }
                 }
@@ -13,8 +13,8 @@ pipelineJob('$jobPath') {
         }
     }
     parameters{
-        booleanParam('ForceImport', false, "Cocher pour forcer l'import de tous les tags (ne prend pas en compte le paramètre \\"Tag à forcer\\").")
-        stringParam('TagsToForce', '', 'Spécifier la liste des tags à forcer. Inutile si "Import forcer ?" est coché.\\nFormat : tag1,tag2,tag3')
+        booleanParam('ForceImport', false, "Cocher pour forcer l'import de tous les tags (ne prend pas en compte le paramètre \"Tag à forcer\").")
+        stringParam('TagsToForce', '', 'Spécifier la liste des tags à forcer. Inutile si "Import forcer ?" est coché.\nFormat : tag1,tag2,tag3')
     }
     triggers{
         cron {
