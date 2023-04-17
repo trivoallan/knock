@@ -1,7 +1,7 @@
 registry:
     organisation: ${ORDGANISATION}
     origin: ${ORIGIN}
-    pull_command: ${PULL8COMMAND}
+    pull_command: ${PULL_COMMAND}
     archive: ${ARCHIVE}
 
 tags_to_import: 
