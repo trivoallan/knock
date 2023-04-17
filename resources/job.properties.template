@@ -4,8 +4,7 @@ registry:
     pull_command: ${PULL_COMMAND}
     archive: ${ARCHIVE}
 
-tags_to_import: 
-${TAGS_TO_IMPORT}
+tags_to_import: ${TAGS_TO_IMPORT}
 
 info:
     harbor_image_name: ${HARBOR_IMAGE_NAME}
