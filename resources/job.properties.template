@@ -1,0 +1,18 @@
+registry:
+    organisation: ${ORDGANISATION}
+    origin: ${ORIGIN}
+    pull_command: ${PULL8COMMAND}
+    archive: ${ARCHIVE}
+
+tags_to_import: 
+${TAGS_TO_IMPORT}
+
+info:
+    harbor_image_name: ${HARBOR_IMAGE_NAME}
+    exploit_level: ${EXPLOIT_LEVEL}
+    sncf_repos: ${SNCF_REPOS}
+    sncf_certs: ${SNCF_CERTS}
+    force_daily: ${FORCE_DAILY}
+    documentation: ${DOCUMENTATION}
+    description: >
+        ${DESCRIPTION}
