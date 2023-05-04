@@ -13,7 +13,7 @@ RUN apk update && \
 ## Récupération du Keyring SNCF ##################################
 ##################################################################
 
-FROM ${PULL_COMMAND}:${TAG_NAME} as keyring
+FROM ${SOURCE_IMAGE_URL_LONG}:${TAG_NAME} as keyring
 USER root
 COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
@@ -25,7 +25,7 @@ RUN --mount=type=bind,target=/tmp/context \
 ## Construction de l'image finale ################################
 ##################################################################
 
-FROM ${PULL_COMMAND}:${TAG_NAME} as final
+FROM ${SOURCE_IMAGE_URL_LONG}:${TAG_NAME} as final
 
 LABEL fr.sncf.h2h.date_1ereDispo=${CREATION_DATE}
 LABEL fr.sncf.h2h.build-date=${BUILD_DATE}
@@ -34,7 +34,7 @@ LABEL fr.sncf.h2h.version_editeur=${ORIGIN_TAG}
 LABEL fr.sncf.h2h.product=${PRODUCT}
 LABEL fr.sncf.h2h.maintainer=${MAINTAINER}
 LABEL fr.sncf.h2h.dockerfile=${DOCKERFILE}
-LABEL fr.sncf.h2h.source_image=${SOURCE_IMAGE_URL}
+LABEL fr.sncf.h2h.source_image=${SOURCE_FULL_IMAGE_URL}
 LABEL fr.sncf.niv_exploit=${EXPLOIT_LEVEL}
 LABEL fr.sncf.source_type=h2h
 LABEL fr.sncf.num_inc=
