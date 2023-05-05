@@ -1,21 +1,21 @@
 ---
-  registry:
-    organisation: ${ORDGANISATION}
-    pull_command: ${PULL_COMMAND}
-    is_from_dockerhub: ${IS_FROM_DOCKERHUB}
-    is_private_registry: ${IS_PRIVATE_REGISTRY}
+  source:
+    image_url: ${SOURCE_IMAGE_URL}
     private_registry_credentials: ${PRIVATE_REGISTRY_CREDENTIALS}
-    archive: ${ARCHIVE}
+
+  destination:
+    image_url: ${DESTINATION_IMAGE_URL}
+    is_archived: ${IS_ARCHIVE}
 
   tags_to_import: ${TAGS_TO_IMPORT}
-
-  info:
-    harbor_image_name: ${HARBOR_IMAGE_NAME}
+    
+  infos:
     exploit_level: ${EXPLOIT_LEVEL}
-    editor: ${EDITOR}
+    editeur: ${EDITOR}
     sncf_repos: ${SNCF_REPOS}
     sncf_certs: ${SNCF_CERTS}
     force_daily: ${FORCE_DAILY}
+    source_full_image_url: ${SOURCE_FULL_IMAGE_URL}
     documentation: ${DOCUMENTATION}
     description: |
       ${DESCRIPTION}
