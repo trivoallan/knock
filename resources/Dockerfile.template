@@ -27,6 +27,7 @@ RUN --mount=type=bind,target=/tmp/context \
 
 FROM ${SOURCE_IMAGE_URL_LONG}:${TAG_NAME} as final
 
+# Ajout des labels
 LABEL fr.sncf.h2h.date_1ereDispo=${CREATION_DATE}
 LABEL fr.sncf.h2h.build-date=${BUILD_DATE}
 LABEL fr.sncf.h2h.version=${HCR_TAG}
@@ -40,11 +41,21 @@ LABEL fr.sncf.source_type=h2h
 LABEL fr.sncf.num_inc=
 LABEL Digest.external=${ORIGIN_DIGEST}
 
+# Elevation de privilèges pour installation des dépendances
 USER root
+
+#Ajout des certificats SNCF
 COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Ajout des repos SNCF
 RUN --mount=type=bind,target=/tmp/context --mount=type=bind,from=keyring,source=/tmp,target=/tmp/keyring \
     sh /tmp/context/add_sncf_http_sources.sh && \
     sh /tmp/context/install_sncf_keyring.sh && \
     sh /tmp/context/add_sncf_https_sources.sh && \
     sh /tmp/context/update_keystore.sh
+
+# Définition de la Timezone
+RUN --mount=type=bind,target=/tmp/context \
+    sh /tmp/context/set_timezone.sh
+ENV TZ=Europe/Paris
