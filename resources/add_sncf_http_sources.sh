@@ -2,7 +2,7 @@
 
 . /etc/os-release
 
-if [ $ID = "debian"  ]
+if [ $ID = "debian" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb http://repos.it.sncf.fr/os/debian/mirror/deb.debian.org/debian ${VERSION_CODENAME} main
@@ -10,7 +10,7 @@ deb-src http://repos.it.sncf.fr/os/debian/mirror/deb.debian.org/debian ${VERSION
 EOF
 fi
 
-if [ $ID = "ubuntu"  ]
+if [ $ID = "ubuntu" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb http://repos.it.sncf.fr/ubuntu ${VERSION_CODENAME} main restricted universe multiverse

@@ -2,7 +2,7 @@
 
 . /etc/os-release
 
-if [ $ID = "alpine"  ]
+if [ $ID = "alpine" ]
 then
     apk add --no-cache tzdata
 else

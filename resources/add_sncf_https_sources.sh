@@ -2,7 +2,7 @@
 
 . /etc/os-release
 
-if [ $ID = "alpine"  ]
+if [ $ID = "alpine" ]
 then
     ALPINE_VERSION=$(cat /etc/alpine-release | cut -d '.' -f 1,2)
     cat <<EOF > /etc/apk/repositories
@@ -11,7 +11,7 @@ http://repos.it.sncf.fr/os/alpine/prod.rsync.alpinelinux.org/v${ALPINE_VERSION}/
 EOF
 fi
 
-if [ $ID = "debian"  ]
+if [ $ID = "debian" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb https://repos.it.sncf.fr/os/debian/mirror/deb.debian.org/debian ${VERSION_CODENAME} main
@@ -26,7 +26,7 @@ EOF
     echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99always-valid
 fi
 
-if [ $ID = "ubuntu"  ]
+if [ $ID = "ubuntu" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb https://repos.it.sncf.fr/ubuntu ${VERSION_CODENAME} main restricted universe multiverse
