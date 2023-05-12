@@ -1,22 +1,23 @@
 ---
-  source:
-    image_url: ${SOURCE_IMAGE_URL}
-    private_registry_credentials: ${PRIVATE_REGISTRY_CREDENTIALS}
+source:
+  image_url: ${SOURCE_IMAGE_URL}
+  private_registry_credentials: ${PRIVATE_REGISTRY_CREDENTIALS}
 
-  destination:
-    image_url: ${DESTINATION_IMAGE_URL}
-    is_archived: ${IS_ARCHIVE}
+destination:
+  image_url: ${DESTINATION_IMAGE_URL}
+  is_archived: ${IS_ARCHIVE}
 
-  tags_to_import: ${TAGS_TO_IMPORT}
-    
-  infos:
-    exploit_level: ${EXPLOIT_LEVEL}
-    editeur: ${EDITOR}
-    sncf_repos: ${SNCF_REPOS}
-    sncf_certs: ${SNCF_CERTS}
-    force_daily: ${FORCE_DAILY}
-    set_timezone: ${SET_TIMEZONE}
-    source_full_image_url: ${SOURCE_FULL_IMAGE_URL}
-    documentation: ${DOCUMENTATION}
-    description: |
-      ${DESCRIPTION}
+tags_to_import: ${TAGS_TO_IMPORT}
+  
+infos:
+  exploit_level: ${EXPLOIT_LEVEL}
+  editeur: ${EDITOR}
+  sncf_repos: ${SNCF_REPOS}
+  sncf_certs: ${SNCF_CERTS}
+  force_daily: ${FORCE_DAILY}
+  set_timezone: ${SET_TIMEZONE}
+  source_full_image_url: ${SOURCE_FULL_IMAGE_URL}
+  documentation: ${DOCUMENTATION}
+  description: |
+    ${DESCRIPTION}
+...
