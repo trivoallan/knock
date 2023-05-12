@@ -15,6 +15,7 @@
     sncf_repos: ${SNCF_REPOS}
     sncf_certs: ${SNCF_CERTS}
     force_daily: ${FORCE_DAILY}
+    set_timezone: ${SET_TIMEZONE}
     source_full_image_url: ${SOURCE_FULL_IMAGE_URL}
     documentation: ${DOCUMENTATION}
     description: |
