@@ -43,14 +43,3 @@ LABEL Digest.external=${ORIGIN_DIGEST}
 
 # Elevation de privilèges pour installation des dépendances
 USER root
-
-#Ajout des certificats SNCF
-COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
-COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-
-# Ajout des repos SNCF
-RUN --mount=type=bind,target=/tmp/context --mount=type=bind,from=keyring,source=/tmp,target=/tmp/keyring \
-    sh /tmp/context/add_sncf_http_sources.sh && \
-    sh /tmp/context/install_sncf_keyring.sh && \
-    sh /tmp/context/add_sncf_https_sources.sh && \
-    sh /tmp/context/update_keystore.sh
