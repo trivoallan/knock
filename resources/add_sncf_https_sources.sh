@@ -53,20 +53,20 @@ name=CentOS_${CENTOS_VERSION}
 baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64
 gpgkey=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/RPM-GPG-KEY-CentOS-7
 https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/RPM-GPG-KEY-redhat-release
-sslcacert=/etc/yum/certs/ca-racine-sncf.pem
+sslcacert=/etc/ssl/certs/ca-certificates.crt
 
 [CentOS_${CENTOS_VERSION}_Security]
 name=CentOS_${CENTOS_VERSION}_Security
 baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/Security
 gpgkey=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/RPM-GPG-KEY-CentOS-7
 https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/RPM-GPG-KEY-redhat-release
-sslcacert=/etc/yum/certs/ca-racine-sncf.pem
+sslcacert=/etc/ssl/certs/ca-certificates.crt
 
 [CentOS_${CENTOS_VERSION}_Extra]
 name=CentOS_${CENTOS_VERSION}_Extra
 baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/Extra
 gpgkey=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/RPM-GPG-KEY-unixsys
-sslcacert=/etc/yum/certs/ca-racine-sncf.pem
+sslcacert=/etc/ssl/certs/ca-certificates.crt
 EOF
     fi
 
