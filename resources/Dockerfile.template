@@ -18,6 +18,7 @@
 # COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
 # COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # RUN --mount=type=bind,target=/tmp/context \
+#     rm -rf /etc/apt/sources.list.d/* && \
 #     sh /tmp/context/add_sncf_http_sources.sh && \
 #     sh /tmp/context/get_sncf_keyring.sh
 
