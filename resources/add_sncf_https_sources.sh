@@ -11,17 +11,22 @@ http://repos.it.sncf.fr/os/alpine/prod.rsync.alpinelinux.org/v${ALPINE_VERSION}/
 EOF
 fi
 
-if [ $ID = "debian" ]
+if [ $ID = "debian"  ] && [ $VERSION_CODENAME = "buster" ]
 then
     cat <<EOF > /etc/apt/sources.list
-deb https://repos.it.sncf.fr/os/debian/mirror/deb.debian.org/debian ${VERSION_CODENAME} main
-deb-src https://repos.it.sncf.fr/os/debian/mirror/deb.debian.org/debian ${VERSION_CODENAME} main
+deb https://repos.it.sncf.fr/debian ${VERSION_CODENAME} main non-free contrib
+deb https://repos.it.sncf.fr/debian ${VERSION_CODENAME}-updates main non-free contrib
+deb https://repos.it.sncf.fr/debian-security ${VERSION_CODENAME}/updates main non-free contrib
+EOF
+    echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99always-valid
+fi
 
-deb https://repos.it.sncf.fr/os/debian/mirror/deb.debian.org/debian-security/ ${VERSION_CODENAME}-security main
-deb-src https://repos.it.sncf.fr/os/debian/mirror/deb.debian.org/debian-security/ ${VERSION_CODENAME}-security main
-
-deb https://repos.it.sncf.fr/os/debian/mirror/deb.debian.org/debian ${VERSION_CODENAME}-updates main
-deb-src https://repos.it.sncf.fr/os/debian/mirror/deb.debian.org/debian ${VERSION_CODENAME}-updates main
+if [ $ID = "debian"  ] && [ $VERSION_CODENAME != "buster" ]
+then
+    cat <<EOF > /etc/apt/sources.list
+deb https://repos.it.sncf.fr/debian ${VERSION_CODENAME} main non-free contrib
+deb https://repos.it.sncf.fr/debian ${VERSION_CODENAME}-updates main non-free contrib
+deb https://repos.it.sncf.fr/debian-security ${VERSION_CODENAME}-security main non-free contrib
 EOF
     echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99always-valid
 fi
