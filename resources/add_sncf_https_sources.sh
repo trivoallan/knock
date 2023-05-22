@@ -35,13 +35,8 @@ if [ $ID = "ubuntu" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb https://repos.it.sncf.fr/ubuntu ${VERSION_CODENAME} main restricted universe multiverse
-deb-src https://repos.it.sncf.fr/ubuntu ${VERSION_CODENAME} main restricted universe multiverse
-
 deb https://repos.it.sncf.fr/ubuntu ${VERSION_CODENAME}-updates main restricted universe multiverse
-deb-src https://repos.it.sncf.fr/ubuntu ${VERSION_CODENAME}-updates main restricted universe multiverse
-
 deb https://repos.it.sncf.fr/ubuntu-security ${VERSION_CODENAME}-security main restricted universe multiverse
-deb-src https://repos.it.sncf.fr/ubuntu-security ${VERSION_CODENAME}-security main restricted universe multiverse
 EOF
 fi
 
