@@ -42,30 +42,32 @@ fi
 
 if [ $ID = "centos" ]
 then
-    CENTOS_VERSION=$(cat /etc/centos-release | cut -d ' ' -f 4 | cut -d '.' -f 1,2)
-
     if [ $VERSION_ID = "7" ]
     then
         rm -rf /etc/yum.repos.d/*
         cat <<EOF > /etc/yum.repos.d/sncf.repo
-[CentOS_${CENTOS_VERSION}]
-name=CentOS_${CENTOS_VERSION}
-baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64
-gpgkey=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/RPM-GPG-KEY-CentOS-7
-https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/RPM-GPG-KEY-redhat-release
+[CentOS_7_Updates]
+name=CentOS_7_Updates
+baseurl=https://repos.it.sncf.fr/repos/os/centos/Updates_yumcron/7/x86_64
+gpgcheck=0
+
+[CentOS_7_Last]
+name=CentOS_7_Last
+baseurl=https://repos.it.sncf.fr/repos/os/centos/7.last/x86_64
+gpgkey=https://repos.it.sncf.fr/repos/os/centos/7.last/x86_64/RPM-GPG-KEY-CentOS-7
 sslcacert=/etc/ssl/certs/ca-certificates.crt
 
-[CentOS_${CENTOS_VERSION}_Security]
-name=CentOS_${CENTOS_VERSION}_Security
-baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/Security
-gpgkey=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/RPM-GPG-KEY-CentOS-7
-https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/RPM-GPG-KEY-redhat-release
+[CentOS_7.last_Security]
+name=CentOS_7.last_Security
+baseurl=https://repos.it.sncf.fr/repos/os/centos/7.last/x86_64/Security
+gpgkey=https://repos.it.sncf.fr/repos/os/centos/7.last/x86_64/RPM-GPG-KEY-CentOS-7
+https://repos.it.sncf.fr/repos/os/centos/7.last/x86_64/RPM-GPG-KEY-redhat-release
 sslcacert=/etc/ssl/certs/ca-certificates.crt
 
-[CentOS_${CENTOS_VERSION}_Extra]
-name=CentOS_${CENTOS_VERSION}_Extra
-baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/Extra
-gpgkey=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/RPM-GPG-KEY-unixsys
+[CentOS_7.last_Extra]
+name=CentOS_7.last_Extra
+baseurl=https://repos.it.sncf.fr/repos/os/centos/7.last/x86_64/Extra
+gpgkey=https://repos.it.sncf.fr/repos/os/centos/7.last/x86_64/RPM-GPG-KEY-unixsys
 sslcacert=/etc/ssl/certs/ca-certificates.crt
 EOF
     fi
@@ -74,33 +76,20 @@ EOF
     then
         rm -rf /etc/yum.repos.d/*
         cat <<EOF > /etc/yum.repos.d/sncf.repo
-[CentOS_${CENTOS_VERSION}_BaseOS]
-name=CentOS_${CENTOS_VERSION}_BaseOS
-baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/BaseOS
-gpgcheck=1
-enabled=1[CentOS_${CENTOS_VERSION}_AppStream]
-name=CentOS_${CENTOS_VERSION}_AppStream
-baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/AppStream
-gpgcheck=1
-enabled=1[CentOS_${CENTOS_VERSION}_Extra]
-name=CentOS_${CENTOS_VERSION}_Extra
-baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/Extra
-gpgcheck=1
-enabled=1
+[CentOS_8_Updates_Security]
+name=CentOS_8_Updates_Security
+baseurl=https://repos.it.sncf.fr/repos/os/centos/8/x86_64/Updates/Security
+gpgcheck=0
 
-[CentOS_${CENTOS_VERSION}_Updates_Security]
-name=CentOS_${CENTOS_VERSION}_Updates_Security
-baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/Updates/Security
-gpgcheck=1
-enabled=0[CentOS_${CENTOS_VERSION}_Updates_BaseOS]
-name=CentOS_${CENTOS_VERSION}_Updates_BaseOS
-baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/Updates/BaseOS
-gpgcheck=1
-enabled=0[CentOS_${CENTOS_VERSION}_Updates_AppStream]
-name=CentOS_${CENTOS_VERSION}_Updates_AppStream
-baseurl=https://repos.it.sncf.fr/repos/os/centos/${CENTOS_VERSION}/x86_64/Updates/AppStream
-gpgcheck=1
-enabled=0
+[CentOS_8_Updates_BaseOS]
+name=CentOS_8_Updates_BaseOS
+baseurl=https://repos.it.sncf.fr/repos/os/centos/8/x86_64/Updates/BaseOS
+gpgcheck=0
+
+[CentOS_8_Updates_AppStream]
+name=CentOS_8_Updates_AppStream
+baseurl=https://repos.it.sncf.fr/repos/os/centos/8/x86_64/Updates/AppStream
+gpgcheck=0
 EOF
     fi
 
