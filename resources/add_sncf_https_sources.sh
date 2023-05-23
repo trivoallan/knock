@@ -50,6 +50,7 @@ then
 name=CentOS_7_Updates
 baseurl=https://repos.it.sncf.fr/repos/os/centos/Updates_yumcron/7/x86_64
 gpgcheck=0
+sslcacert=/etc/ssl/certs/ca-certificates.crt
 
 [CentOS_7_Last]
 name=CentOS_7_Last
