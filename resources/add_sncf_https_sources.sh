@@ -68,16 +68,19 @@ EOF
 name=CentOS_8_Updates_Security
 baseurl=https://repos.it.sncf.fr/repos/os/centos/8.last/x86_64/Updates/Security
 gpgcheck=0
+sslcacert=/etc/ssl/certs/ca-certificates.crt
 
 [CentOS_8_Updates_BaseOS]
 name=CentOS_8_Updates_BaseOS
 baseurl=https://repos.it.sncf.fr/repos/os/centos/8.last/x86_64/Updates/BaseOS
 gpgcheck=0
+sslcacert=/etc/ssl/certs/ca-certificates.crt
 
 [CentOS_8_Updates_AppStream]
 name=CentOS_8_Updates_AppStream
 baseurl=https://repos.it.sncf.fr/repos/os/centos/8.last/x86_64/Updates/AppStream
 gpgcheck=0
+sslcacert=/etc/ssl/certs/ca-certificates.crt
 EOF
     fi
 
