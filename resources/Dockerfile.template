@@ -4,7 +4,7 @@
 
 # FROM ${DOCKERHUB_PROXY}/curlimages/curl AS certs
 # USER root
-# RUN mkdir -p /usr/local/share/ca-certificates && curl -k https://repos.it.sncf.fr/saltstack/storage_account/ca-racine-sncf.pem --output /usr/local/share/ca-certificates/ca-racine-sncf.crt
+# RUN mkdir -p /usr/local/share/ca-certificates && curl -k https://repos.it.sncf.fr/Certificates/ca-racine-sncf.pem --output /usr/local/share/ca-certificates/ca-racine-sncf.crt
 # RUN apk update && \
 #     apk add --no-cache ca-certificates curl && \
 #     update-ca-certificates
