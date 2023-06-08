@@ -41,6 +41,3 @@ LABEL fr.sncf.niv_exploit=${EXPLOIT_LEVEL}
 LABEL fr.sncf.source_type=h2h
 LABEL fr.sncf.num_inc=
 LABEL Digest.external=${ORIGIN_DIGEST}
-
-# Elevation de privilèges pour installation des dépendances
-USER root
