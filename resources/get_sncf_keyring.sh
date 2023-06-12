@@ -19,6 +19,6 @@ then
     then
         curl -s http://repos.it.sncf.fr/os/ubuntu/extra/pool/jammy/main/xsou/ubuntu-extra-keyring-sncf_1.0-1~ubuntu22.04_all.deb --output /tmp/keyring.deb
     else
-        curl -s http://repos.it.sncf.fr/os/ubuntu/extra/pool/${VERSION_CODENAME}/main/xsou/ubuntu-extra-keyring-sncf_1.0-1_all.deb --output /tmp/keyring.deb
+        curl -s http://repos.it.sncf.fr/os/ubuntu/extra/pool/$VERSION_CODENAME/main/xsou/ubuntu-extra-keyring-sncf_1.0-1_all.deb --output /tmp/keyring.deb
     fi
 fi

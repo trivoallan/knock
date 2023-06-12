@@ -6,12 +6,12 @@ if [ "$ID" = "alpine" ]
 then
     ALPINE_VERSION=$(cat /etc/alpine-release | cut -d '.' -f 1,2)
     cat <<EOF > /etc/apk/repositories
-http://repos.it.sncf.fr/os/alpine/prod.rsync.alpinelinux.org/v${ALPINE_VERSION}/main
-http://repos.it.sncf.fr/os/alpine/prod.rsync.alpinelinux.org/v${ALPINE_VERSION}/community
+http://repos.it.sncf.fr/os/alpine/prod.rsync.alpinelinux.org/v$ALPINE_VERSION/main
+http://repos.it.sncf.fr/os/alpine/prod.rsync.alpinelinux.org/v$ALPINE_VERSION/community
 EOF
 fi
 
-if [ "$ID" = "debian"  ] && [ "$VERSION_CODENAME" = "bullseye" ]
+if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" = "bullseye" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb https://repos.it.sncf.fr/debian bullseye main non-free contrib
@@ -21,12 +21,12 @@ EOF
     echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99always-valid
 fi
 
-if [ "$ID" = "debian"  ] && [ "$VERSION_CODENAME" != "bullseye" ]
+if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" != "bullseye" ]
 then
     cat <<EOF > /etc/apt/sources.list
-deb https://repos.it.sncf.fr/debian ${VERSION_CODENAME} main non-free contrib
-deb https://repos.it.sncf.fr/debian ${VERSION_CODENAME}-updates main non-free contrib
-deb https://repos.it.sncf.fr/debian-security ${VERSION_CODENAME}/updates main non-free contrib
+deb https://repos.it.sncf.fr/debian $(echo \"$VERSION\" | grep -oP '\(\K[^)]+') main non-free contrib
+deb https://repos.it.sncf.fr/debian $(echo \"$VERSION\" | grep -oP '\(\K[^)]+')-updates main non-free contrib
+deb https://repos.it.sncf.fr/debian-security $(echo \"$VERSION\" | grep -oP '\(\K[^)]+')/updates main non-free contrib
 EOF
     echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99always-valid
 fi
@@ -34,9 +34,9 @@ fi
 if [ "$ID" = "ubuntu" ]
 then
     cat <<EOF > /etc/apt/sources.list
-deb https://repos.it.sncf.fr/ubuntu ${VERSION_CODENAME} main restricted universe multiverse
-deb https://repos.it.sncf.fr/ubuntu ${VERSION_CODENAME}-updates main restricted universe multiverse
-deb https://repos.it.sncf.fr/ubuntu-security ${VERSION_CODENAME}-security main restricted universe multiverse
+deb https://repos.it.sncf.fr/ubuntu $VERSION_CODENAME main restricted universe multiverse
+deb https://repos.it.sncf.fr/ubuntu $VERSION_CODENAME-updates main restricted universe multiverse
+deb https://repos.it.sncf.fr/ubuntu-security $VERSION_CODENAME-security main restricted universe multiverse
 EOF
 fi
 
