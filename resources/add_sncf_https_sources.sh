@@ -2,7 +2,7 @@
 
 . /etc/os-release
 
-if [ $ID = "alpine" ]
+if [ "$ID" = "alpine" ]
 then
     ALPINE_VERSION=$(cat /etc/alpine-release | cut -d '.' -f 1,2)
     cat <<EOF > /etc/apk/repositories
@@ -11,7 +11,7 @@ http://repos.it.sncf.fr/os/alpine/prod.rsync.alpinelinux.org/v${ALPINE_VERSION}/
 EOF
 fi
 
-if [ $ID = "debian"  ] && [ $VERSION_CODENAME = "bullseye" ]
+if [ "$ID" = "debian"  ] && [ "$VERSION_CODENAME" = "bullseye" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb https://repos.it.sncf.fr/debian bullseye main non-free contrib
@@ -21,7 +21,7 @@ EOF
     echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99always-valid
 fi
 
-if [ $ID = "debian"  ] && [ $VERSION_CODENAME != "bullseye" ]
+if [ "$ID" = "debian"  ] && [ "$VERSION_CODENAME" != "bullseye" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb https://repos.it.sncf.fr/debian ${VERSION_CODENAME} main non-free contrib
@@ -31,7 +31,7 @@ EOF
     echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99always-valid
 fi
 
-if [ $ID = "ubuntu" ]
+if [ "$ID" = "ubuntu" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb https://repos.it.sncf.fr/ubuntu ${VERSION_CODENAME} main restricted universe multiverse
@@ -40,9 +40,9 @@ deb https://repos.it.sncf.fr/ubuntu-security ${VERSION_CODENAME}-security main r
 EOF
 fi
 
-if [ $ID = "centos" ]
+if [ "$ID" = "centos" ]
 then
-    if [ $VERSION_ID = "7" ]
+    if [ "$VERSION_ID" = "7" ]
     then
         rm -rf /etc/yum.repos.d/*
         cat <<EOF > /etc/yum.repos.d/sncf.repo
@@ -60,7 +60,7 @@ sslcacert=/etc/ssl/certs/ca-certificates.crt
 EOF
     fi
 
-    if [ $VERSION_ID = "8" ]
+    if [ "$VERSION_ID" = "8" ]
     then
         rm -rf /etc/yum.repos.d/*
         cat <<EOF > /etc/yum.repos.d/sncf.repo

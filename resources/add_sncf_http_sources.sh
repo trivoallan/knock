@@ -2,7 +2,7 @@
 
 . /etc/os-release
 
-if [ $ID = "debian"  ] && [ $VERSION_CODENAME = "bullseye" ]
+if [ "$ID" = "debian"  ] && [ "$VERSION_CODENAME" = "bullseye" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb http://repos.it.sncf.fr/debian bullseye main non-free contrib
@@ -11,7 +11,7 @@ deb http://repos.it.sncf.fr/debian-security bullseye-security main non-free cont
 EOF
 fi
 
-if [ $ID = "debian"  ] && [ $VERSION_CODENAME != "bullseye" ]
+if [ "$ID" = "debian"  ] && [ "$VERSION_CODENAME" != "bullseye" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb http://repos.it.sncf.fr/debian ${VERSION_CODENAME} main non-free contrib
@@ -20,7 +20,7 @@ deb http://repos.it.sncf.fr/debian-security ${VERSION_CODENAME}/updates main non
 EOF
 fi
 
-if [ $ID = "ubuntu" ]
+if [ "$ID" = "ubuntu" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb http://repos.it.sncf.fr/ubuntu ${VERSION_CODENAME} main restricted universe multiverse
