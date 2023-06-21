@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Exits on first error
+set -e
+
 . /etc/os-release
 
 if [ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]
