@@ -16,14 +16,23 @@ pipelineJob('${JOB_PATH}') {
         numToKeep(10)
     }
     parameters{
-        booleanParam('ForceImport', false, "Cocher pour forcer l'import de tous les tags (ne prend pas en compte le paramètre \"Tag à forcer\").")
-        stringParam('TagsToForce', '', 'Spécifier la liste des tags à forcer. Inutile si "Import forcer ?" est coché.\nFormat : tag1,tag2,tag3')
+        booleanParam('ForceImport', false, 'Cocher pour forcer l\'import de tous les tags (ne prend pas en compte le paramètre "TagsToForce").')
+        booleanParam('KeepBuildDate', false, 'Ne sert que lors d\'un import forcé.\nCocher pour ne pas mettre à jour le label "fr.sncf.h2h.build-date" lors d{\'un l\'import forcé de l\'image si la version Harbor est à jour avec la version distante.')
+        stringParam {
+            name('TagsToForce')
+            defaultValue('')
+            description('Spécifier la liste des tags à forcer. Inutile si "ForceImport" est coché.\nFormat : tag1,tag2,tag3')
+            trim(true)
+        }
+        booleanParam('OnlyListTags', false, 'Cocher pour lister les tags qui vont être importés uniquement (Dry run). Ne tient pas compte des 7 jours de décalage d\'import.')
+        booleanParam('ForceUpdateCatalog', false, 'Cocher la case pour forcer la mise à jour du catalogue d\'image, même pour les tags non importés.')
+        booleanParam('SkipUpdateCatalog', false, 'Cocher pour sauter l\'étape de mise à jour du catalogue (surcharge "ForceUpdateCatalog").')
     }
     properties {
         pipelineTriggers {
             triggers {
                 cron {
-                    spec('H 20 * * *')
+                    spec('H H(0-7) * * *')
                 }
             }
         }
