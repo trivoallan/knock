@@ -11,22 +11,22 @@ http://repos.it.sncf.fr/os/alpine/prod.rsync.alpinelinux.org/v$ALPINE_VERSION/co
 EOF
 fi
 
-if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" = "bullseye" ]
+if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" = "buster" ]
 then
     cat <<EOF > /etc/apt/sources.list
-deb https://repos.it.sncf.fr/debian bullseye main non-free contrib
-deb https://repos.it.sncf.fr/debian bullseye-updates main non-free contrib
-deb https://repos.it.sncf.fr/debian-security bullseye-security main non-free contrib
+deb https://repos.it.sncf.fr/debian buster main non-free contrib
+deb https://repos.it.sncf.fr/debian buster-updates main non-free contrib
+deb https://repos.it.sncf.fr/debian-security buster/updates main non-free contrib
 EOF
     echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99always-valid
 fi
 
-if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" != "bullseye" ]
+if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" != "buster" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb https://repos.it.sncf.fr/debian $(echo \"$VERSION\" | grep -oP '\(\K[^)]+') main non-free contrib
 deb https://repos.it.sncf.fr/debian $(echo \"$VERSION\" | grep -oP '\(\K[^)]+')-updates main non-free contrib
-deb https://repos.it.sncf.fr/debian-security $(echo \"$VERSION\" | grep -oP '\(\K[^)]+')/updates main non-free contrib
+deb https://repos.it.sncf.fr/debian-security $(echo \"$VERSION\" | grep -oP '\(\K[^)]+')-security main non-free contrib
 EOF
     echo 'Acquire::Check-Valid-Until no;' > /etc/apt/apt.conf.d/99always-valid
 fi

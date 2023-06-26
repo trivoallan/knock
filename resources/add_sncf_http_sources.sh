@@ -2,21 +2,21 @@
 
 . /etc/os-release
 
-if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" = "bullseye" ]
+if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" = "buster" ]
 then
     cat <<EOF > /etc/apt/sources.list
-deb http://repos.it.sncf.fr/debian bullseye main non-free contrib
-deb http://repos.it.sncf.fr/debian bullseye-updates main non-free contrib
-deb http://repos.it.sncf.fr/debian-security bullseye-security main non-free contrib
+deb http://repos.it.sncf.fr/debian buster main non-free contrib
+deb http://repos.it.sncf.fr/debian buster-updates main non-free contrib
+deb http://repos.it.sncf.fr/debian-security buster/updates main non-free contrib
 EOF
 fi
 
-if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" != "bullseye" ]
+if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" != "buster" ]
 then
     cat <<EOF > /etc/apt/sources.list
 deb http://repos.it.sncf.fr/debian $(echo \"$VERSION\" | grep -oP '\(\K[^)]+') main non-free contrib
 deb http://repos.it.sncf.fr/debian $(echo \"$VERSION\" | grep -oP '\(\K[^)]+')-updates main non-free contrib
-deb http://repos.it.sncf.fr/debian-security $(echo \"$VERSION\" | grep -oP '\(\K[^)]+')/updates main non-free contrib
+deb http://repos.it.sncf.fr/debian-security $(echo \"$VERSION\" | grep -oP '\(\K[^)]+')-security main non-free contrib
 EOF
 fi
 
