@@ -4,8 +4,11 @@
 
 # FROM ${DOCKERHUB_PROXY}/curlimages/curl AS certs
 # USER root
-# RUN mkdir -p /usr/local/share/ca-certificates && curl -k https://repos.it.sncf.fr/Certificates/ca-racine-sncf.pem --output /usr/local/share/ca-certificates/ca-racine-sncf.crt
-# RUN apk update && \
+# COPY certificats /usr/local/share/ca-certificates
+# RUN --mount=type=bind,target=/tmp/context \
+#     rm -rf /etc/apt/sources.list.d/* && \
+#     sh /tmp/context/add_sncf_http_sources.sh && \
+#     apk update && \
 #     apk add --no-cache ca-certificates curl && \
 #     update-ca-certificates
 
@@ -15,11 +18,11 @@
 
 # FROM ${SOURCE_IMAGE_URL_LONG}:${TAG_NAME} as keyring
 # USER root
-# COPY --from=certs /usr/local/share/ca-certificates/ca-racine-sncf.crt /usr/local/share/ca-certificates/
+# COPY certificats /usr/local/share/ca-certificates
 # COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # RUN --mount=type=bind,target=/tmp/context \
 #     rm -rf /etc/apt/sources.list.d/* && \
-#     sh /tmp/context/add_sncf_http_sources.sh && \
+#     sh /tmp/context/add_sncf_https_sources.sh && \
 #     sh /tmp/context/get_sncf_keyring.sh
 
 ##################################################################
