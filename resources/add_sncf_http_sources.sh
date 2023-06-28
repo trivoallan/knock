@@ -2,6 +2,15 @@
 
 . /etc/os-release
 
+if [ "$ID" = "alpine" ]
+then
+    ALPINE_VERSION=$(cat /etc/alpine-release | cut -d '.' -f 1,2)
+    cat <<EOF > /etc/apk/repositories
+http://repos.it.sncf.fr/os/alpine/prod.rsync.alpinelinux.org/v$ALPINE_VERSION/main
+http://repos.it.sncf.fr/os/alpine/prod.rsync.alpinelinux.org/v$ALPINE_VERSION/community
+EOF
+fi
+
 if [ "$ID" = "debian"  ] && [ "$(echo \"$VERSION\" | grep -oP '\(\K[^)]+')" = "buster" ]
 then
     cat <<EOF > /etc/apt/sources.list
