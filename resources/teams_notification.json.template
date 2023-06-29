@@ -44,11 +44,11 @@
 	"potentialAction": [
 		{
 			"@type": "OpenUri",
-			"name": "View in Jenkins",
+			"name": "View in Blue Ocean",
 			"targets": [
 				{
 					"os": "default",
-					"uri": "${JENKINS_URL}"
+					"uri": "${BLUEOCEAN_URL}"
 				}
 			]
 		},
