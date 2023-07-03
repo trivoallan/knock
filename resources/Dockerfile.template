@@ -9,7 +9,7 @@
 #     rm -rf /etc/apt/sources.list.d/* && \
 #     sh /tmp/context/add_sncf_http_sources.sh && \
 #     apk update && \
-#     apk add --no-cache ca-certificates curl && \
+#     apk add --no-cache ca-certificates && \
 #     update-ca-certificates
 
 ##################################################################
