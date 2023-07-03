@@ -2,7 +2,7 @@
 ## Ajout des certificats SNCF ####################################
 ##################################################################
 
-# FROM ${DOCKERHUB_PROXY}/curlimages/curl AS certs
+# FROM ${DOCKERHUB_PROXY}/alpine:latest AS certs
 # USER root
 # COPY certificats /usr/local/share/ca-certificates
 # RUN --mount=type=bind,target=/tmp/context \
