@@ -1,4 +1,13 @@
 ##################################################################
+## Ajout des certificats SNCF pour Centos ########################
+##################################################################
+
+# FROM ${DOCKERHUB_PROXY}/centos:7 AS certs
+# USER root
+# COPY certificats /etc/pki/ca-trust/source/anchors
+# RUN update-ca-trust extract
+
+##################################################################
 ## Ajout des certificats SNCF ####################################
 ##################################################################
 
