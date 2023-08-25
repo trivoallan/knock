@@ -31,6 +31,14 @@
 					"value": "${DELAYED_TAGS}"
 				},
 				{
+					"name": "Deleted Tags:",
+					"value": "${DELETED_TAGS}"
+				},
+				{
+					"name": "Ignored Tags:",
+					"value": "${IGNORED_TAGS}"
+				},
+				{
 					"name": "Failed Tags:",
 					"value": "${FAILED_TAGS}"
 				},
