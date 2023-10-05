@@ -24,8 +24,8 @@ pipelineJob('${JOB_PATH}') {
             description('Spécifier la liste des tags à forcer. Inutile si "Force Import All Tags ?" est coché.\nFormat : tag1,tag2,tag3')
             trim(true)
         }
-        booleanParam('Only List Tags ?', false, 'Cocher pour lister les tags qui vont être importés uniquement (Dry run). Ne tient pas compte des 7 jours de décalage d\'import.')
-        booleanParam('Dry Run Deletion ?', false, 'Cocher pour ne pas supprimer les tags d\'Harbor qui doivent l\'être.\nLa notification Teams renseignera tout de même les tags qui doivent être supprimés.')
+        booleanParam('Dry Run : only list tags ?', false, 'Cocher pour lister les tags qui vont être importés uniquement. Ne tient pas compte des 7 jours de décalage d\'import.')
+        booleanParam('Dry Run : no deletion ?', false, 'Cocher pour ne pas supprimer les tags d\'Harbor qui doivent l\'être.\nLa notification Teams renseignera tout de même les tags qui doivent être supprimés.')
         booleanParam('Force Update Catalog ?', false, 'Cocher la case pour forcer la mise à jour du catalogue d\'image, même pour les tags non importés.')
         booleanParam('Skip Update Catalog ?', false, 'Cocher pour sauter l\'étape de mise à jour du catalogue (surcharge "Force Update Catalog ?").')
     }
