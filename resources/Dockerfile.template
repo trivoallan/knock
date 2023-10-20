@@ -3,7 +3,7 @@
 ##################################################################
 
 # FROM ${DOCKERHUB_PROXY}/centos:7 AS certs
-# USER root
+# USER 0
 # COPY certificats /etc/pki/ca-trust/source/anchors
 # RUN update-ca-trust extract
 
@@ -12,7 +12,7 @@
 ##################################################################
 
 # FROM ${DOCKERHUB_PROXY}/alpine:latest AS certs
-# USER root
+# USER 0
 # COPY certificats /usr/local/share/ca-certificates
 # RUN --mount=type=bind,target=/tmp/context \
 #     rm -rf /etc/apt/sources.list.d/* && \
@@ -26,7 +26,7 @@
 ##################################################################
 
 # FROM ${SOURCE_IMAGE_URL_LONG}:${TAG_NAME} as keyring
-# USER root
+# USER 0
 # COPY certificats /usr/local/share/ca-certificates
 # COPY --from=certs /etc/ssl/certs /etc/ssl/certs/
 # RUN --mount=type=bind,target=/tmp/context \
