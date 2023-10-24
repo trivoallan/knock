@@ -35,6 +35,12 @@ pipelineJob('${JOB_PATH}') {
                 cron {
                     spec('TZ=America/Boise\nH H(12-23) * * *')
                 }
+                gitlab {
+                    triggerOnPush(true)
+                    triggerOnMergeRequest(false)
+                    triggerOnNoteRequest(false)
+                    skipWorkInProgressMergeRequest(true)
+                }
             }
         }
     }
