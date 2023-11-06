@@ -15,8 +15,9 @@ then
     fi
     if [ ! -z "$CENTOS" ]
     then
-        yes y | keytool -importcert -alias AC_RACINE_SNCF -keystore $CACERTS_PATH -storepass changeit -file /etc/pki/ca-trust/source/anchors/ca-racine-sncf.crt || true
         yes y | keytool -importcert -alias AC_RACINE_SNCF_2023 -keystore $CACERTS_PATH -storepass changeit -file /etc/pki/ca-trust/source/anchors/AC_RACINE_SNCF_2023.crt || true
         yes y | keytool -importcert -alias AC_INFRASTRUCTURE_SNCF_2023 -keystore $CACERTS_PATH -storepass changeit -file /etc/pki/ca-trust/source/anchors/AC_INFRASTRUCTURE_SNCF_2023.crt || true
+        yes y | keytool -importcert -alias AC_RACINE_SNCF -keystore $CACERTS_PATH -storepass changeit -file /etc/pki/ca-trust/source/anchors/ca-racine-sncf.crt || true
+        yes y | keytool -importcert -alias AC_RACINE_SNCF -keystore $CACERTS_PATH -storepass changeit -file /etc/pki/ca-trust/source/anchors/AC_INFRASTRUCTURE_SNCF.crt || true
     fi
 fi
