@@ -18,6 +18,7 @@ infos:
   set_timezone: ${SET_TIMEZONE}
   source_full_image_url: ${SOURCE_FULL_IMAGE_URL}
   documentation: ${DOCUMENTATION}
+  short_description: ${SHORT_DESCRIPTION}
   description: |
     ${DESCRIPTION}
 ...
