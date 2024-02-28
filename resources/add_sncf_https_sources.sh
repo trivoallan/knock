@@ -33,11 +33,20 @@ fi
 
 if [ "$ID" = "ubuntu" ]
 then
-    cat <<EOF > /etc/apt/sources.list
+    if [ "$VERSION_CODENAME" = "jammy" ]
+    then
+        cat <<EOF > /etc/apt/sources.list
+deb https://repos.it.sncf.fr/ubuntu jammy main restricted universe multiverse
+deb https://repos.it.sncf.fr/ubuntu-updates jammy-updates main restricted universe multiverse
+deb https://repos.it.sncf.fr/ubuntu-security jammy-security main restricted universe multiverse
+EOF
+    else
+        cat <<EOF > /etc/apt/sources.list
 deb https://repos.it.sncf.fr/ubuntu $VERSION_CODENAME main restricted universe multiverse
 deb https://repos.it.sncf.fr/ubuntu $VERSION_CODENAME-updates main restricted universe multiverse
 deb https://repos.it.sncf.fr/ubuntu-security $VERSION_CODENAME-security main restricted universe multiverse
 EOF
+    fi
 fi
 
 if [ "$ID" = "centos" ]
@@ -57,7 +66,6 @@ baseurl=https://repos.it.sncf.fr/repos/os/centos/7.last/x86_64
 gpgkey=https://repos.it.sncf.fr/repos/os/centos/7.last/x86_64/RPM-GPG-KEY-CentOS-7
 EOF
     fi
-
     if [ "$VERSION_ID" = "8" ]
     then
         rm -rf /etc/yum.repos.d/*
@@ -78,5 +86,4 @@ baseurl=https://repos.it.sncf.fr/repos/os/centos/8.last/x86_64/Updates/AppStream
 gpgcheck=0
 EOF
     fi
-
 fi
