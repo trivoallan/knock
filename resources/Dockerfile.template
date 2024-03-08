@@ -41,19 +41,19 @@
 FROM ${SOURCE_IMAGE_URL_LONG}:${TAG_NAME} as final
 
 # Ajout des labels
-LABEL fr.sncf.h2h.date_1ereDispo=${CREATION_DATE}
-LABEL fr.sncf.h2h.build-date=${BUILD_DATE}
-LABEL fr.sncf.h2h.version=${HCR_TAG}
-LABEL fr.sncf.h2h.version_editeur=${ORIGIN_TAG}
-LABEL fr.sncf.h2h.os=${OS}
-LABEL fr.sncf.h2h.os_version=${OS_VERSION}
-LABEL fr.sncf.h2h.product=${PRODUCT}
-LABEL fr.sncf.h2h.maintainer=${MAINTAINER}
-LABEL fr.sncf.h2h.dockerfile=${DOCKERFILE}
-LABEL fr.sncf.h2h.source_image=${SOURCE_FULL_IMAGE_URL}
-LABEL fr.sncf.h2h.user=<USER>
-LABEL fr.sncf.h2h.jenkins_url=${JENKINS_URL}
-LABEL fr.sncf.h2h.gitlab_url=${GITLAB_URL}
-LABEL fr.sncf.source_type=h2h
+LABEL fr.sncf.h2h.date_1ereDispo="${CREATION_DATE}"
+LABEL fr.sncf.h2h.build-date="${BUILD_DATE}"
+LABEL fr.sncf.h2h.version="${HCR_TAG}"
+LABEL fr.sncf.h2h.version_editeur="${ORIGIN_TAG}"
+LABEL fr.sncf.h2h.os="${OS}"
+LABEL fr.sncf.h2h.os_version="${OS_VERSION}"
+LABEL fr.sncf.h2h.product="${PRODUCT}"
+LABEL fr.sncf.h2h.maintainer="${MAINTAINER}"
+LABEL fr.sncf.h2h.dockerfile="${DOCKERFILE}"
+LABEL fr.sncf.h2h.source_image="${SOURCE_FULL_IMAGE_URL}"
+LABEL fr.sncf.h2h.user="<USER>"
+LABEL fr.sncf.h2h.jenkins_url="${JENKINS_URL}"
+LABEL fr.sncf.h2h.gitlab_url="${GITLAB_URL}"
+LABEL fr.sncf.source_type="h2h"
 LABEL fr.sncf.num_inc=
-LABEL Digest.external=${ORIGIN_DIGEST}
+LABEL Digest.external="${ORIGIN_DIGEST}"
