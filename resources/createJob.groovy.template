@@ -6,7 +6,7 @@ pipelineJob('${JOB_PATH}') {
                     branch('master')
                     remote {
                         url('${REPOS_URL}')
-                        credentials('pic-socle-dosn')
+                        credentials('gitlab')
                     }
                 }
             }
