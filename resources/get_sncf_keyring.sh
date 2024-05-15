@@ -18,10 +18,5 @@ fi
 
 if [ "$ID" = "ubuntu" ]
 then
-    if [ "$VERSION_CODENAME" = "jammy" ]
-    then
-        curl -s https://repos.it.sncf.fr/os/ubuntu/extra/pool/jammy/main/xsou/ubuntu-extra-keyring-sncf_1.0-1~ubuntu22.04_all.deb --output /tmp/keyring.deb
-    else
-        curl -s https://repos.it.sncf.fr/os/ubuntu/extra/pool/$VERSION_CODENAME/main/xsou/ubuntu-extra-keyring-sncf_1.0-1_all.deb --output /tmp/keyring.deb
-    fi
+    curl -s https://repos.it.sncf.fr/os/ubuntu/extra/pool/${VERSION_ID}/main/xsou/ubuntu-extra-keyring-sncf_1-1ubuntu${VERSION_ID}_amd64.deb --output /tmp/keyring.deb
 fi
