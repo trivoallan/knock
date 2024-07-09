@@ -25,7 +25,7 @@
 ## Récupération du Keyring SNCF ##################################
 ##################################################################
 
-# FROM ${SOURCE_IMAGE_URL_LONG}:${TAG_NAME} as keyring
+# FROM ${SOURCE_IMAGE_URL_LONG}:${TAG_NAME} AS keyring
 # USER 0
 # COPY certificats /usr/local/share/ca-certificates
 # COPY --from=certs /etc/ssl/certs /etc/ssl/certs/
@@ -38,7 +38,7 @@
 ## Construction de l'image finale ################################
 ##################################################################
 
-FROM ${SOURCE_IMAGE_URL_LONG}:${TAG_NAME} as final
+FROM ${SOURCE_IMAGE_URL_LONG}:${TAG_NAME} AS final
 
 # Ajout des labels
 LABEL fr.sncf.h2h.date_1ereDispo="${CREATION_DATE}"
