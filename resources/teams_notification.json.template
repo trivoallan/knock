@@ -45,10 +45,6 @@
 				{
 					"name": "Is not root image ?",
 					"value": "${NON_ROOT_FLAG}"
-				},
-				{
-					"name": "Dockerhub limit at start:",
-					"value": "${DOCKERHUB_RATE_LIMIT_REMAINING}"
 				}
 			]
 		}
