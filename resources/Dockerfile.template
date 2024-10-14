@@ -2,7 +2,7 @@
 ## Ajout des certificats SNCF pour Centos ########################
 ##################################################################
 
-# FROM ${HCR}/04255.prod/centos:7 AS certs
+# FROM ${HCR}/docker.io/centos:7 AS certs
 # USER 0
 # COPY certificats /etc/pki/ca-trust/source/anchors
 # RUN update-ca-trust extract
@@ -11,7 +11,7 @@
 ## Ajout des certificats SNCF ####################################
 ##################################################################
 
-# FROM ${HCR}/hub/alpine:3 AS certs
+# FROM ${HCR}/docker.io/alpine:3 AS certs
 # USER 0
 # COPY certificats /usr/local/share/ca-certificates
 # RUN --mount=type=bind,target=/tmp/context \
