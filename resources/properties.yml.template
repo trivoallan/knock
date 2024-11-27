@@ -10,7 +10,8 @@ destination:
 tags_to_import: ${TAGS_TO_IMPORT}
 
 infos:
-  exploit_level: ${EXPLOIT_LEVEL}
+  prescriptions: ${PRODUCT_PRESCRIPTIONS}
+  exploitations: ${PRODUCT_EXPLOITATIONS}
   editor: ${EDITOR}
   sncf_repos: ${SNCF_REPOS}
   sncf_certs: ${SNCF_CERTS}
