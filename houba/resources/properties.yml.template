@@ -1,0 +1,24 @@
+---
+source:
+  image_url: ${SOURCE_IMAGE_URL}
+  private_registry_credentials: ${PRIVATE_REGISTRY_CREDENTIALS}
+
+destination:
+  image_url: ${DESTINATION_IMAGE_URL}
+  is_archived: ${IS_ARCHIVE}
+
+tags_to_import: ${TAGS_TO_IMPORT}
+
+infos:
+  editor: ${EDITOR}
+  sncf_repos: ${SNCF_REPOS}
+  sncf_certs: ${SNCF_CERTS}
+  force_daily: ${FORCE_DAILY}
+  set_timezone: ${SET_TIMEZONE}
+  run_container: ${RUN_CONTAINER}
+  source_full_image_url: ${SOURCE_FULL_IMAGE_URL}
+  documentation: ${DOCUMENTATION}
+  short_description: ${SHORT_DESCRIPTION}
+  description: |
+    ${DESCRIPTION}
+...

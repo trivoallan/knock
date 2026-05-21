@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+# Fake skopeo pour tests d'intégration.
+# Récupère le scénario via la variable d'env FAKE_SKOPEO_SCENARIO.
+
+set -e
+
+case "${FAKE_SKOPEO_SCENARIO:-default}" in
+    inspect-busybox)
+        cat <<'JSON'
+{
+  "Digest": "sha256:abc123",
+  "Architecture": "amd64",
+  "Os": "linux"
+}
+JSON
+        ;;
+    list-tags-busybox)
+        cat <<'JSON'
+{"Repository": "docker.io/library/busybox", "Tags": ["1.36", "1.37", "latest"]}
+JSON
+        ;;
+    fail)
+        echo "skopeo: simulated failure" >&2
+        exit 1
+        ;;
+    garbage)
+        echo "this is not json"
+        ;;
+    missing-digest)
+        cat <<'JSON'
+{"Architecture": "amd64", "Os": "linux"}
+JSON
+        ;;
+    *)
+        echo "fake-skopeo: unknown scenario ${FAKE_SKOPEO_SCENARIO}" >&2
+        exit 99
+        ;;
+esac

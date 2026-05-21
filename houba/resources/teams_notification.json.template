@@ -1,0 +1,74 @@
+{
+	"@type": "MessageCard",
+	"@context": "https://schema.org/extensions",
+	"summary": "jenkins notifications",
+	"themeColor": "${THEME_COLOR}",
+	"title": "${CATEGORY} - ${IMAGE}",
+	"sections": [
+		{
+			"activityTitle": "${JOB_NAME} - ${STATUS}",
+			"activitySubtitle": "${DESCRIPTION}",
+			"text": "${MESSAGE}",
+			"facts": [
+				{
+					"name": "Category:",
+					"value": "${CATEGORY}"
+				},
+				{
+					"name": "Image:",
+					"value": "${IMAGE}"
+				},
+				{
+					"name": "Imported Tags:",
+					"value": "${IMPORTED_TAGS}"
+				},
+				{
+					"name": "Up to date Tags:",
+					"value": "${UP_TO_DATE_TAGS}"
+				},
+				{
+					"name": "Delayed Tags:",
+					"value": "${DELAYED_TAGS}"
+				},
+				{
+					"name": "Deleted Tags:",
+					"value": "${DELETED_TAGS}"
+				},
+				{
+					"name": "Ignored Tags:",
+					"value": "${IGNORED_TAGS}"
+				},
+				{
+					"name": "Failed Tags:",
+					"value": "${FAILED_TAGS}"
+				},
+				{
+					"name": "Is not root image ?",
+					"value": "${NON_ROOT_FLAG}"
+				}
+			]
+		}
+	],
+	"potentialAction": [
+		{
+			"@type": "OpenUri",
+			"name": "View in Blue Ocean",
+			"targets": [
+				{
+					"os": "default",
+					"uri": "${BLUEOCEAN_URL}"
+				}
+			]
+		},
+		{
+			"@type": "OpenUri",
+			"name": "Gitlab Repo",
+			"targets": [
+				{
+					"os": "default",
+					"uri": "${GITLAB_URL}"
+				}
+			]
+		}
+	]
+}
