@@ -10,12 +10,12 @@ from hub2hub.cli.main import app
 
 @pytest.fixture()
 def harbor_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("H2H_HARBOR_URL", "https://harbor.example.com")
-    monkeypatch.setenv("H2H_HARBOR_USER", "u")
-    monkeypatch.setenv("H2H_HARBOR_PASSWORD", "p")
-    monkeypatch.setenv("H2H_GITLAB_URL", "https://gl")
-    monkeypatch.setenv("H2H_GITLAB_TOKEN", "t")
-    monkeypatch.setenv("H2H_GITLAB_GROUP", "g")
+    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://harbor.example.com")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "u")
+    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://gl")
+    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "g")
 
 
 def test_capture_writes_repositories_and_artifacts(

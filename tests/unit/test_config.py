@@ -7,13 +7,13 @@ from hub2hub.config import HarborSettings, Settings
 
 
 def test_settings_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("H2H_HARBOR_URL", "https://harbor.example.com")
-    monkeypatch.setenv("H2H_HARBOR_USER", "robot$h2h")
-    monkeypatch.setenv("H2H_HARBOR_PASSWORD", "s3cret")
-    monkeypatch.setenv("H2H_GITLAB_URL", "https://gitlab.example.com")
-    monkeypatch.setenv("H2H_GITLAB_TOKEN", "glpat-xxx")
-    monkeypatch.setenv("H2H_GITLAB_GROUP", "eul/h2h/products")
-    monkeypatch.setenv("H2H_WORK_DIR", str(tmp_path))
+    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://harbor.example.com")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "robot$h2h")
+    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "s3cret")
+    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://gitlab.example.com")
+    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "glpat-xxx")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "eul/h2h/products")
+    monkeypatch.setenv("HOUBA_WORK_DIR", str(tmp_path))
 
     settings = Settings()
 
@@ -26,12 +26,12 @@ def test_settings_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
 
 
 def test_settings_secrets_masked_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("H2H_HARBOR_URL", "https://h")
-    monkeypatch.setenv("H2H_HARBOR_USER", "u")
-    monkeypatch.setenv("H2H_HARBOR_PASSWORD", "s3cret-leak")
-    monkeypatch.setenv("H2H_GITLAB_URL", "https://g")
-    monkeypatch.setenv("H2H_GITLAB_TOKEN", "tok-leak")
-    monkeypatch.setenv("H2H_GITLAB_GROUP", "g")
+    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://h")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "u")
+    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "s3cret-leak")
+    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://g")
+    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "tok-leak")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "g")
 
     settings = Settings()
     text = repr(settings)
@@ -41,12 +41,12 @@ def test_settings_secrets_masked_in_repr(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_settings_missing_required(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in (
-        "H2H_HARBOR_URL",
-        "H2H_HARBOR_USER",
-        "H2H_HARBOR_PASSWORD",
-        "H2H_GITLAB_URL",
-        "H2H_GITLAB_TOKEN",
-        "H2H_GITLAB_GROUP",
+        "HOUBA_HARBOR_URL",
+        "HOUBA_HARBOR_USER",
+        "HOUBA_HARBOR_PASSWORD",
+        "HOUBA_GITLAB_URL",
+        "HOUBA_GITLAB_TOKEN",
+        "HOUBA_GITLAB_GROUP",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -55,13 +55,13 @@ def test_settings_missing_required(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_teams_webhook_optional(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("H2H_HARBOR_URL", "https://h")
-    monkeypatch.setenv("H2H_HARBOR_USER", "u")
-    monkeypatch.setenv("H2H_HARBOR_PASSWORD", "s")
-    monkeypatch.setenv("H2H_GITLAB_URL", "https://g")
-    monkeypatch.setenv("H2H_GITLAB_TOKEN", "t")
-    monkeypatch.setenv("H2H_GITLAB_GROUP", "grp")
-    monkeypatch.delenv("H2H_TEAMS_WEBHOOK_URL", raising=False)
+    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://h")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "u")
+    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "s")
+    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://g")
+    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "grp")
+    monkeypatch.delenv("HOUBA_TEAMS_WEBHOOK_URL", raising=False)
 
     settings = Settings()
     assert settings.teams_webhook_url is None
@@ -74,14 +74,14 @@ def test_harbor_settings_isolated(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_invalid_log_level_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Une valeur de `H2H_LOG_LEVEL` hors du Literal doit lever ValidationError."""
-    monkeypatch.setenv("H2H_HARBOR_URL", "https://h")
-    monkeypatch.setenv("H2H_HARBOR_USER", "u")
-    monkeypatch.setenv("H2H_HARBOR_PASSWORD", "p")
-    monkeypatch.setenv("H2H_GITLAB_URL", "https://g")
-    monkeypatch.setenv("H2H_GITLAB_TOKEN", "t")
-    monkeypatch.setenv("H2H_GITLAB_GROUP", "g")
-    monkeypatch.setenv("H2H_LOG_LEVEL", "TRACE")
+    """Une valeur de `HOUBA_LOG_LEVEL` hors du Literal doit lever ValidationError."""
+    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://h")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "u")
+    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://g")
+    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "g")
+    monkeypatch.setenv("HOUBA_LOG_LEVEL", "TRACE")
 
     with pytest.raises(ValidationError):
         Settings()
@@ -89,18 +89,18 @@ def test_invalid_log_level_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_endoflife_url_validated_but_str(monkeypatch: pytest.MonkeyPatch) -> None:
     """`endoflife_url` est validé comme URL mais exposé comme `str` pour httpx."""
-    monkeypatch.setenv("H2H_HARBOR_URL", "https://h")
-    monkeypatch.setenv("H2H_HARBOR_USER", "u")
-    monkeypatch.setenv("H2H_HARBOR_PASSWORD", "p")
-    monkeypatch.setenv("H2H_GITLAB_URL", "https://g")
-    monkeypatch.setenv("H2H_GITLAB_TOKEN", "t")
-    monkeypatch.setenv("H2H_GITLAB_GROUP", "g")
-    monkeypatch.setenv("H2H_ENDOFLIFE_URL", "https://eol.test/api")
+    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://h")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "u")
+    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://g")
+    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "g")
+    monkeypatch.setenv("HOUBA_ENDOFLIFE_URL", "https://eol.test/api")
 
     settings = Settings()
     assert isinstance(settings.endoflife_url, str)
     assert settings.endoflife_url == "https://eol.test/api"
 
-    monkeypatch.setenv("H2H_ENDOFLIFE_URL", "not-a-url")
+    monkeypatch.setenv("HOUBA_ENDOFLIFE_URL", "not-a-url")
     with pytest.raises(ValidationError):
         Settings()
