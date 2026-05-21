@@ -40,13 +40,13 @@ def configure(
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
-        structlog.processors.format_exc_info,
     ]
     renderer: structlog.types.Processor
     if format_ == "json":
         shared_processors.append(structlog.processors.dict_tracebacks)
         renderer = structlog.processors.JSONRenderer()
     else:
+        shared_processors.append(structlog.processors.format_exc_info)
         renderer = structlog.dev.ConsoleRenderer(colors=False)
 
     handler = logging.StreamHandler(stream)

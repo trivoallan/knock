@@ -80,8 +80,8 @@ def test_stdlib_loggers_routed_through_json_renderer() -> None:
     assert obj["level"] == "warning"
 
 
-def test_exception_rendered_with_class_and_traceback_in_json() -> None:
-    """Spec §6.3 : les exceptions doivent exposer error class / traceback."""
+def test_exception_rendered_with_structured_traceback_in_json() -> None:
+    """Spec §6.3 : en JSON, exc_info devient une liste structurée."""
     buf = StringIO()
     configure(format_="json", level="INFO", stream=buf)
 
@@ -91,15 +91,31 @@ def test_exception_rendered_with_class_and_traceback_in_json() -> None:
     except RuntimeError:
         log.error("oops", exc_info=True)
 
-    line = buf.getvalue().strip()
-    obj = json.loads(line)
+    obj = json.loads(buf.getvalue().strip())
     assert obj["event"] == "oops"
-    # structlog.processors.dict_tracebacks puts traceback under "exception"
-    assert "exception" in obj
-    # Verify class name is somewhere in the exception data
-    blob = json.dumps(obj["exception"])
-    assert "RuntimeError" in blob
-    assert "boom" in blob
+    assert isinstance(obj["exception"], list)
+    # dict_tracebacks emits a list with one entry per chained exception
+    assert obj["exception"][0]["exc_type"] == "RuntimeError"
+    assert obj["exception"][0]["exc_value"] == "boom"
+    assert "frames" in obj["exception"][0]
+
+
+def test_exception_rendered_as_string_in_text_mode() -> None:
+    """En mode text, on garde l'output lisible humain via format_exc_info."""
+    buf = StringIO()
+    configure(format_="text", level="INFO", stream=buf)
+
+    log = structlog.get_logger("test")
+    try:
+        raise RuntimeError("boom")
+    except RuntimeError:
+        log.error("oops", exc_info=True)
+
+    out = buf.getvalue()
+    assert "oops" in out
+    assert "RuntimeError" in out
+    assert "boom" in out
+    assert "Traceback" in out
 
 
 def test_autouse_reset_clears_config_between_tests() -> None:
