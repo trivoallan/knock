@@ -4,7 +4,7 @@ import respx
 
 from houba.adapters.harbor_http import HarborHttpAdapter
 from houba.errors import HarborAuthError, HarborNotFoundError, HarborTransientError
-from houba.ports.harbor import ArtifactTag, ImmutableTagRule
+from houba.ports.harbor import ArtifactTag, ImmutableTagRule, Label
 
 
 @pytest.fixture()
@@ -154,3 +154,106 @@ def test_list_immutable_tag_rules(adapter: HarborHttpAdapter) -> None:
         assert rules == [
             ImmutableTagRule(id=1, scope_selector="**", tag_selector="v*", disabled=False),
         ]
+
+
+# ---------------------------------------------------------------------------
+# Write methods
+# ---------------------------------------------------------------------------
+
+
+def test_delete_repository(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        route = router.delete(
+            "/api/v2.0/projects/lib/repositories/busybox"
+        ).respond(200)
+        adapter.delete_repository("lib", "busybox")
+        assert route.called
+
+
+def test_delete_artifact(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        route = router.delete(
+            "/api/v2.0/projects/lib/repositories/busybox/artifacts/sha256:abc"
+        ).respond(200)
+        adapter.delete_artifact("lib", "busybox", "sha256:abc")
+        assert route.called
+
+
+def test_create_artifact_tag(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        route = router.post(
+            "/api/v2.0/projects/lib/repositories/busybox/artifacts/sha256:abc/tags",
+            json={"name": "stable"},
+        ).respond(201)
+        adapter.create_artifact_tag("lib", "busybox", "sha256:abc", "stable")
+        assert route.called
+
+
+def test_delete_artifact_tag(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        route = router.delete(
+            "/api/v2.0/projects/lib/repositories/busybox/artifacts/sha256:abc/tags/stable"
+        ).respond(200)
+        adapter.delete_artifact_tag("lib", "busybox", "sha256:abc", "stable")
+        assert route.called
+
+
+def test_ensure_label_creates_when_absent(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        router.get(
+            "/api/v2.0/labels",
+            params={"name": "stable", "scope": "g"},
+        ).respond(200, json=[])
+        router.post(
+            "/api/v2.0/labels",
+            json={"name": "stable", "scope": "g"},
+        ).respond(201, json={"id": 7, "name": "stable"})
+        label = adapter.ensure_label("stable")
+        assert label == Label(id=7, name="stable")
+
+
+def test_ensure_label_returns_existing(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        router.get(
+            "/api/v2.0/labels",
+            params={"name": "stable", "scope": "g"},
+        ).respond(200, json=[{"id": 7, "name": "stable"}])
+        label = adapter.ensure_label("stable")
+        assert label == Label(id=7, name="stable")
+
+
+def test_add_label_to_artifact(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        route = router.post(
+            "/api/v2.0/projects/lib/repositories/busybox/artifacts/sha256:abc/labels",
+            json={"id": 7},
+        ).respond(200)
+        adapter.add_label_to_artifact("lib", "busybox", "sha256:abc", 7)
+        assert route.called
+
+
+def test_update_immutable_tag_rule(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        route = router.put(
+            "/api/v2.0/projects/lib/immutabletagrules/42",
+        ).respond(200)
+        adapter.update_immutable_tag_rule("lib", 42, "**", "v*", disabled=False)
+        assert route.called
+
+
+def test_delete_repository_double_encodes_repo(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        route = router.delete(
+            "/api/v2.0/projects/lib/repositories/foo%252Fbar"
+        ).respond(200)
+        adapter.delete_repository("lib", "foo/bar")
+        assert route.called
+
+
+def test_delete_artifact_double_encodes_repo(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        route = router.delete(
+            "/api/v2.0/projects/lib/repositories/foo%252Fbar/artifacts/sha256:abc"
+        ).respond(200)
+        adapter.delete_artifact("lib", "foo/bar", "sha256:abc")
+        assert route.called
