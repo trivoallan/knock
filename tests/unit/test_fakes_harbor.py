@@ -72,11 +72,15 @@ def test_delete_artifact_is_journaled() -> None:
     assert fake.calls.deleted_artifacts == [("lib", "busybox", "sha256:abc")]
 
 
-def test_create_and_delete_tags_are_journaled() -> None:
+def test_create_artifact_tag_is_journaled() -> None:
     fake = FakeHarborPort()
     fake.create_artifact_tag("lib", "busybox", "sha256:abc", "1.36")
-    fake.delete_artifact_tag("lib", "busybox", "sha256:abc", "old")
     assert fake.calls.created_artifact_tags == [("lib", "busybox", "sha256:abc", "1.36")]
+
+
+def test_delete_artifact_tag_is_journaled() -> None:
+    fake = FakeHarborPort()
+    fake.delete_artifact_tag("lib", "busybox", "sha256:abc", "old")
     assert fake.calls.deleted_artifact_tags == [("lib", "busybox", "sha256:abc", "old")]
 
 
@@ -91,8 +95,11 @@ def test_ensure_label_creates_when_missing() -> None:
     lab = fake.ensure_label("fr.sncf.h2h.source.tag=1.36")
     assert lab.id >= 1
     assert lab.name == "fr.sncf.h2h.source.tag=1.36"
-    # Second call returns same label
+    # Second call with same name returns same label
     assert fake.ensure_label("fr.sncf.h2h.source.tag=1.36").id == lab.id
+    # Second call with a *different* name gets a different id
+    other = fake.ensure_label("fr.sncf.h2h.source.tag=2.0")
+    assert other.id != lab.id
 
 
 def test_add_label_to_artifact_is_journaled() -> None:
