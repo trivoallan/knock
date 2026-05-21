@@ -33,10 +33,10 @@ def test_immutable_tag_rule_dataclass() -> None:
     assert r.disabled is False
 
 
-def test_harbor_port_exposes_expected_methods() -> None:
+def test_harbor_port_has_no_class_level_annotations() -> None:
     hints = get_type_hints(HarborPort)
-    # Verifies dataclasses are importable as type hints from the port module.
-    assert hints == {}  # Protocol has no annotated attrs ; methods are tested via FakeHarborPort
+    # Protocol has no annotated class-level attributes; methods are tested via FakeHarborPort.
+    assert hints == {}
 
 
 def test_harbor_port_protocol_runtime_check() -> None:
