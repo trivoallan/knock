@@ -12,15 +12,24 @@ from houba.ports.image_builder import BuildRequest
 
 class BuildkitAdapter:
     def __init__(self, binary: str | None = None) -> None:
+        # Résolution différée : on valide seulement si binary explicite est fourni.
+        # La résolution PATH se fait au premier appel (lazy) pour ne pas bloquer
+        # la construction du Container dans des environnements sans buildctl.
         if binary is not None:
             if not Path(binary).is_file():
                 raise BuildkitError(f"buildctl binary not found: {binary}")
-            self._bin = binary
-            return
+            self._bin: str | None = binary
+        else:
+            self._bin = None
+
+    def _resolve(self) -> str:
+        if self._bin is not None:
+            return self._bin
         resolved = shutil.which("buildctl")
         if not resolved:
             raise BuildkitError("buildctl binary not found in PATH")
         self._bin = resolved
+        return self._bin
 
     def build_and_push(self, request: BuildRequest) -> None:
         args = [
@@ -35,7 +44,7 @@ class BuildkitAdapter:
             args.append(f"--opt=build-arg:{k}={v}")
         try:
             r = subprocess.run(  # noqa: S603
-                [self._bin, *args],
+                [self._resolve(), *args],
                 check=False,
                 capture_output=True,
                 text=True,

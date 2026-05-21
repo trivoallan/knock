@@ -11,15 +11,24 @@ from houba.errors import GitError
 
 class GitCliAdapter:
     def __init__(self, binary: str | None = None) -> None:
+        # Résolution différée : on valide seulement si binary explicite est fourni.
+        # La résolution PATH se fait au premier appel (lazy) pour ne pas bloquer
+        # la construction du Container dans des environnements sans git.
         if binary is not None:
             if not Path(binary).is_file():
                 raise GitError(f"git binary not found: {binary}")
-            self._bin = binary
-            return
+            self._bin: str | None = binary
+        else:
+            self._bin = None
+
+    def _resolve(self) -> str:
+        if self._bin is not None:
+            return self._bin
         resolved = shutil.which("git")
         if not resolved:
             raise GitError("git binary not found in PATH")
         self._bin = resolved
+        return self._bin
 
     def clone(self, url: str, destination: Path, *, branch: str | None = None) -> None:
         args = ["clone"]
@@ -54,7 +63,7 @@ class GitCliAdapter:
     def _run(self, args: list[str], *, cwd: Path | None) -> str:
         try:
             r = subprocess.run(  # noqa: S603
-                [self._bin, *args],
+                [self._resolve(), *args],
                 cwd=str(cwd) if cwd else None,
                 check=False,
                 capture_output=True,
