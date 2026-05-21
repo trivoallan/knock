@@ -97,9 +97,9 @@ def test_get_artifact_by_tag(adapter: HarborHttpAdapter) -> None:
             "push_time": "2026-05-21T12:00:00Z",
             "labels": [{"name": "fr.sncf.h2h.source.tag=1.36"}],
         }
-        router.get(
-            "/api/v2.0/projects/lib/repositories/busybox/artifacts/latest"
-        ).respond(200, json=body)
+        router.get("/api/v2.0/projects/lib/repositories/busybox/artifacts/latest").respond(
+            200, json=body
+        )
         art = adapter.get_artifact("lib", "busybox", "latest")
         assert art.digest == "sha256:abc"
         assert art.tags == ["1.36", "latest"]
@@ -163,9 +163,7 @@ def test_list_immutable_tag_rules(adapter: HarborHttpAdapter) -> None:
 
 def test_delete_repository(adapter: HarborHttpAdapter) -> None:
     with respx.mock(base_url="https://harbor.example.com") as router:
-        route = router.delete(
-            "/api/v2.0/projects/lib/repositories/busybox"
-        ).respond(200)
+        route = router.delete("/api/v2.0/projects/lib/repositories/busybox").respond(200)
         adapter.delete_repository("lib", "busybox")
         assert route.called
 
@@ -243,9 +241,7 @@ def test_update_immutable_tag_rule(adapter: HarborHttpAdapter) -> None:
 
 def test_delete_repository_double_encodes_repo(adapter: HarborHttpAdapter) -> None:
     with respx.mock(base_url="https://harbor.example.com") as router:
-        route = router.delete(
-            "/api/v2.0/projects/lib/repositories/foo%252Fbar"
-        ).respond(200)
+        route = router.delete("/api/v2.0/projects/lib/repositories/foo%252Fbar").respond(200)
         adapter.delete_repository("lib", "foo/bar")
         assert route.called
 
@@ -262,17 +258,17 @@ def test_delete_artifact_double_encodes_repo(adapter: HarborHttpAdapter) -> None
 def test_write_transient_5xx_is_retried(adapter: HarborHttpAdapter) -> None:
     with respx.mock(base_url="https://harbor.example.com") as router:
         responses = [httpx.Response(503), httpx.Response(503), httpx.Response(200)]
-        route = router.delete(
-            "/api/v2.0/projects/lib/repositories/busybox"
-        ).mock(side_effect=responses)
+        route = router.delete("/api/v2.0/projects/lib/repositories/busybox").mock(
+            side_effect=responses
+        )
         adapter.delete_repository("lib", "busybox")
         assert route.call_count == 3
 
 
 def test_write_404_raises_not_found(adapter: HarborHttpAdapter) -> None:
     with respx.mock(base_url="https://harbor.example.com") as router:
-        router.delete(
-            "/api/v2.0/projects/lib/repositories/busybox/artifacts/sha256:bad"
-        ).respond(404)
+        router.delete("/api/v2.0/projects/lib/repositories/busybox/artifacts/sha256:bad").respond(
+            404
+        )
         with pytest.raises(HarborNotFoundError):
             adapter.delete_artifact("lib", "busybox", "sha256:bad")

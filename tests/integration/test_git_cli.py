@@ -18,9 +18,7 @@ def test_clone_calls_git(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     log = _log(monkeypatch, tmp_path)
-    GitCliAdapter().clone(
-        "https://gitlab.example.com/g/r.git", tmp_path / "r", branch="master"
-    )
+    GitCliAdapter().clone("https://gitlab.example.com/g/r.git", tmp_path / "r", branch="master")
     out = log.read_text()
     assert "clone" in out
     assert "--branch master" in out or "-b master" in out

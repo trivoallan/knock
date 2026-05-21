@@ -48,15 +48,11 @@ class FakeHarborPort:
     def get_artifacts(self, project_name: str, repository_name: str) -> list[Artifact]:
         return list(self._artifacts.get((project_name, repository_name), []))
 
-    def get_artifact(
-        self, project_name: str, repository_name: str, reference: str
-    ) -> Artifact:
+    def get_artifact(self, project_name: str, repository_name: str, reference: str) -> Artifact:
         for art in self._artifacts.get((project_name, repository_name), []):
             if art.digest == reference or reference in art.tags:
                 return art
-        raise HarborNotFoundError(
-            f"{project_name}/{repository_name}@{reference} not found in fake"
-        )
+        raise HarborNotFoundError(f"{project_name}/{repository_name}@{reference} not found in fake")
 
     def list_artifact_tags(
         self, project_name: str, repository_name: str, reference: str
@@ -70,24 +66,18 @@ class FakeHarborPort:
     def delete_repository(self, project_name: str, repository_name: str) -> None:
         self.calls.deleted_repositories.append((project_name, repository_name))
 
-    def delete_artifact(
-        self, project_name: str, repository_name: str, reference: str
-    ) -> None:
+    def delete_artifact(self, project_name: str, repository_name: str, reference: str) -> None:
         self.calls.deleted_artifacts.append((project_name, repository_name, reference))
 
     def create_artifact_tag(
         self, project_name: str, repository_name: str, reference: str, tag: str
     ) -> None:
-        self.calls.created_artifact_tags.append(
-            (project_name, repository_name, reference, tag)
-        )
+        self.calls.created_artifact_tags.append((project_name, repository_name, reference, tag))
 
     def delete_artifact_tag(
         self, project_name: str, repository_name: str, reference: str, tag: str
     ) -> None:
-        self.calls.deleted_artifact_tags.append(
-            (project_name, repository_name, reference, tag)
-        )
+        self.calls.deleted_artifact_tags.append((project_name, repository_name, reference, tag))
 
     def ensure_label(self, name: str) -> Label:
         if name in self._labels:
@@ -104,9 +94,7 @@ class FakeHarborPort:
         reference: str,
         label_id: int,
     ) -> None:
-        self.calls.added_labels.append(
-            (project_name, repository_name, reference, label_id)
-        )
+        self.calls.added_labels.append((project_name, repository_name, reference, label_id))
 
     def update_immutable_tag_rule(
         self,

@@ -62,9 +62,7 @@ class HarborHttpAdapter:
             for item in items
         ]
 
-    def get_artifact(
-        self, project_name: str, repository_name: str, reference: str
-    ) -> Artifact:
+    def get_artifact(self, project_name: str, repository_name: str, reference: str) -> Artifact:
         repo_encoded = quote(quote(repository_name, safe=""), safe="")
         # safe=":" preserves the `sha256:` separator dans les digests. Les noms de tags
         # ne doivent pas contenir de `:` (convention Harbor) sous peine d'être parsés
@@ -84,10 +82,7 @@ class HarborHttpAdapter:
     ) -> list[ArtifactTag]:
         repo_encoded = quote(quote(repository_name, safe=""), safe="")
         ref_encoded = quote(reference, safe=":")
-        path = (
-            f"/projects/{project_name}/repositories/{repo_encoded}"
-            f"/artifacts/{ref_encoded}/tags"
-        )
+        path = f"/projects/{project_name}/repositories/{repo_encoded}/artifacts/{ref_encoded}/tags"
         items = list(self._paginate(path))
         return [ArtifactTag(name=i["name"], immutable=i.get("immutable", False)) for i in items]
 
@@ -104,15 +99,10 @@ class HarborHttpAdapter:
         repo_encoded = quote(quote(repository_name, safe=""), safe="")
         self._request("DELETE", f"/projects/{project_name}/repositories/{repo_encoded}")
 
-    def delete_artifact(
-        self, project_name: str, repository_name: str, reference: str
-    ) -> None:
+    def delete_artifact(self, project_name: str, repository_name: str, reference: str) -> None:
         repo_encoded = quote(quote(repository_name, safe=""), safe="")
         ref_encoded = quote(reference, safe=":")
-        path = (
-            f"/projects/{project_name}/repositories/{repo_encoded}"
-            f"/artifacts/{ref_encoded}"
-        )
+        path = f"/projects/{project_name}/repositories/{repo_encoded}/artifacts/{ref_encoded}"
         self._request("DELETE", path)
 
     def create_artifact_tag(
@@ -120,10 +110,7 @@ class HarborHttpAdapter:
     ) -> None:
         repo_encoded = quote(quote(repository_name, safe=""), safe="")
         ref_encoded = quote(reference, safe=":")
-        path = (
-            f"/projects/{project_name}/repositories/{repo_encoded}"
-            f"/artifacts/{ref_encoded}/tags"
-        )
+        path = f"/projects/{project_name}/repositories/{repo_encoded}/artifacts/{ref_encoded}/tags"
         self._request("POST", path, json={"name": tag})
 
     def delete_artifact_tag(
@@ -157,8 +144,7 @@ class HarborHttpAdapter:
         repo_encoded = quote(quote(repository_name, safe=""), safe="")
         ref_encoded = quote(reference, safe=":")
         path = (
-            f"/projects/{project_name}/repositories/{repo_encoded}"
-            f"/artifacts/{ref_encoded}/labels"
+            f"/projects/{project_name}/repositories/{repo_encoded}/artifacts/{ref_encoded}/labels"
         )
         self._request("POST", path, json={"id": label_id})
 
