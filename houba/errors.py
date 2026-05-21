@@ -1,4 +1,4 @@
-"""Hiérarchie d'exceptions et table des exit codes du CLI h2h.
+"""Hiérarchie d'exceptions et table des exit codes du CLI houba.
 
 Voir spec §6.3.
 """

@@ -1,4 +1,4 @@
-"""Point d'entrée Typer de la CLI h2h.
+"""Point d'entrée Typer de la CLI houba.
 
 Voir spec §3 et §6.3 (mapping exception → exit code).
 """
