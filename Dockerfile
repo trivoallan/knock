@@ -3,7 +3,7 @@ FROM python:3.12-slim AS build
 
 WORKDIR /src
 COPY pyproject.toml uv.lock ./
-COPY hub2hub ./hub2hub
+COPY houba ./houba
 
 RUN pip install --no-cache-dir uv && uv build
 

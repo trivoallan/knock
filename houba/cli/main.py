@@ -10,8 +10,8 @@ import importlib.metadata
 import typer
 from pydantic import ValidationError
 
-from hub2hub.cli import dev as dev_cli
-from hub2hub.errors import H2HError, exit_code_for
+from houba.cli import dev as dev_cli
+from houba.errors import H2HError, exit_code_for
 
 app = typer.Typer(name="h2h", no_args_is_help=True, add_completion=False)
 app.add_typer(dev_cli.app, name="dev", help="Outils de développement (capture de fixtures, debug)")
@@ -21,7 +21,7 @@ app.add_typer(dev_cli.app, name="dev", help="Outils de développement (capture d
 def version() -> None:
     """Affiche la version du CLI."""
     try:
-        v = importlib.metadata.version("hub2hub")
+        v = importlib.metadata.version("houba")
     except importlib.metadata.PackageNotFoundError:
         v = "0.1.0-dev"
     typer.echo(v)

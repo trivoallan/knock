@@ -2,8 +2,8 @@ import httpx
 import pytest
 import respx
 
-from hub2hub.adapters.harbor_http import HarborHttpAdapter
-from hub2hub.errors import HarborAuthError, HarborNotFoundError, HarborTransientError
+from houba.adapters.harbor_http import HarborHttpAdapter
+from houba.errors import HarborAuthError, HarborNotFoundError, HarborTransientError
 
 
 @pytest.fixture()

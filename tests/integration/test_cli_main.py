@@ -5,8 +5,8 @@ import typer
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
-from hub2hub.cli.main import _run, app
-from hub2hub.errors import ConfigError, HarborAuthError, NoTagsToImportError
+from houba.cli.main import _run, app
+from houba.errors import ConfigError, HarborAuthError, NoTagsToImportError
 
 
 def test_h2h_version_outputs_version_string() -> None:
@@ -30,7 +30,7 @@ def test_run_maps_validation_error_to_exit_3() -> None:
     def _raise() -> None:
         raise ValidationError.from_exception_data("Settings", [])
 
-    with patch("hub2hub.cli.main.app", side_effect=_raise):
+    with patch("houba.cli.main.app", side_effect=_raise):
         with pytest.raises(typer.Exit) as excinfo:
             _run()
     assert excinfo.value.exit_code == 3
@@ -48,7 +48,7 @@ def test_run_maps_h2h_errors_to_exit_codes(exc: Exception, expected_code: int) -
     def _raise() -> None:
         raise exc
 
-    with patch("hub2hub.cli.main.app", side_effect=_raise):
+    with patch("houba.cli.main.app", side_effect=_raise):
         with pytest.raises(typer.Exit) as excinfo:
             _run()
     assert excinfo.value.exit_code == expected_code

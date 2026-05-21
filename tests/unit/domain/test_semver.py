@@ -1,6 +1,6 @@
 import pytest
 
-from hub2hub.domain.semver import sort_semver
+from houba.domain.semver import sort_semver
 
 
 def test_basic_ascending_order() -> None:

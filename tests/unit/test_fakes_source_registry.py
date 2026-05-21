@@ -1,4 +1,4 @@
-from hub2hub.ports.source_registry import SourceImage
+from houba.ports.source_registry import SourceImage
 from tests.fakes.source_registry import FakeSourceRegistryPort
 
 

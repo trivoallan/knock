@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from hub2hub.adapters.skopeo_cli import SkopeoAdapter
-from hub2hub.errors import SkopeoError
+from houba.adapters.skopeo_cli import SkopeoAdapter
+from houba.errors import SkopeoError
 
 
 def test_list_tags(fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

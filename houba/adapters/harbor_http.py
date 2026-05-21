@@ -9,13 +9,13 @@ from urllib.parse import quote
 import httpx
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from hub2hub.errors import (
+from houba.errors import (
     HarborAuthError,
     HarborError,
     HarborNotFoundError,
     HarborTransientError,
 )
-from hub2hub.ports.harbor import Artifact, Repository
+from houba.ports.harbor import Artifact, Repository
 
 PAGE_SIZE = 100
 MAX_ATTEMPTS = 5

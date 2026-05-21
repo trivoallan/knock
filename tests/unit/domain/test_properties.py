@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from hub2hub.domain.properties import Properties, parse_properties
-from hub2hub.errors import PropertiesValidationError
+from houba.domain.properties import Properties, parse_properties
+from houba.errors import PropertiesValidationError
 
 FIXTURES = Path(__file__).parents[2] / "fixtures" / "synthetic"
 

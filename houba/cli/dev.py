@@ -10,7 +10,7 @@ from typing import Annotated
 
 import typer
 
-from hub2hub.cli._di import build_container
+from houba.cli._di import build_container
 
 app = typer.Typer(name="dev", help="Outils de développement (capture de fixtures, debug)")
 

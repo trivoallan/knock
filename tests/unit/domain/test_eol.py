@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from hub2hub.domain.eol import (
+from houba.domain.eol import (
     EolEntry,
     parse_markdown_table,
     resolve_eol_for_tag,

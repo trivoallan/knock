@@ -5,7 +5,7 @@ import pytest
 import respx
 from typer.testing import CliRunner
 
-from hub2hub.cli.main import app
+from houba.cli.main import app
 
 
 @pytest.fixture()

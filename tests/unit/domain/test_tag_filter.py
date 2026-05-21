@@ -2,8 +2,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from hub2hub.domain.properties import Properties, parse_properties
-from hub2hub.domain.tag_filter import HarborTagState, TagsDecision, compute_tags_to_import
+from houba.domain.properties import Properties, parse_properties
+from houba.domain.tag_filter import HarborTagState, TagsDecision, compute_tags_to_import
 
 
 def _props(yaml: str) -> Properties:
@@ -149,7 +149,7 @@ def test_to_delete_when_tag_absent_from_source() -> None:
 
 @pytest.mark.parametrize("bad_regex", ["[unclosed", "*invalid"])
 def test_invalid_regex_raises(bad_regex: str) -> None:
-    from hub2hub.errors import PropertiesValidationError
+    from houba.errors import PropertiesValidationError
 
     yaml = BASE_YAML + f"\n  include_regex: '{bad_regex}'\n"
     with pytest.raises(PropertiesValidationError):

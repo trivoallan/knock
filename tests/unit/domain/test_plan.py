@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from hub2hub.domain.plan import ImportPlan, build_plan
-from hub2hub.domain.properties import parse_properties
+from houba.domain.plan import ImportPlan, build_plan
+from houba.domain.properties import parse_properties
 
 YAML = """
 source:

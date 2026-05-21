@@ -10,9 +10,9 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from hub2hub.domain.properties import Properties
-from hub2hub.domain.semver import sort_semver
-from hub2hub.errors import PropertiesValidationError
+from houba.domain.properties import Properties
+from houba.domain.semver import sort_semver
+from houba.errors import PropertiesValidationError
 
 DIGEST_CHANGE_GRACE = timedelta(days=7)
 _SEMVER_RE = re.compile(r"^v?\d+(\.\d+){0,2}(-[0-9A-Za-z.-]+)?$")

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from hub2hub.ports.source_registry import SourceImage
+from houba.ports.source_registry import SourceImage
 
 
 class FakeSourceRegistryPort:

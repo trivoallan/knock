@@ -6,8 +6,8 @@ import json
 import shutil
 import subprocess
 
-from hub2hub.errors import SkopeoError
-from hub2hub.ports.source_registry import SourceImage
+from houba.errors import SkopeoError
+from houba.ports.source_registry import SourceImage
 
 
 class SkopeoAdapter:
