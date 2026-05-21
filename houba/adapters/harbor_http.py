@@ -1,4 +1,4 @@
-"""Adaptateur HTTP pour Harbor v2 (méthodes de lecture)."""
+"""Adaptateur HTTP pour Harbor v2 (méthodes de lecture et d'écriture)."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from houba.errors import (
     HarborNotFoundError,
     HarborTransientError,
 )
-from houba.ports.harbor import Artifact, ArtifactTag, ImmutableTagRule, Repository
+from houba.ports.harbor import Artifact, ArtifactTag, ImmutableTagRule, Label, Repository
 
 PAGE_SIZE = 100
 MAX_ATTEMPTS = 5
@@ -29,6 +29,10 @@ class HarborHttpAdapter:
             timeout=httpx.Timeout(30.0, connect=10.0),
             headers={"Accept": "application/json"},
         )
+
+    # ------------------------------------------------------------------
+    # Read methods
+    # ------------------------------------------------------------------
 
     def get_repositories(self, project_name: str) -> list[Repository]:
         items = list(self._paginate(f"/projects/{project_name}/repositories"))
@@ -92,6 +96,92 @@ class HarborHttpAdapter:
         items = list(self._paginate(path))
         return [_parse_immutable_rule(i) for i in items]
 
+    # ------------------------------------------------------------------
+    # Write methods
+    # ------------------------------------------------------------------
+
+    def delete_repository(self, project_name: str, repository_name: str) -> None:
+        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        self._request("DELETE", f"/projects/{project_name}/repositories/{repo_encoded}")
+
+    def delete_artifact(
+        self, project_name: str, repository_name: str, reference: str
+    ) -> None:
+        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        ref_encoded = quote(reference, safe=":")
+        path = (
+            f"/projects/{project_name}/repositories/{repo_encoded}"
+            f"/artifacts/{ref_encoded}"
+        )
+        self._request("DELETE", path)
+
+    def create_artifact_tag(
+        self, project_name: str, repository_name: str, reference: str, tag: str
+    ) -> None:
+        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        ref_encoded = quote(reference, safe=":")
+        path = (
+            f"/projects/{project_name}/repositories/{repo_encoded}"
+            f"/artifacts/{ref_encoded}/tags"
+        )
+        self._request("POST", path, json={"name": tag})
+
+    def delete_artifact_tag(
+        self, project_name: str, repository_name: str, reference: str, tag: str
+    ) -> None:
+        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        ref_encoded = quote(reference, safe=":")
+        tag_encoded = quote(tag, safe="")
+        path = (
+            f"/projects/{project_name}/repositories/{repo_encoded}"
+            f"/artifacts/{ref_encoded}/tags/{tag_encoded}"
+        )
+        self._request("DELETE", path)
+
+    def ensure_label(self, name: str) -> Label:
+        existing = self._get("/labels", params={"name": name, "scope": "g"})
+        if existing:
+            item = existing[0]
+            return Label(id=item["id"], name=item["name"])
+        created = self._request("POST", "/labels", json={"name": name, "scope": "g"})
+        return Label(id=created["id"], name=created["name"])  # type: ignore[index]
+
+    def add_label_to_artifact(
+        self,
+        project_name: str,
+        repository_name: str,
+        reference: str,
+        label_id: int,
+    ) -> None:
+        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        ref_encoded = quote(reference, safe=":")
+        path = (
+            f"/projects/{project_name}/repositories/{repo_encoded}"
+            f"/artifacts/{ref_encoded}/labels"
+        )
+        self._request("POST", path, json={"id": label_id})
+
+    def update_immutable_tag_rule(
+        self,
+        project_name: str,
+        rule_id: int,
+        scope_selector: str,
+        tag_selector: str,
+        disabled: bool,
+    ) -> None:
+        path = f"/projects/{project_name}/immutabletagrules/{rule_id}"
+        payload = {
+            "id": rule_id,
+            "scope_selector": {"repository": {"decoration": scope_selector}},
+            "tag_selector": {"decoration": "matches", "pattern": tag_selector},
+            "disabled": disabled,
+        }
+        self._request("PUT", path, json=payload)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
     def _paginate(self, path: str) -> Iterable[dict[str, Any]]:
         page = 1
         while True:
@@ -107,9 +197,9 @@ class HarborHttpAdapter:
         wait=wait_exponential(multiplier=0.1, max=2.0),
         reraise=True,
     )
-    def _get(self, path: str, *, params: dict[str, Any] | None = None) -> Any:
+    def _call(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         try:
-            r = self._client.get(self._base + path, params=params)
+            r = self._client.request(method, self._base + path, **kwargs)
         except httpx.HTTPError as e:
             raise HarborTransientError(str(e)) from e
 
@@ -121,7 +211,23 @@ class HarborHttpAdapter:
             raise HarborTransientError(f"{r.status_code}: {r.text}")
         if not r.is_success:
             raise HarborError(f"{r.status_code}: {r.text}")
-        return r.json()
+        return r
+
+    def _get(self, path: str, *, params: dict[str, Any] | None = None) -> Any:
+        return self._call("GET", path, params=params).json()
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: Any = None,
+        params: dict[str, Any] | None = None,
+    ) -> Any | None:
+        r = self._call(method, path, json=json, params=params)
+        if not r.content:
+            return None
+        return r.json() or None
 
 
 def _parse_immutable_rule(payload: dict[str, Any]) -> ImmutableTagRule:
