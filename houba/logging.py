@@ -1,4 +1,4 @@
-"""Configuration de structlog pour le CLI h2h.
+"""Configuration de structlog pour le CLI houba.
 
 Voir spec §6.3 — logs structurés JSON/text.
 
