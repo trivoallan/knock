@@ -44,9 +44,7 @@ def build_container(settings: Settings | None = None) -> Container:
     )
     notifier = None
     if settings.teams_webhook_url is not None:
-        notifier = TeamsWebhookAdapter(
-            webhook_url=settings.teams_webhook_url.get_secret_value()
-        )
+        notifier = TeamsWebhookAdapter(webhook_url=settings.teams_webhook_url.get_secret_value())
     return Container(
         settings=settings,
         harbor=harbor,
