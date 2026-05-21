@@ -506,6 +506,39 @@ def test_harbor_settings_isolated(monkeypatch: pytest.MonkeyPatch) -> None:
     """Les sous-blocs Settings doivent supporter une instanciation directe pour les tests."""
     h = HarborSettings(url="https://x", user="u", password="p")
     assert h.password.get_secret_value() == "p"
+
+
+def test_invalid_log_level_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Une valeur de `H2H_LOG_LEVEL` hors du Literal doit lever ValidationError."""
+    monkeypatch.setenv("H2H_HARBOR_URL", "https://h")
+    monkeypatch.setenv("H2H_HARBOR_USER", "u")
+    monkeypatch.setenv("H2H_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("H2H_GITLAB_URL", "https://g")
+    monkeypatch.setenv("H2H_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("H2H_GITLAB_GROUP", "g")
+    monkeypatch.setenv("H2H_LOG_LEVEL", "TRACE")
+
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_endoflife_url_validated_but_str(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`endoflife_url` est validé comme URL mais exposé comme `str` pour httpx."""
+    monkeypatch.setenv("H2H_HARBOR_URL", "https://h")
+    monkeypatch.setenv("H2H_HARBOR_USER", "u")
+    monkeypatch.setenv("H2H_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("H2H_GITLAB_URL", "https://g")
+    monkeypatch.setenv("H2H_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("H2H_GITLAB_GROUP", "g")
+    monkeypatch.setenv("H2H_ENDOFLIFE_URL", "https://eol.test/api")
+
+    settings = Settings()
+    assert isinstance(settings.endoflife_url, str)
+    assert settings.endoflife_url == "https://eol.test/api"
+
+    monkeypatch.setenv("H2H_ENDOFLIFE_URL", "not-a-url")
+    with pytest.raises(ValidationError):
+        Settings()
 ```
 
 - [ ] **Step 2 : Lancer le test pour vérifier qu'il échoue**
@@ -518,55 +551,106 @@ Expected : ImportError sur `hub2hub.config`.
 
 - [ ] **Step 3 : Implémenter `hub2hub/config.py`**
 
+> **Note architecturale** : le contrat env du spec §6.1 utilise un seul underscore (`H2H_HARBOR_URL`). Pour préserver ce contrat *et* l'API ergonomique `settings.harbor.url`, chaque sous-bloc est un `BaseSettings` avec son propre `env_prefix`. La racine les compose via `default_factory`. Une première version utilisait `BaseModel` + `env_nested_delimiter="__"` (qui exigerait `H2H_HARBOR__URL`) et a été abandonnée car incompatible avec le spec et avec les tests ci-dessus.
+
 ```python
 """Lecture de la configuration depuis les variables d'environnement.
 
 Aucun autre module ne doit lire directement os.environ.
 Voir spec §6.1.
+
+Architecture : chaque sous-bloc est un `BaseSettings` avec son propre
+`env_prefix`. Le bloc racine les compose via `default_factory`. Cela
+préserve le contrat single-underscore du spec (`H2H_HARBOR_URL` plutôt
+que `H2H_HARBOR__URL`) tout en gardant l'API ergonomique
+`settings.harbor.url`.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, HttpUrl, SecretStr
+from pydantic import AfterValidator, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class HarborSettings(BaseModel):
+def _validate_http_url(value: str) -> str:
+    """Valide la valeur comme URL via Pydantic mais expose une `str`.
+
+    Les consommateurs downstream (httpx, urllib.parse.urljoin) attendent une
+    `str`, pas un wrapper `HttpUrl`. On valide à la lecture de la config puis on
+    stocke la chaîne brute.
+    """
+    HttpUrl(value)  # lève ValidationError si malformée
+    return value
+
+
+HttpUrlStr = Annotated[str, AfterValidator(_validate_http_url)]
+
+
+class HarborSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="H2H_HARBOR_",
+        env_file=None,
+        extra="ignore",
+    )
+
     url: str
     user: str
     password: SecretStr
     project_default: str | None = None
 
 
-class HarborOrangeSettings(BaseModel):
+class HarborOrangeSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="H2H_HARBOR_ORANGE_",
+        env_file=None,
+        extra="ignore",
+    )
+
     url: str | None = None
     user: str | None = None
     password: SecretStr | None = None
 
 
-class GitLabSettings(BaseModel):
+class GitLabSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="H2H_GITLAB_",
+        env_file=None,
+        extra="ignore",
+    )
+
     url: str
     token: SecretStr
     group: str
 
 
+def _build_harbor() -> HarborSettings:
+    return HarborSettings.model_validate({})
+
+
+def _build_harbor_orange() -> HarborOrangeSettings:
+    return HarborOrangeSettings.model_validate({})
+
+
+def _build_gitlab() -> GitLabSettings:
+    return GitLabSettings.model_validate({})
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="H2H_",
-        env_nested_delimiter="__",
         env_file=None,
         extra="ignore",
     )
 
-    harbor: HarborSettings
-    harbor_orange: HarborOrangeSettings = Field(default_factory=HarborOrangeSettings)
-    gitlab: GitLabSettings
+    harbor: HarborSettings = Field(default_factory=_build_harbor)
+    harbor_orange: HarborOrangeSettings = Field(default_factory=_build_harbor_orange)
+    gitlab: GitLabSettings = Field(default_factory=_build_gitlab)
 
     teams_webhook_url: SecretStr | None = None
-    endoflife_url: HttpUrl = HttpUrl("https://endoflife.date/api")
+    endoflife_url: HttpUrlStr = "https://endoflife.date/api"
 
     log_format: Literal["text", "json"] = "text"
     log_level: Literal["DEBUG", "INFO", "WARN", "WARNING", "ERROR"] = "INFO"
@@ -584,7 +668,7 @@ class Settings(BaseSettings):
 uv run pytest tests/unit/test_config.py -v
 ```
 
-Expected : 5 tests pass.
+Expected : 7 tests pass.
 
 - [ ] **Step 5 : Commit**
 
