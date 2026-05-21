@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import httpx
 import pytest
 import respx
-import httpx
 
 from houba.adapters.gitlab_http import GitLabHttpAdapter
 from houba.errors import GitLabError
@@ -16,9 +16,10 @@ def adapter() -> GitLabHttpAdapter:
 
 def test_find_project_by_path_returns_project(adapter: GitLabHttpAdapter) -> None:
     with respx.mock(base_url="https://gitlab.example.com") as router:
-        router.get(
-            "/api/v4/projects/group%2Frepo"
-        ).respond(200, json={"id": 42, "path_with_namespace": "group/repo", "default_branch": "main"})
+        router.get("/api/v4/projects/group%2Frepo").respond(
+            200,
+            json={"id": 42, "path_with_namespace": "group/repo", "default_branch": "main"},
+        )
         proj = adapter.find_project_by_path("group/repo")
         assert proj == GitLabProject(id=42, path="group/repo", default_branch="main")
 
@@ -71,7 +72,10 @@ def test_transient_5xx_retried(adapter: GitLabHttpAdapter) -> None:
     with respx.mock(base_url="https://gitlab.example.com") as router:
         responses = [
             httpx.Response(503),
-            httpx.Response(200, json={"id": 1, "path_with_namespace": "g/r", "default_branch": "master"}),
+            httpx.Response(
+                200,
+                json={"id": 1, "path_with_namespace": "g/r", "default_branch": "master"},
+            ),
         ]
         route = router.get("/api/v4/projects/g%2Fr").mock(side_effect=responses)
         adapter.find_project_by_path("g/r")
