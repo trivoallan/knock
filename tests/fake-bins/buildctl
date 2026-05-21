@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+# Fake buildctl pour tests d'intégration.
+# Scénario via FAKE_BUILDCTL_SCENARIO. Trace les arguments dans FAKE_BUILDCTL_LOG.
+
+set -e
+
+if [ -n "${FAKE_BUILDCTL_LOG:-}" ]; then
+    echo "$@" >> "$FAKE_BUILDCTL_LOG"
+fi
+
+case "${FAKE_BUILDCTL_SCENARIO:-success}" in
+    success)
+        echo "#1 [internal] load build definition"
+        echo "#1 transferring dockerfile: 100B done"
+        echo "#1 DONE 0.0s"
+        ;;
+    fail)
+        echo "buildctl: simulated failure" >&2
+        exit 1
+        ;;
+    *)
+        echo "fake-buildctl: unknown scenario ${FAKE_BUILDCTL_SCENARIO}" >&2
+        exit 99
+        ;;
+esac
