@@ -11,7 +11,7 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, Field, ValidationError
 
-from hub2hub.errors import PropertiesValidationError
+from houba.errors import PropertiesValidationError
 
 
 class Source(BaseModel):

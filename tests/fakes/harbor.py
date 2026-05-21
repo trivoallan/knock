@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from hub2hub.ports.harbor import Artifact, Repository
+from houba.ports.harbor import Artifact, Repository
 
 
 class FakeHarborPort:

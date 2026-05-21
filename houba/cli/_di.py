@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from hub2hub.adapters.harbor_http import HarborHttpAdapter
-from hub2hub.adapters.skopeo_cli import SkopeoAdapter
-from hub2hub.adapters.system_clock import SystemClock
-from hub2hub.config import Settings
+from houba.adapters.harbor_http import HarborHttpAdapter
+from houba.adapters.skopeo_cli import SkopeoAdapter
+from houba.adapters.system_clock import SystemClock
+from houba.config import Settings
 
 
 @dataclass(frozen=True)

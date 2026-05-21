@@ -6,7 +6,7 @@ from io import StringIO
 import pytest
 import structlog
 
-from hub2hub.logging import configure
+from houba.logging import configure
 
 
 @pytest.fixture(autouse=True)

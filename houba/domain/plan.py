@@ -9,8 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from hub2hub.domain.labels import build_labels
-from hub2hub.domain.properties import Properties
+from houba.domain.labels import build_labels
+from houba.domain.properties import Properties
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from hub2hub.domain.purge import compute_archives_to_purge
+from houba.domain.purge import compute_archives_to_purge
 
 
 def test_archives_older_than_30_days_purged_keeping_latest_2() -> None:

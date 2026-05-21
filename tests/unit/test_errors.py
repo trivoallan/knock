@@ -1,6 +1,6 @@
 import pytest
 
-from hub2hub.errors import (
+from houba.errors import (
     AdapterError,
     ConfigError,
     DomainError,

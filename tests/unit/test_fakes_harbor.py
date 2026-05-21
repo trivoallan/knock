@@ -1,4 +1,4 @@
-from hub2hub.ports.harbor import Artifact, Repository
+from houba.ports.harbor import Artifact, Repository
 from tests.fakes.harbor import FakeHarborPort
 
 

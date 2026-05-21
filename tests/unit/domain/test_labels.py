@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from hub2hub.domain.labels import build_labels
+from houba.domain.labels import build_labels
 
 
 def test_required_labels_present() -> None:
