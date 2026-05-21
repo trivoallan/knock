@@ -43,6 +43,14 @@ def test_get_artifacts_url_double_encodes_repository(adapter: HarborHttpAdapter)
         assert route.called
 
 
+def test_auth_error_maps_403(adapter: HarborHttpAdapter) -> None:
+    """Spec §6.3 : HarborAuthError couvre 401 ET 403 (permissions robot insuffisantes)."""
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        router.get("/api/v2.0/projects/lib/repositories").respond(403, json={"errors": []})
+        with pytest.raises(HarborAuthError):
+            adapter.get_repositories("lib")
+
+
 def test_auth_error_maps_401(adapter: HarborHttpAdapter) -> None:
     with respx.mock(base_url="https://harbor.example.com") as router:
         router.get("/api/v2.0/projects/lib/repositories").respond(401, json={"errors": []})

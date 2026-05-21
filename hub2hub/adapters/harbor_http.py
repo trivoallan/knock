@@ -42,6 +42,9 @@ class HarborHttpAdapter:
         ]
 
     def get_artifacts(self, project_name: str, repository_name: str) -> list[Artifact]:
+        # Harbor exige un double encodage du nom de repo : les `/` doivent rester
+        # encodés côté serveur après le routing. Voir vars/HarborApi.groovy et
+        # ci/harbor.py — bug historique reproduit ici intentionnellement.
         repo_encoded = quote(quote(repository_name, safe=""), safe="")
         path = f"/projects/{project_name}/repositories/{repo_encoded}/artifacts"
         items = list(self._paginate(path))
@@ -76,8 +79,8 @@ class HarborHttpAdapter:
         except httpx.HTTPError as e:
             raise HarborTransientError(str(e)) from e
 
-        if r.status_code == 401:
-            raise HarborAuthError(r.text)
+        if r.status_code in (401, 403):
+            raise HarborAuthError(f"{r.status_code}: {r.text}")
         if r.status_code == 404:
             raise HarborNotFoundError(f"{path}: {r.text}")
         if 500 <= r.status_code < 600:
