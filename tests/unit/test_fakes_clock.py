@@ -20,4 +20,4 @@ def test_fake_clock_advance() -> None:
 
 def test_fake_clock_rejects_naive_datetime() -> None:
     with pytest.raises(ValueError, match="timezone-aware"):
-        FakeClock(datetime(2026, 1, 1))  # noqa: DTZ001 — exprès
+        FakeClock(datetime(2026, 1, 1))
