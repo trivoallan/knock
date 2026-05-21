@@ -10,7 +10,7 @@ les snapshot tests de la Phase A.
 - Accès lecture au Harbor de production (`HOUBA_HARBOR_URL`, robot account
   read-only `pic-dosn_hcr-prod-sharedlibs` ou équivalent).
 - Variables d'environnement `HOUBA_*` valorisées (cf. spec §6.1).
-- Image `h2h-cli` buildée localement (`docker build -t h2h-cli:dev .`) ou
+- Image `houba` buildée localement (`docker build -t houba:dev .`) ou
   exécution via `uv run h2h`.
 
 ## Sélection des produits
