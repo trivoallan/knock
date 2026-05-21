@@ -62,6 +62,9 @@ class HarborHttpAdapter:
         self, project_name: str, repository_name: str, reference: str
     ) -> Artifact:
         repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        # safe=":" preserves the `sha256:` separator dans les digests. Les noms de tags
+        # ne doivent pas contenir de `:` (convention Harbor) sous peine d'être parsés
+        # comme des digests par l'API.
         ref_encoded = quote(reference, safe=":")
         path = f"/projects/{project_name}/repositories/{repo_encoded}/artifacts/{ref_encoded}"
         item = self._get(path)
