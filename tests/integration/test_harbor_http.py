@@ -198,7 +198,7 @@ def test_delete_artifact_tag(adapter: HarborHttpAdapter) -> None:
         assert route.called
 
 
-def test_ensure_label_creates_when_absent(adapter: HarborHttpAdapter) -> None:
+def test_ensure_label_creates_when_missing(adapter: HarborHttpAdapter) -> None:
     with respx.mock(base_url="https://harbor.example.com") as router:
         router.get(
             "/api/v2.0/labels",
@@ -257,3 +257,22 @@ def test_delete_artifact_double_encodes_repo(adapter: HarborHttpAdapter) -> None
         ).respond(200)
         adapter.delete_artifact("lib", "foo/bar", "sha256:abc")
         assert route.called
+
+
+def test_write_transient_5xx_is_retried(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        responses = [httpx.Response(503), httpx.Response(503), httpx.Response(200)]
+        route = router.delete(
+            "/api/v2.0/projects/lib/repositories/busybox"
+        ).mock(side_effect=responses)
+        adapter.delete_repository("lib", "busybox")
+        assert route.call_count == 3
+
+
+def test_write_404_raises_not_found(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        router.delete(
+            "/api/v2.0/projects/lib/repositories/busybox/artifacts/sha256:bad"
+        ).respond(404)
+        with pytest.raises(HarborNotFoundError):
+            adapter.delete_artifact("lib", "busybox", "sha256:bad")
