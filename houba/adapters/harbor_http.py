@@ -144,7 +144,8 @@ class HarborHttpAdapter:
             item = existing[0]
             return Label(id=item["id"], name=item["name"])
         created = self._request("POST", "/labels", json={"name": name, "scope": "g"})
-        return Label(id=created["id"], name=created["name"])  # type: ignore[index]
+        assert created is not None, "Harbor POST /labels returned empty body"
+        return Label(id=created["id"], name=created["name"])
 
     def add_label_to_artifact(
         self,
@@ -227,7 +228,7 @@ class HarborHttpAdapter:
         r = self._call(method, path, json=json, params=params)
         if not r.content:
             return None
-        return r.json() or None
+        return r.json()
 
 
 def _parse_immutable_rule(payload: dict[str, Any]) -> ImmutableTagRule:
