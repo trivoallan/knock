@@ -1951,6 +1951,33 @@ git commit -m "feat(python): ajoute commande h2h dev capture (fixtures depuis Ha
 ## Groupe 5 — Modules `domain/`
 
 > Pour chaque tâche de ce groupe, l'implémenteur doit **commencer par lire** la fonction Groovy équivalente dans `vars/importProduct.groovy` ou ailleurs (numéro de ligne donné en référence) avant d'écrire le test, pour extraire le comportement réel. Le test précède toujours le code Python.
+>
+> **⚠️ Observation transversale (découverte pendant Tasks 14, 15, 17)** : tous
+> les modules `domain/` portés ici sont des **redéfinitions clean-slate** des
+> fonctions Groovy équivalentes, **PAS** des portages iso-fonctionnels.
+> Le spec §12 ("Refonte du protocole Hub2Hub ou du contenu des `properties.yml`
+> clients : iso-fonctionnel.") n'est donc pas respecté par ce que produit
+> Phase A. Listes (non-exhaustives) des écarts documentés dans le rapport
+> d'implémentation de chaque tâche :
+>
+> - **T14 properties** : schéma legacy entier (source.image_url, infos.*,
+>   obsolete_tags, no_purge_on_tags, private_registry_credentials, etc.)
+>   absent du `Properties` Pydantic minimaliste.
+> - **T15 labels** : labels legacy (`fr.sncf.h2h.build-date`,
+>   `fr.sncf.h2h.gitlab_url`, etc., 18 labels du `Dockerfile.template`)
+>   non émis. `deleteProduct.groovy` lit `fr.sncf.h2h.gitlab_url`
+>   et casserait si une image était produite avec le nouveau `build_labels`.
+> - **T17 tag_filter** : 16 comportements Groovy non portés
+>   (rename, aliases, `tag.auto`, prescriptions, `.sig` filtering, "Tags To
+>   Force", `OBSOLETE_TAGS`, `force` flag…). Le nouveau ajoute `to_update`
+>   avec délai 7 jours et `to_delete` — comportements **inédits** vs Groovy.
+>
+> **Conséquence pour la stratégie big-bang (spec §10)** : avant cutover,
+> Phase B/C devra soit (a) étendre les modules domain/ et le schéma
+> properties.yml pour atteindre l'iso-fonctionnel, soit (b) déployer une
+> couche de mapping legacy → new au point d'entrée (use_case) avec
+> reconciliation de la sémantique. À brainstormer en sortie de Phase A
+> AVANT d'écrire le plan Phase B.
 
 ### Task 13 : `domain/semver.py` — tri sémantique des tags
 
