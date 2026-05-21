@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+# Fake git pour tests d'intégration.
+# Trace les arguments dans FAKE_GIT_LOG ; renvoie des sorties prédéfinies selon les
+# sous-commandes attendues. Comportement par défaut : success (exit 0).
+
+set -e
+
+if [ -n "${FAKE_GIT_LOG:-}" ]; then
+    echo "$@" >> "$FAKE_GIT_LOG"
+fi
+
+case "$1" in
+    rev-parse)
+        # rev-parse HEAD → renvoie la révision factice
+        echo "${FAKE_GIT_REVISION:-abc123def456}"
+        ;;
+    clone|checkout|add|commit|push|tag)
+        if [ "${FAKE_GIT_SCENARIO:-success}" = "fail" ]; then
+            echo "git $1: simulated failure" >&2
+            exit 1
+        fi
+        ;;
+    *)
+        # Autres sous-commandes : silencieux, exit 0
+        :
+        ;;
+esac
