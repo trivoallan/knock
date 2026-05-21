@@ -1,0 +1,63 @@
+# CI/CD du repo houba — CLI Python de la pipeline Hub2Hub.
+# Pour le projet métier Hub2Hub (Jenkins Shared Library Groovy), voir le repo shared-libs.
+
+stages:
+  - test
+  - build
+
+.python_base:
+  image: python:3.12-slim
+  before_script:
+    - pip install --no-cache-dir uv
+    - apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+    - uv sync
+
+python:lint:
+  extends: .python_base
+  stage: test
+  script:
+    - uv run ruff check .
+    - uv run ruff format --check .
+    - uv run mypy houba
+  rules:
+    - changes:
+        - pyproject.toml
+        - uv.lock
+        - houba/**/*
+        - tests/**/*
+        - .gitlab-ci.yml
+
+python:test:
+  extends: .python_base
+  stage: test
+  script:
+    - uv run pytest tests/ -v --cov=houba --cov-report=term-missing --cov-fail-under=80
+    - uv run pytest tests/unit/domain -v --cov=houba.domain --cov-report=term-missing --cov-fail-under=90
+  artifacts:
+    when: always
+    paths:
+      - .coverage
+    expire_in: 1 week
+  rules:
+    - changes:
+        - pyproject.toml
+        - uv.lock
+        - houba/**/*
+        - tests/**/*
+
+python:build:image:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - docker build -t houba:${CI_COMMIT_SHORT_SHA} .
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - Dockerfile
+        - pyproject.toml
+        - uv.lock
+        - houba/**/*
