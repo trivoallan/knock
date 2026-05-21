@@ -37,6 +37,7 @@ packages = ["hub2hub"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# TODO: retirer cette exclusion une fois le legacy ci/ supprimé (Phase B/C, cf. spec §10).
 extend-exclude = ["ci"]
 
 [tool.ruff.lint]
