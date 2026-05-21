@@ -23,6 +23,14 @@ JSON
         echo "skopeo: simulated failure" >&2
         exit 1
         ;;
+    garbage)
+        echo "this is not json"
+        ;;
+    missing-digest)
+        cat <<'JSON'
+{"Architecture": "amd64", "Os": "linux"}
+JSON
+        ;;
     *)
         echo "fake-skopeo: unknown scenario ${FAKE_SKOPEO_SCENARIO}" >&2
         exit 99

@@ -24,3 +24,27 @@ def test_failure_raises_skopeo_error(fake_bin_path: Path, monkeypatch: pytest.Mo
     monkeypatch.setenv("FAKE_SKOPEO_SCENARIO", "fail")
     with pytest.raises(SkopeoError):
         SkopeoAdapter().inspect("docker.io/library/busybox:1.36")
+
+
+def test_garbage_output_raises_skopeo_error(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """skopeo retourne du non-JSON → SkopeoError plutôt que JSONDecodeError."""
+    monkeypatch.setenv("FAKE_SKOPEO_SCENARIO", "garbage")
+    with pytest.raises(SkopeoError, match="invalid JSON"):
+        SkopeoAdapter().inspect("docker.io/library/busybox:1.36")
+
+
+def test_missing_digest_raises_skopeo_error(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """skopeo retourne du JSON sans le champ Digest → SkopeoError, pas KeyError."""
+    monkeypatch.setenv("FAKE_SKOPEO_SCENARIO", "missing-digest")
+    with pytest.raises(SkopeoError, match="Digest"):
+        SkopeoAdapter().inspect("docker.io/library/busybox:1.36")
+
+
+def test_explicit_missing_binary_raises_skopeo_error() -> None:
+    """Si le constructeur reçoit un chemin explicite qui n'existe pas, échec immédiat."""
+    with pytest.raises(SkopeoError, match="not found"):
+        SkopeoAdapter(binary="/nonexistent/path/to/skopeo")
