@@ -2398,6 +2398,35 @@ git commit -m "feat(domain): ajoute parse_properties (port de setProperties Groo
 
 Référence Groovy : chercher les littéraux `fr.sncf.h2h.` dans `vars/importProduct.groovy` :
 
+> **⚠️ Divergence labels découverte en cours d'implémentation (commit `31de702`)**
+>
+> Le set de labels du plan (`source.*`, `import.*`, `eol.*`) **ne correspond
+> pas** au contrat legacy. Les vrais labels sont émis par
+> `resources/Dockerfile.template` (lignes 44-61) :
+>
+> - `fr.sncf.h2h.date_1ereDispo`, `fr.sncf.h2h.build-date`
+> - `fr.sncf.h2h.version`, `fr.sncf.h2h.version_editeur`
+> - `fr.sncf.h2h.os`, `fr.sncf.h2h.os_version`
+> - `fr.sncf.h2h.java_{version,jre_version,jdk_version,vendor}`
+> - `fr.sncf.h2h.apache_version`, `fr.sncf.h2h.product`
+> - `fr.sncf.h2h.maintainer`, `fr.sncf.h2h.dockerfile`
+> - `fr.sncf.h2h.source_image`, `fr.sncf.h2h.user`
+> - `fr.sncf.h2h.jenkins_url`, `fr.sncf.h2h.gitlab_url`
+>
+> **Conséquence directe** : `vars/deleteProduct.groovy:46-47` LIT
+> `fr.sncf.h2h.gitlab_url` pour retrouver le repo GitLab d'un produit à
+> supprimer. Tant qu'on conserve ce shim Groovy (spec §9.3), les images
+> doivent émettre ce label, sinon `deleteProduct` casse.
+>
+> **Stratégie** : Phase A garde `build_labels` minimal (8 labels, nouveau
+> namespace). Aucune image n'est encore construite en Phase A donc rien
+> n'est cassé en pratique. En Phase B, quand le rendu Dockerfile et l'appel
+> BuildKit seront wirés, `build_labels` devra être étendu pour émettre
+> AUSSI les labels legacy (au minimum `fr.sncf.h2h.gitlab_url` +
+> `fr.sncf.h2h.build-date`). Ou bien `deleteProduct.groovy` doit être
+> migré vers les nouveaux labels avant que la première image ne soit
+> imprimée par le CLI.
+
 ```bash
 grep -n 'fr\.sncf\.h2h' vars/importProduct.groovy
 ```
