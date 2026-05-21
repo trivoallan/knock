@@ -8,11 +8,11 @@ from houba.config import HarborSettings, Settings
 
 def test_settings_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOUBA_HARBOR_URL", "https://harbor.example.com")
-    monkeypatch.setenv("HOUBA_HARBOR_USER", "robot$h2h")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "robot$houba")
     monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "s3cret")
     monkeypatch.setenv("HOUBA_GITLAB_URL", "https://gitlab.example.com")
     monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "glpat-xxx")
-    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "eul/h2h/products")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "eul/houba/products")
     monkeypatch.setenv("HOUBA_WORK_DIR", str(tmp_path))
 
     settings = Settings()

@@ -16,5 +16,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=build /src/dist/*.whl /tmp/
 RUN pip install --no-cache-dir /tmp/*.whl && rm /tmp/*.whl
 
-ENTRYPOINT ["h2h"]
+ENTRYPOINT ["houba"]
 CMD ["--help"]

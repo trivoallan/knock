@@ -10,7 +10,7 @@ from houba.errors import HarborAuthError, HarborNotFoundError, HarborTransientEr
 def adapter() -> HarborHttpAdapter:
     return HarborHttpAdapter(
         base_url="https://harbor.example.com",
-        user="robot$h2h",
+        user="robot$houba",
         password="s3cret",
     )
 

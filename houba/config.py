@@ -100,7 +100,7 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARN", "WARNING", "ERROR"] = "INFO"
     dry_run_tags: bool = False
     dry_run_deletions: bool = False
-    work_dir: Path = Path("/tmp/h2h-work")  # noqa: S108
+    work_dir: Path = Path("/tmp/houba-work")  # noqa: S108
 
     project: str | None = None
     repository: str | None = None

@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from houba.cli import dev as dev_cli
 from houba.errors import H2HError, exit_code_for
 
-app = typer.Typer(name="h2h", no_args_is_help=True, add_completion=False)
+app = typer.Typer(name="houba", no_args_is_help=True, add_completion=False)
 app.add_typer(dev_cli.app, name="dev", help="Outils de développement (capture de fixtures, debug)")
 
 
