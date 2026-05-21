@@ -4,6 +4,7 @@ import respx
 
 from houba.adapters.harbor_http import HarborHttpAdapter
 from houba.errors import HarborAuthError, HarborNotFoundError, HarborTransientError
+from houba.ports.harbor import ArtifactTag, ImmutableTagRule
 
 
 @pytest.fixture()
@@ -86,3 +87,70 @@ def test_transient_5xx_exhausts_retries_then_raises(adapter: HarborHttpAdapter) 
         ).respond(503)
         with pytest.raises(HarborTransientError):
             adapter.get_repositories("lib")
+
+
+def test_get_artifact_by_tag(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        body = {
+            "digest": "sha256:abc",
+            "tags": [{"name": "1.36"}, {"name": "latest"}],
+            "push_time": "2026-05-21T12:00:00Z",
+            "labels": [{"name": "fr.sncf.h2h.source.tag=1.36"}],
+        }
+        router.get(
+            "/api/v2.0/projects/lib/repositories/busybox/artifacts/latest"
+        ).respond(200, json=body)
+        art = adapter.get_artifact("lib", "busybox", "latest")
+        assert art.digest == "sha256:abc"
+        assert art.tags == ["1.36", "latest"]
+
+
+def test_get_artifact_double_encodes_repo(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        route = router.get(
+            "/api/v2.0/projects/lib/repositories/foo%252Fbar/artifacts/sha256:abc"
+        ).respond(200, json={"digest": "sha256:abc"})
+        adapter.get_artifact("lib", "foo/bar", "sha256:abc")
+        assert route.called
+
+
+def test_list_artifact_tags(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        body = [{"name": "1.36", "immutable": False}, {"name": "latest", "immutable": True}]
+        router.get(
+            "/api/v2.0/projects/lib/repositories/busybox/artifacts/sha256:abc/tags",
+            params={"page": "1", "page_size": "100"},
+        ).respond(200, json=body)
+        router.get(
+            "/api/v2.0/projects/lib/repositories/busybox/artifacts/sha256:abc/tags",
+            params={"page": "2", "page_size": "100"},
+        ).respond(200, json=[])
+        tags = adapter.list_artifact_tags("lib", "busybox", "sha256:abc")
+        assert tags == [
+            ArtifactTag(name="1.36", immutable=False),
+            ArtifactTag(name="latest", immutable=True),
+        ]
+
+
+def test_list_immutable_tag_rules(adapter: HarborHttpAdapter) -> None:
+    with respx.mock(base_url="https://harbor.example.com") as router:
+        body = [
+            {
+                "id": 1,
+                "scope_selector": {"repository": {"decoration": "**"}},
+                "tag_selector": {"decoration": "matches", "pattern": "v*"},
+                "disabled": False,
+            }
+        ]
+        router.get(
+            "/api/v2.0/projects/lib/immutabletagrules",
+            params={"page": "1", "page_size": "100"},
+        ).respond(200, json=body)
+        router.get(
+            "/api/v2.0/projects/lib/immutabletagrules",
+            params={"page": "2", "page_size": "100"},
+        ).respond(200, json=[])
+        rules = adapter.list_immutable_tag_rules("lib")
+        assert rules == [
+            ImmutableTagRule(id=1, scope_selector="**", tag_selector="v*", disabled=False),
+        ]

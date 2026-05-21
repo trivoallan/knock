@@ -15,7 +15,7 @@ from houba.errors import (
     HarborNotFoundError,
     HarborTransientError,
 )
-from houba.ports.harbor import Artifact, Repository
+from houba.ports.harbor import Artifact, ArtifactTag, ImmutableTagRule, Repository
 
 PAGE_SIZE = 100
 MAX_ATTEMPTS = 5
@@ -58,6 +58,37 @@ class HarborHttpAdapter:
             for item in items
         ]
 
+    def get_artifact(
+        self, project_name: str, repository_name: str, reference: str
+    ) -> Artifact:
+        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        ref_encoded = quote(reference, safe=":")
+        path = f"/projects/{project_name}/repositories/{repo_encoded}/artifacts/{ref_encoded}"
+        item = self._get(path)
+        return Artifact(
+            digest=item["digest"],
+            tags=[t["name"] for t in (item.get("tags") or [])],
+            push_time=item.get("push_time", ""),
+            labels=[lab["name"] for lab in (item.get("labels") or [])],
+        )
+
+    def list_artifact_tags(
+        self, project_name: str, repository_name: str, reference: str
+    ) -> list[ArtifactTag]:
+        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        ref_encoded = quote(reference, safe=":")
+        path = (
+            f"/projects/{project_name}/repositories/{repo_encoded}"
+            f"/artifacts/{ref_encoded}/tags"
+        )
+        items = list(self._paginate(path))
+        return [ArtifactTag(name=i["name"], immutable=i.get("immutable", False)) for i in items]
+
+    def list_immutable_tag_rules(self, project_name: str) -> list[ImmutableTagRule]:
+        path = f"/projects/{project_name}/immutabletagrules"
+        items = list(self._paginate(path))
+        return [_parse_immutable_rule(i) for i in items]
+
     def _paginate(self, path: str) -> Iterable[dict[str, Any]]:
         page = 1
         while True:
@@ -88,3 +119,15 @@ class HarborHttpAdapter:
         if not r.is_success:
             raise HarborError(f"{r.status_code}: {r.text}")
         return r.json()
+
+
+def _parse_immutable_rule(payload: dict[str, Any]) -> ImmutableTagRule:
+    scope = payload.get("scope_selector") or {}
+    scope_repo = scope.get("repository") or {}
+    tag = payload.get("tag_selector") or {}
+    return ImmutableTagRule(
+        id=payload["id"],
+        scope_selector=scope_repo.get("decoration", "**"),
+        tag_selector=tag.get("pattern", "*"),
+        disabled=payload.get("disabled", False),
+    )
