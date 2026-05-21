@@ -2118,6 +2118,31 @@ git commit -m "feat(domain): ajoute sort_semver (port de sortBySemver Groovy)"
 
 Référence Groovy : `setProperties` (vars/importProduct.groovy:1292-1347) + `resources/properties.yml.template`.
 
+> **⚠️ Divergence schéma découverte en cours d'implémentation (commit `c529663`)**
+>
+> Le `setProperties` Groovy n'est *pas* le parser YAML : c'est la déclaration
+> Jenkins des paramètres de job (cron, "Force Import All Tags", "Dry Run"…).
+> Le vrai parsing de `properties.yml` legacy se fait via `readYaml` à
+> `vars/importProduct.groovy:170-256` puis accès `CONFIGURATION.<field>`.
+>
+> Le schéma défini ici est une **redéfinition minimale** (clean-slate),
+> incompatible avec le legacy. Le spec §12 demande pourtant "iso-fonctionnel".
+>
+> Champs legacy NON portés en Phase A et à réintégrer en Phase B/C :
+> - `source.image_url`, `source.private_registry_credentials` (le legacy stocke
+>   une URL Docker complète, pas split registry/repository)
+> - `destination.image_url`, `destination.is_archived` (idem)
+> - `infos.{editor, sncf_repos, sncf_certs, force_daily, set_timezone,
+>   run_container, source_full_image_url, documentation, short_description,
+>   description}` — métadonnées catalogue + flags d'installation système
+> - `tags_to_import` (liste à plat), `obsolete_tags`, `no_purge_on_tags[]`
+>
+> **Stratégie** : Phase A garde le schéma minimal pour ne pas bloquer le
+> domain. Phase B doit ajouter (a) un *shim* `legacy_to_new.py` qui convertit
+> les `properties.yml` existants vers le nouveau format, ou (b) étendre le
+> schéma avec des `AliasChoices` Pydantic pour accepter les deux. À décider
+> en brainstorming Phase B.
+
 - [ ] **Step 1 : Lire la référence**
 
 ```bash
