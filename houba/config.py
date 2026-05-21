@@ -5,8 +5,8 @@ Voir spec §6.1.
 
 Architecture : chaque sous-bloc est un `BaseSettings` avec son propre
 `env_prefix`. Le bloc racine les compose via `default_factory`. Cela
-préserve le contrat single-underscore du spec (`H2H_HARBOR_URL` plutôt
-que `H2H_HARBOR__URL`) tout en gardant l'API ergonomique
+préserve le contrat single-underscore du spec (`HOUBA_HARBOR_URL` plutôt
+que `HOUBA_HARBOR__URL`) tout en gardant l'API ergonomique
 `settings.harbor.url`.
 """
 
@@ -35,7 +35,7 @@ HttpUrlStr = Annotated[str, AfterValidator(_validate_http_url)]
 
 class HarborSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="H2H_HARBOR_",
+        env_prefix="HOUBA_HARBOR_",
         env_file=None,
         extra="ignore",
     )
@@ -48,7 +48,7 @@ class HarborSettings(BaseSettings):
 
 class HarborOrangeSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="H2H_HARBOR_ORANGE_",
+        env_prefix="HOUBA_HARBOR_ORANGE_",
         env_file=None,
         extra="ignore",
     )
@@ -60,7 +60,7 @@ class HarborOrangeSettings(BaseSettings):
 
 class GitLabSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="H2H_GITLAB_",
+        env_prefix="HOUBA_GITLAB_",
         env_file=None,
         extra="ignore",
     )
@@ -84,7 +84,7 @@ def _build_gitlab() -> GitLabSettings:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="H2H_",
+        env_prefix="HOUBA_",
         env_file=None,
         extra="ignore",
     )
