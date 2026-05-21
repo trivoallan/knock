@@ -1,0 +1,16 @@
+.git
+.venv
+.uv-cache
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+dist
+tests
+docs
+vars
+ci
+resources
+.claude
+*.md
