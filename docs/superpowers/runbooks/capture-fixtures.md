@@ -11,7 +11,7 @@ les snapshot tests de la Phase A.
   read-only `pic-dosn_hcr-prod-sharedlibs` ou équivalent).
 - Variables d'environnement `HOUBA_*` valorisées (cf. spec §6.1).
 - Image `houba` buildée localement (`docker build -t houba:dev .`) ou
-  exécution via `uv run h2h`.
+  exécution via `uv run houba`.
 
 ## Sélection des produits
 
@@ -35,7 +35,7 @@ Au total : viser 10 à 20 captures.
 Pour chaque produit retenu :
 
 ```bash
-uv run h2h dev capture \
+uv run houba dev capture \
   --project <project> \
   --repository <repository> \
   --output tests/fixtures/captured/
