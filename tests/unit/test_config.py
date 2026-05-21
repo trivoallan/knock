@@ -71,3 +71,36 @@ def test_harbor_settings_isolated(monkeypatch: pytest.MonkeyPatch) -> None:
     """Les sous-blocs Settings doivent supporter une instanciation directe pour les tests."""
     h = HarborSettings(url="https://x", user="u", password="p")
     assert h.password.get_secret_value() == "p"
+
+
+def test_invalid_log_level_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Une valeur de `H2H_LOG_LEVEL` hors du Literal doit lever ValidationError."""
+    monkeypatch.setenv("H2H_HARBOR_URL", "https://h")
+    monkeypatch.setenv("H2H_HARBOR_USER", "u")
+    monkeypatch.setenv("H2H_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("H2H_GITLAB_URL", "https://g")
+    monkeypatch.setenv("H2H_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("H2H_GITLAB_GROUP", "g")
+    monkeypatch.setenv("H2H_LOG_LEVEL", "TRACE")
+
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_endoflife_url_validated_but_str(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`endoflife_url` est validé comme URL mais exposé comme `str` pour httpx."""
+    monkeypatch.setenv("H2H_HARBOR_URL", "https://h")
+    monkeypatch.setenv("H2H_HARBOR_USER", "u")
+    monkeypatch.setenv("H2H_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("H2H_GITLAB_URL", "https://g")
+    monkeypatch.setenv("H2H_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("H2H_GITLAB_GROUP", "g")
+    monkeypatch.setenv("H2H_ENDOFLIFE_URL", "https://eol.test/api")
+
+    settings = Settings()
+    assert isinstance(settings.endoflife_url, str)
+    assert settings.endoflife_url == "https://eol.test/api"
+
+    monkeypatch.setenv("H2H_ENDOFLIFE_URL", "not-a-url")
+    with pytest.raises(ValidationError):
+        Settings()

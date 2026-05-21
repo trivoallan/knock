@@ -13,10 +13,24 @@ que `H2H_HARBOR__URL`) tout en gardant l'API ergonomique
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import AfterValidator, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _validate_http_url(value: str) -> str:
+    """Valide la valeur comme URL via Pydantic mais expose une `str`.
+
+    Les consommateurs downstream (httpx, urllib.parse.urljoin) attendent une
+    `str`, pas un wrapper `HttpUrl`. On valide à la lecture de la config puis on
+    stocke la chaîne brute.
+    """
+    HttpUrl(value)  # lève ValidationError si malformée
+    return value
+
+
+HttpUrlStr = Annotated[str, AfterValidator(_validate_http_url)]
 
 
 class HarborSettings(BaseSettings):
@@ -56,6 +70,18 @@ class GitLabSettings(BaseSettings):
     group: str
 
 
+def _build_harbor() -> HarborSettings:
+    return HarborSettings.model_validate({})
+
+
+def _build_harbor_orange() -> HarborOrangeSettings:
+    return HarborOrangeSettings.model_validate({})
+
+
+def _build_gitlab() -> GitLabSettings:
+    return GitLabSettings.model_validate({})
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="H2H_",
@@ -63,12 +89,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    harbor: HarborSettings = Field(default_factory=HarborSettings)  # type: ignore[arg-type]
-    harbor_orange: HarborOrangeSettings = Field(default_factory=HarborOrangeSettings)
-    gitlab: GitLabSettings = Field(default_factory=GitLabSettings)  # type: ignore[arg-type]
+    harbor: HarborSettings = Field(default_factory=_build_harbor)
+    harbor_orange: HarborOrangeSettings = Field(default_factory=_build_harbor_orange)
+    gitlab: GitLabSettings = Field(default_factory=_build_gitlab)
 
     teams_webhook_url: SecretStr | None = None
-    endoflife_url: HttpUrl = HttpUrl("https://endoflife.date/api")
+    endoflife_url: HttpUrlStr = "https://endoflife.date/api"
 
     log_format: Literal["text", "json"] = "text"
     log_level: Literal["DEBUG", "INFO", "WARN", "WARNING", "ERROR"] = "INFO"
