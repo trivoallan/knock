@@ -221,9 +221,13 @@ Alias rules:
 - `artifactType` is recorded in provenance, so blast-radius queries can filter by type.
 - The deferred `helmChart` transform `rewriteImageRefs` is high-value: a hardened chart that points at *houba-mirrored* images closes the loop. It is its own design.
 
-### 6.1 Stamping non-image artifacts — implementation note
+### 6.1 Registry client & stamping non-image artifacts
 
-Stamping an artifact that is *not* rebuilt cannot use plain `skopeo copy` (it cannot add annotations; changing the manifest changes the digest). The copy-and-annotate path is: **pull manifest → add annotations → push** (new digest), via `oras`/`crane`. This is a **second execution path** alongside the image rebuild, and a new adapter concern for the implementation plan. The `image` path bakes annotations during the BuildKit rebuild.
+houba's registry client is **regctl** (regclient), replacing skopeo. regctl covers list-tags, inspect, copy, **annotate** (`regctl image mod --annotation`), and retag at the OCI dist-spec level — on any registry. This matters because:
+
+- Stamping an artifact that is *not* rebuilt cannot use plain `skopeo copy` (skopeo cannot add annotations; changing the manifest changes the digest). The copy-and-annotate path — **pull manifest → add annotations → push** (new digest) — is a `regctl image mod`. This is the execution path for `generic`/`helmChart`, alongside the image rebuild.
+- The `image` path bakes annotations during the **BuildKit** (`buildctl`) rebuild; regctl is not a builder, so `buildctl` stays.
+- regctl is registry-native (single static binary, no daemon, talks the dist-spec directly) and first-class on arbitrary OCI artifacts and the **referrers API** (relevant to the SLSA/in-toto attestation roadmap) — both weak spots of skopeo. `crane` was the close runner-up; `oras` is complementary for artifacts but not a full skopeo replacement on its own. The sibling tool `regis` already uses regctl (shared family tooling).
 
 ---
 
@@ -282,6 +286,8 @@ Universal across artifact types; baked during the image rebuild, or added on the
 - **`io.houba.*`** only for the genuinely novel lineage: `io.houba.policy` (= `metadata.name`), `io.houba.import`, `io.houba.variant`, `io.houba.transform.version`, `io.houba.artifact.type`, `io.houba.owner.team` (the stable key from `metadata.labels.team`).
 - **Immutable build facts only.** No location fact: the `import.harbor` label is **dropped** — the same digest can live in many registries, so "which registry" is a runtime/location fact resolved downstream, not baked provenance. The human owner is resolved downstream from the stable `team` key, never stamped as a person.
 
+Annotations are set by `buildctl` during the image rebuild, or by `regctl image mod` on the copy path — **not** by Harbor's proprietary label API. The Phase B Harbor label methods (`ensure_label`/`add_label_to_artifact`) are therefore *not* the provenance mechanism in this design. Consequently the Harbor write surface shrinks: tag create/delete, artifact deletion, and annotation move to the dist-spec level (any registry, via regctl), and the Harbor HTTP API is needed only for genuinely Harbor-specific concerns (immutable tag *rules*, projects).
+
 ---
 
 ## 10. Architecture impact (for the implementation plan)
@@ -291,10 +297,11 @@ This design touches, beyond `domain/`:
 - **`config.py`** — env-roster custom settings source; `RegistrySettings`; removal of single-`HOUBA_HARBOR_*`.
 - **`cli/_di.py`** — `dict[name → adapter]`; per-destination resolution.
 - **New domain** — `MirrorPolicy` models (replacing `Properties`), the alias-template resolver, the merge engine, the variant expander, the selection engine extended with `names`.
-- **New adapter concern** — a copy-and-annotate path (`oras`/`crane`) for `generic`/`helmChart`, distinct from the BuildKit rebuild.
+- **Registry adapter** — `skopeo_cli` is **replaced by a regctl adapter** (list/inspect/copy/annotate/retag), which also provides the copy-and-annotate path for `generic`/`helmChart`. `buildctl` stays for the image rebuild. The runtime image bundles **regctl + buildctl + git** (was skopeo + buildctl + git).
+- **Reduced Harbor coupling** — provenance via OCI annotations plus dist-spec tag/delete/annotate via regctl mean the Harbor HTTP API shrinks to immutable tag *rules* and projects. This materially advances the deferred `registry type: oci` (generic, non-Harbor) future: most write operations no longer depend on Harbor's proprietary API.
 - **Deferred architecture** — a `RegistryPort` abstraction with `HarborRegistryAdapter` + a future `OciRegistryAdapter` (for registry `type: oci`); the `helmChart` transform vocabulary.
 
-The implementation will decompose into phases at the planning stage: the reconcile engine + schema, multi-registry config, the copy-and-annotate path, the `image` transform vocabulary, then the `helmChart` transform.
+The implementation will decompose into phases at the planning stage: the reconcile engine + schema, multi-registry config, the regctl adapter + copy-and-annotate path, the `image` transform vocabulary, then the `helmChart` transform.
 
 ---
 
