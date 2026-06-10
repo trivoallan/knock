@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
@@ -36,3 +36,11 @@ class Destination(_CamelModel):
     registry: str | None = None
     project: str
     repository: str
+
+
+class TagSelection(_CamelModel):
+    include_regex: str | None = None
+    exclude_regex: list[str] = Field(default_factory=list)
+    semver_only: bool = True
+    names: list[str] = Field(default_factory=list)
+    aliases: list[str] = Field(default_factory=list)
