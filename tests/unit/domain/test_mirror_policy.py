@@ -15,6 +15,7 @@ from houba.domain.mirror_policy import (
     TagSelection,
     TransformStep,
     Variant,
+    mirror_policy_json_schema,
     parse_mirror_policy,
 )
 from houba.errors import PolicyValidationError
@@ -215,6 +216,17 @@ def test_spec_requires_at_least_one_import() -> None:
         )
 
 
+def test_spec_generic_without_transform_is_valid() -> None:
+    spec = Spec.model_validate(
+        {
+            "artifactType": "generic",
+            "source": {"registry": "docker.io", "repository": "r"},
+            "imports": [{"name": "v", "tags": {}}],
+        }
+    )
+    assert spec.artifact_type is ArtifactType.generic
+
+
 def test_spec_generic_forbids_transform_in_defaults() -> None:
     with pytest.raises(PolicyValidationError, match="generic"):
         Spec.model_validate(
@@ -292,8 +304,6 @@ def test_parse_wraps_validation_error() -> None:
 
 
 def test_json_schema_is_emitted_with_camel_case_keys() -> None:
-    from houba.domain.mirror_policy import mirror_policy_json_schema
-
     schema = mirror_policy_json_schema()
     assert schema["title"] == "MirrorPolicy"
     assert schema["type"] == "object"
@@ -306,8 +316,6 @@ def test_json_schema_is_emitted_with_camel_case_keys() -> None:
 
 def test_json_schema_is_stable_and_serializable() -> None:
     import json
-
-    from houba.domain.mirror_policy import mirror_policy_json_schema
 
     # must be JSON-serializable (publishable for editor/CI validation)
     json.dumps(mirror_policy_json_schema())
