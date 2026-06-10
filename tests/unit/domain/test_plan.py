@@ -35,8 +35,8 @@ def test_build_plan_basic_fields() -> None:
     assert plan.dst_image == "lib/busybox:1.36"
     assert plan.flags["add_apt_repos"] is True
     assert plan.flags["add_yum_repos"] is False
-    assert plan.labels["fr.sncf.h2h.source.digest"] == "sha256:abc"
-    assert plan.labels["fr.sncf.h2h.eol.date"] == "2027-01-01"
+    assert plan.labels["io.houba.source.digest"] == "sha256:abc"
+    assert plan.labels["io.houba.eol.date"] == "2027-01-01"
 
 
 def test_build_plan_without_eol() -> None:
@@ -57,5 +57,5 @@ def test_build_plan_without_eol() -> None:
         now=datetime(2026, 5, 21, tzinfo=UTC),
     )
 
-    assert "fr.sncf.h2h.eol.product" not in plan.labels
-    assert "fr.sncf.h2h.eol.date" not in plan.labels
+    assert "io.houba.eol.product" not in plan.labels
+    assert "io.houba.eol.date" not in plan.labels
