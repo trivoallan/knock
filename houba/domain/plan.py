@@ -30,6 +30,7 @@ def build_plan(
     src_digest: str,
     eol_date: str | None,
     now: datetime,
+    label_prefix: str = "fr.sncf.h2h",
 ) -> ImportPlan:
     src_image = f"{properties.source.registry}/{properties.source.repository}:{tag}"
     dst_image = f"{properties.destination.project}/{properties.destination.repository}:{tag}"
@@ -37,6 +38,7 @@ def build_plan(
     flags = properties.flags.model_dump()
 
     labels = build_labels(
+        prefix=label_prefix,
         src_registry=properties.source.registry,
         src_repository=properties.source.repository,
         src_tag=tag,
