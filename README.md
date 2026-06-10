@@ -1,28 +1,32 @@
 # houba
 
-**OCI image mirroring CLI with policy-driven tag selection.**
+**The single front door for the external container images your organization runs.**
 
-`houba` mirrors container images from a public source registry (Docker Hub, Quay, GHCR…) into a private OCI registry (Harbor), applying per-product policies for tag selection, exclusion patterns, semver ordering, archival, and OCI label enrichment.
+> **Status — early development.** Foundations and I/O adapters are in place (`v0.2`); the derive-and-stamp engine and the provenance schema are the current focus ([roadmap](docs/roadmap.md)). Not yet production-ready.
+
+Every public image that enters your registry passes through houba: it is rebuilt with your hardening policy — internal CA certificates, internal package mirrors — and stamped with **standardized, portable provenance** (OCI annotations + SLSA attestations).
+
+The payoff lands the morning a critical CVE drops. Because every running image carries a consistent provenance stamp, *"what's our blast radius, and who owns it?"* becomes **one query** in the observability stack you already have — not a frantic spreadsheet. houba produces the stamp; your tools (Datadog, PowerBI, Wiz…) read it.
+
+houba is **not** an image mirror. `skopeo sync` and Harbor replication copy images byte-for-byte. houba *transforms* them and makes them *traceable*.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
 
 ---
 
-## What it does
+## How it works
 
-For each product you want to mirror you write a small `properties.yml` describing source/destination, tag filters. `houba` then:
+For each image you bring in, you declare a small policy (source, tag-selection rules, hardening steps). houba then:
 
 1. Lists tags on the source registry (via `skopeo`).
-2. Computes which tags must be imported, updated, or deleted — based on regex include/exclude filters, semver ordering, and a 7-day stability window for digest changes.
-3. For each tag to import: pulls the image, builds a small wrapper layer (via `buildctl` / BuildKit) embedding configurable shell scripts and certificates, pushes to your Harbor.
-4. Applies OCI labels (`{prefix}.source.registry`, `{prefix}.source.tag`, `{prefix}.import.date` …) — prefix is configurable.
-5. Optionally archives obsolete tags rather than deleting them.
-6. Sends a Teams webhook notification on success / failure.
+2. Selects which tags to derive — regex include/exclude filters, semver ordering, a 7-day stability window for moving digests.
+3. Rebuilds each selected image through your hardening policy (via `buildctl` / BuildKit): internal CA certificates, internal package mirrors, configurable steps.
+4. Stamps the result with standardized provenance (OCI annotations today; SLSA attestations on the roadmap).
+5. Pushes the derived image to your registry, optionally archiving superseded tags.
+6. Notifies on success / failure (Teams webhook).
 
-The same CLI also offers operational commands: `archive restore`, `archive purge`, `proxycache update`, `product delete`, `product init`.
-
-> **Status:** Phase B (this release, `v0.2.0-phase-b`) ships the foundations + all I/O adapters. The use-cases (`product import`, `archive restore`…) come in Phase C. See [docs/](docs/) for the design and implementation plans.
+See the [roadmap](docs/roadmap.md) for what is built versus planned, and the [design overview](docs/design.md) for the architecture.
 
 ---
 

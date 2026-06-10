@@ -112,6 +112,6 @@ Transient errors (HTTP 5xx, network timeouts) are automatically retried up to 5 
 
 - **Phase A (delivered)** — project foundations, complete `domain/` layer with > 90 % coverage, read-only adapters for Harbor / source registry, `houba dev capture` to record production fixtures.
 - **Phase B (delivered, this release)** — all 4 missing ports and their adapters: image builder (BuildKit), git CLI, GitLab REST API, Teams webhook. Harbor write-side (delete, tag create/delete, label, immutable rule) added. Composition root wired. Runtime Docker image embeds skopeo + buildctl + git.
-- **Phase C (next)** — use cases: `product_import`, `product_init`, `product_delete`, `proxycache_update`, `archive_restore`, `archive_purge`.
+- **Phase C (next)** — the derive-and-stamp engine and its provenance schema, re-scoped around houba's product thesis (the *stamper / single front door* model). See the [roadmap](roadmap.md) for the ordered plan and what was promoted, demoted, or cut from the inherited use-case list.
 
-See [README](../README.md) for installation and configuration.
+See [README](../README.md) for installation and configuration, and the [roadmap](roadmap.md) for direction.
