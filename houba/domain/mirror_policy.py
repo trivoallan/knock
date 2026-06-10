@@ -144,3 +144,12 @@ def parse_mirror_policy(text: str) -> MirrorPolicy:
         return MirrorPolicy.model_validate(raw)
     except ValidationError as e:
         raise PolicyValidationError(str(e)) from e
+
+
+def mirror_policy_json_schema() -> dict[str, Any]:
+    """The JSON Schema for a MirrorPolicy, keyed by the public (camelCase) field names.
+
+    Published for editor/CI validation of policy files (see CLAUDE.md: JSON Schema
+    systematically). Derived from the Pydantic models — never hand-written.
+    """
+    return MirrorPolicy.model_json_schema(by_alias=True)
