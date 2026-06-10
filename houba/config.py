@@ -46,18 +46,6 @@ class HarborSettings(BaseSettings):
     project_default: str | None = None
 
 
-class HarborOrangeSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="HOUBA_HARBOR_ORANGE_",
-        env_file=None,
-        extra="ignore",
-    )
-
-    url: str | None = None
-    user: str | None = None
-    password: SecretStr | None = None
-
-
 class GitLabSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="HOUBA_GITLAB_",
@@ -74,10 +62,6 @@ def _build_harbor() -> HarborSettings:
     return HarborSettings.model_validate({})
 
 
-def _build_harbor_orange() -> HarborOrangeSettings:
-    return HarborOrangeSettings.model_validate({})
-
-
 def _build_gitlab() -> GitLabSettings:
     return GitLabSettings.model_validate({})
 
@@ -90,7 +74,6 @@ class Settings(BaseSettings):
     )
 
     harbor: HarborSettings = Field(default_factory=_build_harbor)
-    harbor_orange: HarborOrangeSettings = Field(default_factory=_build_harbor_orange)
     gitlab: GitLabSettings = Field(default_factory=_build_gitlab)
 
     teams_webhook_url: SecretStr | None = None
