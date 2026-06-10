@@ -95,6 +95,7 @@ class Settings(BaseSettings):
 
     teams_webhook_url: SecretStr | None = None
     endoflife_url: HttpUrlStr = "https://endoflife.date/api"
+    label_prefix: str = "io.houba"
 
     log_format: Literal["text", "json"] = "text"
     log_level: Literal["DEBUG", "INFO", "WARN", "WARNING", "ERROR"] = "INFO"
