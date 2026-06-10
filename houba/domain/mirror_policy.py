@@ -62,3 +62,14 @@ class TransformStep(_CamelModel):
             raise ValueError("a transform step must be a single-key map {stepName: params}")
         ((name, params),) = data.items()
         return {"name": name, "params": params or {}}
+
+
+class Archive(_CamelModel):
+    keep: int = 2
+    older_than_days: int = 30
+
+
+class Variant(_CamelModel):
+    name: str
+    suffix: str = ""
+    transform: list[TransformStep] | None = None  # None ⇒ inherit resolved transform
