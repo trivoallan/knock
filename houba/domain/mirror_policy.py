@@ -7,9 +7,10 @@ a policy file fail fast (the schema is the public API).
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+import yaml
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from pydantic.alias_generators import to_camel
 
 from houba.errors import PolicyValidationError
@@ -113,3 +114,33 @@ class Spec(_CamelModel):
                     f"artifactType 'generic' must not declare transform steps (import '{imp.name}')"
                 )
         return self
+
+
+class Metadata(_CamelModel):
+    name: str
+    labels: dict[str, str] = Field(default_factory=dict)
+
+
+class MirrorPolicy(_CamelModel):
+    api_version: Literal["houba.io/v1alpha1"]
+    kind: Literal["MirrorPolicy"]
+    metadata: Metadata
+    spec: Spec
+
+
+def parse_mirror_policy(text: str) -> MirrorPolicy:
+    """Parse and validate a MirrorPolicy YAML document.
+
+    Raises PolicyValidationError on malformed YAML, a non-mapping root, an unknown
+    field, a wrong kind/apiVersion, or any schema/semantic violation.
+    """
+    try:
+        raw = yaml.safe_load(text)
+    except yaml.YAMLError as e:
+        raise PolicyValidationError(f"invalid YAML: {e}") from e
+    if not isinstance(raw, dict):
+        raise PolicyValidationError("the root YAML document must be a mapping")
+    try:
+        return MirrorPolicy.model_validate(raw)
+    except ValidationError as e:
+        raise PolicyValidationError(str(e)) from e

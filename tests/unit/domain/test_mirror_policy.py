@@ -9,12 +9,15 @@ from houba.domain.mirror_policy import (
     Defaults,
     Destination,
     ImportProfile,
+    MirrorPolicy,
     Source,
     Spec,
     TagSelection,
     TransformStep,
     Variant,
+    parse_mirror_policy,
 )
+from houba.errors import PolicyValidationError
 
 
 def test_source_parses() -> None:
@@ -213,8 +216,6 @@ def test_spec_requires_at_least_one_import() -> None:
 
 
 def test_spec_generic_forbids_transform_in_defaults() -> None:
-    from houba.errors import PolicyValidationError
-
     with pytest.raises(PolicyValidationError, match="generic"):
         Spec.model_validate(
             {
@@ -227,8 +228,6 @@ def test_spec_generic_forbids_transform_in_defaults() -> None:
 
 
 def test_spec_generic_forbids_transform_in_import() -> None:
-    from houba.errors import PolicyValidationError
-
     with pytest.raises(PolicyValidationError, match="generic"):
         Spec.model_validate(
             {
@@ -236,4 +235,57 @@ def test_spec_generic_forbids_transform_in_import() -> None:
                 "source": {"registry": "docker.io", "repository": "r"},
                 "imports": [{"name": "v", "tags": {}, "transform": [{"injectCA": {}}]}],
             }
+        )
+
+
+VALID_YAML = """
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis
+  labels:
+    team: platform-data
+spec:
+  artifactType: image
+  source: { registry: docker.io, repository: library/redis }
+  imports:
+    - name: v7
+      tags: { includeRegex: "^7\\\\." }
+"""
+
+
+def test_parse_valid_policy() -> None:
+    policy = parse_mirror_policy(VALID_YAML)
+    assert isinstance(policy, MirrorPolicy)
+    assert policy.api_version == "houba.io/v1alpha1"
+    assert policy.kind == "MirrorPolicy"
+    assert policy.metadata.name == "redis"
+    assert policy.metadata.labels == {"team": "platform-data"}
+    assert policy.spec.imports[0].name == "v7"
+
+
+def test_parse_rejects_wrong_kind() -> None:
+    with pytest.raises(PolicyValidationError):
+        parse_mirror_policy(
+            "apiVersion: houba.io/v1alpha1\nkind: Wrong\nmetadata: {name: x}\n"
+            "spec: {artifactType: image, source: {registry: d, repository: r}, "
+            "imports: [{name: v, tags: {}}]}\n"
+        )
+
+
+def test_parse_rejects_non_mapping() -> None:
+    with pytest.raises(PolicyValidationError, match="mapping"):
+        parse_mirror_policy("- just\n- a\n- list\n")
+
+
+def test_parse_rejects_invalid_yaml() -> None:
+    with pytest.raises(PolicyValidationError, match="YAML"):
+        parse_mirror_policy("key: : :\n")
+
+
+def test_parse_wraps_validation_error() -> None:
+    with pytest.raises(PolicyValidationError):
+        parse_mirror_policy(
+            "apiVersion: houba.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
+            "spec: {source: {registry: d, repository: r}, imports: [{name: v, tags: {}}]}\n"
         )
