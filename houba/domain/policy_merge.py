@@ -30,15 +30,21 @@ class ResolvedImport:
     platforms: list[str] | None
 
 
-def _merge_tags(default: TagSelection | None, override: TagSelection) -> TagSelection:
-    if default is None:
-        return override
+def _merge_tags(default: TagSelection, override: TagSelection) -> TagSelection:
     # shallow-merge: a field the override set explicitly wins; otherwise inherit.
     # `model_fields_set` tells us which fields were explicitly provided.
     merged = default.model_dump(by_alias=False)
     for field in override.model_fields_set:
         merged[field] = getattr(override, field)
     return TagSelection.model_validate(merged)
+
+
+def _merge_archive(default: Archive, override: Archive) -> Archive:
+    # shallow-merge: a field the override set explicitly wins; otherwise inherit.
+    merged = default.model_dump(by_alias=False)
+    for field in override.model_fields_set:
+        merged[field] = getattr(override, field)
+    return Archive.model_validate(merged)
 
 
 def resolve_imports(spec: Spec) -> list[ResolvedImport]:
@@ -52,7 +58,15 @@ def resolve_imports(spec: Spec) -> list[ResolvedImport]:
         transform = (
             imp.transform if imp.transform is not None else ((d.transform if d else None) or [])
         )
-        archive = imp.archive if imp.archive is not None else (d.archive if d else None)
+        archive: Archive | None
+        if imp.archive is not None:
+            archive = (
+                _merge_archive(d.archive, imp.archive)
+                if d is not None and d.archive is not None
+                else imp.archive
+            )
+        else:
+            archive = d.archive if d is not None else None
         platforms = imp.platforms if imp.platforms is not None else (d.platforms if d else None)
         if transform and platforms is not None and len(platforms) > 1:
             raise PolicyValidationError(

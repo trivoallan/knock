@@ -134,3 +134,33 @@ def test_no_transform_with_multi_platform_ok() -> None:
     [resolved] = resolve_imports(spec)
     assert resolved.platforms == ["linux/amd64", "linux/arm64"]
     assert resolved.transform == []
+
+
+def test_archive_shallow_merge_import_overrides_key() -> None:
+    spec = _spec(
+        defaults={"archive": {"keep": 5, "olderThanDays": 90}},
+        imports=[{"name": "v", "tags": {}, "archive": {"keep": 3}}],
+    )
+    [resolved] = resolve_imports(spec)
+    assert resolved.archive.keep == 3  # import wins
+    assert resolved.archive.older_than_days == 90  # inherited from defaults
+
+
+def test_archive_inherited_when_import_omits_it() -> None:
+    spec = _spec(
+        defaults={"archive": {"keep": 5, "olderThanDays": 90}},
+        imports=[{"name": "v", "tags": {}}],
+    )
+    [resolved] = resolve_imports(spec)
+    assert resolved.archive.keep == 5
+    assert resolved.archive.older_than_days == 90
+
+
+def test_archive_import_only_when_no_default() -> None:
+    spec = _spec(
+        defaults=None,
+        imports=[{"name": "v", "tags": {}, "archive": {"keep": 7}}],
+    )
+    [resolved] = resolve_imports(spec)
+    assert resolved.archive.keep == 7
+    assert resolved.archive.older_than_days == 30  # model default, no defaults block

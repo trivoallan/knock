@@ -51,6 +51,11 @@ class TagSelection(_CamelModel):
 
 
 class TransformStep(_CamelModel):
+    """One transform step.
+
+    YAML encodes it as a single-key map ``{stepName: params}``; parsed to ``{name, params}``.
+    """
+
     name: str
     params: dict[str, Any] = Field(default_factory=dict)
 
@@ -151,5 +156,10 @@ def mirror_policy_json_schema() -> dict[str, Any]:
 
     Published for editor/CI validation of policy files (see CLAUDE.md: JSON Schema
     systematically). Derived from the Pydantic models — never hand-written.
+
+    Note: transform steps are authored in YAML as a single-key map ``{stepName: params}``,
+    while this schema reflects the normalized internal ``{name, params}`` form — so this
+    schema validates the internal model, not the raw YAML transform-step encoding (full
+    YAML-shape validation is a later concern).
     """
     return MirrorPolicy.model_json_schema(by_alias=True)
