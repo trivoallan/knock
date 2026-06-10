@@ -73,3 +73,21 @@ class Variant(_CamelModel):
     name: str
     suffix: str = ""
     transform: list[TransformStep] | None = None  # None ⇒ inherit resolved transform
+
+
+class Defaults(_CamelModel):
+    destinations: list[Destination] | None = None
+    transform: list[TransformStep] | None = None
+    archive: Archive | None = None
+    tags: TagSelection | None = None
+    platforms: list[str] | None = None
+
+
+class ImportProfile(_CamelModel):
+    name: str
+    tags: TagSelection
+    destinations: list[Destination] | None = None
+    transform: list[TransformStep] | None = None
+    archive: Archive | None = None
+    platforms: list[str] | None = None
+    variants: list[Variant] | None = None

@@ -6,7 +6,9 @@ from pydantic import ValidationError
 from houba.domain.mirror_policy import (
     Archive,
     ArtifactType,
+    Defaults,
     Destination,
+    ImportProfile,
     Source,
     TagSelection,
     TransformStep,
@@ -123,3 +125,53 @@ def test_variant_with_transform() -> None:
     assert v.suffix == "-fips"
     assert v.transform is not None
     assert v.transform[0].name == "enableFips"
+
+
+def test_defaults_all_optional() -> None:
+    d = Defaults.model_validate({})
+    assert d.destinations is None
+    assert d.transform is None
+    assert d.archive is None
+    assert d.tags is None
+    assert d.platforms is None
+
+
+def test_defaults_populated() -> None:
+    d = Defaults.model_validate(
+        {
+            "platforms": ["linux/amd64", "linux/arm64"],
+            "destinations": [{"registry": "harbor-eu", "project": "lib", "repository": "redis"}],
+            "transform": [{"injectCA": {"certs": ["corp-root-ca"]}}],
+            "archive": {"keep": 2, "olderThanDays": 30},
+            "tags": {"semverOnly": True, "excludeRegex": ["-rc"]},
+        }
+    )
+    assert d.platforms == ["linux/amd64", "linux/arm64"]
+    assert d.destinations[0].registry == "harbor-eu"
+    assert d.transform[0].name == "injectCA"
+    assert d.tags.exclude_regex == ["-rc"]
+
+
+def test_import_profile_minimal() -> None:
+    i = ImportProfile.model_validate({"name": "v7", "tags": {"includeRegex": "^7\\."}})
+    assert i.name == "v7"
+    assert i.tags.include_regex == "^7\\."
+    assert i.destinations is None  # inherited from defaults at merge time
+    assert i.variants is None
+
+
+def test_import_profile_full() -> None:
+    i = ImportProfile.model_validate(
+        {
+            "name": "v7",
+            "tags": {"includeRegex": "^7\\.", "aliases": ["{major}.{minor}"]},
+            "destinations": [{"registry": "harbor-eu", "project": "lib", "repository": "redis"}],
+            "transform": [{"setTimezone": {"zone": "Europe/Paris"}}],
+            "archive": {"keep": 3},
+            "platforms": ["linux/amd64"],
+            "variants": [{"name": "standard", "suffix": ""}],
+        }
+    )
+    assert i.platforms == ["linux/amd64"]
+    assert i.variants[0].name == "standard"
+    assert i.transform[0].name == "setTimezone"
