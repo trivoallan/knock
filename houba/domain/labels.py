@@ -1,4 +1,4 @@
-"""Construction des labels OCI fr.sncf.h2h.* apposés sur les images importées."""
+"""Construction des labels OCI (préfixe configurable) apposés sur les images importées."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from datetime import datetime
 
 def build_labels(
     *,
+    prefix: str,
     src_registry: str,
     src_repository: str,
     src_tag: str,
@@ -16,16 +17,18 @@ def build_labels(
     eol_product: str | None,
     eol_date: str | None,
 ) -> dict[str, str]:
+    if not prefix:
+        return {}
     labels: dict[str, str] = {
-        "fr.sncf.h2h.source.registry": src_registry,
-        "fr.sncf.h2h.source.repository": src_repository,
-        "fr.sncf.h2h.source.tag": src_tag,
-        "fr.sncf.h2h.source.digest": src_digest,
-        "fr.sncf.h2h.import.date": import_date.isoformat(),
-        "fr.sncf.h2h.import.harbor": harbor,
+        f"{prefix}.source.registry": src_registry,
+        f"{prefix}.source.repository": src_repository,
+        f"{prefix}.source.tag": src_tag,
+        f"{prefix}.source.digest": src_digest,
+        f"{prefix}.import.date": import_date.isoformat(),
+        f"{prefix}.import.harbor": harbor,
     }
     if eol_product:
-        labels["fr.sncf.h2h.eol.product"] = eol_product
+        labels[f"{prefix}.eol.product"] = eol_product
     if eol_date:
-        labels["fr.sncf.h2h.eol.date"] = eol_date
+        labels[f"{prefix}.eol.date"] = eol_date
     return labels
