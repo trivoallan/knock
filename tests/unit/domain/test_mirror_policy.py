@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from houba.domain.mirror_policy import ArtifactType, Destination, Source, TagSelection
+from houba.domain.mirror_policy import (
+    ArtifactType,
+    Destination,
+    Source,
+    TagSelection,
+    TransformStep,
+)
 
 
 def test_source_parses() -> None:
@@ -60,3 +66,30 @@ def test_tag_selection_camel_case_input() -> None:
     assert t.semver_only is False
     assert t.names == ["7.2.1-special"]
     assert t.aliases == ["{major}.{minor}", "latest"]
+
+
+def test_transform_step_from_single_key_map() -> None:
+    step = TransformStep.model_validate({"injectCA": {"certs": ["corp-root-ca"]}})
+    assert step.name == "injectCA"
+    assert step.params == {"certs": ["corp-root-ca"]}
+
+
+def test_transform_step_with_empty_params() -> None:
+    step = TransformStep.model_validate({"enableFips": {}})
+    assert step.name == "enableFips"
+    assert step.params == {}
+
+
+def test_transform_step_null_params_becomes_empty() -> None:
+    step = TransformStep.model_validate({"enableFips": None})
+    assert step.params == {}
+
+
+def test_transform_step_rejects_multi_key() -> None:
+    with pytest.raises(ValueError):
+        TransformStep.model_validate({"injectCA": {}, "setTimezone": {}})
+
+
+def test_transform_step_rejects_empty() -> None:
+    with pytest.raises(ValueError):
+        TransformStep.model_validate({})
