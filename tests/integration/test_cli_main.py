@@ -9,14 +9,14 @@ from houba.cli.main import _run, app
 from houba.errors import ConfigError, HarborAuthError, NoTagsToImportError
 
 
-def test_h2h_version_outputs_version_string() -> None:
+def test_houba_version_outputs_version_string() -> None:
     runner = CliRunner()
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
     assert "0.1.0" in result.stdout
 
 
-def test_h2h_help_lists_subgroups() -> None:
+def test_houba_help_lists_subgroups() -> None:
     runner = CliRunner()
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
@@ -44,7 +44,7 @@ def test_run_maps_validation_error_to_exit_3() -> None:
         (HarborAuthError("401"), 2),
     ],
 )
-def test_run_maps_h2h_errors_to_exit_codes(exc: Exception, expected_code: int) -> None:
+def test_run_maps_houba_errors_to_exit_codes(exc: Exception, expected_code: int) -> None:
     def _raise() -> None:
         raise exc
 

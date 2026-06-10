@@ -5,7 +5,7 @@ from houba.domain.labels import build_labels
 
 def test_required_labels_present() -> None:
     labels = build_labels(
-        prefix="fr.sncf.h2h",
+        prefix="io.houba",
         src_registry="docker.io",
         src_repository="library/busybox",
         src_tag="1.36",
@@ -16,19 +16,19 @@ def test_required_labels_present() -> None:
         eol_date=None,
     )
 
-    assert labels["fr.sncf.h2h.source.registry"] == "docker.io"
-    assert labels["fr.sncf.h2h.source.repository"] == "library/busybox"
-    assert labels["fr.sncf.h2h.source.tag"] == "1.36"
-    assert labels["fr.sncf.h2h.source.digest"] == "sha256:abc"
-    assert labels["fr.sncf.h2h.import.date"] == "2026-05-21T10:30:00+00:00"
-    assert labels["fr.sncf.h2h.import.harbor"] == "blue"
-    assert "fr.sncf.h2h.eol.product" not in labels
-    assert "fr.sncf.h2h.eol.date" not in labels
+    assert labels["io.houba.source.registry"] == "docker.io"
+    assert labels["io.houba.source.repository"] == "library/busybox"
+    assert labels["io.houba.source.tag"] == "1.36"
+    assert labels["io.houba.source.digest"] == "sha256:abc"
+    assert labels["io.houba.import.date"] == "2026-05-21T10:30:00+00:00"
+    assert labels["io.houba.import.harbor"] == "blue"
+    assert "io.houba.eol.product" not in labels
+    assert "io.houba.eol.date" not in labels
 
 
 def test_eol_labels_included_when_provided() -> None:
     labels = build_labels(
-        prefix="fr.sncf.h2h",
+        prefix="io.houba",
         src_registry="docker.io",
         src_repository="library/redis",
         src_tag="7.2",
@@ -39,8 +39,8 @@ def test_eol_labels_included_when_provided() -> None:
         eol_date="2025-12-31",
     )
 
-    assert labels["fr.sncf.h2h.eol.product"] == "redis"
-    assert labels["fr.sncf.h2h.eol.date"] == "2025-12-31"
+    assert labels["io.houba.eol.product"] == "redis"
+    assert labels["io.houba.eol.date"] == "2025-12-31"
 
 
 def test_build_labels_with_default_prefix() -> None:

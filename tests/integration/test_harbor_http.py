@@ -95,7 +95,7 @@ def test_get_artifact_by_tag(adapter: HarborHttpAdapter) -> None:
             "digest": "sha256:abc",
             "tags": [{"name": "1.36"}, {"name": "latest"}],
             "push_time": "2026-05-21T12:00:00Z",
-            "labels": [{"name": "fr.sncf.h2h.source.tag=1.36"}],
+            "labels": [{"name": "io.houba.source.tag=1.36"}],
         }
         router.get("/api/v2.0/projects/lib/repositories/busybox/artifacts/latest").respond(
             200, json=body

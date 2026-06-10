@@ -11,9 +11,9 @@ from houba.ports.harbor import (
 
 
 def test_label_dataclass_has_id_and_name() -> None:
-    lab = Label(id=42, name="fr.sncf.h2h.source.tag=1.36")
+    lab = Label(id=42, name="io.houba.source.tag=1.36")
     assert lab.id == 42
-    assert lab.name == "fr.sncf.h2h.source.tag=1.36"
+    assert lab.name == "io.houba.source.tag=1.36"
 
 
 def test_artifact_tag_dataclass() -> None:
