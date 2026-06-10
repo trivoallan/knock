@@ -19,6 +19,7 @@ __all__ = [
     "HoubaError",
     "InternalError",
     "NoTagsToImportError",
+    "PolicyValidationError",
     "PropertiesValidationError",
     "SkopeoError",
     "exit_code_for",
@@ -35,6 +36,10 @@ class DomainError(HoubaError):
 
 class PropertiesValidationError(DomainError):
     """`properties.yml` invalide (schéma, regex malformée, valeur inattendue)."""
+
+
+class PolicyValidationError(DomainError):
+    """`MirrorPolicy` YAML invalid (schema, unknown field, inconsistent spec)."""
 
 
 class NoTagsToImportError(DomainError):

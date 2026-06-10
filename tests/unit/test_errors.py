@@ -46,3 +46,11 @@ def test_exit_codes(exc: HoubaError, expected_code: int) -> None:
 
 def test_exit_code_for_unknown_exception() -> None:
     assert exit_code_for(RuntimeError("boom")) == 4
+
+
+def test_policy_validation_error_is_domain_error_exit_1() -> None:
+    from houba.errors import DomainError, PolicyValidationError, exit_code_for
+
+    err = PolicyValidationError("bad policy")
+    assert isinstance(err, DomainError)
+    assert exit_code_for(err) == 1
