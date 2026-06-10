@@ -104,7 +104,7 @@ spec:
 
 ### 3.3 `spec` top-level
 
-- `artifactType` — discriminator (§6). Default `image`. Gates the `transform` vocabulary.
+- `artifactType` — discriminator (§6), **required** (no default — the type is explicit, so a policy never silently mis-handles a chart as an image). Gates the `transform` vocabulary.
 - `source` — one upstream repository: `{ registry, repository }`. Here `registry` is a **literal upstream hostname** (e.g. `docker.io`, `ghcr.io`) — distinct from `destination.registry`, which references a *named* registry from the roster (§7). **Not** overridable per import (one `MirrorPolicy` = one upstream). Not part of `defaults`.
 - `defaults` — fallback values inherited by each import. May hold `destinations`, `transform`, `archive`, `tags`. Optional.
 - `imports` — list of import profiles (§4). At least one required.
@@ -201,6 +201,7 @@ Alias rules:
 
 - Aliases are **moving**: re-evaluated every reconcile, re-pointed to the current highest. They are **exempt** from the concrete-tag immutability / 7-day digest-stability window (they are *meant* to move).
 - An alias does **not** re-stamp: it points at an already-stamped digest. The `org.opencontainers.image.*` / `io.houba.*` provenance records the *concrete* tag actually imported, never the alias.
+- **Aliases must be unique per destination repository.** If two templates, two imports, or a variant suffix collision would produce the same alias pointing into the same destination repository, reconcile **fails fast with a validation error** — never last-wins. (Collisions are detected during the load-and-validate phase, §8, before any mutation.)
 
 ---
 
@@ -211,9 +212,11 @@ Alias rules:
 1. **Mirror + stamp** — copy the artifact, add provenance annotations. Works for **any** OCI artifact type. The blast-radius thesis applies to charts and every other type ("which Helm charts are hit by this CVE?").
 2. **Transform** — rebuild content. Meaningful only for some types; the vocabulary is type-specific.
 
+`artifactType` is **required** — there is no default, so a policy must state its type explicitly.
+
 | `artifactType` | Transform vocabulary | Execution path |
 |---|---|---|
-| `image` (default) | full — `injectCA`, `rewritePackageSources`, `setTimezone`, `enableFips`, … | rebuild via BuildKit, then push |
+| `image` | full — `injectCA`, `rewritePackageSources`, `setTimezone`, `enableFips`, … | rebuild via BuildKit, then push |
 | `helmChart` | none in v1alpha1 (deferred: `rewriteImageRefs`, `setDefaultRegistry`, re-sign) | copy + annotate; stamped as `helmChart` |
 | `generic` | none — must be empty (validation error otherwise) | copy + annotate |
 
@@ -266,7 +269,7 @@ HOUBA_REGISTRY_HARBOR_US_PASSWORD=...
 houba reconcile <dir> [--dry-run]
 ```
 
-- **Load & validate first.** All `MirrorPolicy` files under `<dir>` are parsed and validated before any mutation. If *any* file is invalid, abort non-zero — never partial-apply a broken set.
+- **Load & validate first.** All `MirrorPolicy` files under `<dir>` are discovered **recursively** (subdirectories included, so policies can be organized by team/registry), then parsed and validated — including cross-policy alias-collision checks (§5.2) — before any mutation. If *any* file is invalid or any collision is detected, abort non-zero — never partial-apply a broken set.
 - **Stateless.** Actual state is read from each destination registry at run time. No state store.
 - **Partial failure.** Reconcile proceeds policy-by-policy with continue-on-error; per-policy/import/variant/destination status is collected. Exit non-zero if *any* unit failed (so a scheduler/CI sees red), but one failing policy does not block the others.
 - **`--dry-run`.** Compute and print the plan (per destination: tags to import/update/delete, aliases to move, variants and transform steps) without mutating. For GitOps PR-preview and CI "plan" stages. Maps to the existing dry-run settings.
@@ -305,8 +308,12 @@ The implementation will decompose into phases at the planning stage: the reconci
 
 ---
 
-## 11. Open questions
+## 11. Resolved during review
 
-- **Recursive directory load?** Does `reconcile <dir>` descend into subdirectories, or only the top level? (Lean: recursive, so policies can be organized by team/registry.)
+- **`artifactType` is required** (no default) — a policy states its type explicitly (§3.3, §6).
+- **Directory load is recursive** (§8) — policies may be organized in subdirectories.
+- **Alias collisions are a validation error**, detected in the load phase, never last-wins (§5.2, §8).
+
+## 12. Open questions (for the plan)
+
 - **`source.registry` credentials.** Pulling from private upstreams may need source-side auth. v1alpha1 assumes public or already-authenticated upstreams; source credentials are a likely near-term addition (same roster mechanism, used for read).
-- **Alias collision across imports.** Two imports in one policy could render the same alias (e.g. both produce `latest`). Detection + error vs last-wins — to settle in the plan. (Lean: validation error; aliases must be unique per destination+repository.)
