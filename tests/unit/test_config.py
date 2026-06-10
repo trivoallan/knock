@@ -87,6 +87,34 @@ def test_invalid_log_level_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
         Settings()
 
 
+def test_label_prefix_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """HOUBA_LABEL_PREFIX vaut 'io.houba' par défaut."""
+    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://h")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "u")
+    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://g")
+    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "g")
+    monkeypatch.delenv("HOUBA_LABEL_PREFIX", raising=False)
+
+    settings = Settings()
+    assert settings.label_prefix == "io.houba"
+
+
+def test_label_prefix_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """HOUBA_LABEL_PREFIX peut être surchargé via la variable d'environnement."""
+    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://h")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "u")
+    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://g")
+    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "g")
+    monkeypatch.setenv("HOUBA_LABEL_PREFIX", "com.example.myorg")
+
+    settings = Settings()
+    assert settings.label_prefix == "com.example.myorg"
+
+
 def test_endoflife_url_validated_but_str(monkeypatch: pytest.MonkeyPatch) -> None:
     """`endoflife_url` est validé comme URL mais exposé comme `str` pour httpx."""
     monkeypatch.setenv("HOUBA_HARBOR_URL", "https://h")
