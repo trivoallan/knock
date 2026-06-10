@@ -10,6 +10,7 @@ from houba.domain.mirror_policy import (
     Destination,
     ImportProfile,
     Source,
+    Spec,
     TagSelection,
     TransformStep,
     Variant,
@@ -175,3 +176,64 @@ def test_import_profile_full() -> None:
     assert i.platforms == ["linux/amd64"]
     assert i.variants[0].name == "standard"
     assert i.transform[0].name == "setTimezone"
+
+
+def test_spec_minimal() -> None:
+    spec = Spec.model_validate(
+        {
+            "artifactType": "image",
+            "source": {"registry": "docker.io", "repository": "library/redis"},
+            "imports": [{"name": "v7", "tags": {"includeRegex": "^7\\."}}],
+        }
+    )
+    assert spec.artifact_type is ArtifactType.image
+    assert spec.source.repository == "library/redis"
+    assert len(spec.imports) == 1
+
+
+def test_spec_artifact_type_required() -> None:
+    with pytest.raises(Exception):  # noqa: B017
+        Spec.model_validate(
+            {
+                "source": {"registry": "docker.io", "repository": "r"},
+                "imports": [{"name": "v", "tags": {}}],
+            }
+        )
+
+
+def test_spec_requires_at_least_one_import() -> None:
+    with pytest.raises(Exception):  # noqa: B017
+        Spec.model_validate(
+            {
+                "artifactType": "image",
+                "source": {"registry": "docker.io", "repository": "r"},
+                "imports": [],
+            }
+        )
+
+
+def test_spec_generic_forbids_transform_in_defaults() -> None:
+    from houba.errors import PolicyValidationError
+
+    with pytest.raises(PolicyValidationError, match="generic"):
+        Spec.model_validate(
+            {
+                "artifactType": "generic",
+                "source": {"registry": "docker.io", "repository": "r"},
+                "defaults": {"transform": [{"injectCA": {}}]},
+                "imports": [{"name": "v", "tags": {}}],
+            }
+        )
+
+
+def test_spec_generic_forbids_transform_in_import() -> None:
+    from houba.errors import PolicyValidationError
+
+    with pytest.raises(PolicyValidationError, match="generic"):
+        Spec.model_validate(
+            {
+                "artifactType": "generic",
+                "source": {"registry": "docker.io", "repository": "r"},
+                "imports": [{"name": "v", "tags": {}, "transform": [{"injectCA": {}}]}],
+            }
+        )
