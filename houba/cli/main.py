@@ -11,7 +11,7 @@ import typer
 from pydantic import ValidationError
 
 from houba.cli import dev as dev_cli
-from houba.errors import H2HError, exit_code_for
+from houba.errors import HoubaError, exit_code_for
 
 app = typer.Typer(name="houba", no_args_is_help=True, add_completion=False)
 app.add_typer(dev_cli.app, name="dev", help="Outils de développement (capture de fixtures, debug)")
@@ -28,7 +28,7 @@ def version() -> None:
 
 
 def _run() -> None:
-    """Wrapper d'entrée qui mappe les exceptions H2H sur des exit codes.
+    """Wrapper d'entrée qui mappe les exceptions Houba sur des exit codes.
 
     Voir spec §6.3 :
       1 = DomainError, 2 = AdapterError, 3 = ConfigError, 4 = InternalError.
@@ -40,7 +40,7 @@ def _run() -> None:
     except ValidationError as e:
         typer.echo(f"Configuration invalide : {e}", err=True)
         raise typer.Exit(3) from e
-    except H2HError as e:
+    except HoubaError as e:
         code = exit_code_for(e)
         typer.echo(f"{type(e).__name__}: {e}", err=True)
         raise typer.Exit(code) from e

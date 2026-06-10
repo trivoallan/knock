@@ -14,11 +14,11 @@ __all__ = [
     "EolSourceError",
     "GitError",
     "GitLabError",
-    "H2HError",
     "HarborAuthError",
     "HarborError",
     "HarborNotFoundError",
     "HarborTransientError",
+    "HoubaError",
     "InternalError",
     "NoTagsToImportError",
     "PropertiesValidationError",
@@ -27,11 +27,11 @@ __all__ = [
 ]
 
 
-class H2HError(Exception):
+class HoubaError(Exception):
     """Racine de toutes les erreurs métier/infra du CLI."""
 
 
-class DomainError(H2HError):
+class DomainError(HoubaError):
     """Erreur métier ou de validation (exit 1)."""
 
 
@@ -47,7 +47,7 @@ class EolDateInconsistencyError(DomainError):
     """La donnée EOL récupérée pour le produit est incohérente avec le tag traité."""
 
 
-class AdapterError(H2HError):
+class AdapterError(HoubaError):
     """Erreur infrastructure / dépendance externe (exit 2)."""
 
 
@@ -87,18 +87,18 @@ class EolSourceError(AdapterError):
     """Erreur de récupération des données EOL (endoflife.date)."""
 
 
-class ConfigError(H2HError):
+class ConfigError(HoubaError):
     """Configuration invalide / manquante (exit 3)."""
 
 
-class InternalError(H2HError):
+class InternalError(HoubaError):
     """Bug, assertion, condition inattendue (exit 4)."""
 
 
 # Les clés doivent être les racines de chaque branche (siblings non liées par héritage).
 # `exit_code_for` parcourt la MRO de l'exception et prend le premier match — l'ordre des
 # entrées de ce dict n'a pas d'importance tant que les clés restent des branches racines.
-_EXIT_CODES: dict[type[H2HError], int] = {
+_EXIT_CODES: dict[type[HoubaError], int] = {
     DomainError: 1,
     AdapterError: 2,
     ConfigError: 3,
@@ -109,7 +109,7 @@ _EXIT_CODES: dict[type[H2HError], int] = {
 def exit_code_for(exc: BaseException) -> int:
     """Retourne l'exit code pour une exception en parcourant sa MRO.
 
-    Toute exception non rattachée à `H2HError` (ex. `RuntimeError`, `KeyError`)
+    Toute exception non rattachée à `HoubaError` (ex. `RuntimeError`, `KeyError`)
     est traitée comme une `InternalError` (exit 4).
     """
     for klass in type(exc).__mro__:

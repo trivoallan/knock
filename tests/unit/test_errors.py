@@ -4,11 +4,11 @@ from houba.errors import (
     AdapterError,
     ConfigError,
     DomainError,
-    H2HError,
     HarborAuthError,
     HarborError,
     HarborNotFoundError,
     HarborTransientError,
+    HoubaError,
     InternalError,
     NoTagsToImportError,
     PropertiesValidationError,
@@ -17,10 +17,10 @@ from houba.errors import (
 
 
 def test_hierarchy() -> None:
-    assert issubclass(DomainError, H2HError)
-    assert issubclass(AdapterError, H2HError)
-    assert issubclass(ConfigError, H2HError)
-    assert issubclass(InternalError, H2HError)
+    assert issubclass(DomainError, HoubaError)
+    assert issubclass(AdapterError, HoubaError)
+    assert issubclass(ConfigError, HoubaError)
+    assert issubclass(InternalError, HoubaError)
     assert issubclass(HarborError, AdapterError)
     assert issubclass(HarborAuthError, HarborError)
     assert issubclass(HarborNotFoundError, HarborError)
@@ -40,7 +40,7 @@ def test_hierarchy() -> None:
         (InternalError("x"), 4),
     ],
 )
-def test_exit_codes(exc: H2HError, expected_code: int) -> None:
+def test_exit_codes(exc: HoubaError, expected_code: int) -> None:
     assert exit_code_for(exc) == expected_code
 
 
