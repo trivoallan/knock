@@ -6,7 +6,6 @@ Many organisations maintain a private OCI registry that mirrors a curated subset
 
 - Which tags should we mirror? Latest five semver? Anything matching a regex? Anything not in an exclusion list?
 - When does a digest change behind a moving tag (e.g. `1.36`) — do we re-pull immediately or wait for the upstream maintainer to settle?
-- What about end-of-life images: should we still mirror them?
 - Once mirrored, how do we record provenance (source registry / repository / tag / digest / import date) for traceability?
 - When a product is decommissioned, how do we archive its tags rather than lose them?
 
@@ -33,9 +32,9 @@ Many organisations maintain a private OCI registry that mirrors a curated subset
 ┌──────────────────┐                            ┌────────────────────┐
 │ Domain (pure)    │                            │     Ports          │
 │ semver, tag      │                            │ Harbor, source     │
-│ filter, EOL,     │                            │ registry, builder, │
-│ purge, plan,     │                            │ git, gitlab,       │
-│ labels, props    │                            │ notifier, eol …    │
+│ filter, purge,   │                            │ registry, builder, │
+│ plan, labels,    │                            │ git, gitlab,       │
+│ props            │                            │ notifier, clock …  │
 └──────────────────┘                            └────────┬───────────┘
                                                          │
                                                          ▼
@@ -43,8 +42,7 @@ Many organisations maintain a private OCI registry that mirrors a curated subset
                                               │      Adapters        │
                                               │ HarborHttp, Skopeo,  │
                                               │ Buildkit, GitCli,    │
-                                              │ GitLabHttp, Teams,   │
-                                              │ Endoflife …          │
+                                              │ GitLabHttp, Teams …  │
                                               └──────────────────────┘
 ```
 
@@ -85,8 +83,6 @@ Every imported image is enriched with a configurable set of labels:
 - `{prefix}.source.digest` — e.g. `sha256:abc…`
 - `{prefix}.import.date` — ISO 8601
 - `{prefix}.import.harbor` — which Harbor instance received it
-- `{prefix}.eol.product` — endoflife.date product key, if applicable
-- `{prefix}.eol.date` — EOL date for this tag, if applicable
 
 The prefix is configurable via `HOUBA_LABEL_PREFIX` (default `io.houba`).
 
@@ -96,8 +92,7 @@ The prefix is configurable via `HOUBA_LABEL_PREFIX` (default `io.houba`).
 HoubaError                          (base)
 ├── DomainError          exit 1     business / validation error
 │   ├── PropertiesValidationError
-│   ├── NoTagsToImportError
-│   └── EolDateInconsistencyError
+│   └── NoTagsToImportError
 ├── AdapterError         exit 2     infra / external dependency error
 │   ├── HarborError
 │   │   ├── HarborAuthError
@@ -106,8 +101,7 @@ HoubaError                          (base)
 │   ├── GitError
 │   ├── SkopeoError
 │   ├── BuildkitError
-│   ├── GitLabError
-│   └── EolSourceError
+│   └── GitLabError
 ├── ConfigError          exit 3     missing or invalid configuration
 └── InternalError        exit 4     bug / assertion failure
 ```
@@ -117,7 +111,7 @@ Transient errors (HTTP 5xx, network timeouts) are automatically retried up to 5 
 ## Status
 
 - **Phase A (delivered)** — project foundations, complete `domain/` layer with > 90 % coverage, read-only adapters for Harbor / source registry, `houba dev capture` to record production fixtures.
-- **Phase B (delivered, this release)** — all 5 missing ports and their adapters: image builder (BuildKit), git CLI, GitLab REST API, Teams webhook, endoflife.date. Harbor write-side (delete, tag create/delete, label, immutable rule) added. Composition root wired. Runtime Docker image embeds skopeo + buildctl + git.
+- **Phase B (delivered, this release)** — all 4 missing ports and their adapters: image builder (BuildKit), git CLI, GitLab REST API, Teams webhook. Harbor write-side (delete, tag create/delete, label, immutable rule) added. Composition root wired. Runtime Docker image embeds skopeo + buildctl + git.
 - **Phase C (next)** — use cases: `product_import`, `product_init`, `product_delete`, `proxycache_update`, `archive_restore`, `archive_purge`.
 
 See [README](../README.md) for installation and configuration.

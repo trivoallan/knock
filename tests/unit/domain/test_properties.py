@@ -20,7 +20,6 @@ def test_parse_minimal_applies_defaults() -> None:
     assert p.flags.set_timezone is True  # défaut
     assert p.archive.keep == 2
     assert p.archive.older_than_days == 30
-    assert p.eol.product is None
 
 
 def test_parse_full_overrides_defaults() -> None:
@@ -30,7 +29,6 @@ def test_parse_full_overrides_defaults() -> None:
     assert p.tags.include_regex == r"^v\d+\.\d+\.\d+$"
     assert p.tags.exclude_regex == ["-rc"]
     assert p.flags.add_apt_repos is True
-    assert p.eol.product == "kubernetes"
     assert p.archive.keep == 3
 
 

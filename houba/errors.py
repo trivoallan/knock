@@ -10,8 +10,6 @@ __all__ = [
     "BuildkitError",
     "ConfigError",
     "DomainError",
-    "EolDateInconsistencyError",
-    "EolSourceError",
     "GitError",
     "GitLabError",
     "HarborAuthError",
@@ -41,10 +39,6 @@ class PropertiesValidationError(DomainError):
 
 class NoTagsToImportError(DomainError):
     """Aucun tag source ne satisfait les filtres après application du calcul."""
-
-
-class EolDateInconsistencyError(DomainError):
-    """La donnée EOL récupérée pour le produit est incohérente avec le tag traité."""
 
 
 class AdapterError(HoubaError):
@@ -81,10 +75,6 @@ class BuildkitError(AdapterError):
 
 class GitLabError(AdapterError):
     """Erreur de communication avec l'API REST GitLab."""
-
-
-class EolSourceError(AdapterError):
-    """Erreur de récupération des données EOL (endoflife.date)."""
 
 
 class ConfigError(HoubaError):

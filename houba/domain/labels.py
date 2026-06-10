@@ -14,8 +14,6 @@ def build_labels(
     src_digest: str,
     import_date: datetime,
     harbor: str,
-    eol_product: str | None,
-    eol_date: str | None,
 ) -> dict[str, str]:
     if not prefix:
         return {}
@@ -27,8 +25,4 @@ def build_labels(
         f"{prefix}.import.date": import_date.isoformat(),
         f"{prefix}.import.harbor": harbor,
     }
-    if eol_product:
-        labels[f"{prefix}.eol.product"] = eol_product
-    if eol_date:
-        labels[f"{prefix}.eol.date"] = eol_date
     return labels

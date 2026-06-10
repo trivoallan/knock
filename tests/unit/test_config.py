@@ -113,22 +113,3 @@ def test_label_prefix_override(monkeypatch: pytest.MonkeyPatch) -> None:
 
     settings = Settings()
     assert settings.label_prefix == "com.example.myorg"
-
-
-def test_endoflife_url_validated_but_str(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`endoflife_url` est validé comme URL mais exposé comme `str` pour httpx."""
-    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://h")
-    monkeypatch.setenv("HOUBA_HARBOR_USER", "u")
-    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "p")
-    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://g")
-    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "t")
-    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "g")
-    monkeypatch.setenv("HOUBA_ENDOFLIFE_URL", "https://eol.test/api")
-
-    settings = Settings()
-    assert isinstance(settings.endoflife_url, str)
-    assert settings.endoflife_url == "https://eol.test/api"
-
-    monkeypatch.setenv("HOUBA_ENDOFLIFE_URL", "not-a-url")
-    with pytest.raises(ValidationError):
-        Settings()

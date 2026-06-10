@@ -1,8 +1,8 @@
 # houba
 
-**OCI image mirroring CLI with policy-driven tag selection and EOL awareness.**
+**OCI image mirroring CLI with policy-driven tag selection.**
 
-`houba` mirrors container images from a public source registry (Docker Hub, Quay, GHCR…) into a private OCI registry (Harbor), applying per-product policies for tag selection, exclusion patterns, semver ordering, end-of-life awareness, archival, and OCI label enrichment.
+`houba` mirrors container images from a public source registry (Docker Hub, Quay, GHCR…) into a private OCI registry (Harbor), applying per-product policies for tag selection, exclusion patterns, semver ordering, archival, and OCI label enrichment.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
@@ -11,12 +11,12 @@
 
 ## What it does
 
-For each product you want to mirror you write a small `properties.yml` describing source/destination, tag filters, EOL source. `houba` then:
+For each product you want to mirror you write a small `properties.yml` describing source/destination, tag filters. `houba` then:
 
 1. Lists tags on the source registry (via `skopeo`).
-2. Computes which tags must be imported, updated, or deleted — based on regex include/exclude filters, semver ordering, a 7-day stability window for digest changes, and EOL data from [endoflife.date](https://endoflife.date).
+2. Computes which tags must be imported, updated, or deleted — based on regex include/exclude filters, semver ordering, and a 7-day stability window for digest changes.
 3. For each tag to import: pulls the image, builds a small wrapper layer (via `buildctl` / BuildKit) embedding configurable shell scripts and certificates, pushes to your Harbor.
-4. Applies OCI labels (`{prefix}.source.registry`, `{prefix}.source.tag`, `{prefix}.import.date`, `{prefix}.eol.date` …) — prefix is configurable.
+4. Applies OCI labels (`{prefix}.source.registry`, `{prefix}.source.tag`, `{prefix}.import.date` …) — prefix is configurable.
 5. Optionally archives obsolete tags rather than deleting them.
 6. Sends a Teams webhook notification on success / failure.
 
@@ -61,7 +61,6 @@ You still need `skopeo`, `buildctl`, and `git` on `PATH` when running from sourc
 | `HOUBA_GITLAB_TOKEN` | yes | — | Personal access token (read/write API) |
 | `HOUBA_GITLAB_GROUP` | yes | — | GitLab group containing per-product repositories |
 | `HOUBA_TEAMS_WEBHOOK_URL` | no | — | Disables notifications when absent |
-| `HOUBA_ENDOFLIFE_URL` | no | `https://endoflife.date/api` | EOL data source |
 | `HOUBA_LABEL_PREFIX` | no | `io.houba` | OCI label key prefix (e.g. `org.example.mirror`) |
 | `HOUBA_LOG_FORMAT` | no | `text` | `text` or `json` |
 | `HOUBA_LOG_LEVEL` | no | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
@@ -88,9 +87,9 @@ See [docs/runbooks/capture-fixtures.md](docs/runbooks/capture-fixtures.md).
 
 ```
 houba/
-├── domain/         pure business logic (semver, properties, tag filter, EOL, purge, plan, labels)
+├── domain/         pure business logic (semver, properties, tag filter, purge, plan, labels)
 ├── ports/          typing.Protocol interfaces (harbor, source_registry, image_builder,
-│                   git_repo, gitlab, notifier, eol_source, clock)
+│                   git_repo, gitlab, notifier, clock)
 ├── adapters/       concrete implementations (httpx, subprocess)
 ├── use_cases/      orchestration (Phase C)
 └── cli/            Typer entry points

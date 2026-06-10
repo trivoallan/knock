@@ -28,7 +28,6 @@ def build_plan(
     tag: str,
     properties: Properties,
     src_digest: str,
-    eol_date: str | None,
     now: datetime,
     label_prefix: str = "io.houba",
 ) -> ImportPlan:
@@ -45,8 +44,6 @@ def build_plan(
         src_digest=src_digest,
         import_date=now,
         harbor=properties.destination.harbor,
-        eol_product=properties.eol.product,
-        eol_date=eol_date,
     )
 
     return ImportPlan(

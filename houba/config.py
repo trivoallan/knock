@@ -13,24 +13,10 @@ que `HOUBA_HARBOR__URL`) tout en gardant l'API ergonomique
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Literal
 
-from pydantic import AfterValidator, Field, HttpUrl, SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-def _validate_http_url(value: str) -> str:
-    """Valide la valeur comme URL via Pydantic mais expose une `str`.
-
-    Les consommateurs downstream (httpx, urllib.parse.urljoin) attendent une
-    `str`, pas un wrapper `HttpUrl`. On valide à la lecture de la config puis on
-    stocke la chaîne brute.
-    """
-    HttpUrl(value)  # lève ValidationError si malformée
-    return value
-
-
-HttpUrlStr = Annotated[str, AfterValidator(_validate_http_url)]
 
 
 class HarborSettings(BaseSettings):
@@ -77,7 +63,6 @@ class Settings(BaseSettings):
     gitlab: GitLabSettings = Field(default_factory=_build_gitlab)
 
     teams_webhook_url: SecretStr | None = None
-    endoflife_url: HttpUrlStr = "https://endoflife.date/api"
     label_prefix: str = "io.houba"
 
     log_format: Literal["text", "json"] = "text"
