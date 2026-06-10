@@ -4,11 +4,13 @@ import pytest
 from pydantic import ValidationError
 
 from houba.domain.mirror_policy import (
+    Archive,
     ArtifactType,
     Destination,
     Source,
     TagSelection,
     TransformStep,
+    Variant,
 )
 
 
@@ -93,3 +95,31 @@ def test_transform_step_rejects_multi_key() -> None:
 def test_transform_step_rejects_empty() -> None:
     with pytest.raises(ValueError):
         TransformStep.model_validate({})
+
+
+def test_archive_defaults() -> None:
+    a = Archive.model_validate({})
+    assert a.keep == 2
+    assert a.older_than_days == 30
+
+
+def test_archive_camel_input() -> None:
+    a = Archive.model_validate({"keep": 5, "olderThanDays": 90})
+    assert a.keep == 5
+    assert a.older_than_days == 90
+
+
+def test_variant_minimal() -> None:
+    v = Variant.model_validate({"name": "standard", "suffix": ""})
+    assert v.name == "standard"
+    assert v.suffix == ""
+    assert v.transform is None
+
+
+def test_variant_with_transform() -> None:
+    v = Variant.model_validate(
+        {"name": "fips", "suffix": "-fips", "transform": [{"enableFips": {}}]}
+    )
+    assert v.suffix == "-fips"
+    assert v.transform is not None
+    assert v.transform[0].name == "enableFips"
