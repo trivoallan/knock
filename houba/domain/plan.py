@@ -30,7 +30,7 @@ def build_plan(
     src_digest: str,
     eol_date: str | None,
     now: datetime,
-    label_prefix: str = "fr.sncf.h2h",
+    label_prefix: str = "io.houba",
 ) -> ImportPlan:
     src_image = f"{properties.source.registry}/{properties.source.repository}:{tag}"
     dst_image = f"{properties.destination.project}/{properties.destination.repository}:{tag}"
