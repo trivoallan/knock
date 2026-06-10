@@ -36,6 +36,8 @@ The schema is designed whole; the **implementation is bounded**. The schema admi
 | `artifactType: generic` — copy + stamp, no transform | ✅ | |
 | `artifactType: helmChart` — copy + stamp, **chart transform deferred** | ✅ (stamp only) | `rewriteImageRefs`, `setDefaultRegistry`, re-sign |
 | Registry `type: harbor` | ✅ | `type: oci` (generic-OCI adapter, needs `RegistryPort`) |
+| `platforms` knob + multi-arch on the **copy path** (no transform steps) | ✅ | |
+| Multi-arch **rebuild** (image + transform across platforms) | ❌ (single-platform) | BuildKit multi-platform build + index reassembly |
 | `reconcile` contract (exit codes, `--dry-run`, partial failure, stateless) | ✅ | |
 | Reference deployment manifests (Argo/CronJob/GH Actions) | ❌ | `examples/deploy/` — multi-trigger, never single |
 
@@ -55,11 +57,12 @@ metadata:
   labels:
     team: platform-data            # stable key → provenance; human owner resolved downstream
 spec:
-  artifactType: image              # image | helmChart | generic   (default: image)
+  artifactType: image              # image | helmChart | generic   (required)
   source:
     registry: docker.io            # upstream registry
     repository: library/redis
   defaults:                        # fallback values for every import (rule B merge)
+    platforms: ["linux/amd64", "linux/arm64"]   # default: all source platforms
     destinations:
       - { registry: harbor-eu, project: lib, repository: redis }
       - { registry: harbor-us, project: lib, repository: redis }
@@ -106,7 +109,7 @@ spec:
 
 - `artifactType` — discriminator (§6), **required** (no default — the type is explicit, so a policy never silently mis-handles a chart as an image). Gates the `transform` vocabulary.
 - `source` — one upstream repository: `{ registry, repository }`. Here `registry` is a **literal upstream hostname** (e.g. `docker.io`, `ghcr.io`) — distinct from `destination.registry`, which references a *named* registry from the roster (§7). **Not** overridable per import (one `MirrorPolicy` = one upstream). Not part of `defaults`.
-- `defaults` — fallback values inherited by each import. May hold `destinations`, `transform`, `archive`, `tags`. Optional.
+- `defaults` — fallback values inherited by each import. May hold `destinations`, `transform`, `archive`, `tags`, `platforms`. Optional.
 - `imports` — list of import profiles (§4). At least one required.
 
 ### 3.4 Merge semantics (rule B) — load-bearing
@@ -114,7 +117,7 @@ spec:
 When an `import` specifies a field also present in `defaults`:
 
 - **Map fields** (`tags`, `archive`): **shallow-merged** key-by-key over the default, one level deep. Example: `defaults.tags = {semverOnly: true, excludeRegex: ["-rc"]}` + `import.tags = {includeRegex: "^7\\."}` → `{includeRegex: "^7\\.", semverOnly: true, excludeRegex: ["-rc"]}`.
-- **List fields** (`transform`, `destinations`): **replaced wholesale**. No append/merge.
+- **List fields** (`transform`, `destinations`, `platforms`): **replaced wholesale**. No append/merge.
 - Nested lists inside a merged map (e.g. `tags.excludeRegex`) are atomic — replaced if the import specifies them.
 
 Rationale: `transform` is an *ordered* list with dependencies (inject CA before rewriting HTTPS sources that must trust it). Auto-merging ordered lists is ill-defined (the k8s strategic-merge trap). Replace is the only predictable rule; restating a list on override is an explicit, acceptable cost. One level of merge only — no recursion, no list-merge magic.
@@ -134,6 +137,7 @@ import:
   destinations: <list<Destination>>     # optional; inherits defaults.destinations
   transform:    <list<TransformStep>>   # optional; inherits defaults.transform
   archive:      <Archive>               # optional; inherits defaults.archive
+  platforms:    <list<string>>          # optional; inherits defaults.platforms; default = all source platforms
   variants:     <list<Variant>>         # optional; one implicit "default" variant if absent
 ```
 
@@ -232,6 +236,18 @@ houba's registry client is **regctl** (regclient), replacing skopeo. regctl cove
 - The `image` path bakes annotations during the **BuildKit** (`buildctl`) rebuild; regctl is not a builder, so `buildctl` stays.
 - regctl is registry-native (single static binary, no daemon, talks the dist-spec directly) and first-class on arbitrary OCI artifacts and the **referrers API** (relevant to the SLSA/in-toto attestation roadmap) — both weak spots of skopeo. `crane` was the close runner-up; `oras` is complementary for artifacts but not a full skopeo replacement on its own. The sibling tool `regis` already uses regctl (shared family tooling).
 
+### 6.2 Multi-architecture
+
+A tag usually resolves to an OCI **index** (manifest list) referencing one image manifest per platform. `platforms` (a list, `defaults`-overridable, default = *all source platforms*) selects which platforms to mirror. What matters is that **the rebuild is triggered by the presence of `transform` steps, not by `artifactType`**:
+
+- **No transform steps** (empty `transform`, any `artifactType` — including `image`) → **copy + annotate** path → **multi-arch**. regctl copies the whole index (honouring `platforms`) and annotates the index. Available in v1alpha1.
+- **With transform steps** (`image` hardening) → **rebuild** path → **single-platform** in v1alpha1 (default: the builder's native platform). A policy that combines `transform` steps with more than one `platforms` entry is a **validation error** — no platform is silently dropped.
+- **Deferred:** full multi-arch rebuild (BuildKit `--platform <list>` + index reassembly). When it lands, providing arm64/etc. build capacity (QEMU/binfmt or native builder nodes) is a **deployment concern** — houba issues the multi-platform build; the infra provides the builders, like the reconcile trigger.
+
+So in v1alpha1 a *copied* or *un-hardened* image is multi-arch; only a *hardened* image is single-arch, until rebuild-multi-arch lands.
+
+**Stamping** sets provenance annotations on the **index** (what the tag resolves to and what scanners read); the rebuild path annotates the single-platform manifest it produces.
+
 ---
 
 ## 7. Registries (config)
@@ -271,6 +287,7 @@ houba reconcile <dir> [--dry-run]
 
 - **Load & validate first.** All `MirrorPolicy` files under `<dir>` are discovered **recursively** (subdirectories included, so policies can be organized by team/registry), then parsed and validated — including cross-policy alias-collision checks (§5.2) — before any mutation. If *any* file is invalid or any collision is detected, abort non-zero — never partial-apply a broken set.
 - **Stateless.** Actual state is read from each destination registry at run time. No state store.
+- **Change detection for derived artifacts.** A *transformed* image's mirror digest differs from its source — so houba cannot compare `mirror-digest == source-digest`. It compares the source digest recorded in the stamp (`org.opencontainers.image.base.digest`) against the current source digest; for multi-arch, that source digest is the **index** digest. The stamp is the idempotency key. (This is a `tag_filter` refinement in `domain/`; it also subsumes the 7-day digest-stability window, which keys on the same source digest.)
 - **Partial failure.** Reconcile proceeds policy-by-policy with continue-on-error; per-policy/import/variant/destination status is collected. Exit non-zero if *any* unit failed (so a scheduler/CI sees red), but one failing policy does not block the others.
 - **`--dry-run`.** Compute and print the plan (per destination: tags to import/update/delete, aliases to move, variants and transform steps) without mutating. For GitOps PR-preview and CI "plan" stages. Maps to the existing dry-run settings.
 - **Idempotent.** Re-running converges to the same state; safe at any cadence.
@@ -302,7 +319,7 @@ This design touches, beyond `domain/`:
 - **New domain** — `MirrorPolicy` models (replacing `Properties`), the alias-template resolver, the merge engine, the variant expander, the selection engine extended with `names`.
 - **Registry adapter** — `skopeo_cli` is **replaced by a regctl adapter** (list/inspect/copy/annotate/retag), which also provides the copy-and-annotate path for `generic`/`helmChart`. `buildctl` stays for the image rebuild. The runtime image bundles **regctl + buildctl + git** (was skopeo + buildctl + git).
 - **Reduced Harbor coupling** — provenance via OCI annotations plus dist-spec tag/delete/annotate via regctl mean the Harbor HTTP API shrinks to immutable tag *rules* and projects. This materially advances the deferred `registry type: oci` (generic, non-Harbor) future: most write operations no longer depend on Harbor's proprietary API.
-- **Deferred architecture** — a `RegistryPort` abstraction with `HarborRegistryAdapter` + a future `OciRegistryAdapter` (for registry `type: oci`); the `helmChart` transform vocabulary.
+- **Deferred architecture** — a `RegistryPort` abstraction with `HarborRegistryAdapter` + a future `OciRegistryAdapter` (for registry `type: oci`); the `helmChart` transform vocabulary; full multi-arch rebuild (BuildKit multi-platform + index reassembly).
 
 The implementation will decompose into phases at the planning stage: the reconcile engine + schema, multi-registry config, the regctl adapter + copy-and-annotate path, the `image` transform vocabulary, then the `helmChart` transform.
 
