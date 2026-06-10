@@ -289,3 +289,25 @@ def test_parse_wraps_validation_error() -> None:
             "apiVersion: houba.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
             "spec: {source: {registry: d, repository: r}, imports: [{name: v, tags: {}}]}\n"
         )
+
+
+def test_json_schema_is_emitted_with_camel_case_keys() -> None:
+    from houba.domain.mirror_policy import mirror_policy_json_schema
+
+    schema = mirror_policy_json_schema()
+    assert schema["title"] == "MirrorPolicy"
+    assert schema["type"] == "object"
+    # camelCase property names (the public contract), not snake_case
+    dumped = repr(schema)
+    assert "artifactType" in dumped
+    assert "includeRegex" in dumped
+    assert "artifact_type" not in dumped
+
+
+def test_json_schema_is_stable_and_serializable() -> None:
+    import json
+
+    from houba.domain.mirror_policy import mirror_policy_json_schema
+
+    # must be JSON-serializable (publishable for editor/CI validation)
+    json.dumps(mirror_policy_json_schema())
