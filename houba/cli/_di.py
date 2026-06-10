@@ -8,7 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from houba.adapters.buildkit_cli import BuildkitAdapter
-from houba.adapters.endoflife_http import EndoflifeHttpAdapter
 from houba.adapters.git_cli import GitCliAdapter
 from houba.adapters.gitlab_http import GitLabHttpAdapter
 from houba.adapters.harbor_http import HarborHttpAdapter
@@ -27,7 +26,6 @@ class Container:
     git: GitCliAdapter
     gitlab: GitLabHttpAdapter
     notifier: TeamsWebhookAdapter | None
-    eol: EndoflifeHttpAdapter
     clock: SystemClock
 
 
@@ -53,6 +51,5 @@ def build_container(settings: Settings | None = None) -> Container:
         git=GitCliAdapter(),
         gitlab=gitlab,
         notifier=notifier,
-        eol=EndoflifeHttpAdapter(base_url=settings.endoflife_url),
         clock=SystemClock(),
     )

@@ -15,8 +15,6 @@ flags:
   add_yum_repos: false
   update_keystore: true
   set_timezone: true
-eol:
-  product: kubernetes
 archive:
   keep: 3
   older_than_days: 60

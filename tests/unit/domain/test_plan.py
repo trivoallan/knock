@@ -15,8 +15,6 @@ flags:
   add_apt_repos: true
   update_keystore: true
   set_timezone: true
-eol:
-  product: busybox
 """
 
 
@@ -25,7 +23,6 @@ def test_build_plan_basic_fields() -> None:
         tag="1.36",
         properties=parse_properties(YAML),
         src_digest="sha256:abc",
-        eol_date="2027-01-01",
         now=datetime(2026, 5, 21, tzinfo=UTC),
     )
 
@@ -36,26 +33,6 @@ def test_build_plan_basic_fields() -> None:
     assert plan.flags["add_apt_repos"] is True
     assert plan.flags["add_yum_repos"] is False
     assert plan.labels["io.houba.source.digest"] == "sha256:abc"
-    assert plan.labels["io.houba.eol.date"] == "2027-01-01"
-
-
-def test_build_plan_without_eol() -> None:
-    yaml_no_eol = """
-    source:
-      registry: docker.io
-      repository: library/busybox
-    destination:
-      harbor: blue
-      project: lib
-      repository: busybox
-    """
-    plan = build_plan(
-        tag="1.36",
-        properties=parse_properties(yaml_no_eol),
-        src_digest="sha256:abc",
-        eol_date=None,
-        now=datetime(2026, 5, 21, tzinfo=UTC),
-    )
-
-    assert "io.houba.eol.product" not in plan.labels
-    assert "io.houba.eol.date" not in plan.labels
+    assert plan.labels["io.houba.source.registry"] == "docker.io"
+    assert plan.labels["io.houba.source.tag"] == "1.36"
+    assert plan.labels["io.houba.import.harbor"] == "blue"

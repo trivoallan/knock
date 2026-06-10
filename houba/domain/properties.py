@@ -38,10 +38,6 @@ class Flags(BaseModel):
     set_timezone: bool = True
 
 
-class Eol(BaseModel):
-    product: str | None = None
-
-
 class Archive(BaseModel):
     keep: int = 2
     older_than_days: int = 30
@@ -52,7 +48,6 @@ class Properties(BaseModel):
     destination: Destination
     tags: TagsSpec = Field(default_factory=TagsSpec)
     flags: Flags = Field(default_factory=Flags)
-    eol: Eol = Field(default_factory=Eol)
     archive: Archive = Field(default_factory=Archive)
 
 
