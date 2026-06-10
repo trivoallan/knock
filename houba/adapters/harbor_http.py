@@ -21,6 +21,16 @@ PAGE_SIZE = 100
 MAX_ATTEMPTS = 5
 
 
+def _encode_repo(repository_name: str) -> str:
+    """Double-encode a Harbor repository name for URL path segments.
+
+    Harbor exige un double encodage du nom de repo : les `/` doivent rester
+    encodés côté serveur après le routing. Voir vars/HarborApi.groovy et
+    ci/harbor.py — bug historique reproduit ici intentionnellement.
+    """
+    return quote(quote(repository_name, safe=""), safe="")
+
+
 class HarborHttpAdapter:
     def __init__(self, *, base_url: str, user: str, password: str) -> None:
         self._base = base_url.rstrip("/") + "/api/v2.0"
@@ -46,10 +56,7 @@ class HarborHttpAdapter:
         ]
 
     def get_artifacts(self, project_name: str, repository_name: str) -> list[Artifact]:
-        # Harbor exige un double encodage du nom de repo : les `/` doivent rester
-        # encodés côté serveur après le routing. Voir vars/HarborApi.groovy et
-        # ci/harbor.py — bug historique reproduit ici intentionnellement.
-        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        repo_encoded = _encode_repo(repository_name)
         path = f"/projects/{project_name}/repositories/{repo_encoded}/artifacts"
         items = list(self._paginate(path))
         return [
@@ -63,7 +70,7 @@ class HarborHttpAdapter:
         ]
 
     def get_artifact(self, project_name: str, repository_name: str, reference: str) -> Artifact:
-        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        repo_encoded = _encode_repo(repository_name)
         # safe=":" preserves the `sha256:` separator dans les digests. Les noms de tags
         # ne doivent pas contenir de `:` (convention Harbor) sous peine d'être parsés
         # comme des digests par l'API.
@@ -80,7 +87,7 @@ class HarborHttpAdapter:
     def list_artifact_tags(
         self, project_name: str, repository_name: str, reference: str
     ) -> list[ArtifactTag]:
-        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        repo_encoded = _encode_repo(repository_name)
         ref_encoded = quote(reference, safe=":")
         path = f"/projects/{project_name}/repositories/{repo_encoded}/artifacts/{ref_encoded}/tags"
         items = list(self._paginate(path))
@@ -96,11 +103,11 @@ class HarborHttpAdapter:
     # ------------------------------------------------------------------
 
     def delete_repository(self, project_name: str, repository_name: str) -> None:
-        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        repo_encoded = _encode_repo(repository_name)
         self._request("DELETE", f"/projects/{project_name}/repositories/{repo_encoded}")
 
     def delete_artifact(self, project_name: str, repository_name: str, reference: str) -> None:
-        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        repo_encoded = _encode_repo(repository_name)
         ref_encoded = quote(reference, safe=":")
         path = f"/projects/{project_name}/repositories/{repo_encoded}/artifacts/{ref_encoded}"
         self._request("DELETE", path)
@@ -108,7 +115,7 @@ class HarborHttpAdapter:
     def create_artifact_tag(
         self, project_name: str, repository_name: str, reference: str, tag: str
     ) -> None:
-        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        repo_encoded = _encode_repo(repository_name)
         ref_encoded = quote(reference, safe=":")
         path = f"/projects/{project_name}/repositories/{repo_encoded}/artifacts/{ref_encoded}/tags"
         self._request("POST", path, json={"name": tag})
@@ -116,7 +123,7 @@ class HarborHttpAdapter:
     def delete_artifact_tag(
         self, project_name: str, repository_name: str, reference: str, tag: str
     ) -> None:
-        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        repo_encoded = _encode_repo(repository_name)
         ref_encoded = quote(reference, safe=":")
         tag_encoded = quote(tag, safe="")
         path = (
@@ -141,7 +148,7 @@ class HarborHttpAdapter:
         reference: str,
         label_id: int,
     ) -> None:
-        repo_encoded = quote(quote(repository_name, safe=""), safe="")
+        repo_encoded = _encode_repo(repository_name)
         ref_encoded = quote(reference, safe=":")
         path = (
             f"/projects/{project_name}/repositories/{repo_encoded}/artifacts/{ref_encoded}/labels"
