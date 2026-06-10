@@ -85,20 +85,20 @@ def test_delete_artifact_tag_is_journaled() -> None:
 
 
 def test_ensure_label_returns_existing() -> None:
-    pre = Label(id=7, name="fr.sncf.h2h.source.tag=1.36")
+    pre = Label(id=7, name="io.houba.source.tag=1.36")
     fake = FakeHarborPort(labels=[pre])
-    assert fake.ensure_label("fr.sncf.h2h.source.tag=1.36") is pre
+    assert fake.ensure_label("io.houba.source.tag=1.36") is pre
 
 
 def test_ensure_label_creates_when_missing() -> None:
     fake = FakeHarborPort()
-    lab = fake.ensure_label("fr.sncf.h2h.source.tag=1.36")
+    lab = fake.ensure_label("io.houba.source.tag=1.36")
     assert lab.id >= 1
-    assert lab.name == "fr.sncf.h2h.source.tag=1.36"
+    assert lab.name == "io.houba.source.tag=1.36"
     # Second call with same name returns same label
-    assert fake.ensure_label("fr.sncf.h2h.source.tag=1.36").id == lab.id
+    assert fake.ensure_label("io.houba.source.tag=1.36").id == lab.id
     # Second call with a *different* name gets a different id
-    other = fake.ensure_label("fr.sncf.h2h.source.tag=2.0")
+    other = fake.ensure_label("io.houba.source.tag=2.0")
     assert other.id != lab.id
 
 
