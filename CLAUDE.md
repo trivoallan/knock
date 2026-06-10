@@ -65,6 +65,7 @@ When adding a new external dependency, the pattern is always: **port (Protocol +
 
 **Architecture philosophy.**
 - Prefer declarative specs over imperative code paths — the product policy is a Pydantic `properties.yml` schema; extend that schema before adding ad-hoc Python branching.
+- **JSON Schema, systematically, wherever a declarative contract exists** (config, the policy schema, structured payloads). Derive it from the Pydantic models (`model_json_schema()`) — never hand-write it; publish it so policy files get editor/CI validation, and validate inputs against it. Extend the schema before adding imperative parsing.
 - Choose established libraries over building from scratch (httpx, tenacity, pydantic, typer, structlog).
 - Type hints required for all new functions and classes; `domain/` and `ports/` stay fully `mypy --strict`. `adapters.*` and `cli.*` are intentionally laxer (`disallow_untyped_calls = false`) because they touch untyped I/O libraries — do not relax `domain/` to match.
 
