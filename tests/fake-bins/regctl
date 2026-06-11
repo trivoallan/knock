@@ -1,0 +1,54 @@
+#!/usr/bin/env sh
+# Fake regctl for integration tests.
+# Reads are selected by FAKE_REGCTL_SCENARIO; every call's argv is appended to
+# FAKE_REGCTL_LOG (if set) so tests can assert on exact write arguments.
+set -e
+
+[ -n "${FAKE_REGCTL_LOG:-}" ] && echo "$@" >> "$FAKE_REGCTL_LOG"
+
+scenario="${FAKE_REGCTL_SCENARIO:-default}"
+
+# Global failure simulation (covers read AND write commands).
+if [ "$scenario" = "fail" ]; then
+    echo "regctl: simulated failure" >&2
+    exit 1
+fi
+
+cmd="$1 $2"
+case "$cmd" in
+    "tag ls")
+        case "$scenario" in
+            tags-redis) printf '7.2.0\n7.3.0\nlatest\n' ;;
+            empty) : ;;
+            *) printf '7.2.0\n' ;;
+        esac
+        ;;
+    "image digest")
+        printf 'sha256:abc123\n'
+        ;;
+    "manifest get")
+        if [ "$scenario" = "garbage" ]; then
+            printf 'not json\n'
+        elif [ "$scenario" = "manifest-array" ]; then
+            printf '[]\n'
+        elif [ "$scenario" = "mirror-stamped" ]; then
+            printf '{"annotations":{"org.opencontainers.image.base.digest":"sha256:src999"}}\n'
+        else
+            printf '{"annotations":{}}\n'
+        fi
+        ;;
+    "image config")
+        case "$scenario" in
+            garbage) printf 'not json\n' ;;
+            created-invalid) printf '{"created":"not-a-date","architecture":"amd64"}\n' ;;
+            no-created) printf '{"architecture":"amd64","os":"linux"}\n' ;;
+            *) printf '{"created":"2026-01-02T03:04:05Z","architecture":"amd64","os":"linux"}\n' ;;
+        esac
+        ;;
+    "image copy"|"image mod"|"tag rm")
+        : ;;
+    *)
+        echo "fake-regctl: unknown command '$cmd'" >&2
+        exit 99
+        ;;
+esac

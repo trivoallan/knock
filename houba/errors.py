@@ -21,6 +21,7 @@ __all__ = [
     "NoTagsToImportError",
     "PolicyValidationError",
     "PropertiesValidationError",
+    "RegctlError",
     "SkopeoError",
     "exit_code_for",
 ]
@@ -68,6 +69,10 @@ class HarborTransientError(HarborError):
 
 class GitError(AdapterError):
     """Erreur d'invocation `git` (clone, commit, push)."""
+
+
+class RegctlError(AdapterError):
+    """Erreur d'invocation `regctl` (tag ls, inspect, copy, mod, rm)."""
 
 
 class SkopeoError(AdapterError):
