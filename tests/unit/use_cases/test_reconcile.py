@@ -392,6 +392,24 @@ def test_unknown_cert_name_raises_config_error() -> None:
         _run(registry, FakeImageBuilder(), ca_certs={})
 
 
+def test_build_stages_under_work_dir(tmp_path: Path) -> None:
+    src_repo = "docker.io/library/redis"
+    registry = FakeRegistryPort(
+        tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": []},
+        infos={
+            f"{src_repo}:7.2.5": ImageInfo(
+                digest="sha256:src", created=HARDENED_NOW, annotations={}
+            )
+        },
+    )
+    builder = FakeImageBuilder()
+    wd = tmp_path / "houba-work"
+    assert not wd.exists()
+    _run(registry, builder, work_dir=wd)
+    assert wd.exists()  # _build_variant created the configured work_dir
+    assert len(builder.requests) == 1
+
+
 def test_missing_cert_file_raises_config_error_before_mutation() -> None:
     from houba.errors import ConfigError
 

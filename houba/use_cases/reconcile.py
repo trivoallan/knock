@@ -102,8 +102,11 @@ def _build_variant(
     dest_ref: str,
     resolved: _ResolvedTransform,
     platform: str,
+    work_dir: Path | None = None,
 ) -> None:
-    with tempfile.TemporaryDirectory(prefix="houba-build-") as tmp:
+    if work_dir is not None:
+        work_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="houba-build-", dir=work_dir) as tmp:
         ctx = Path(tmp)
         for filename, content in resolved.cert_files:
             (ctx / filename).write_text(content)
@@ -165,6 +168,7 @@ def reconcile_policies(
     label_prefix: str,
     dry_run_tags: bool,
     dry_run_deletions: bool,
+    work_dir: Path | None = None,
 ) -> RunSummary:
     # --- Plan phase: expand everything, resolve destinations, collision-check. ---
     plans: list[_Plan] = []
@@ -277,6 +281,7 @@ def reconcile_policies(
                             dest_ref=f"{plan.dest_repo}:{out_tag}",
                             resolved=resolved_by_variant[vplan.name],
                             platform=build_platform,
+                            work_dir=work_dir,
                         )
                     else:
                         registry.copy(f"{src_repo}:{src_tag}", f"{plan.dest_repo}:{out_tag}")

@@ -33,6 +33,7 @@ def reconcile(
         label_prefix=container.settings.label_prefix,
         dry_run_tags=dry_run or container.settings.dry_run_tags,
         dry_run_deletions=dry_run or container.settings.dry_run_deletions,
+        work_dir=container.settings.work_dir,
     )
     typer.echo(
         f"reconcile: imported={summary.imported} updated={summary.updated} "
