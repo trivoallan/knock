@@ -390,3 +390,21 @@ def test_unknown_cert_name_raises_config_error() -> None:
     )
     with pytest.raises(ConfigError, match="unknown CA cert"):
         _run(registry, FakeImageBuilder(), ca_certs={})
+
+
+def test_missing_cert_file_raises_config_error_before_mutation() -> None:
+    from houba.errors import ConfigError
+
+    src_repo = "docker.io/library/redis"
+    registry = FakeRegistryPort(
+        tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": []},
+        infos={
+            f"{src_repo}:7.2.5": ImageInfo(
+                digest="sha256:src", created=HARDENED_NOW, annotations={}
+            )
+        },
+    )
+    builder = FakeImageBuilder()
+    with pytest.raises(ConfigError, match="cannot read CA cert file"):
+        _run(registry, builder, ca_certs={"corp": CACertSource(path="/no/such/cert.pem")})
+    assert registry.copied == [] and registry.deleted == [] and builder.requests == []

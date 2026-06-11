@@ -28,6 +28,7 @@ from houba.domain.transform import (
     transform_version,
     validate_transform_steps,
 )
+from houba.errors import ConfigError
 from houba.ports.image_builder import BuildRequest, ImageBuilderPort
 from houba.ports.registry import ImageInfo, RegistryPort
 
@@ -50,9 +51,15 @@ def to_mirror_artifact(
     return MirrorArtifact(base_digest=base, transform_version=tv)
 
 
+def _read_cert_file(path: str) -> str:
+    try:
+        return Path(path).read_text()
+    except OSError as e:
+        raise ConfigError(f"cannot read CA cert file {path!r}: {e}") from e
+
+
 @dataclass(frozen=True)
 class _ResolvedTransform:
-    steps: list[TransformStep]
     cert_files: list[tuple[str, str]]  # (filename ending in .crt, PEM content)
     apt_mirror: str | None
     apk_mirror: str | None
@@ -75,12 +82,16 @@ def _resolve_transform(
     contents: dict[str, str] = {}
     cert_files: list[tuple[str, str]] = []
     for name, src in resolve_ca_certs(cert_names, ca_certs):
-        pem = src.pem if src.pem is not None else Path(src.path).read_text()  # type: ignore[arg-type]
+        if src.pem is not None:
+            pem = src.pem
+        else:
+            assert src.path is not None  # guaranteed by CACertSource._exactly_one
+            pem = _read_cert_file(src.path)
         contents[name] = pem
         cert_files.append((f"{name}.crt", pem))
     version = transform_version(steps, cert_contents=contents, apt_mirror=apt, apk_mirror=apk)
     return _ResolvedTransform(
-        steps=steps, cert_files=cert_files, apt_mirror=apt, apk_mirror=apk, version=version
+        cert_files=cert_files, apt_mirror=apt, apk_mirror=apk, version=version
     )
 
 
@@ -125,6 +136,7 @@ class _Plan:
     expanded: ExpandedImport
     dest_repo: str
     config: RegistryConfig
+    transforms: dict[str, _ResolvedTransform]  # variant name → resolved transform
 
 
 @dataclass
@@ -163,11 +175,24 @@ def reconcile_policies(
             expanded = expand_import(resolved, src_tags)
             for v in expanded.variants:
                 validate_transform_steps(v.transform)
+            # Resolve transforms (unknown cert/mirror names AND unreadable cert files)
+            # during planning so all config errors surface before ANY mutation.
+            transforms = {
+                v.name: _resolve_transform(v.transform, ca_certs, package_mirrors)
+                for v in expanded.variants
+                if v.transform
+            }
             for dest in resolved.destinations or []:
                 _name, cfg = resolve_registry(dest.registry, roster)
                 dest_repo = f"{cfg.host}/{dest.project}/{dest.repository}"
                 plans.append(
-                    _Plan(policy=policy, expanded=expanded, dest_repo=dest_repo, config=cfg)
+                    _Plan(
+                        policy=policy,
+                        expanded=expanded,
+                        dest_repo=dest_repo,
+                        config=cfg,
+                        transforms=transforms,
+                    )
                 )
                 for variant in expanded.variants:
                     for alias_name, target in variant.aliases.items():
@@ -204,13 +229,10 @@ def reconcile_policies(
             for tag in selected
         }
         tv_key = f"{label_prefix}.transform.version" if label_prefix else None
-        resolved_by_variant: dict[str, _ResolvedTransform] = {}
-        transform_versions: dict[str, str | None] = {}
-        for v in plan.expanded.variants:
-            if v.transform:
-                rt = _resolve_transform(v.transform, ca_certs, package_mirrors)
-                resolved_by_variant[v.name] = rt
-                transform_versions[v.name] = rt.version
+        resolved_by_variant = plan.transforms
+        transform_versions: dict[str, str | None] = {
+            name: rt.version for name, rt in plan.transforms.items()
+        }
 
         mirror: dict[str, MirrorArtifact] = {}
         for out_tag in registry.list_tags(plan.dest_repo):
