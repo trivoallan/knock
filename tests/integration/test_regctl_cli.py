@@ -52,3 +52,47 @@ def test_garbage_json_raises_regctl_error(
 def test_explicit_missing_binary_raises() -> None:
     with pytest.raises(RegctlError, match="not found"):
         RegctlAdapter(binary="/nonexistent/regctl")
+
+
+def _log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    log = tmp_path / "regctl.log"
+    monkeypatch.setenv("FAKE_REGCTL_LOG", str(log))
+    return log
+
+
+def test_copy_invokes_image_copy(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().copy("docker.io/redis:7.2.0", "harbor.corp/lib/redis:7.2.0")
+    assert "image copy docker.io/redis:7.2.0 harbor.corp/lib/redis:7.2.0" in log.read_text()
+
+
+def test_annotate_emits_one_flag_per_annotation(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().annotate(
+        "harbor.corp/lib/redis:7.2.0",
+        {"org.opencontainers.image.base.digest": "sha256:src", "io.houba.lineage": "copy"},
+    )
+    line = log.read_text()
+    assert "image mod" in line
+    assert "--annotation org.opencontainers.image.base.digest=sha256:src" in line
+    assert "--annotation io.houba.lineage=copy" in line
+
+
+def test_delete_tag_invokes_tag_rm(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().delete_tag("harbor.corp/lib/redis:6.0.0")
+    assert "tag rm harbor.corp/lib/redis:6.0.0" in log.read_text()
+
+
+def test_write_failure_raises_regctl_error(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "fail")
+    with pytest.raises(RegctlError):
+        RegctlAdapter().copy("a:1", "b:1")

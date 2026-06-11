@@ -38,6 +38,18 @@ class RegctlAdapter:
         created = self._parse_time(created_raw) if isinstance(created_raw, str) else None
         return ImageInfo(digest=digest, created=created, annotations=annotations)
 
+    def copy(self, src_ref: str, dst_ref: str) -> None:
+        self._run(["image", "copy", src_ref, dst_ref])
+
+    def annotate(self, image_ref: str, annotations: dict[str, str]) -> None:
+        args = ["image", "mod", image_ref, "--replace"]
+        for key, value in annotations.items():
+            args += ["--annotation", f"{key}={value}"]
+        self._run(args)
+
+    def delete_tag(self, image_ref: str) -> None:
+        self._run(["tag", "rm", image_ref])
+
     def _parse_time(self, value: str) -> datetime | None:
         try:
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
