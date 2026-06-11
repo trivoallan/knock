@@ -75,7 +75,14 @@ class RegctlAdapter:
             raise RegctlError(f"expected JSON object from regctl {' '.join(args)}: {payload!r}")
         return payload
 
-    def _run(self, args: list[str]) -> str:
+    def login(self, host: str, *, username: str, password: str, tls_verify: bool) -> None:
+        args = ["registry", "login", "--user", username, "--pass-stdin"]
+        if not tls_verify:
+            args += ["--tls", "disabled"]
+        args.append(host)
+        self._run(args, stdin=password)
+
+    def _run(self, args: list[str], *, stdin: str | None = None) -> str:
         try:
             r = subprocess.run(  # noqa: S603
                 [self._resolve(), *args],
@@ -83,6 +90,7 @@ class RegctlAdapter:
                 capture_output=True,
                 text=True,
                 timeout=300,
+                input=stdin,
             )
         except (OSError, subprocess.TimeoutExpired) as e:
             raise RegctlError(str(e)) from e

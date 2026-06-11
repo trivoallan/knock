@@ -36,3 +36,9 @@ def test_fake_journals_writes() -> None:
 def test_fake_inspect_unseeded_raises_clear_keyerror() -> None:
     with pytest.raises(KeyError, match="no seeded ImageInfo"):
         FakeRegistryPort().inspect("missing:1")
+
+
+def test_fake_journals_login() -> None:
+    fake = FakeRegistryPort()
+    fake.login("harbor.corp", username="robot", password="s3cret", tls_verify=True)
+    assert fake.logins == [("harbor.corp", "robot", True)]  # password NOT journalled

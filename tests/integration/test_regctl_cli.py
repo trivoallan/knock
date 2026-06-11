@@ -147,3 +147,21 @@ def test_annotate_value_with_equals_is_passed_through(
     log = _log(tmp_path, monkeypatch)
     RegctlAdapter().annotate("r:1", {"k": "a=b=c"})
     assert "--annotation k=a=b=c" in log.read_text()
+
+
+def test_login_invokes_registry_login_with_password_on_stdin(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().login("harbor.corp", username="robot", password="s3cret", tls_verify=True)
+    line = log.read_text()
+    assert "registry login --user robot --pass-stdin harbor.corp" in line
+    assert "s3cret" not in line  # password is on stdin, never in argv
+
+
+def test_login_tls_disabled(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().login("localhost:5000", username="u", password="p", tls_verify=False)
+    assert "--tls disabled" in log.read_text()
