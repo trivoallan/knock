@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.0](https://github.com/trivoallan/houba/compare/v0.1.0...v0.2.0) (2026-06-11)
+
+
+### Features
+
+* **adapters:** MirrorPolicy regctl adapter (Phase 5) ([#13](https://github.com/trivoallan/houba/issues/13)) ([dd0392d](https://github.com/trivoallan/houba/commit/dd0392d22f0bee95fb79152a96252c527c642ed4))
+* **config:** MirrorPolicy multi-registry env-roster (Phase 4) ([#10](https://github.com/trivoallan/houba/issues/10)) ([3ecffd7](https://github.com/trivoallan/houba/commit/3ecffd72de9f49c408419de9da24307846a389bb))
+* **domain:** MirrorPolicy reconcile-plan + change-detection (Phase 3) ([#9](https://github.com/trivoallan/houba/issues/9)) ([4db6b46](https://github.com/trivoallan/houba/commit/4db6b467e2ddf7edb5292afbc6a52c5b3d0d5f85))
+* **domain:** MirrorPolicy selection + aliases + variants (Phase 2) ([#4](https://github.com/trivoallan/houba/issues/4)) ([f4963be](https://github.com/trivoallan/houba/commit/f4963be0fcde7a1313512fedc6c0cca50d11ce62))
+* houba reconcile — use case + CLI (Phase 7-core) ([#17](https://github.com/trivoallan/houba/issues/17)) ([c9db2ea](https://github.com/trivoallan/houba/commit/c9db2ea86abfe6046fe4665a086cd6f03be8389a))
+
+
+### Bug Fixes
+
+* **ci:** .python-version 3.12 (cohérent avec requires-python) ([f49fcce](https://github.com/trivoallan/houba/commit/f49fcce8cff39880b1c1356c2caf678e6283e067))
+* test version agnostique + revert bump Python 3.14 prématuré (Renovate) ([881402a](https://github.com/trivoallan/houba/commit/881402a1b43ad54ccfb50de8791088df8c4b4386))
+
+
+### Documentation
+
+* **architecture:** C4 model (System Landscape + Context) + keep-in-sync-with-specs contract ([#16](https://github.com/trivoallan/houba/issues/16)) ([ddab8b6](https://github.com/trivoallan/houba/commit/ddab8b6c30e2bf1ea15deb3019f928bbeb5b4552))
+
 ## 0.1.0 (2026-06-11)
 
 
