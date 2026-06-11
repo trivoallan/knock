@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from houba.domain.expand import VariantPlan
+from houba.domain.expand import ExpandedImport, VariantPlan
 from houba.domain.reconcile import (
+    ImportReconcile,
     MirrorArtifact,
     SourceArtifact,
     VariantReconcile,
     _classify,
+    reconcile_import,
     reconcile_variant,
 )
 
@@ -89,3 +91,58 @@ def test_reconcile_variant_empty_suffix_passthrough() -> None:
     got = reconcile_variant(plan, source, {}, NOW, GRACE)
     assert got.to_import == ["2.0.0"]
     assert got.aliases == {"2": "2.0.0"}
+
+
+def _expanded(variants: list[VariantPlan]) -> ExpandedImport:
+    return ExpandedImport(
+        name="redis", destinations=None, platforms=None, archive=None, variants=variants
+    )
+
+
+def test_reconcile_import_runs_each_variant() -> None:
+    exp = _expanded(
+        [
+            _plan("standard", "", ["7.2.0"], {"7.2": "7.2.0"}),
+            _plan("fips", "-fips", ["7.2.0"], {"7.2": "7.2.0"}),
+        ]
+    )
+    source = {"7.2.0": _src("sha256:a", 30)}
+    got = reconcile_import(exp, source, {}, NOW, GRACE)
+    assert isinstance(got, ImportReconcile)
+    assert got.name == "redis"
+    assert [v.variant for v in got.variants] == ["standard", "fips"]
+    assert got.variants[0].to_import == ["7.2.0"]
+    assert got.variants[1].to_import == ["7.2.0-fips"]
+
+
+def test_reconcile_import_deletion_across_variants() -> None:
+    # desired output across both variants: 7.2.0, 7.2 (std) + 7.2.0-fips, 7.2-fips (fips)
+    exp = _expanded(
+        [
+            _plan("standard", "", ["7.2.0"], {"7.2": "7.2.0"}),
+            _plan("fips", "-fips", ["7.2.0"], {"7.2": "7.2.0"}),
+        ]
+    )
+    source = {"7.2.0": _src("sha256:a", 30)}
+    mirror = {
+        "7.2.0": MirrorArtifact(base_digest="sha256:a"),  # desired (std) → keep
+        "7.2.0-fips": MirrorArtifact(base_digest="sha256:a"),  # desired (fips) → keep
+        "6.0.0": MirrorArtifact(base_digest="sha256:old"),  # NOT desired → delete
+        "6.0.0-fips": MirrorArtifact(base_digest="sha256:old"),  # NOT desired → delete
+    }
+    got = reconcile_import(exp, source, mirror, NOW, GRACE)
+    assert sorted(got.to_delete) == ["6.0.0", "6.0.0-fips"]
+    # the standard variant must NOT mark 7.2.0-fips (a sibling variant's tag) for deletion
+    assert "7.2.0-fips" not in got.to_delete
+
+
+def test_reconcile_import_aliases_are_not_deleted() -> None:
+    exp = _expanded([_plan("standard", "", ["7.2.0"], {"7.2": "7.2.0", "latest": "7.2.0"})])
+    source = {"7.2.0": _src("sha256:a", 30)}
+    mirror = {
+        "7.2": MirrorArtifact(base_digest="sha256:a"),  # an alias currently in the mirror
+        "latest": MirrorArtifact(base_digest="sha256:a"),
+        "7.2.0": MirrorArtifact(base_digest="sha256:a"),
+    }
+    got = reconcile_import(exp, source, mirror, NOW, GRACE)
+    assert got.to_delete == []  # the aliases 7.2/latest are desired alias names → not deleted

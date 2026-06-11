@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Literal
 
-from houba.domain.expand import VariantPlan
+from houba.domain.expand import ExpandedImport, VariantPlan
 
 DEFAULT_GRACE = timedelta(days=7)
 
@@ -76,3 +76,29 @@ def reconcile_variant(
         to_update=to_update,
         aliases=aliases,
     )
+
+
+@dataclass(frozen=True)
+class ImportReconcile:
+    name: str
+    variants: list[VariantReconcile]
+    to_delete: list[str]
+
+
+def reconcile_import(
+    expanded: ExpandedImport,
+    source: dict[str, SourceArtifact],
+    mirror: dict[str, MirrorArtifact],
+    now: datetime,
+    grace: timedelta = DEFAULT_GRACE,
+) -> ImportReconcile:
+    variants = [reconcile_variant(v, source, mirror, now, grace) for v in expanded.variants]
+
+    # Desired output names across ALL variants: concrete output tags + alias names.
+    desired: set[str] = set()
+    for v in expanded.variants:
+        desired.update(tag + v.suffix for tag in v.tags)
+        desired.update(alias + v.suffix for alias in v.aliases)
+
+    to_delete = sorted(t for t in mirror if t not in desired)
+    return ImportReconcile(name=expanded.name, variants=variants, to_delete=to_delete)
