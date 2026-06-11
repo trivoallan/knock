@@ -34,3 +34,40 @@ def validate_transform_steps(steps: list[TransformStep]) -> None:
                 raise PolicyValidationError(
                     "rewritePackageSources.mirror must be a non-empty mirror name (string)"
                 )
+
+
+CA_DIR = "/usr/local/share/ca-certificates"
+
+
+def render_dockerfile(
+    source_ref: str,
+    *,
+    ca_cert_filenames: list[str],
+    apt_mirror: str | None,
+    apk_mirror: str | None,
+) -> str:
+    """Render a hardening Dockerfile. Canonical order: CA trust, then source rewrite
+    (the two steps are independent). Package-source rewrite is a host-swap preserving
+    the upstream path — v1 assumes a pull-through mirror at the given base URL."""
+    lines = [f"FROM {source_ref}"]
+    if ca_cert_filenames:
+        lines.append(f"COPY {' '.join(ca_cert_filenames)} {CA_DIR}/")
+        lines.append("RUN update-ca-certificates")
+    rewrites: list[str] = []
+    if apt_mirror:
+        rewrites.append(
+            f"if [ -f /etc/apt/sources.list ]; then "
+            f"sed -ri 's#https?://[^/]+#{apt_mirror}#g' /etc/apt/sources.list; fi"
+        )
+        rewrites.append(
+            f"if ls /etc/apt/sources.list.d/*.list >/dev/null 2>&1; then "
+            f"sed -ri 's#https?://[^/]+#{apt_mirror}#g' /etc/apt/sources.list.d/*.list; fi"
+        )
+    if apk_mirror:
+        rewrites.append(
+            f"if [ -f /etc/apk/repositories ]; then "
+            f"sed -ri 's#https?://[^/]+#{apk_mirror}#g' /etc/apk/repositories; fi"
+        )
+    if rewrites:
+        lines.append("RUN set -eux; " + "; ".join(rewrites))
+    return "\n".join(lines) + "\n"
