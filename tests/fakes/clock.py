@@ -4,11 +4,10 @@ from datetime import datetime, timedelta
 
 
 class FakeClock:
-    """Horloge déterministe pour les tests. Refuse les datetime naïves.
+    """Horloge déterministe pour les tests : now() renvoie un instant fixe injecté.
 
-    L'arithmétique de dates dans `domain/tag_filter` (délai 7 jours) mélangera
-    cette horloge avec des datetimes provenant d'Harbor — tous tz-aware. Une
-    valeur naïve provoquerait des TypeError surprenants en runtime.
+    Refuse les datetime naïves — toutes les datetimes manipulées dans houba
+    doivent être tz-aware pour éviter des TypeError surprenants en runtime.
     """
 
     def __init__(self, now: datetime) -> None:

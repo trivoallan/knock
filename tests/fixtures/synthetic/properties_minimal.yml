@@ -1,7 +1,0 @@
-source:
-  registry: docker.io
-  repository: library/busybox
-destination:
-  harbor: blue
-  project: lib
-  repository: busybox
