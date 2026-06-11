@@ -9,16 +9,17 @@ from houba.config import CACertSource, PackageMirror, RegistryConfig
 from houba.domain.mirror_policy import parse_mirror_policy
 from houba.domain.transforms.base import ResolvedResource, ResolvedStep
 from houba.domain.transforms.render import transform_version
-from houba.errors import ConfigError, PolicyValidationError
+from houba.errors import ConfigError, PolicyValidationError, RegctlError
 from houba.ports.registry import ImageInfo
 from houba.use_cases.reconcile import (
-    RunSummary,
     reconcile_policies,
     to_mirror_artifact,
     to_source_artifact,
 )
+from houba.use_cases.report import RunReport
 from tests.fakes.image_builder import FakeImageBuilder
 from tests.fakes.registry import FakeRegistryPort
+from tests.fakes.reporter import FakeReporter
 
 NOW = datetime(2026, 6, 11, tzinfo=UTC)
 CREATED = datetime(2026, 1, 1, tzinfo=UTC)
@@ -66,6 +67,23 @@ def _info(digest: str, ann: dict[str, str] | None = None) -> ImageInfo:
     return ImageInfo(digest=digest, created=CREATED, annotations=ann or {})
 
 
+def _run(policies, **kw):  # type: ignore[no-untyped-def]
+    defaults = dict(
+        registry=kw.pop("registry"),
+        builder=kw.pop("builder", FakeImageBuilder()),
+        roster=ROSTER,
+        ca_certs={},
+        package_mirrors={},
+        build_platform="linux/amd64",
+        now=NOW,
+        label_prefix="io.houba",
+        dry_run_tags=kw.pop("dry_run_tags", False),
+        dry_run_deletions=kw.pop("dry_run_deletions", False),
+        reporter=kw.pop("reporter", FakeReporter()),
+    )
+    return reconcile_policies(policies, **defaults)
+
+
 def test_reconcile_copies_new_tags_and_stamps() -> None:
     fake = FakeRegistryPort(
         tags={
@@ -77,20 +95,8 @@ def test_reconcile_copies_new_tags_and_stamps() -> None:
             "docker.io/library/redis:7.3.0": _info("sha256:b"),
         },
     )
-    summary = reconcile_policies(
-        [POLICY],
-        registry=fake,
-        builder=FakeImageBuilder(),
-        roster=ROSTER,
-        ca_certs={},
-        package_mirrors={},
-        build_platform="linux/amd64",
-        now=NOW,
-        label_prefix="io.houba",
-        dry_run_tags=False,
-        dry_run_deletions=False,
-    )
-    assert isinstance(summary, RunSummary)
+    report = _run([POLICY], registry=fake)
+    assert isinstance(report, RunReport)
     assert fake.logins == [("harbor.corp", "robot", True)]
     assert ("docker.io/library/redis:7.2.0", "harbor.corp/lib/redis:7.2.0") in fake.copied
     assert ("docker.io/library/redis:7.3.0", "harbor.corp/lib/redis:7.3.0") in fake.copied
@@ -99,7 +105,7 @@ def test_reconcile_copies_new_tags_and_stamps() -> None:
     assert base_digest == "sha256:a"
     assert stamped["harbor.corp/lib/redis:7.2.0"]["io.houba.owner.team"] == "platform-data"
     assert ("harbor.corp/lib/redis:7.3.0", "harbor.corp/lib/redis:latest") in fake.copied
-    assert summary.imported == 2
+    assert report.totals.imported == 2
 
 
 def test_reconcile_dry_run_tags_skips_mutations() -> None:
@@ -107,23 +113,11 @@ def test_reconcile_dry_run_tags_skips_mutations() -> None:
         tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": []},
         infos={"docker.io/library/redis:7.2.0": _info("sha256:a")},
     )
-    summary = reconcile_policies(
-        [POLICY],
-        registry=fake,
-        builder=FakeImageBuilder(),
-        roster=ROSTER,
-        ca_certs={},
-        package_mirrors={},
-        build_platform="linux/amd64",
-        now=NOW,
-        label_prefix="io.houba",
-        dry_run_tags=True,
-        dry_run_deletions=True,
-    )
+    report = _run([POLICY], registry=fake, dry_run_tags=True, dry_run_deletions=True)
     assert fake.copied == []
     assert fake.annotated == []
     assert fake.deleted == []
-    assert summary.imported == 1
+    assert report.totals.imported == 1
 
 
 def test_reconcile_collision_raises_before_mutation() -> None:
@@ -162,6 +156,7 @@ spec:
             label_prefix="io.houba",
             dry_run_tags=False,
             dry_run_deletions=False,
+            reporter=FakeReporter(),
         )
     assert fake.copied == []  # fail-fast: nothing mutated
 
@@ -178,20 +173,8 @@ def test_reconcile_updates_changed_stable_tag() -> None:
             ),
         },
     )
-    summary = reconcile_policies(
-        [POLICY],
-        registry=fake,
-        builder=FakeImageBuilder(),
-        roster=ROSTER,
-        ca_certs={},
-        package_mirrors={},
-        build_platform="linux/amd64",
-        now=NOW,
-        label_prefix="io.houba",
-        dry_run_tags=False,
-        dry_run_deletions=False,
-    )
-    assert summary.updated == 1
+    report = _run([POLICY], registry=fake)
+    assert report.totals.updated == 1
     assert ("docker.io/library/redis:7.2.0", "harbor.corp/lib/redis:7.2.0") in fake.copied
     stamped = {ref: ann for ref, ann in fake.annotated}
     assert (
@@ -211,21 +194,9 @@ def test_reconcile_idempotent_when_unchanged() -> None:
             ),
         },
     )
-    summary = reconcile_policies(
-        [POLICY],
-        registry=fake,
-        builder=FakeImageBuilder(),
-        roster=ROSTER,
-        ca_certs={},
-        package_mirrors={},
-        build_platform="linux/amd64",
-        now=NOW,
-        label_prefix="io.houba",
-        dry_run_tags=False,
-        dry_run_deletions=False,
-    )
-    assert summary.imported == 0
-    assert summary.updated == 0
+    report = _run([POLICY], registry=fake)
+    assert report.totals.imported == 0
+    assert report.totals.updated == 0
     # No cross-registry copy (source→mirror): the tag is up-to-date; idempotent.
     assert ("docker.io/library/redis:7.2.0", "harbor.corp/lib/redis:7.2.0") not in fake.copied
 
@@ -243,20 +214,8 @@ def test_reconcile_deletes_orphan_stamped_tag() -> None:
             ),
         },
     )
-    summary = reconcile_policies(
-        [POLICY],
-        registry=fake,
-        builder=FakeImageBuilder(),
-        roster=ROSTER,
-        ca_certs={},
-        package_mirrors={},
-        build_platform="linux/amd64",
-        now=NOW,
-        label_prefix="io.houba",
-        dry_run_tags=False,
-        dry_run_deletions=False,
-    )
-    assert summary.deleted == 1
+    report = _run([POLICY], registry=fake)
+    assert report.totals.deleted == 1
     assert fake.deleted == ["harbor.corp/lib/redis:6.0.0"]
 
 
@@ -276,22 +235,123 @@ def test_reconcile_does_not_delete_unstamped_tag() -> None:
             "harbor.corp/lib/redis:manual-tag": _info("sha256:manual"),  # UNstamped
         },
     )
-    summary = reconcile_policies(
-        [POLICY],
-        registry=fake,
-        builder=FakeImageBuilder(),
-        roster=ROSTER,
-        ca_certs={},
-        package_mirrors={},
-        build_platform="linux/amd64",
-        now=NOW,
-        label_prefix="io.houba",
-        dry_run_tags=False,
-        dry_run_deletions=False,
-    )
+    report = _run([POLICY], registry=fake)
     assert "harbor.corp/lib/redis:manual-tag" not in fake.deleted
-    assert summary.deleted == 0
+    assert report.totals.deleted == 0
 
+
+def test_reconcile_surfaces_skipped_in_report() -> None:
+    # mirror up-to-date → skip; report records a skipped operation.
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": ["7.2.0"]},
+        infos={
+            "docker.io/library/redis:7.2.0": _info("sha256:same"),
+            "harbor.corp/lib/redis:7.2.0": _info(
+                "sha256:m", {"org.opencontainers.image.base.digest": "sha256:same"}
+            ),
+        },
+    )
+    report = _run([POLICY], registry=fake)
+    assert report.totals.skipped == 1
+    kinds = [
+        op.kind
+        for p in report.policies
+        for t in p.targets
+        for v in t.variants
+        for op in v.operations
+    ]
+    assert "skipped" in kinds
+
+
+def test_reconcile_dry_run_marks_operations_planned() -> None:
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": []},
+        infos={"docker.io/library/redis:7.2.0": _info("sha256:a")},
+    )
+    report = _run([POLICY], registry=fake, dry_run_tags=True, dry_run_deletions=True)
+    assert report.mode == "dry-run"
+    ops = [
+        op for p in report.policies for t in p.targets for v in t.variants for op in v.operations
+    ]
+    assert ops and all(op.applied is False for op in ops)
+
+
+def test_reconcile_accumulate_and_continue_on_failure() -> None:
+    # Two policies; the FIRST destination inspect fails for `boom`, the second succeeds.
+    class FlakyRegistry(FakeRegistryPort):
+        def inspect(self, image_ref: str):  # type: ignore[no-untyped-def]
+            if image_ref == "docker.io/library/boom:1.0.0":
+                raise RegctlError("inspect failed")
+            return super().inspect(image_ref)
+
+    boom = parse_mirror_policy("""
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata: { name: boom }
+spec:
+  artifactType: image
+  source: { registry: docker.io, repository: library/boom }
+  imports:
+    - name: v1
+      tags: { includeRegex: "^1\\\\." }
+      destinations: [{ project: lib, repository: boom }]
+""")
+    fake = FlakyRegistry(
+        tags={
+            "docker.io/library/boom": ["1.0.0"],
+            "docker.io/library/redis": ["7.2.0"],
+            "harbor.corp/lib/boom": [],
+            "harbor.corp/lib/redis": [],
+        },
+        infos={"docker.io/library/redis:7.2.0": _info("sha256:a")},
+    )
+    report = _run([boom, POLICY], registry=fake)
+    assert report.status == "partial"
+    by_name = {p.name: p for p in report.policies}
+    assert by_name["boom"].status == "failed"
+    assert by_name["boom"].error is not None
+    assert by_name["boom"].error.type == "RegctlError"
+    assert by_name["boom"].error.exit_code == 2
+    assert by_name["redis"].status == "ok"
+    assert by_name["redis"].totals.imported == 1
+
+
+def test_reconcile_emits_events_to_reporter() -> None:
+    reporter = FakeReporter()
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": []},
+        infos={"docker.io/library/redis:7.2.0": _info("sha256:a")},
+    )
+    _run([POLICY], registry=fake, reporter=reporter)
+    assert reporter.runs_started == [(1, "apply")]
+    assert ("redis", "docker.io/library/redis") in reporter.policies_started
+    assert any(ev.kind == "imported" and ev.out_tag == "7.2.0" for ev in reporter.operations)
+    assert len(reporter.runs_completed) == 1
+
+
+def test_reconcile_delete_event_has_empty_variant() -> None:
+    # Deletions are target-level (domain to_delete spans all variants), so their
+    # emitted OperationEvent must carry variant="" — not a leaked last-variant name.
+    reporter = FakeReporter()
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": ["7.2.0", "6.0.0"]},
+        infos={
+            "docker.io/library/redis:7.2.0": _info("sha256:a"),
+            "harbor.corp/lib/redis:7.2.0": _info(
+                "sha256:m", {"org.opencontainers.image.base.digest": "sha256:a"}
+            ),
+            "harbor.corp/lib/redis:6.0.0": _info(
+                "sha256:old", {"org.opencontainers.image.base.digest": "sha256:gone"}
+            ),
+        },
+    )
+    _run([POLICY], registry=fake, reporter=reporter)
+    delete_events = [ev for ev in reporter.operations if ev.kind == "deleted"]
+    assert delete_events  # the orphan 6.0.0 tag is deleted
+    assert all(ev.variant == "" for ev in delete_events)
+
+
+# --- Transform / rebuild path (hardened policy) ---------------------------------
 
 HARDENED_NOW = datetime(2026, 6, 11, tzinfo=UTC)
 
@@ -300,7 +360,9 @@ def _hardened_policy() -> object:
     return parse_mirror_policy(Path("docs/examples/hardened/redis.yml").read_text())
 
 
-def _run(registry: FakeRegistryPort, builder: FakeImageBuilder, **over: object) -> RunSummary:
+def _run_hardened(
+    registry: FakeRegistryPort, builder: FakeImageBuilder, **over: object
+) -> RunReport:
     kwargs: dict[str, object] = dict(
         registry=registry,
         builder=builder,
@@ -312,11 +374,10 @@ def _run(registry: FakeRegistryPort, builder: FakeImageBuilder, **over: object) 
         label_prefix="io.houba",
         dry_run_tags=False,
         dry_run_deletions=False,
+        reporter=FakeReporter(),
     )
     kwargs.update(over)
-    return reconcile_policies(  # type: ignore[arg-type]
-        [_hardened_policy()], **kwargs
-    )
+    return reconcile_policies([_hardened_policy()], **kwargs)  # type: ignore[arg-type]
 
 
 def test_transformed_variant_builds_then_stamps_lineage() -> None:
@@ -330,9 +391,9 @@ def test_transformed_variant_builds_then_stamps_lineage() -> None:
         },
     )
     builder = FakeImageBuilder()
-    summary = _run(registry, builder)
+    report = _run_hardened(registry, builder)
 
-    assert summary.imported == 1
+    assert report.totals.imported == 1
     assert len(builder.requests) == 1
     req = builder.requests[0]
     assert req.image_ref == "reg.local/hardened/redis:7.2.5"
@@ -382,8 +443,8 @@ def test_transformed_variant_skips_when_version_matches() -> None:
         },
     )
     builder = FakeImageBuilder()
-    summary = _run(registry, builder)
-    assert summary.imported == 0 and summary.updated == 0
+    report = _run_hardened(registry, builder)
+    assert report.totals.imported == 0 and report.totals.updated == 0
     assert builder.requests == []
 
 
@@ -398,7 +459,7 @@ def test_unknown_cert_name_raises_config_error() -> None:
         },
     )
     with pytest.raises(ConfigError, match="unknown CA cert"):
-        _run(registry, FakeImageBuilder(), ca_certs={})
+        _run_hardened(registry, FakeImageBuilder(), ca_certs={})
 
 
 def test_build_stages_under_work_dir(tmp_path: Path) -> None:
@@ -414,14 +475,12 @@ def test_build_stages_under_work_dir(tmp_path: Path) -> None:
     builder = FakeImageBuilder()
     wd = tmp_path / "houba-work"
     assert not wd.exists()
-    _run(registry, builder, work_dir=wd)
+    _run_hardened(registry, builder, work_dir=wd)
     assert wd.exists()  # _build_variant created the configured work_dir
     assert len(builder.requests) == 1
 
 
 def test_missing_cert_file_raises_config_error_before_mutation() -> None:
-    from houba.errors import ConfigError
-
     src_repo = "docker.io/library/redis"
     registry = FakeRegistryPort(
         tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": []},
@@ -433,5 +492,5 @@ def test_missing_cert_file_raises_config_error_before_mutation() -> None:
     )
     builder = FakeImageBuilder()
     with pytest.raises(ConfigError, match="cannot read CA cert file"):
-        _run(registry, builder, ca_certs={"corp": CACertSource(path="/no/such/cert.pem")})
+        _run_hardened(registry, builder, ca_certs={"corp": CACertSource(path="/no/such/cert.pem")})
     assert registry.copied == [] and registry.deleted == [] and builder.requests == []
