@@ -3,7 +3,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from houba.config import HarborSettings, RegistryConfig, Settings
+from houba.config import HarborSettings, RegistryConfig, Settings, resolve_registry
+from houba.errors import ConfigError
 
 
 def _base_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -194,3 +195,33 @@ def test_registries_roster_invalid_entry_rejected(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("HOUBA_REGISTRIES", '{"eu": {"host": "h", "username": "robot"}}')
     with pytest.raises(ValidationError):
         Settings()
+
+
+def test_resolve_registry_by_name() -> None:
+    roster = {"eu": RegistryConfig(host="a"), "us": RegistryConfig(host="b")}
+    name, cfg = resolve_registry("us", roster)
+    assert name == "us"
+    assert cfg.host == "b"
+
+
+def test_resolve_registry_unknown_name_raises() -> None:
+    with pytest.raises(ConfigError, match="unknown registry"):
+        resolve_registry("zz", {"eu": RegistryConfig(host="a")})
+
+
+def test_resolve_registry_omitted_with_single_uses_it() -> None:
+    roster = {"only": RegistryConfig(host="a")}
+    name, cfg = resolve_registry(None, roster)
+    assert name == "only"
+    assert cfg.host == "a"
+
+
+def test_resolve_registry_omitted_with_multiple_raises() -> None:
+    roster = {"eu": RegistryConfig(host="a"), "us": RegistryConfig(host="b")}
+    with pytest.raises(ConfigError, match="specify one"):
+        resolve_registry(None, roster)
+
+
+def test_resolve_registry_omitted_with_empty_raises() -> None:
+    with pytest.raises(ConfigError, match="no registries"):
+        resolve_registry(None, {})
