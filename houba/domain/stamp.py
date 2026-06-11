@@ -39,5 +39,5 @@ def build_stamp_annotations(
         annotations[f"{prefix}.import"] = import_name
         annotations[f"{prefix}.variant"] = variant
         if team is not None:
-            annotations[f"{prefix}.team"] = team
+            annotations[f"{prefix}.owner.team"] = team
     return annotations

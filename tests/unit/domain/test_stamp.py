@@ -34,7 +34,7 @@ def test_oci_standard_annotations_always_present() -> None:
 
 def test_houba_facts_under_prefix() -> None:
     a = _ann(prefix="io.houba")
-    assert a["io.houba.team"] == "platform-data"
+    assert a["io.houba.owner.team"] == "platform-data"
     assert a["io.houba.artifact.type"] == "image"
     assert a["io.houba.policy"] == "redis"
     assert a["io.houba.import"] == "v7"
@@ -49,7 +49,7 @@ def test_empty_prefix_drops_houba_facts_keeps_oci() -> None:
 
 def test_no_team_omits_team_key() -> None:
     a = _ann(team=None)
-    assert "io.houba.team" not in a
+    assert "io.houba.owner.team" not in a
 
 
 def test_no_location_fact_stamped() -> None:
