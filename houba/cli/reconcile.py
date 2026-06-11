@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from houba.cli._di import build_container
+from houba.cli.render import render_report
+from houba.logging import configure
 from houba.use_cases.loader import load_policy_dir
 from houba.use_cases.reconcile import reconcile_policies
+from houba.use_cases.report import report_exit_code
 
 
 def reconcile(
@@ -17,11 +21,16 @@ def reconcile(
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="Plan only — no copies, no deletes.")
     ] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Unfold per-operation detail in text output.")
+    ] = False,
 ) -> None:
     """Reconcile all MirrorPolicy files under DIRECTORY against their destinations."""
     container = build_container()
+    configure(format_=container.settings.log_format, level=container.settings.log_level)
+
     policies = load_policy_dir(directory)
-    summary = reconcile_policies(
+    report = reconcile_policies(
         policies,
         registry=container.registry,
         builder=container.builder,
@@ -33,9 +42,8 @@ def reconcile(
         label_prefix=container.settings.label_prefix,
         dry_run_tags=dry_run or container.settings.dry_run_tags,
         dry_run_deletions=dry_run or container.settings.dry_run_deletions,
+        reporter=container.reporter,
         work_dir=container.settings.work_dir,
     )
-    typer.echo(
-        f"reconcile: imported={summary.imported} updated={summary.updated} "
-        f"deleted={summary.deleted} aliased={summary.aliased}"
-    )
+    render_report(report, fmt=container.settings.log_format, verbose=verbose, stream=sys.stdout)
+    raise typer.Exit(report_exit_code(report))

@@ -36,7 +36,26 @@ def test_reconcile_runs_and_reports(
     (tmp_path / "redis.yml").write_text(POLICY)
     result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "--dry-run"])
     assert result.exit_code == 0, result.stdout
-    assert "reconcile" in result.stdout
+    assert "reconcile [dry-run]" in result.stdout
+    assert "status=ok" in result.stdout
+
+
+def test_reconcile_json_output_is_parseable(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    import json
+
+    _env(monkeypatch)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "empty")
+    monkeypatch.setenv("HOUBA_LOG_FORMAT", "json")
+    (tmp_path / "redis.yml").write_text(POLICY)
+    result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "--dry-run"])
+    assert result.exit_code == 0, result.stdout
+    # stdout's LAST non-empty line is the RunReport JSON (journal lines may precede it).
+    last = [ln for ln in result.stdout.splitlines() if ln.strip()][-1]
+    payload = json.loads(last)
+    assert payload["mode"] == "dry-run"
+    assert payload["status"] == "ok"
 
 
 def test_reconcile_invalid_policy_raises(

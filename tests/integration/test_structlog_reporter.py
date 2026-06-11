@@ -5,7 +5,7 @@ import json
 
 from houba.adapters.structlog_reporter import StructlogReporter
 from houba.logging import configure
-from houba.ports.reporter import Counts, ErrorInfo, OperationEvent
+from houba.ports.reporter import ErrorInfo, OperationEvent
 
 
 def test_structlog_reporter_emits_json_events() -> None:
