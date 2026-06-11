@@ -25,10 +25,12 @@ auditable primitives, never hardcoded behavior.
 - **Transform-aware change detection**: rebuild when the source moved *or* the resolved
   transform changed.
 
-**Out (deferred):** other primitives (`set-timezone`, `set-label`, Java keystore); a `run`
-escape hatch (breaks declarativeness/auditability — explicitly rejected); multi-platform
-rebuild; per-import platform fan-out. Infra (separate tasks, not this spec): add `regctl`
-to the runtime image alongside `buildctl`; native per-registry TLS/auth wiring for regctl.
+**Out (deferred):** other primitives (`set-label`, Java keystore); a `run` escape hatch
+(breaks declarativeness/auditability — explicitly rejected); multi-platform rebuild;
+per-import platform fan-out. Infra (separate tasks, not this spec): add `regctl` to the
+runtime image alongside `buildctl`; native per-registry TLS/auth wiring for regctl.
+(`setTimezone` was deferred here but delivered by the pluggable transform-step registry —
+see `2026-06-11-transform-steps-pluggables-design.md`.)
 
 **v1 limitation — `rewritePackageSources` covers the classic source formats only:** the
 host-swap rewrites `/etc/apt/sources.list` + `/etc/apt/sources.list.d/*.list` (one-line apt)

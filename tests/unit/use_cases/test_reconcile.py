@@ -7,7 +7,8 @@ import pytest
 
 from houba.config import CACertSource, PackageMirror, RegistryConfig
 from houba.domain.mirror_policy import parse_mirror_policy
-from houba.domain.transform import transform_version
+from houba.domain.transforms.base import ResolvedResource, ResolvedStep
+from houba.domain.transforms.render import transform_version
 from houba.errors import ConfigError, PolicyValidationError
 from houba.ports.registry import ImageInfo
 from houba.use_cases.reconcile import (
@@ -352,9 +353,17 @@ def test_transformed_variant_skips_when_version_matches() -> None:
         .spec.imports[0]
         .transform
     )
-    tv = transform_version(
-        steps, cert_contents={"corp": "PEMDATA"}, apt_mirror="https://mirror.corp", apk_mirror=None
-    )
+    resolved_steps = [
+        ResolvedStep(
+            steps[0],  # injectCA: certs ["corp"]
+            (ResolvedResource(kind="caCert", name="corp", filename="corp.crt", content="PEMDATA"),),
+        ),
+        ResolvedStep(
+            steps[1],  # rewritePackageSources: mirror "corp"
+            (ResolvedResource(kind="packageMirror", name="corp", apt="https://mirror.corp"),),
+        ),
+    ]
+    tv = transform_version(resolved_steps)
 
     registry = FakeRegistryPort(
         tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": ["7.2.5"]},
