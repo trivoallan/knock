@@ -7,7 +7,10 @@ Pydantic RunReport tree in `houba.use_cases.report` embeds `Counts` and `ErrorIn
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal, Protocol
+
+if TYPE_CHECKING:
+    from houba.use_cases.report import RunReport
 
 OperationKind = Literal["imported", "updated", "deleted", "aliased", "skipped"]
 
@@ -38,3 +41,16 @@ class OperationEvent:
     src_tag: str | None
     digest: str | None
     applied: bool
+
+
+class Reporter(Protocol):
+    """In-flight reconcile events. The use case calls these as work happens; the
+    structlog adapter renders them to the stderr journal. `run_completed` takes the
+    full RunReport (imported lazily to avoid a hard ports→use_cases dependency)."""
+
+    def run_started(self, policy_count: int, *, mode: str) -> None: ...
+    def policy_started(self, name: str, source: str) -> None: ...
+    def operation_applied(self, ev: OperationEvent) -> None: ...
+    def policy_failed(self, name: str, error: ErrorInfo) -> None: ...
+    def policy_completed(self, name: str, totals: Counts) -> None: ...
+    def run_completed(self, report: RunReport) -> None: ...
