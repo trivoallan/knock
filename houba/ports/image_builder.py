@@ -13,6 +13,7 @@ class BuildRequest:
     context_dir: Path
     image_ref: str
     build_args: dict[str, str] = field(default_factory=dict)
+    platform: str | None = None
 
 
 class ImageBuilderPort(Protocol):

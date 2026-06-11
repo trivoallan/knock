@@ -55,3 +55,39 @@ def test_no_team_omits_team_key() -> None:
 def test_no_location_fact_stamped() -> None:
     a = _ann()
     assert not any("harbor" in k or "destination" in k or "registry" in k for k in a)
+
+
+# ---------------------------------------------------------------------------
+# transform lineage keys
+# ---------------------------------------------------------------------------
+
+
+def _base_kwargs() -> dict:
+    return dict(
+        prefix="io.houba",
+        source_registry="docker.io",
+        source_repository="library/redis",
+        source_tag="7.2.0",
+        source_digest="sha256:src",
+        created=datetime(2026, 6, 11, tzinfo=UTC),
+        team="data",
+        artifact_type="image",
+        policy="redis-hardened",
+        import_name="v7",
+        variant="default",
+    )
+
+
+def test_stamp_without_transform_has_no_transform_keys() -> None:
+    ann = build_stamp_annotations(**_base_kwargs())
+    assert not any(".transform." in k for k in ann)
+
+
+def test_stamp_with_transform_emits_steps_and_version() -> None:
+    ann = build_stamp_annotations(
+        **_base_kwargs(),
+        transform_steps=["injectCA", "rewritePackageSources"],
+        transform_version_value="sha256:tv",
+    )
+    assert ann["io.houba.transform.steps"] == "injectCA,rewritePackageSources"
+    assert ann["io.houba.transform.version"] == "sha256:tv"

@@ -24,6 +24,8 @@ def build_stamp_annotations(
     policy: str,
     import_name: str,
     variant: str,
+    transform_steps: list[str] | None = None,
+    transform_version_value: str | None = None,
 ) -> dict[str, str]:
     source = f"{source_registry}/{source_repository}"
     annotations: dict[str, str] = {
@@ -42,4 +44,7 @@ def build_stamp_annotations(
         annotations[f"{prefix}.variant"] = variant
         if team is not None:
             annotations[f"{prefix}.owner.team"] = team
+    if prefix and transform_steps and transform_version_value is not None:
+        annotations[f"{prefix}.transform.steps"] = ",".join(transform_steps)
+        annotations[f"{prefix}.transform.version"] = transform_version_value
     return annotations

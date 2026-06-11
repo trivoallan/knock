@@ -155,3 +155,27 @@ def test_reconcile_variant_missing_source_tag_raises_clear_error() -> None:
     source = {"1.0.0": _src("sha256:a", 30)}  # 2.0.0 missing → contract violation
     with pytest.raises(KeyError, match=r"2\.0\.0"):
         reconcile_variant(plan, source, {}, NOW, GRACE)
+
+
+# ---------------------------------------------------------------------------
+# Transform-aware change detection (Task 5)
+# ---------------------------------------------------------------------------
+
+
+def test_classify_transform_unchanged_falls_back_to_source_logic() -> None:
+    src = SourceArtifact(digest="sha256:s", pushed_at=NOW)
+    mir = MirrorArtifact(base_digest="sha256:s", transform_version="sha256:tv")
+    assert _classify(src, mir, NOW, GRACE, desired_transform_version="sha256:tv") == "skip"
+
+
+def test_classify_transform_changed_rebuilds_now_ignoring_grace() -> None:
+    # Source unchanged + pushed just now (inside grace), but transform changed → update now.
+    src = SourceArtifact(digest="sha256:s", pushed_at=NOW)
+    mir = MirrorArtifact(base_digest="sha256:s", transform_version="sha256:OLD")
+    assert _classify(src, mir, NOW, GRACE, desired_transform_version="sha256:NEW") == "update"
+
+
+def test_classify_copy_path_unchanged_when_no_transform_either_side() -> None:
+    src = SourceArtifact(digest="sha256:s", pushed_at=NOW)
+    mir = MirrorArtifact(base_digest="sha256:s")  # transform_version defaults None
+    assert _classify(src, mir, NOW, GRACE, desired_transform_version=None) == "skip"

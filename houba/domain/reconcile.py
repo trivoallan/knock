@@ -28,6 +28,7 @@ class SourceArtifact:
 @dataclass(frozen=True)
 class MirrorArtifact:
     base_digest: str  # recorded org.opencontainers.image.base.digest
+    transform_version: str | None = None  # recorded {prefix}.transform.version
 
 
 def _classify(
@@ -35,11 +36,17 @@ def _classify(
     mirror: MirrorArtifact | None,
     now: datetime,
     grace: timedelta,
+    *,
+    desired_transform_version: str | None = None,
 ) -> Literal["import", "update", "skip"]:
     if mirror is None:
         return "import"
-    if mirror.base_digest == source.digest:
+    transform_unchanged = mirror.transform_version == desired_transform_version
+    source_unchanged = mirror.base_digest == source.digest
+    if source_unchanged and transform_unchanged:
         return "skip"
+    if not transform_unchanged:
+        return "update"  # operator changed the hardening → rebuild now, no grace
     if now - source.pushed_at < grace:
         return "skip"  # source moved too recently — let it settle
     return "update"
@@ -59,6 +66,8 @@ def reconcile_variant(
     mirror: dict[str, MirrorArtifact],
     now: datetime,
     grace: timedelta = DEFAULT_GRACE,
+    *,
+    desired_transform_version: str | None = None,
 ) -> VariantReconcile:
     """Reconcile one variant against a destination's mirror state.
 
@@ -77,7 +86,13 @@ def reconcile_variant(
                 f"source tag {src_tag!r} absent from source state — "
                 "expand_import selection and source fetch must be consistent"
             ) from exc
-        decision = _classify(src, mirror.get(out_tag), now, grace)
+        decision = _classify(
+            src,
+            mirror.get(out_tag),
+            now,
+            grace,
+            desired_transform_version=desired_transform_version,
+        )
         if decision == "import":
             to_import.append(out_tag)
         elif decision == "update":
@@ -104,13 +119,26 @@ def reconcile_import(
     mirror: dict[str, MirrorArtifact],
     now: datetime,
     grace: timedelta = DEFAULT_GRACE,
+    *,
+    transform_versions: dict[str, str | None] | None = None,
 ) -> ImportReconcile:
     """Reconcile all variants of an expanded import; delegates to reconcile_variant.
 
     The same source pre-condition applies: every tag selected by expand_import
     must be present in ``source`` (selection and source-state fetch must be consistent).
     """
-    variants = [reconcile_variant(v, source, mirror, now, grace) for v in expanded.variants]
+    tv = transform_versions or {}
+    variants = [
+        reconcile_variant(
+            v,
+            source,
+            mirror,
+            now,
+            grace,
+            desired_transform_version=tv.get(v.name),
+        )
+        for v in expanded.variants
+    ]
 
     # Desired output names across ALL variants: concrete output tags + alias names.
     desired: set[str] = set()

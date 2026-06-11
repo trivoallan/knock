@@ -7,7 +7,8 @@
   blast-radius. This carries the product thesis: the provenance *stamp* is read downstream by
   the observability / CMDB stack — houba never calls it, the coupling is the data.
 - **System Context** — houba and the systems it integrates with directly (source registries,
-  BuildKit, Harbor, GitLab, Teams).
+  destination registries, BuildKit, and the internal package mirror the hardening rebuild
+  pulls from).
 
 This model is the **source of truth** for the context and landscape levels. It must not drift
 from the specs — see the [maintenance contract](#maintenance-contract).

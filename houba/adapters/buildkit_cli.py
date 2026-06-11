@@ -40,6 +40,8 @@ class BuildkitAdapter:
             f"--opt=filename={request.dockerfile_path.name}",
             f"--output=type=image,name={request.image_ref},push=true",
         ]
+        if request.platform:
+            args.append(f"--opt=platform={request.platform}")
         for k, v in sorted(request.build_args.items()):
             args.append(f"--opt=build-arg:{k}={v}")
         try:

@@ -1,0 +1,35 @@
+# Hardening (rebuild path) — REQUIRES THE TRANSFORM ENGINE (Phase 6, in progress).
+# Design: docs/superpowers/specs/2026-06-11-image-transform-hardening-design.md
+#
+# Unlike the copy-path examples (../busybox, ../redis), this one REBUILDS the image
+# through a declarative hardening policy: it injects internal CA certs into the image's
+# trust store and rewrites its package sources to an internal mirror, then stamps the
+# result (base.digest = source digest, plus io.houba.transform.*). The policy stays
+# portable — it only names the CA(s)/mirror; the org-specific data lives in config:
+#
+#   HOUBA_TRANSFORM_CA_CERTS='{"corp": {"path": "/etc/houba/certs/corp-root.pem"}}'
+#   HOUBA_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian", "apk": "https://mirror.corp/alpine"}}'
+#
+# This will run with `houba reconcile docs/examples/hardened` once the rebuild path lands.
+#
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis-hardened
+  labels:
+    team: data-platform
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/redis
+  imports:
+    - name: v7
+      tags:
+        includeRegex: "^7\\.2\\."
+      transform:
+        - injectCA: { certs: [corp] }             # names → HOUBA_TRANSFORM_CA_CERTS
+        - rewritePackageSources: { mirror: corp }  # name → HOUBA_TRANSFORM_PACKAGE_MIRRORS
+      destinations:
+        - project: hardened
+          repository: redis

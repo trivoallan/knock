@@ -24,11 +24,16 @@ def reconcile(
     summary = reconcile_policies(
         policies,
         registry=container.registry,
+        builder=container.builder,
         roster=container.settings.registries,
+        ca_certs=container.settings.transform_ca_certs,
+        package_mirrors=container.settings.transform_package_mirrors,
+        build_platform=container.settings.build_platform,
         now=container.clock.now(),
         label_prefix=container.settings.label_prefix,
         dry_run_tags=dry_run or container.settings.dry_run_tags,
         dry_run_deletions=dry_run or container.settings.dry_run_deletions,
+        work_dir=container.settings.work_dir,
     )
     typer.echo(
         f"reconcile: imported={summary.imported} updated={summary.updated} "
