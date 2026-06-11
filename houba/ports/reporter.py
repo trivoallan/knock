@@ -7,6 +7,9 @@ Pydantic RunReport tree in `houba.use_cases.report` embeds `Counts` and `ErrorIn
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
+
+OperationKind = Literal["imported", "updated", "deleted", "aliased", "skipped"]
 
 
 @dataclass(frozen=True)
@@ -30,7 +33,7 @@ class OperationEvent:
     policy: str
     dest_repo: str
     variant: str
-    kind: str  # imported|updated|deleted|aliased|skipped
+    kind: OperationKind
     out_tag: str
     src_tag: str | None
     digest: str | None

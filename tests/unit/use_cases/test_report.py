@@ -19,7 +19,12 @@ def _ok_policy() -> PolicyReport:
         kind="imported", out_tag="7.2.0", src_tag="7.2.0", digest="sha256:a", applied=True
     )
     variant = VariantReport(name="v7", suffix="", totals=Counts(imported=1), operations=[op])
-    target = TargetReport(dest_repo="harbor.corp/lib/redis", variants=[variant], operations=[])
+    target = TargetReport(
+        dest_repo="harbor.corp/lib/redis",
+        variants=[variant],
+        operations=[],
+        totals=Counts(imported=1),
+    )
     return PolicyReport(
         name="redis",
         source="docker.io/library/redis",
@@ -71,5 +76,19 @@ def test_report_exit_code_is_max_of_failures() -> None:
 
 
 def test_json_schema_is_stable_and_serializable() -> None:
-    json.dumps(run_report_json_schema())
-    assert run_report_json_schema()["title"] == "RunReport"
+    schema = run_report_json_schema()
+    assert schema["title"] == "RunReport"
+    json.dumps(schema)  # must not raise
+
+
+def test_report_exit_code_single_failure() -> None:
+    failed = PolicyReport(
+        name="a",
+        source="s",
+        status="failed",
+        error=ErrorInfo(type="RegctlError", message="boom", exit_code=2),
+        totals=Counts(),
+        targets=[],
+    )
+    report = RunReport(mode="apply", status="failed", totals=Counts(), policies=[failed])
+    assert report_exit_code(report) == 2

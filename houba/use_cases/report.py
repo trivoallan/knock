@@ -11,9 +11,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from houba.ports.reporter import Counts, ErrorInfo
+from houba.ports.reporter import Counts, ErrorInfo, OperationKind
 
-OperationKind = Literal["imported", "updated", "deleted", "aliased", "skipped"]
 PolicyStatus = Literal["ok", "failed"]
 RunStatus = Literal["ok", "partial", "failed"]
 RunMode = Literal["apply", "dry-run"]
@@ -38,13 +37,14 @@ class TargetReport(BaseModel):
     dest_repo: str
     variants: list[VariantReport]
     operations: list[Operation]  # target-level ops (deletions)
+    totals: Counts
 
 
 class PolicyReport(BaseModel):
     name: str
     source: str
     status: PolicyStatus
-    error: ErrorInfo | None
+    error: ErrorInfo | None = None
     totals: Counts
     targets: list[TargetReport]
 
