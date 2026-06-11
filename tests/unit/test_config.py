@@ -202,3 +202,23 @@ def test_resolve_ca_certs_unknown_name_raises() -> None:
 def test_resolve_mirror_unknown_name_raises() -> None:
     with pytest.raises(ConfigError, match="unknown package mirror 'nope'"):
         resolve_mirror("nope", {})
+
+
+# ---------------------------------------------------------------------------
+# Task 1 — RegistryConfig.ca_cert
+# ---------------------------------------------------------------------------
+
+
+def test_registry_config_ca_cert_defaults_none() -> None:
+    from houba.config import RegistryConfig
+
+    assert RegistryConfig(host="harbor.corp").ca_cert is None
+
+
+def test_registry_config_ca_cert_parses_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "HOUBA_REGISTRIES",
+        '{"corp": {"host": "harbor.corp", "tls_verify": false,'
+        ' "ca_cert": "/etc/houba/registry-ca.pem"}}',
+    )
+    assert Settings().registries["corp"].ca_cert == "/etc/houba/registry-ca.pem"

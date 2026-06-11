@@ -24,6 +24,7 @@ class RegistryConfig(BaseModel):
     username: str | None = None
     password: SecretStr | None = None
     tls_verify: bool = True
+    ca_cert: str | None = None  # path to a CA PEM regctl should trust for this registry's TLS
 
     @model_validator(mode="after")
     def _credentials_both_or_neither(self) -> RegistryConfig:
