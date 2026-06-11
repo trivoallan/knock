@@ -20,6 +20,9 @@ case "$cmd" in
         case "$scenario" in
             tags-redis) printf '7.2.0\n7.3.0\nlatest\n' ;;
             empty) : ;;
+            notfound)
+                echo 'failed: NAME_UNKNOWN: repository name not known to registry' >&2
+                exit 1 ;;
             *) printf '7.2.0\n' ;;
         esac
         ;;

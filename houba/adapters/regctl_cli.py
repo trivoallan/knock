@@ -34,7 +34,15 @@ class RegctlAdapter:
         return self._bin
 
     def list_tags(self, repo_ref: str) -> list[str]:
-        out = self._run(["tag", "ls", repo_ref])
+        try:
+            out = self._run(["tag", "ls", repo_ref])
+        except RegctlError as e:
+            # A never-pushed repo → dist-spec NAME_UNKNOWN; that means "no tags", not a
+            # hard error (else the first reconcile of an empty mirror would always fail).
+            msg = str(e).lower()
+            if "name_unknown" in msg or "not known to registry" in msg:
+                return []
+            raise
         return [line.strip() for line in out.splitlines() if line.strip()]
 
     def inspect(self, image_ref: str) -> ImageInfo:
