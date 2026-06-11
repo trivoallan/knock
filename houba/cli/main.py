@@ -9,6 +9,7 @@ import importlib.metadata
 
 import typer
 from pydantic import ValidationError
+from pydantic_settings import SettingsError
 
 from houba.cli import dev as dev_cli
 from houba.errors import HoubaError, exit_code_for
@@ -37,7 +38,7 @@ def _run() -> None:
     """
     try:
         app()
-    except ValidationError as e:
+    except (ValidationError, SettingsError) as e:
         typer.echo(f"Configuration invalide : {e}", err=True)
         raise typer.Exit(3) from e
     except HoubaError as e:

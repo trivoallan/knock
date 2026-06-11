@@ -3,7 +3,17 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from houba.config import HarborSettings, Settings
+from houba.config import HarborSettings, RegistryConfig, Settings, resolve_registry
+from houba.errors import ConfigError
+
+
+def _base_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://h")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "u")
+    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://g")
+    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "g")
 
 
 def test_settings_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -113,3 +123,105 @@ def test_label_prefix_override(monkeypatch: pytest.MonkeyPatch) -> None:
 
     settings = Settings()
     assert settings.label_prefix == "com.example.myorg"
+
+
+def test_registry_config_minimal() -> None:
+    r = RegistryConfig(host="harbor.corp.example.com")
+    assert r.host == "harbor.corp.example.com"
+    assert r.username is None
+    assert r.password is None
+    assert r.tls_verify is True  # default
+
+
+def test_registry_config_with_credentials() -> None:
+    r = RegistryConfig(host="h", username="robot", password="s3cret", tls_verify=False)
+    assert r.username == "robot"
+    assert r.password.get_secret_value() == "s3cret"
+    assert r.tls_verify is False
+
+
+def test_registry_config_password_masked_in_repr() -> None:
+    r = RegistryConfig(host="h", username="u", password="leak-me")
+    assert "leak-me" not in repr(r)
+
+
+def test_registry_config_username_without_password_rejected() -> None:
+    with pytest.raises(ValidationError, match="together"):
+        RegistryConfig(host="h", username="robot")
+
+
+def test_registry_config_password_without_username_rejected() -> None:
+    with pytest.raises(ValidationError, match="together"):
+        RegistryConfig(host="h", password="s3cret")
+
+
+def test_registry_config_rejects_unknown_field() -> None:
+    with pytest.raises(ValidationError):
+        RegistryConfig(host="h", typpo="x")
+
+
+def test_registries_roster_empty_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_env(monkeypatch)
+    monkeypatch.delenv("HOUBA_REGISTRIES", raising=False)
+    assert Settings().registries == {}
+
+
+def test_registries_roster_from_json_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_env(monkeypatch)
+    monkeypatch.setenv(
+        "HOUBA_REGISTRIES",
+        '{"eu": {"host": "harbor.eu.corp", "username": "robot", "password": "s3cret"},'
+        ' "us": {"host": "harbor.us.corp"}}',
+    )
+    reg = Settings().registries
+    assert set(reg) == {"eu", "us"}
+    assert reg["eu"].host == "harbor.eu.corp"
+    assert reg["eu"].password.get_secret_value() == "s3cret"
+    assert reg["us"].username is None
+
+
+def test_registries_roster_password_masked_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_env(monkeypatch)
+    monkeypatch.setenv(
+        "HOUBA_REGISTRIES",
+        '{"eu": {"host": "h", "username": "u", "password": "roster-leak"}}',
+    )
+    assert "roster-leak" not in repr(Settings())
+
+
+def test_registries_roster_invalid_entry_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_env(monkeypatch)
+    # username without password → RegistryConfig validator fires during Settings parse
+    monkeypatch.setenv("HOUBA_REGISTRIES", '{"eu": {"host": "h", "username": "robot"}}')
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_resolve_registry_by_name() -> None:
+    roster = {"eu": RegistryConfig(host="a"), "us": RegistryConfig(host="b")}
+    name, cfg = resolve_registry("us", roster)
+    assert name == "us"
+    assert cfg.host == "b"
+
+
+def test_resolve_registry_unknown_name_raises() -> None:
+    with pytest.raises(ConfigError, match="unknown registry"):
+        resolve_registry("zz", {"eu": RegistryConfig(host="a")})
+
+
+def test_resolve_registry_omitted_with_single_uses_it() -> None:
+    roster = {"only": RegistryConfig(host="a")}
+    name, cfg = resolve_registry(None, roster)
+    assert name == "only"
+    assert cfg.host == "a"
+
+
+def test_resolve_registry_omitted_with_multiple_raises() -> None:
+    roster = {"eu": RegistryConfig(host="a"), "us": RegistryConfig(host="b")}
+    with pytest.raises(ConfigError, match="specify one"):
+        resolve_registry(None, roster)
+
+
+def test_resolve_registry_omitted_with_empty_raises() -> None:
+    with pytest.raises(ConfigError, match="no registries"):
+        resolve_registry(None, {})
