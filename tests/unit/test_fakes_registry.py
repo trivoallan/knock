@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from houba.ports.registry import ImageInfo
+from houba.ports.registry import ImageInfo, RegistryPort
 from tests.fakes.registry import FakeRegistryPort
 
 
@@ -42,3 +42,14 @@ def test_fake_journals_login() -> None:
     fake = FakeRegistryPort()
     fake.login("harbor.corp", username="robot", password="s3cret", tls_verify=True)
     assert fake.logins == [("harbor.corp", "robot", True)]  # password NOT journalled
+
+
+def test_fake_is_a_registry_port() -> None:
+    fake: RegistryPort = FakeRegistryPort()
+    assert fake is not None
+
+
+def test_fake_journals_configure_registry() -> None:
+    fake = FakeRegistryPort()
+    fake.configure_registry("harbor.corp", tls_verify=False, ca_cert="/ca.pem")
+    assert fake.configured == [("harbor.corp", False, "/ca.pem")]
