@@ -1,5 +1,5 @@
 from houba.domain.transforms.base import ContextFile, Fragment, ResolvedResource, ResourceRef
-from houba.domain.transforms.steps import InjectCA, RewritePackageSources
+from houba.domain.transforms.steps import InjectCA, RewritePackageSources, SetTimezone
 
 
 def _cert(name: str, content: str) -> ResolvedResource:
@@ -57,3 +57,19 @@ def test_rewrite_fragment_apt_only_omits_apk() -> None:
     (run,) = frag.instructions
     assert "/etc/apt/sources.list" in run
     assert "/etc/apk/repositories" not in run
+
+
+def test_set_timezone_has_no_resource_refs() -> None:
+    p = SetTimezone.params_model(zone="Europe/Paris")
+    assert SetTimezone().resource_refs(p) == ()
+
+
+def test_set_timezone_fragment_is_pure_no_context() -> None:
+    p = SetTimezone.params_model(zone="Europe/Paris")
+    frag = SetTimezone().fragment(p, ())
+    assert frag.context_files == ()
+    assert frag.instructions == (
+        "RUN ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime "
+        "&& echo Europe/Paris > /etc/timezone",
+        "ENV TZ=Europe/Paris",
+    )

@@ -78,3 +78,24 @@ class RewritePackageSources(TransformStepCompiler[_RewritePackageSourcesParams])
             )
         instructions = ("RUN set -eux; " + "; ".join(rewrites),) if rewrites else ()
         return Fragment(instructions=instructions)
+
+
+class _SetTimezoneParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    zone: str = Field(min_length=1)
+
+
+class SetTimezone(TransformStepCompiler[_SetTimezoneParams]):
+    name = "setTimezone"
+    params_model = _SetTimezoneParams
+
+    def fragment(
+        self, params: _SetTimezoneParams, resources: tuple[ResolvedResource, ...]
+    ) -> Fragment:
+        z = params.zone
+        return Fragment(
+            instructions=(
+                f"RUN ln -snf /usr/share/zoneinfo/{z} /etc/localtime && echo {z} > /etc/timezone",
+                f"ENV TZ={z}",
+            )
+        )
