@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Literal
 
+from houba.domain.expand import VariantPlan
+
 DEFAULT_GRACE = timedelta(days=7)
 
 
@@ -41,3 +43,36 @@ def _classify(
     if now - source.pushed_at < grace:
         return "skip"  # source moved too recently — let it settle
     return "update"
+
+
+@dataclass(frozen=True)
+class VariantReconcile:
+    variant: str
+    to_import: list[str]
+    to_update: list[str]
+    aliases: dict[str, str]
+
+
+def reconcile_variant(
+    plan: VariantPlan,
+    source: dict[str, SourceArtifact],
+    mirror: dict[str, MirrorArtifact],
+    now: datetime,
+    grace: timedelta = DEFAULT_GRACE,
+) -> VariantReconcile:
+    to_import: list[str] = []
+    to_update: list[str] = []
+    for src_tag in plan.tags:
+        out_tag = src_tag + plan.suffix
+        decision = _classify(source[src_tag], mirror.get(out_tag), now, grace)
+        if decision == "import":
+            to_import.append(out_tag)
+        elif decision == "update":
+            to_update.append(out_tag)
+    aliases = {alias + plan.suffix: target + plan.suffix for alias, target in plan.aliases.items()}
+    return VariantReconcile(
+        variant=plan.name,
+        to_import=to_import,
+        to_update=to_update,
+        aliases=aliases,
+    )
