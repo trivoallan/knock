@@ -164,3 +164,29 @@ def test_archive_import_only_when_no_default() -> None:
     [resolved] = resolve_imports(spec)
     assert resolved.archive.keep == 7
     assert resolved.archive.older_than_days == 30  # model default, no defaults block
+
+
+def test_variants_pass_through_to_resolved() -> None:
+    spec = _spec(
+        defaults=None,
+        imports=[
+            {
+                "name": "v7",
+                "tags": {"includeRegex": "^7\\."},
+                "variants": [
+                    {"name": "standard", "suffix": ""},
+                    {"name": "fips", "suffix": "-fips", "transform": [{"enableFips": {}}]},
+                ],
+            }
+        ],
+    )
+    [resolved] = resolve_imports(spec)
+    assert resolved.variants is not None
+    assert [v.name for v in resolved.variants] == ["standard", "fips"]
+    assert resolved.variants[1].suffix == "-fips"
+
+
+def test_variants_none_when_absent() -> None:
+    spec = _spec(defaults=None, imports=[{"name": "v", "tags": {}}])
+    [resolved] = resolve_imports(spec)
+    assert resolved.variants is None

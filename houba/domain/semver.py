@@ -48,6 +48,29 @@ def _key(value: str) -> _Key:
     )
 
 
+@dataclass(frozen=True)
+class SemverParts:
+    major: int
+    minor: int
+    patch: int
+
+
+def parse_semver(value: str) -> SemverParts | None:
+    """Parse a tag's semver components, or None if it is not semver.
+
+    Accepts an optional leading `v` and partial versions (`2`, `3.4`); a
+    prerelease suffix is allowed but ignored for the components.
+    """
+    m = _SEMVER_RE.match(value.strip())
+    if not m:
+        return None
+    return SemverParts(
+        major=int(m.group("major")),
+        minor=int(m.group("minor") or 0),
+        patch=int(m.group("patch") or 0),
+    )
+
+
 def sort_semver(values: list[str], *, reverse: bool = False) -> list[str]:
     semver = [v for v in values if _key(v).is_non_semver == 0]
     others = [v for v in values if _key(v).is_non_semver == 1]
