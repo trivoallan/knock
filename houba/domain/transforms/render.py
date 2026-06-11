@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -42,3 +45,31 @@ def render(resolved_steps: Sequence[ResolvedStep], *, source_ref: str) -> Render
         lines.extend(frag.instructions)
         context_files.extend(frag.context_files)
     return Rendered(dockerfile="\n".join(lines) + "\n", context_files=tuple(context_files))
+
+
+def transform_version(resolved_steps: Sequence[ResolvedStep]) -> str:
+    """Content hash of the resolved transform: step names/params + resolved resource data.
+
+    Changes when a step/param changes, the step order changes, or a resolved value
+    (cert content, mirror URL) changes. Drives transform-aware change detection.
+    """
+    payload: list[Any] = [
+        [
+            rs.step.name,
+            rs.step.params,
+            [
+                {
+                    "kind": r.kind,
+                    "name": r.name,
+                    "filename": r.filename,
+                    "content": r.content,
+                    "apt": r.apt,
+                    "apk": r.apk,
+                }
+                for r in rs.resources
+            ],
+        ]
+        for rs in resolved_steps
+    ]
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return "sha256:" + hashlib.sha256(blob).hexdigest()
