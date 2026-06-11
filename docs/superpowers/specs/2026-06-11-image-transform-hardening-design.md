@@ -30,6 +30,13 @@ escape hatch (breaks declarativeness/auditability — explicitly rejected); mult
 rebuild; per-import platform fan-out. Infra (separate tasks, not this spec): add `regctl`
 to the runtime image alongside `buildctl`; native per-registry TLS/auth wiring for regctl.
 
+**v1 limitation — `rewritePackageSources` covers the classic source formats only:** the
+host-swap rewrites `/etc/apt/sources.list` + `/etc/apt/sources.list.d/*.list` (one-line apt)
+and `/etc/apk/repositories`. It does **not** yet touch the deb822 `/etc/apt/sources.list.d/*.sources`
+format that ships by default on Ubuntu 24.04+ / Debian 12 — hardening a base image that uses
+deb822 will leave its package sources pointing upstream. Extending the rewrite to deb822
+(`URIs:` lines) is a follow-up.
+
 ## 3. The transform vocabulary
 
 `TransformStep` (Phase 1: single-key map `{stepName: params}` → `{name, params}`) is
