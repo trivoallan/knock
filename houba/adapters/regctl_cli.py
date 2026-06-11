@@ -83,6 +83,12 @@ class RegctlAdapter:
             raise RegctlError(f"expected JSON object from regctl {' '.join(args)}: {payload!r}")
         return payload
 
+    def configure_registry(self, host: str, *, tls_verify: bool, ca_cert: str | None) -> None:
+        args = ["registry", "set", host, "--tls", "enabled" if tls_verify else "disabled"]
+        if ca_cert:
+            args += ["--cacert", ca_cert]
+        self._run(args)
+
     def login(self, host: str, *, username: str, password: str, tls_verify: bool) -> None:
         args = ["registry", "login", "--user", username, "--pass-stdin"]
         if not tls_verify:

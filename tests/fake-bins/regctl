@@ -65,7 +65,7 @@ case "$cmd" in
             *) printf '{"created":"2026-01-02T03:04:05Z","architecture":"amd64","os":"linux"}\n' ;;
         esac
         ;;
-    "registry login")
+    "registry login"|"registry set")
         : ;;
     "image copy"|"image mod"|"tag rm")
         : ;;
