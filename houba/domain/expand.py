@@ -21,8 +21,8 @@ class VariantPlan:
     name: str
     suffix: str
     transform: list[TransformStep]
-    tags: list[str]            # selected concrete source tags (un-suffixed)
-    aliases: dict[str, str]    # alias name → concrete target tag (un-suffixed)
+    tags: list[str]  # selected concrete source tags (un-suffixed)
+    aliases: dict[str, str]  # alias name → concrete target tag (un-suffixed)
 
 
 @dataclass(frozen=True)

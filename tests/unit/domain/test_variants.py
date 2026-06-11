@@ -21,9 +21,7 @@ def test_no_variants_yields_implicit_default() -> None:
         {"name": "v", "tags": {}, "transform": [{"setTimezone": {}}]},
     )
     [variant] = expand_variants(resolved)
-    assert variant == ResolvedVariant(
-        name="default", suffix="", transform=resolved.transform
-    )
+    assert variant == ResolvedVariant(name="default", suffix="", transform=resolved.transform)
 
 
 def test_no_variants_no_transform_yields_empty_transform() -> None:
