@@ -28,6 +28,18 @@ For each image you bring in, you declare a small policy (source, tag-selection r
 
 See the [roadmap](docs/roadmap.md) for what is built versus planned, and the [design overview](docs/design.md) for the architecture.
 
+### Run it as a deployment
+
+A **reference deployment** runs houba as a Kubernetes CronJob (git-sync'd policies, rootless
+buildkitd, a blast-radius consumer) — the same `deploy/` manifests serve a local kind demo and a
+production blueprint. Fastest taste:
+
+```bash
+make demo-lite        # kind up, reconcile the busybox example, print blast radius
+```
+
+See [docs/runbooks/reference-deployment.md](docs/runbooks/reference-deployment.md).
+
 ---
 
 ## Quick start

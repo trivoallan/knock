@@ -1,0 +1,48 @@
+# houba reference deployment — runtime-neutral core.
+#
+# This base is identical across the lite demo, the full demo, and the prod
+# blueprint; overlays change ONLY the registry target, the secret source, the
+# image, the schedule, and whether the rebuild (buildkitd) add-on is present.
+# That identity is what guarantees "the demo IS the blueprint" (no drift).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: houba
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - cronjob-reconcile.yaml
+  - job-blast-radius.yaml
+
+# Stable, predictable resource names (no content-hash suffix) so the on-demand
+# blast-radius Job and the CronJob reference config/script by fixed name.
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: houba-config
+    literals:
+      - HOUBA_LABEL_PREFIX=io.houba
+      - HOUBA_LOG_FORMAT=json
+      - HOUBA_LOG_LEVEL=INFO
+      - HOUBA_WORK_DIR=/tmp/houba-work
+      # GitOps source of the policies (a merged PR here is the front door).
+      # Overlays repoint these at the org's policy repo.
+      - POLICY_REPO_URL=https://github.com/trivoallan/houba
+      - POLICY_REPO_REF=main
+      - POLICY_DIR=/policies/current/docs/examples/busybox
+      # Repos the blast-radius consumer walks (matches the busybox example).
+      - BLAST_REPOS=demo/busybox
+  # The blast-radius consumer script, mounted into its Job. Canonical copy
+  # lives at scripts/blast-radius.sh so it is also runnable standalone.
+  - name: houba-blast-radius
+    files:
+      - blast-radius.sh=../../scripts/blast-radius.sh
+
+# Container image is rewritten per overlay (houba:dev loaded into kind for the
+# demos; a pinned ghcr.io tag in prod).
+images:
+  - name: houba
+    newName: houba
+    newTag: dev

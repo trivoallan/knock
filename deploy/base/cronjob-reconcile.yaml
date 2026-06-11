@@ -1,0 +1,80 @@
+# The reference trigger: houba reconcile on a schedule.
+# git-sync clones the policy repo (one-time) into a shared volume before houba runs;
+# a merged PR on that repo is the operational form of "the front door is mandatory".
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: houba-reconcile
+spec:
+  schedule: "0 * * * *" # hourly — the 7-day digest-stability window makes any sub-daily cadence enough
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0 # a failed reconcile reports per-policy and exits; let the next schedule retry
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: houba
+            app.kubernetes.io/component: reconcile
+        spec:
+          serviceAccountName: houba
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          initContainers:
+            - name: git-sync
+              image: registry.k8s.io/git-sync/git-sync:v4.4.0
+              args:
+                - --repo=$(POLICY_REPO_URL)
+                - --ref=$(POLICY_REPO_REF)
+                - --root=/policies
+                - --link=current
+                - --one-time
+                - --verbose=1
+              envFrom:
+                - configMapRef:
+                    name: houba-config
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: policies
+                  mountPath: /policies
+          containers:
+            - name: houba
+              image: houba # rewritten by the kustomize images transformer
+              command: ["/bin/sh", "-c"]
+              args: ['exec houba reconcile "$POLICY_DIR"']
+              envFrom:
+                - configMapRef:
+                    name: houba-config
+                - secretRef:
+                    name: houba-registries # provided per-overlay (literal / ExternalSecret)
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+              volumeMounts:
+                - name: policies
+                  mountPath: /policies
+                  readOnly: true
+                - name: work
+                  mountPath: /tmp
+          volumes:
+            - name: policies
+              emptyDir: {}
+            - name: work
+              emptyDir: {}

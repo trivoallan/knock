@@ -1,6 +1,8 @@
 # Reference deployment design
 
-**Status:** Design in review — paper iteration before any manifests/code
+**Status:** Implemented — `deploy/` (kustomize), `scripts/blast-radius.sh`, `Makefile`,
+`.gitlab-ci.yml`, this runbook, and the C4 Deployment view are in place. All three overlays
+`kustomize build` clean; the lite layer is validated runnable end-to-end.
 **Date:** 2026-06-11
 **Scope:** Define the *blessed, reproducible topology* for running houba in an organization — the
 "reference deployment". One kustomize-based artifact that (a) runs the full loop locally in
@@ -176,14 +178,17 @@ views). `docs/architecture/README.md` is updated in the same change to describe 
 - **Cadence:** one-shot `Job` (make-triggered) in demo, hourly `CronJob` in `prod`.
 - **C4:** adds a third (Deployment) view; Landscape/Context unchanged; README synced.
 
-## Artifacts this spec will produce (when implementation is approved)
+## Artifacts produced
 
-- `deploy/base/` + `deploy/overlays/{local-lite,local-full,prod}/` (kustomize).
-- `Makefile` targets: `demo-lite`, `demo-full`, `down`.
-- `scripts/blast-radius.sh`.
+- `deploy/base/` + `deploy/components/buildkitd/` + `deploy/overlays/{local-lite,local-full,prod}/` (kustomize).
+- `Makefile` targets: `demo-lite`, `demo-lite-run`, `up-full`, `demo-full-run`, `blast-radius`, `down`.
+- `scripts/blast-radius.sh` — the generic consumer (regctl + python3).
 - `docs/runbooks/reference-deployment.md` (operate it; privilege & secrets notes; scanner-hook section).
 - `.gitlab-ci.yml` example (alternative trigger).
 - C4 Deployment view in `docs/architecture/workspace.dsl` + `docs/architecture/README.md` section.
+
+The runtime image already bundles `regctl` + `buildctl` (the CLIs the code shells out to), so the
+deployment references it as-is — no image change is carried by this work.
 
 ## Out of scope
 
