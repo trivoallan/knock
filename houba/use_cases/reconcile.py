@@ -111,7 +111,9 @@ def reconcile_policies(
             logged_in.add(cfg.host)
 
         src_repo = _source_repo(plan.policy)
-        selected = plan.expanded.variants[0].tags if plan.expanded.variants else []
+        # Every variant shares the same selected source tags (the suffix differentiates
+        # the output), but union defensively so a missing source entry can't arise.
+        selected = sorted({tag for v in plan.expanded.variants for tag in v.tags})
         source: dict[str, SourceArtifact] = {
             tag: to_source_artifact(registry.inspect(f"{src_repo}:{tag}"), now=now)
             for tag in selected

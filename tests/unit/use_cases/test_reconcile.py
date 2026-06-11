@@ -148,3 +148,114 @@ spec:
             dry_run_deletions=False,
         )
     assert fake.copied == []  # fail-fast: nothing mutated
+
+
+def test_reconcile_updates_changed_stable_tag() -> None:
+    # mirror has 7.2.0 stamped with an OLD base.digest; source moved to a new digest,
+    # source pushed long ago (past the 7-day grace) → update.
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": ["7.2.0"]},
+        infos={
+            "docker.io/library/redis:7.2.0": _info("sha256:NEW"),
+            "harbor.corp/lib/redis:7.2.0": _info(
+                "sha256:mirror", {"org.opencontainers.image.base.digest": "sha256:OLD"}
+            ),
+        },
+    )
+    summary = reconcile_policies(
+        [POLICY],
+        registry=fake,
+        roster=ROSTER,
+        now=NOW,
+        label_prefix="io.houba",
+        dry_run_tags=False,
+        dry_run_deletions=False,
+    )
+    assert summary.updated == 1
+    assert ("docker.io/library/redis:7.2.0", "harbor.corp/lib/redis:7.2.0") in fake.copied
+    stamped = {ref: ann for ref, ann in fake.annotated}
+    assert (
+        stamped["harbor.corp/lib/redis:7.2.0"]["org.opencontainers.image.base.digest"]
+        == "sha256:NEW"
+    )
+
+
+def test_reconcile_idempotent_when_unchanged() -> None:
+    # mirror's recorded base.digest == current source digest → skip (no cross-registry copy).
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": ["7.2.0"]},
+        infos={
+            "docker.io/library/redis:7.2.0": _info("sha256:same"),
+            "harbor.corp/lib/redis:7.2.0": _info(
+                "sha256:mirror", {"org.opencontainers.image.base.digest": "sha256:same"}
+            ),
+        },
+    )
+    summary = reconcile_policies(
+        [POLICY],
+        registry=fake,
+        roster=ROSTER,
+        now=NOW,
+        label_prefix="io.houba",
+        dry_run_tags=False,
+        dry_run_deletions=False,
+    )
+    assert summary.imported == 0
+    assert summary.updated == 0
+    # No cross-registry copy (source→mirror): the tag is up-to-date; idempotent.
+    assert ("docker.io/library/redis:7.2.0", "harbor.corp/lib/redis:7.2.0") not in fake.copied
+
+
+def test_reconcile_deletes_orphan_stamped_tag() -> None:
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": ["7.2.0", "6.0.0"]},
+        infos={
+            "docker.io/library/redis:7.2.0": _info("sha256:a"),
+            "harbor.corp/lib/redis:7.2.0": _info(
+                "sha256:m", {"org.opencontainers.image.base.digest": "sha256:a"}
+            ),
+            "harbor.corp/lib/redis:6.0.0": _info(
+                "sha256:old", {"org.opencontainers.image.base.digest": "sha256:gone"}
+            ),
+        },
+    )
+    summary = reconcile_policies(
+        [POLICY],
+        registry=fake,
+        roster=ROSTER,
+        now=NOW,
+        label_prefix="io.houba",
+        dry_run_tags=False,
+        dry_run_deletions=False,
+    )
+    assert summary.deleted == 1
+    assert fake.deleted == ["harbor.corp/lib/redis:6.0.0"]
+
+
+def test_reconcile_does_not_delete_unstamped_tag() -> None:
+    # An unstamped tag in the dest repo (no base.digest annotation) is NOT houba-managed
+    # → it is invisible to reconcile and must never be deleted.
+    fake = FakeRegistryPort(
+        tags={
+            "docker.io/library/redis": ["7.2.0"],
+            "harbor.corp/lib/redis": ["7.2.0", "manual-tag"],
+        },
+        infos={
+            "docker.io/library/redis:7.2.0": _info("sha256:a"),
+            "harbor.corp/lib/redis:7.2.0": _info(
+                "sha256:m", {"org.opencontainers.image.base.digest": "sha256:a"}
+            ),
+            "harbor.corp/lib/redis:manual-tag": _info("sha256:manual"),  # UNstamped
+        },
+    )
+    summary = reconcile_policies(
+        [POLICY],
+        registry=fake,
+        roster=ROSTER,
+        now=NOW,
+        label_prefix="io.houba",
+        dry_run_tags=False,
+        dry_run_deletions=False,
+    )
+    assert "harbor.corp/lib/redis:manual-tag" not in fake.deleted
+    assert summary.deleted == 0

@@ -6,7 +6,7 @@ from pydantic_settings import SettingsError
 from typer.testing import CliRunner
 
 from houba.cli.main import _run, app
-from houba.errors import ConfigError, HarborAuthError, NoTagsToImportError
+from houba.errors import ConfigError, HarborAuthError, NoTagsToImportError, PolicyValidationError
 
 
 def test_houba_version_outputs_version_string() -> None:
@@ -56,6 +56,7 @@ def test_run_maps_settings_error_to_exit_3() -> None:
         (ConfigError("boom"), 3),
         (NoTagsToImportError("nada"), 1),
         (HarborAuthError("401"), 2),
+        (PolicyValidationError("bad"), 1),
     ],
 )
 def test_run_maps_houba_errors_to_exit_codes(exc: Exception, expected_code: int) -> None:
