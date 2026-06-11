@@ -12,10 +12,14 @@ from pydantic import ValidationError
 from pydantic_settings import SettingsError
 
 from houba.cli import dev as dev_cli
+from houba.cli.reconcile import reconcile as reconcile_cmd
 from houba.errors import HoubaError, exit_code_for
 
 app = typer.Typer(name="houba", no_args_is_help=True, add_completion=False)
 app.add_typer(dev_cli.app, name="dev", help="Outils de développement (capture de fixtures, debug)")
+
+
+app.command(name="reconcile")(reconcile_cmd)
 
 
 @app.command()
