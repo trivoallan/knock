@@ -62,7 +62,7 @@ Two new env-driven config blocks (same shape as the Phase 4 registry roster), un
 
 ```bash
 # name → CA cert SOURCE: a file path (k8s-mountable) is primary; inline PEM is a fallback.
-HOUBA_TRANSFORM_CA_CERTS='{"corp-root": "/etc/houba/certs/corp-root.pem", "partner-ca": "/etc/houba/certs/partner.pem"}'
+HOUBA_TRANSFORM_CA_CERTS='{"corp-root": {"path": "/etc/houba/certs/corp-root.pem"}, "partner-ca": {"path": "/etc/houba/certs/partner.pem"}}'
 
 # name → per-package-manager mirror URLs
 HOUBA_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian", "apk": "https://mirror.corp/alpine"}}'
