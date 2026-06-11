@@ -126,6 +126,18 @@ docker rm -f houba-demo-registry
   **Requires the transform engine (Phase 6, in progress)** — it won't run yet. Design:
   [the transform/hardening spec](../superpowers/specs/2026-06-11-image-transform-hardening-design.md).
 
+### Transform vocabulary
+
+Hardening steps are pluggable primitives: `injectCA`, `rewritePackageSources`, and
+`setTimezone` (e.g. `setTimezone: { zone: Europe/Paris }`). Adding a primitive is a
+single self-contained compiler in `houba/domain/transforms/steps.py`.
+
+### Upgrade note
+
+The `io.houba.transform.version` hash format changed when the pluggable registry landed;
+on the first reconcile after upgrading, already-hardened images rebuild **once** (their
+recorded version no longer matches), then stay idempotent.
+
 The copy-path examples keep `registry` off the destinations (resolved to the single
 configured `local` registry), so they stay portable — the same policy file works against
 any registry roster.
