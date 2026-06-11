@@ -15,8 +15,25 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class RegistryConfig(BaseModel):
+    """One real registry behind a logical destination name (host + credentials)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    host: str  # registry host, e.g. "harbor.corp.example.com" or "localhost:5000"
+    username: str | None = None
+    password: SecretStr | None = None
+    tls_verify: bool = True
+
+    @model_validator(mode="after")
+    def _credentials_both_or_neither(self) -> RegistryConfig:
+        if (self.username is None) != (self.password is None):
+            raise ValueError("registry username and password must be set together")
+        return self
 
 
 class HarborSettings(BaseSettings):

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from houba.config import HarborSettings, Settings
+from houba.config import HarborSettings, RegistryConfig, Settings
 
 
 def test_settings_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -113,3 +113,38 @@ def test_label_prefix_override(monkeypatch: pytest.MonkeyPatch) -> None:
 
     settings = Settings()
     assert settings.label_prefix == "com.example.myorg"
+
+
+def test_registry_config_minimal() -> None:
+    r = RegistryConfig(host="harbor.corp.example.com")
+    assert r.host == "harbor.corp.example.com"
+    assert r.username is None
+    assert r.password is None
+    assert r.tls_verify is True  # default
+
+
+def test_registry_config_with_credentials() -> None:
+    r = RegistryConfig(host="h", username="robot", password="s3cret", tls_verify=False)
+    assert r.username == "robot"
+    assert r.password.get_secret_value() == "s3cret"
+    assert r.tls_verify is False
+
+
+def test_registry_config_password_masked_in_repr() -> None:
+    r = RegistryConfig(host="h", username="u", password="leak-me")
+    assert "leak-me" not in repr(r)
+
+
+def test_registry_config_username_without_password_rejected() -> None:
+    with pytest.raises(ValidationError, match="together"):
+        RegistryConfig(host="h", username="robot")
+
+
+def test_registry_config_password_without_username_rejected() -> None:
+    with pytest.raises(ValidationError, match="together"):
+        RegistryConfig(host="h", password="s3cret")
+
+
+def test_registry_config_rejects_unknown_field() -> None:
+    with pytest.raises(ValidationError):
+        RegistryConfig(host="h", typpo="x")
