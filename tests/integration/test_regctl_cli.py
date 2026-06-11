@@ -17,6 +17,16 @@ def test_list_tags_empty(fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert RegctlAdapter().list_tags("docker.io/redis") == []
 
 
+def test_list_tags_repo_not_found_returns_empty(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A never-pushed destination repo → regctl exits non-zero with NAME_UNKNOWN.
+    # That means "no tags", not a hard error — else the very first reconcile (empty
+    # mirror) would always fail. Surfaced by real-registry testing.
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "notfound")
+    assert RegctlAdapter().list_tags("localhost:5001/demo/absent") == []
+
+
 def test_inspect_digest_created_annotations(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
