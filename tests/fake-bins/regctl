@@ -23,6 +23,13 @@ case "$cmd" in
             notfound)
                 echo 'failed: NAME_UNKNOWN: repository name not known to registry' >&2
                 exit 1 ;;
+            apply-fail-boom)
+                # Source repos (docker.io) carry a tag so BOTH policies reach apply;
+                # destination repos (harbor.corp) are empty so the good policy imports.
+                case "$*" in
+                    *docker.io*) printf '7.2.0\n' ;;
+                    *) : ;;
+                esac ;;
             *) printf '7.2.0\n' ;;
         esac
         ;;
@@ -41,7 +48,17 @@ case "$cmd" in
         fi
         ;;
     "image config")
+        # Apply-phase failure for the 'boom' policy only: its source inspect
+        # (image config docker.io/library/boom:...) blows up, while the good
+        # policy's inspect succeeds. Read happens in apply, so the run is partial.
         case "$scenario" in
+            apply-fail-boom)
+                case "$*" in
+                    *boom*)
+                        echo 'regctl: simulated apply failure on boom' >&2
+                        exit 1 ;;
+                esac
+                printf '{"created":"2026-01-02T03:04:05Z","architecture":"amd64","os":"linux"}\n' ;;
             garbage) printf 'not json\n' ;;
             created-invalid) printf '{"created":"not-a-date","architecture":"amd64"}\n' ;;
             no-created) printf '{"architecture":"amd64","os":"linux"}\n' ;;
