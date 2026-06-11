@@ -2,5 +2,12 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "description": "Pin Python to 3.12.x — deployment target; revert of a premature 3.14 bump. Patch updates within 3.12 are fine; 3.13+ is a deliberate decision, not an auto-PR.",
+      "matchPackageNames": ["python"],
+      "allowedVersions": "<3.13"
+    }
   ]
 }
