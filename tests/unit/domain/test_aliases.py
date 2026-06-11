@@ -60,3 +60,16 @@ def test_tags_not_matching_a_template_are_skipped() -> None:
 
 def test_no_templates_yields_empty() -> None:
     assert resolve_aliases([], ["1.0.0"], None) == {}
+
+
+def test_unanchored_capture_regex_renders_consistently_with_search() -> None:
+    # unanchored include_regex with a named capture; the tag has a prefix.
+    # select_tags uses re.search, so render_template must too (else the alias is
+    # silently dropped for a selected tag).
+    rx = r"(?P<flavor>debian|alpine)-(?P<ver>\d+)$"  # no leading ^
+    got = resolve_aliases(["{flavor}"], ["lib-debian-12", "lib-alpine-3"], rx)
+    assert got == {"debian": "lib-debian-12", "alpine": "lib-alpine-3"}
+
+
+def test_latest_with_no_tags_yields_empty() -> None:
+    assert resolve_aliases(["latest"], [], None) == {}

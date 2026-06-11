@@ -24,7 +24,7 @@ def render_template(template: str, tag: str, include_regex: str | None) -> str |
     semver = parse_semver(tag)
     captures: dict[str, str] = {}
     if include_regex is not None:
-        m = re.match(include_regex, tag)
+        m = re.search(include_regex, tag)
         if m is not None:
             captures = {k: v for k, v in m.groupdict().items() if v is not None}
 
