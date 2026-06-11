@@ -52,8 +52,11 @@ Then for real:
 
 ```bash
 uv run houba reconcile docs/examples/busybox
-# reconcile: imported=12 updated=0 deleted=0 aliased=3
+# ✓ busybox  imported=12 updated=0 deleted=0 aliased=3 skipped=0
+# reconcile [apply] status=ok  imported=12 updated=0 deleted=0 aliased=3 skipped=0 failed_policies=0
 ```
+(Per-operation detail goes to **stderr** as a structlog event journal; pass `--verbose` to
+also unfold it in the stdout recap. `HOUBA_LOG_FORMAT=json` switches both streams to JSON.)
 
 (`reconcile` takes a **directory** and discovers policies recursively — so
 `uv run houba reconcile docs/examples` would reconcile *both* busybox and redis.
@@ -101,7 +104,9 @@ Run `reconcile` again — nothing is re-copied, because each mirror artifact's r
 
 ```bash
 uv run houba reconcile docs/examples/busybox
-# reconcile: imported=0 updated=0 deleted=0 aliased=3   (aliases are re-pointed every run)
+# ✓ busybox  imported=0 updated=0 deleted=0 aliased=3 skipped=12
+# reconcile [apply] status=ok  imported=0 updated=0 deleted=0 aliased=3 skipped=12 failed_policies=0
+#                                                                          (aliases are re-pointed every run)
 ```
 
 ## 6. Clean up
