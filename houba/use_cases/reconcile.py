@@ -23,12 +23,10 @@ from houba.domain.mirror_policy import MirrorPolicy, TransformStep
 from houba.domain.policy_merge import resolve_imports
 from houba.domain.reconcile import MirrorArtifact, SourceArtifact, reconcile_import
 from houba.domain.stamp import build_stamp_annotations
-from houba.domain.transform import (
-    render_dockerfile,
-    transform_version,
-    validate_transform_steps,
-)
-from houba.errors import ConfigError
+from houba.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
+from houba.domain.transforms.registry import DEFAULT_REGISTRY
+from houba.domain.transforms.render import render, transform_version, validate_transform_steps
+from houba.errors import ConfigError, InternalError
 from houba.ports.image_builder import BuildRequest, ImageBuilderPort
 from houba.ports.registry import ImageInfo, RegistryPort
 
@@ -60,10 +58,28 @@ def _read_cert_file(path: str) -> str:
 
 @dataclass(frozen=True)
 class _ResolvedTransform:
-    cert_files: list[tuple[str, str]]  # (filename ending in .crt, PEM content)
-    apt_mirror: str | None
-    apk_mirror: str | None
+    resolved_steps: list[ResolvedStep]
     version: str
+
+
+def _resolve_ref(
+    ref: ResourceRef,
+    ca_certs: dict[str, CACertSource],
+    package_mirrors: dict[str, PackageMirror],
+) -> ResolvedResource:
+    if ref.kind == "caCert":
+        ((name, src),) = resolve_ca_certs([ref.name], ca_certs)
+        if src.pem is not None:
+            content = src.pem
+        else:
+            # path is guaranteed non-None when pem is None by CACertSource._exactly_one
+            assert src.path is not None
+            content = _read_cert_file(src.path)
+        return ResolvedResource(kind="caCert", name=name, filename=f"{name}.crt", content=content)
+    if ref.kind == "packageMirror":
+        m = resolve_mirror(ref.name, package_mirrors)
+        return ResolvedResource(kind="packageMirror", name=ref.name, apt=m.apt, apk=m.apk)
+    raise InternalError(f"no resolver for resource kind {ref.kind!r}")
 
 
 def _resolve_transform(
@@ -71,28 +87,16 @@ def _resolve_transform(
     ca_certs: dict[str, CACertSource],
     package_mirrors: dict[str, PackageMirror],
 ) -> _ResolvedTransform:
-    cert_names: list[str] = []
-    apt = apk = None
+    resolved_steps: list[ResolvedStep] = []
     for step in steps:
-        if step.name == "injectCA":
-            cert_names = list(step.params["certs"])
-        elif step.name == "rewritePackageSources":
-            m = resolve_mirror(step.params["mirror"], package_mirrors)
-            apt, apk = m.apt, m.apk
-    contents: dict[str, str] = {}
-    cert_files: list[tuple[str, str]] = []
-    for name, src in resolve_ca_certs(cert_names, ca_certs):
-        if src.pem is not None:
-            pem = src.pem
-        else:
-            assert src.path is not None  # guaranteed by CACertSource._exactly_one
-            pem = _read_cert_file(src.path)
-        contents[name] = pem
-        cert_files.append((f"{name}.crt", pem))
-    version = transform_version(steps, cert_contents=contents, apt_mirror=apt, apk_mirror=apk)
-    return _ResolvedTransform(
-        cert_files=cert_files, apt_mirror=apt, apk_mirror=apk, version=version
-    )
+        compiler = DEFAULT_REGISTRY.get(step.name)
+        params = compiler.params_model.model_validate(step.params)
+        resources = tuple(
+            _resolve_ref(ref, ca_certs, package_mirrors) for ref in compiler.resource_refs(params)
+        )
+        resolved_steps.append(ResolvedStep(step=step, resources=resources))
+    version = transform_version(resolved_steps)
+    return _ResolvedTransform(resolved_steps=resolved_steps, version=version)
 
 
 def _build_variant(
@@ -108,16 +112,11 @@ def _build_variant(
         work_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="houba-build-", dir=work_dir) as tmp:
         ctx = Path(tmp)
-        for filename, content in resolved.cert_files:
-            (ctx / filename).write_text(content)
-        dockerfile = render_dockerfile(
-            source_ref,
-            ca_cert_filenames=[f for f, _ in resolved.cert_files],
-            apt_mirror=resolved.apt_mirror,
-            apk_mirror=resolved.apk_mirror,
-        )
+        rendered = render(resolved.resolved_steps, source_ref=source_ref)
+        for cf in rendered.context_files:
+            (ctx / cf.path).write_text(cf.content)
         df_path = ctx / "Dockerfile"
-        df_path.write_text(dockerfile)
+        df_path.write_text(rendered.dockerfile)
         builder.build_and_push(
             BuildRequest(
                 dockerfile_path=df_path, context_dir=ctx, image_ref=dest_ref, platform=platform
