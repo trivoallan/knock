@@ -65,8 +65,10 @@ When adding a new external dependency, the pattern is always: **port (Protocol +
 
 **Architecture docs stay in sync with specs (C4).** The C4 model lives in `docs/architecture/workspace.dsl` (Structurizr DSL) — one model, two views: **System Landscape** and **System Context** (render + rationale in `docs/architecture/README.md`). It is the source of truth for those two levels. Whenever a spec adds or changes an **actor**, an **external system**, or an **integration** — anything visible at context or landscape level — update `workspace.dsl` **in the same change as the spec**. A spec under `docs/superpowers/specs/` that shifts the architecture is not complete until the C4 model reflects it; the model must never drift from the specs.
 
+**Examples stay in sync with specs.** When a spec designs or changes a user-facing feature, update `docs/examples/` **in the same change** — add or revise an example (a `MirrorPolicy` + the README walkthrough) demonstrating it. If the feature isn't implemented yet, add the example marked as such (e.g. "requires the rebuild path — Phase 6"): it documents the design now and becomes runnable when the feature lands. Examples must never drift from the specs.
+
 **Architecture philosophy.**
-- Prefer declarative specs over imperative code paths — the product policy is a Pydantic `properties.yml` schema; extend that schema before adding ad-hoc Python branching.
+- Prefer declarative specs over imperative code paths — the product policy is the Pydantic `MirrorPolicy` schema; extend that schema before adding ad-hoc Python branching.
 - **JSON Schema, systematically, wherever a declarative contract exists** (config, the policy schema, structured payloads). Derive it from the Pydantic models (`model_json_schema()`) — never hand-write it; publish it so policy files get editor/CI validation, and validate inputs against it. Extend the schema before adding imperative parsing.
 - Choose established libraries over building from scratch (httpx, tenacity, pydantic, typer, structlog).
 - Type hints required for all new functions and classes; `domain/` and `ports/` stay fully `mypy --strict`. `adapters.*` and `cli.*` are intentionally laxer (`disallow_untyped_calls = false`) because they touch untyped I/O libraries — do not relax `domain/` to match.

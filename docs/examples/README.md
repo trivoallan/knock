@@ -121,9 +121,14 @@ docker rm -f houba-demo-registry
   showing how aliases track the highest patch per minor (`7.2` → the latest `7.2.z`) and
   `latest` → the highest overall. Larger image, slower to copy:
   `uv run houba reconcile docs/examples/redis`.
+- **[`hardened/redis.yml`](hardened/redis.yml)** — the **rebuild path**: inject internal
+  CA certs + rewrite package sources to an internal mirror, then stamp the result. ⚠️
+  **Requires the transform engine (Phase 6, in progress)** — it won't run yet. Design:
+  [the transform/hardening spec](../superpowers/specs/2026-06-11-image-transform-hardening-design.md).
 
-Both keep `registry` off the destinations (resolved to the single configured `local`
-registry), so they stay portable — the same policy file works against any registry roster.
+The copy-path examples keep `registry` off the destinations (resolved to the single
+configured `local` registry), so they stay portable — the same policy file works against
+any registry roster.
 
 > A policy is just data. `uv run python -c "import json,houba.domain.mirror_policy as m;
 > print(json.dumps(m.MirrorPolicy.model_json_schema(), indent=2))"` prints the JSON Schema
