@@ -117,9 +117,7 @@ def resolve_ca_certs(
         try:
             out.append((name, roster[name]))
         except KeyError:
-            raise ConfigError(
-                f"unknown CA cert {name!r}; configured: {sorted(roster)}"
-            ) from None
+            raise ConfigError(f"unknown CA cert {name!r}; configured: {sorted(roster)}") from None
     return out
 
 

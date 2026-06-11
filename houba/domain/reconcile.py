@@ -87,7 +87,10 @@ def reconcile_variant(
                 "expand_import selection and source fetch must be consistent"
             ) from exc
         decision = _classify(
-            src, mirror.get(out_tag), now, grace,
+            src,
+            mirror.get(out_tag),
+            now,
+            grace,
             desired_transform_version=desired_transform_version,
         )
         if decision == "import":
@@ -127,7 +130,11 @@ def reconcile_import(
     tv = transform_versions or {}
     variants = [
         reconcile_variant(
-            v, source, mirror, now, grace,
+            v,
+            source,
+            mirror,
+            now,
+            grace,
             desired_transform_version=tv.get(v.name),
         )
         for v in expanded.variants
