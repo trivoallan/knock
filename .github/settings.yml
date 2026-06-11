@@ -1,0 +1,42 @@
+# Repository configuration, managed declaratively by the Settings GitHub App.
+# https://github.com/apps/settings  —  the app must be installed on the account
+# for this file to take effect; on each push to the default branch it reconciles
+# the repo settings to match this file.
+#
+# Schema: https://github.com/repository-settings/app
+
+repository:
+  name: houba
+  description: "The single front door for external container images: harden, stamp, and trace every image you run."
+  homepage: "https://github.com/trivoallan/houba"
+  topics: oci, containers, container-images, harbor, supply-chain-security, provenance, slsa, image-hardening, golden-images, devsecops, python, cli
+
+  private: false
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  has_downloads: false
+
+  default_branch: main
+
+  # Linear history: rebase feature branches on main, never merge main back in.
+  # Squash or rebase to land PRs; no merge commits.
+  allow_squash_merge: true
+  allow_rebase_merge: true
+  allow_merge_commit: false
+  delete_branch_on_merge: true
+
+# Protect main: CI must be green. The owner (admin) keeps an escape hatch
+# (enforce_admins: false); external contributions go through passing CI.
+branches:
+  - name: main
+    protection:
+      required_status_checks:
+        strict: true
+        contexts:
+          - "lint (ruff + mypy)"
+          - "test (pytest + coverage gates)"
+          - "docker build (runtime image)"
+      enforce_admins: false
+      required_pull_request_reviews: null
+      restrictions: null

@@ -1,0 +1,26 @@
+__pycache__/
+*.pyc
+.venv/
+.uv-cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+*.egg-info/
+.env
+.env.*
+!.env.example
+.serena/
+.DS_Store
+
+# Implementation plans are a local working artifact — never committed, never on main.
+# (Specs DO persist, under docs/superpowers/specs/.)
+docs/superpowers/plans/
+
+# Structurizr generated artifacts — docs/architecture/workspace.dsl is the source of truth.
+docs/architecture/.structurizr/
+docs/architecture/workspace.json
+docs/architecture/_export/
