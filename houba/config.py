@@ -32,6 +32,36 @@ class RegistryConfig(BaseModel):
         return self
 
 
+class CACertSource(BaseModel):
+    """A CA certificate supplied either as a filesystem path or as an inline PEM string."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str | None = None
+    pem: str | None = None
+
+    @model_validator(mode="after")
+    def _exactly_one(self) -> CACertSource:
+        if (self.path is None) == (self.pem is None):
+            raise ValueError("a CA cert source needs exactly one of path | pem")
+        return self
+
+
+class PackageMirror(BaseModel):
+    """Override URLs for one or more OS package managers during image hardening."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    apt: str | None = None
+    apk: str | None = None
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> PackageMirror:
+        if self.apt is None and self.apk is None:
+            raise ValueError("a package mirror needs at least one of apt | apk")
+        return self
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="HOUBA_",
@@ -47,6 +77,10 @@ class Settings(BaseSettings):
     dry_run_tags: bool = False
     dry_run_deletions: bool = False
     work_dir: Path = Path("/tmp/houba-work")  # noqa: S108
+
+    transform_ca_certs: dict[str, CACertSource] = Field(default_factory=dict)
+    transform_package_mirrors: dict[str, PackageMirror] = Field(default_factory=dict)
+    build_platform: str = "linux/amd64"
 
 
 def resolve_registry(
@@ -72,3 +106,28 @@ def resolve_registry(
         f"destination registry omitted but {len(roster)} configured; "
         f"specify one of {sorted(roster)}"
     )
+
+
+def resolve_ca_certs(
+    names: list[str], roster: dict[str, CACertSource]
+) -> list[tuple[str, CACertSource]]:
+    """Resolve a list of CA cert names against the configured roster."""
+    out: list[tuple[str, CACertSource]] = []
+    for name in names:
+        try:
+            out.append((name, roster[name]))
+        except KeyError:
+            raise ConfigError(
+                f"unknown CA cert {name!r}; configured: {sorted(roster)}"
+            ) from None
+    return out
+
+
+def resolve_mirror(name: str, roster: dict[str, PackageMirror]) -> PackageMirror:
+    """Resolve a package mirror name against the configured roster."""
+    try:
+        return roster[name]
+    except KeyError:
+        raise ConfigError(
+            f"unknown package mirror {name!r}; configured: {sorted(roster)}"
+        ) from None

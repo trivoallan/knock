@@ -138,3 +138,67 @@ def test_resolve_registry_omitted_with_multiple_raises() -> None:
 def test_resolve_registry_omitted_with_empty_raises() -> None:
     with pytest.raises(ConfigError, match="no registries"):
         resolve_registry(None, {})
+
+
+# ---------------------------------------------------------------------------
+# Task 2 — CA cert sources, package mirrors, build_platform
+# ---------------------------------------------------------------------------
+
+
+from houba.config import (  # noqa: E402
+    CACertSource,
+    PackageMirror,
+    resolve_ca_certs,
+    resolve_mirror,
+)
+
+
+def test_ca_cert_source_accepts_path_only() -> None:
+    assert CACertSource(path="/etc/houba/certs/corp.pem").path == "/etc/houba/certs/corp.pem"
+
+
+def test_ca_cert_source_accepts_pem_only() -> None:
+    assert CACertSource(pem="-----BEGIN CERTIFICATE-----\n...").pem is not None
+
+
+def test_ca_cert_source_rejects_both_or_neither() -> None:
+    with pytest.raises(ValueError, match="exactly one of path"):
+        CACertSource(path="/x", pem="y")
+    with pytest.raises(ValueError, match="exactly one of path"):
+        CACertSource()
+
+
+def test_package_mirror_requires_at_least_one_manager() -> None:
+    assert PackageMirror(apt="https://mirror.corp").apt == "https://mirror.corp"
+    with pytest.raises(ValueError, match="at least one of apt"):
+        PackageMirror()
+
+
+def test_rosters_parse_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOUBA_TRANSFORM_CA_CERTS", '{"corp": {"path": "/etc/houba/certs/c.pem"}}')
+    monkeypatch.setenv(
+        "HOUBA_TRANSFORM_PACKAGE_MIRRORS",
+        '{"corp": {"apt": "https://mirror.corp", "apk": "https://mirror.corp"}}',
+    )
+    s = Settings()
+    assert s.transform_ca_certs["corp"].path == "/etc/houba/certs/c.pem"
+    assert s.transform_package_mirrors["corp"].apt == "https://mirror.corp"
+
+
+def test_build_platform_defaults_to_amd64() -> None:
+    assert Settings().build_platform == "linux/amd64"
+
+
+def test_resolve_ca_certs_returns_named_sources() -> None:
+    roster = {"corp": CACertSource(pem="PEM")}
+    assert resolve_ca_certs(["corp"], roster) == [("corp", CACertSource(pem="PEM"))]
+
+
+def test_resolve_ca_certs_unknown_name_raises() -> None:
+    with pytest.raises(ConfigError, match="unknown CA cert 'nope'"):
+        resolve_ca_certs(["nope"], {})
+
+
+def test_resolve_mirror_unknown_name_raises() -> None:
+    with pytest.raises(ConfigError, match="unknown package mirror 'nope'"):
+        resolve_mirror("nope", {})
