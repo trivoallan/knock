@@ -29,6 +29,8 @@ case "$cmd" in
     "manifest get")
         if [ "$scenario" = "garbage" ]; then
             printf 'not json\n'
+        elif [ "$scenario" = "manifest-array" ]; then
+            printf '[]\n'
         elif [ "$scenario" = "mirror-stamped" ]; then
             printf '{"annotations":{"org.opencontainers.image.base.digest":"sha256:src999"}}\n'
         else
@@ -36,11 +38,12 @@ case "$cmd" in
         fi
         ;;
     "image config")
-        if [ "$scenario" = "garbage" ]; then
-            printf 'not json\n'
-        else
-            printf '{"created":"2026-01-02T03:04:05Z","architecture":"amd64","os":"linux"}\n'
-        fi
+        case "$scenario" in
+            garbage) printf 'not json\n' ;;
+            created-invalid) printf '{"created":"not-a-date","architecture":"amd64"}\n' ;;
+            no-created) printf '{"architecture":"amd64","os":"linux"}\n' ;;
+            *) printf '{"created":"2026-01-02T03:04:05Z","architecture":"amd64","os":"linux"}\n' ;;
+        esac
         ;;
     "image copy"|"image mod"|"tag rm")
         : ;;

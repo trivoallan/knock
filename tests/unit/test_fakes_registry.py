@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from houba.ports.registry import ImageInfo
 from tests.fakes.registry import FakeRegistryPort
 
@@ -29,3 +31,8 @@ def test_fake_journals_writes() -> None:
     assert fake.copied == [("src:1", "dst:1")]
     assert fake.annotated == [("dst:1", {"org.opencontainers.image.base.digest": "sha256:a"})]
     assert fake.deleted == ["dst:old"]
+
+
+def test_fake_inspect_unseeded_raises_clear_keyerror() -> None:
+    with pytest.raises(KeyError, match="no seeded ImageInfo"):
+        FakeRegistryPort().inspect("missing:1")

@@ -19,7 +19,10 @@ class FakeRegistryPort:
         return list(self._tags.get(repo_ref, []))
 
     def inspect(self, image_ref: str) -> ImageInfo:
-        return self._infos[image_ref]
+        try:
+            return self._infos[image_ref]
+        except KeyError:
+            raise KeyError(f"FakeRegistryPort: no seeded ImageInfo for {image_ref!r}") from None
 
     def copy(self, src_ref: str, dst_ref: str) -> None:
         self.copied.append((src_ref, dst_ref))

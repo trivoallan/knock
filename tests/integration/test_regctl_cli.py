@@ -96,3 +96,51 @@ def test_write_failure_raises_regctl_error(
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "fail")
     with pytest.raises(RegctlError):
         RegctlAdapter().copy("a:1", "b:1")
+
+
+# Fix 1 — created edge cases (→ None contract for Phase 7's pushed_at)
+
+
+def test_inspect_invalid_created_is_none(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "created-invalid")
+    assert RegctlAdapter().inspect("x:1").created is None
+
+
+def test_inspect_absent_created_is_none(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "no-created")
+    assert RegctlAdapter().inspect("x:1").created is None
+
+
+# Fix 2 — shutil.which → None branch
+
+
+def test_no_binary_in_path_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PATH", "")
+    with pytest.raises(RegctlError, match="not found in PATH"):
+        RegctlAdapter()
+
+
+# Fix 3 — _json non-dict branch
+
+
+def test_inspect_non_object_json_raises(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "manifest-array")
+    with pytest.raises(RegctlError, match="expected JSON object"):
+        RegctlAdapter().inspect("x:1")
+
+
+# Fix 4 — annotation value containing '='
+
+
+def test_annotate_value_with_equals_is_passed_through(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().annotate("r:1", {"k": "a=b=c"})
+    assert "--annotation k=a=b=c" in log.read_text()
