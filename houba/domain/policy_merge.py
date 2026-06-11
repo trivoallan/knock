@@ -16,6 +16,7 @@ from houba.domain.mirror_policy import (
     Spec,
     TagSelection,
     TransformStep,
+    Variant,
 )
 from houba.errors import PolicyValidationError
 
@@ -28,6 +29,7 @@ class ResolvedImport:
     transform: list[TransformStep]
     archive: Archive | None
     platforms: list[str] | None
+    variants: list[Variant] | None
 
 
 def _merge_tags(default: TagSelection, override: TagSelection) -> TagSelection:
@@ -82,6 +84,7 @@ def resolve_imports(spec: Spec) -> list[ResolvedImport]:
                 transform=transform,
                 archive=archive,
                 platforms=platforms,
+                variants=imp.variants,
             )
         )
     return resolved
