@@ -1,3 +1,4 @@
+import re
 from unittest.mock import patch
 
 import pytest
@@ -13,7 +14,9 @@ def test_houba_version_outputs_version_string() -> None:
     runner = CliRunner()
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "0.1.0" in result.stdout
+    # Version-agnostic: assert a version-like string, not a hardcoded literal
+    # (otherwise this test breaks on every release bump, e.g. the 0.2.0 PR).
+    assert re.match(r"^\d+\.\d+", result.stdout.strip())
 
 
 def test_houba_help_lists_subgroups() -> None:
