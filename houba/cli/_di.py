@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from houba.adapters.buildkit_cli import BuildkitAdapter
 from houba.adapters.regctl_cli import RegctlAdapter
+from houba.adapters.structlog_reporter import StructlogReporter
 from houba.adapters.system_clock import SystemClock
 from houba.config import Settings
 
@@ -19,6 +20,7 @@ class Container:
     registry: RegctlAdapter
     builder: BuildkitAdapter
     clock: SystemClock
+    reporter: StructlogReporter
 
 
 def build_container(settings: Settings | None = None) -> Container:
@@ -28,4 +30,5 @@ def build_container(settings: Settings | None = None) -> Container:
         registry=RegctlAdapter(),
         builder=BuildkitAdapter(),
         clock=SystemClock(),
+        reporter=StructlogReporter(),
     )
