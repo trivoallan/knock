@@ -1,28 +1,26 @@
 workspace "houba" "Single front door / stamper for external container images." {
 
     model {
-        platformEng = person "Platform / Security Engineer" "Owns the hardening policy, operates houba, and mandates it as the single front door for external images."
-        productTeam = person "Product / Application Team" "Declares its products (properties.yml) and consumes the hardened, stamped images."
+        platformEng = person "Platform / Security Engineer" "Owns the hardening policy and the registry roster; operates houba as the single front door for external images."
+        productTeam = person "Product / Application Team" "Declares its imports as MirrorPolicy files and consumes the hardened, stamped images."
         incidentResponder = person "Incident Responder (SRE / Security)" "At CVE time, computes the blast-radius from houba's provenance stamp."
 
-        houba = softwareSystem "houba" "Single front door / stamper: rebuilds external container images through a hardening policy and stamps them with standardized, portable provenance." "Target"
+        houba = softwareSystem "houba" "Single front door / stamper: mirrors external container images, optionally rebuilds them through a hardening policy, and stamps them with standardized, portable provenance." "Target"
 
         sourceRegistries = softwareSystem "Source Registries" "External public OCI registries (Docker Hub, Quay, GHCR) the images originate from." "External"
-        buildkit = softwareSystem "BuildKit" "OCI build engine driven by houba to rebuild and harden images." "External"
-        harbor = softwareSystem "Harbor" "The organization's private OCI registry; destination for the stamped images." "External"
-        gitlab = softwareSystem "GitLab" "Hosts the product declarations; houba proposes changes to them via merge request." "External"
-        teams = softwareSystem "Microsoft Teams" "Receives run notifications." "External"
+        destRegistries = softwareSystem "Destination Registries" "The organization's private OCI registries — any dist-spec registry (Harbor, Zot, …); destination for the stamped images, addressed generically via regctl." "External"
+        buildkit = softwareSystem "BuildKit" "OCI build engine houba drives to rebuild and harden images." "External"
+        packageMirror = softwareSystem "Internal Package Mirror" "The organization's internal apt/apk mirror; the hardening rebuild rewrites the image's package sources to it." "External"
         observability = softwareSystem "Observability / CMDB" "The organization's existing query stack; reads the provenance stamp to answer blast-radius questions during an incident." "External,Downstream"
 
-        platformEng -> houba "Configures the hardening policy, runs / schedules imports" "CLI"
-        productTeam -> gitlab "Declares its products (properties.yml)" "Git / Web"
-        houba -> gitlab "Clones declarations, proposes changes via merge request, reads project variables" "git + REST"
-        houba -> sourceRegistries "Lists tags, inspects digests, pulls images" "skopeo"
-        houba -> buildkit "Submits the hardening build (internal CA, package mirrors)" "buildctl"
-        houba -> harbor "Reads state; pushes stamped images, tags, labels, immutable rules" "Harbor REST v2 + push"
-        houba -> teams "Sends run notifications" "webhook"
-        productTeam -> harbor "Pulls the hardened images" "docker pull (OCI)"
-        observability -> harbor "Reads provenance stamps on images" "scan / API" "DataCoupling"
+        platformEng -> houba "Configures the hardening policy + registry roster, runs / schedules reconcile" "CLI"
+        productTeam -> houba "Declares its imports as MirrorPolicy files" "YAML"
+        houba -> sourceRegistries "Lists tags, inspects digests, copies images" "regctl"
+        houba -> destRegistries "Reads mirror state; copies, stamps, retags, deletes" "regctl (dist-spec)"
+        houba -> buildkit "Submits the hardening rebuild (internal CA trust, package mirror)" "buildctl"
+        buildkit -> packageMirror "Pulls packages during the hardening rebuild" "apt / apk"
+        productTeam -> destRegistries "Pulls the hardened images" "docker pull (OCI)"
+        observability -> destRegistries "Reads provenance stamps on images" "scan / API" "DataCoupling"
         incidentResponder -> observability "Queries blast-radius (at CVE time)" "Query UI"
     }
 
