@@ -44,3 +44,21 @@ def test_build_and_push_failure_raises_buildkit_error(
 def test_explicit_missing_binary_raises_buildkit_error() -> None:
     with pytest.raises(BuildkitError, match="not found"):
         BuildkitAdapter(binary="/nonexistent/buildctl")
+
+
+def test_build_emits_platform_opt(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = tmp_path / "buildctl.log"
+    monkeypatch.setenv("FAKE_BUILDCTL_LOG", str(log))
+    df = tmp_path / "Dockerfile"
+    df.write_text("FROM scratch\n")
+    BuildkitAdapter().build_and_push(
+        BuildRequest(
+            dockerfile_path=df,
+            context_dir=tmp_path,
+            image_ref="reg/x:1",
+            platform="linux/amd64",
+        )
+    )
+    assert "--opt=platform=linux/amd64" in log.read_text()
