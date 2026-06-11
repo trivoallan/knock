@@ -26,7 +26,7 @@ def _ann(prefix: str = "io.houba", team: str | None = "platform-data") -> dict[s
 def test_oci_standard_annotations_always_present() -> None:
     a = _ann()
     assert a["org.opencontainers.image.source"] == "docker.io/library/redis"
-    assert a["org.opencontainers.image.revision"] == "7.2.1"
+    assert a["org.opencontainers.image.revision"] == "sha256:abc"  # source digest, not the tag
     assert a["org.opencontainers.image.base.name"] == "docker.io/library/redis:7.2.1"
     assert a["org.opencontainers.image.base.digest"] == "sha256:abc"
     assert a["org.opencontainers.image.created"] == "2026-06-11T12:00:00+00:00"

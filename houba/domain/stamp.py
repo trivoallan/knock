@@ -28,7 +28,9 @@ def build_stamp_annotations(
     source = f"{source_registry}/{source_repository}"
     annotations: dict[str, str] = {
         "org.opencontainers.image.source": source,
-        "org.opencontainers.image.revision": source_tag,
+        # revision = the immutable source digest (what was actually packaged),
+        # not the mutable upstream tag. The tag survives in base.name.
+        "org.opencontainers.image.revision": source_digest,
         "org.opencontainers.image.base.name": f"{source}:{source_tag}",
         "org.opencontainers.image.base.digest": source_digest,
         "org.opencontainers.image.created": created.isoformat(),
