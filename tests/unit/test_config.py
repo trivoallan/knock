@@ -6,6 +6,15 @@ from pydantic import ValidationError
 from houba.config import HarborSettings, RegistryConfig, Settings
 
 
+def _base_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOUBA_HARBOR_URL", "https://h")
+    monkeypatch.setenv("HOUBA_HARBOR_USER", "u")
+    monkeypatch.setenv("HOUBA_HARBOR_PASSWORD", "p")
+    monkeypatch.setenv("HOUBA_GITLAB_URL", "https://g")
+    monkeypatch.setenv("HOUBA_GITLAB_TOKEN", "t")
+    monkeypatch.setenv("HOUBA_GITLAB_GROUP", "g")
+
+
 def test_settings_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOUBA_HARBOR_URL", "https://harbor.example.com")
     monkeypatch.setenv("HOUBA_HARBOR_USER", "robot$houba")
@@ -148,3 +157,40 @@ def test_registry_config_password_without_username_rejected() -> None:
 def test_registry_config_rejects_unknown_field() -> None:
     with pytest.raises(ValidationError):
         RegistryConfig(host="h", typpo="x")
+
+
+def test_registries_roster_empty_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_env(monkeypatch)
+    monkeypatch.delenv("HOUBA_REGISTRIES", raising=False)
+    assert Settings().registries == {}
+
+
+def test_registries_roster_from_json_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_env(monkeypatch)
+    monkeypatch.setenv(
+        "HOUBA_REGISTRIES",
+        '{"eu": {"host": "harbor.eu.corp", "username": "robot", "password": "s3cret"},'
+        ' "us": {"host": "harbor.us.corp"}}',
+    )
+    reg = Settings().registries
+    assert set(reg) == {"eu", "us"}
+    assert reg["eu"].host == "harbor.eu.corp"
+    assert reg["eu"].password.get_secret_value() == "s3cret"
+    assert reg["us"].username is None
+
+
+def test_registries_roster_password_masked_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_env(monkeypatch)
+    monkeypatch.setenv(
+        "HOUBA_REGISTRIES",
+        '{"eu": {"host": "h", "username": "u", "password": "roster-leak"}}',
+    )
+    assert "roster-leak" not in repr(Settings())
+
+
+def test_registries_roster_invalid_entry_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    _base_env(monkeypatch)
+    # username without password → RegistryConfig validator fires during Settings parse
+    monkeypatch.setenv("HOUBA_REGISTRIES", '{"eu": {"host": "h", "username": "robot"}}')
+    with pytest.raises(ValidationError):
+        Settings()

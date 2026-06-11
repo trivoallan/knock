@@ -81,6 +81,7 @@ class Settings(BaseSettings):
 
     teams_webhook_url: SecretStr | None = None
     label_prefix: str = "io.houba"
+    registries: dict[str, RegistryConfig] = Field(default_factory=dict)
 
     log_format: Literal["text", "json"] = "text"
     log_level: Literal["DEBUG", "INFO", "WARN", "WARNING", "ERROR"] = "INFO"
