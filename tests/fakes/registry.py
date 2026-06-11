@@ -14,6 +14,7 @@ class FakeRegistryPort:
         self.copied: list[tuple[str, str]] = []
         self.annotated: list[tuple[str, dict[str, str]]] = []
         self.deleted: list[str] = []
+        self.logins: list[tuple[str, str, bool]] = []
 
     def list_tags(self, repo_ref: str) -> list[str]:
         return list(self._tags.get(repo_ref, []))
@@ -32,3 +33,6 @@ class FakeRegistryPort:
 
     def delete_tag(self, image_ref: str) -> None:
         self.deleted.append(image_ref)
+
+    def login(self, host: str, *, username: str, password: str, tls_verify: bool) -> None:
+        self.logins.append((host, username, tls_verify))

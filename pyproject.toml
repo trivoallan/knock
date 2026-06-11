@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-houba = "houba.cli.main:app"
+houba = "houba.cli.main:_run"
 
 [dependency-groups]
 dev = [
