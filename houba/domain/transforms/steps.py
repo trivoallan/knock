@@ -43,3 +43,38 @@ class InjectCA(TransformStepCompiler[_InjectCAParams]):
             ),
             context_files=tuple(files),
         )
+
+
+class _RewritePackageSourcesParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mirror: str = Field(min_length=1)
+
+
+class RewritePackageSources(TransformStepCompiler[_RewritePackageSourcesParams]):
+    name = "rewritePackageSources"
+    params_model = _RewritePackageSourcesParams
+
+    def resource_refs(self, params: _RewritePackageSourcesParams) -> tuple[ResourceRef, ...]:
+        return (ResourceRef("packageMirror", params.mirror),)
+
+    def fragment(
+        self, params: _RewritePackageSourcesParams, resources: tuple[ResolvedResource, ...]
+    ) -> Fragment:
+        (m,) = resources
+        rewrites: list[str] = []
+        if m.apt:
+            rewrites.append(
+                f"if [ -f /etc/apt/sources.list ]; then "
+                f"sed -ri 's#https?://[^/]+#{m.apt}#g' /etc/apt/sources.list; fi"
+            )
+            rewrites.append(
+                f"if ls /etc/apt/sources.list.d/*.list >/dev/null 2>&1; then "
+                f"sed -ri 's#https?://[^/]+#{m.apt}#g' /etc/apt/sources.list.d/*.list; fi"
+            )
+        if m.apk:
+            rewrites.append(
+                f"if [ -f /etc/apk/repositories ]; then "
+                f"sed -ri 's#https?://[^/]+#{m.apk}#g' /etc/apk/repositories; fi"
+            )
+        instructions = ("RUN set -eux; " + "; ".join(rewrites),) if rewrites else ()
+        return Fragment(instructions=instructions)

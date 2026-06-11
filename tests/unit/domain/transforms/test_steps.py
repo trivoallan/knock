@@ -1,5 +1,5 @@
 from houba.domain.transforms.base import ContextFile, Fragment, ResolvedResource, ResourceRef
-from houba.domain.transforms.steps import InjectCA
+from houba.domain.transforms.steps import InjectCA, RewritePackageSources
 
 
 def _cert(name: str, content: str) -> ResolvedResource:
@@ -28,3 +28,32 @@ def test_inject_ca_fragment_copies_and_updates_trust_store() -> None:
             ContextFile(path="partner.crt", content="PEM2"),
         ),
     )
+
+
+def _mirror(apt: str | None = None, apk: str | None = None) -> ResolvedResource:
+    return ResolvedResource(kind="packageMirror", name="corp", apt=apt, apk=apk)
+
+
+def test_rewrite_resource_refs_one_mirror() -> None:
+    p = RewritePackageSources.params_model(mirror="corp")
+    assert RewritePackageSources().resource_refs(p) == (ResourceRef("packageMirror", "corp"),)
+
+
+def test_rewrite_fragment_apt_and_apk() -> None:
+    p = RewritePackageSources.params_model(mirror="corp")
+    frag = RewritePackageSources().fragment(p, (_mirror(apt="https://m", apk="https://m"),))
+    assert frag.context_files == ()
+    (run,) = frag.instructions
+    assert run.startswith("RUN set -eux; ")
+    assert "/etc/apt/sources.list" in run
+    assert "/etc/apt/sources.list.d/*.list" in run
+    assert "/etc/apk/repositories" in run
+    assert "s#https?://[^/]+#https://m#g" in run
+
+
+def test_rewrite_fragment_apt_only_omits_apk() -> None:
+    p = RewritePackageSources.params_model(mirror="corp")
+    frag = RewritePackageSources().fragment(p, (_mirror(apt="https://m"),))
+    (run,) = frag.instructions
+    assert "/etc/apt/sources.list" in run
+    assert "/etc/apk/repositories" not in run
