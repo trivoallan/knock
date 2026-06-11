@@ -1,0 +1,23 @@
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      # Maintains a release PR from Conventional Commits; on merge it tags the
+      # release, writes CHANGELOG.md, and bumps the version in pyproject.toml.
+      # Config: release-please-config.json + .release-please-manifest.json.
+      # While < 1.0.0, `feat:` bumps minor and breaking changes are capped at
+      # minor (bump-minor-pre-major) — no automatic jump to 1.0.0.
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
