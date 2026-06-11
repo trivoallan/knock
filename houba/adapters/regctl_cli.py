@@ -14,15 +14,24 @@ from houba.ports.registry import ImageInfo
 
 class RegctlAdapter:
     def __init__(self, binary: str | None = None) -> None:
+        # Résolution différée : on valide seulement si binary explicite est fourni.
+        # La résolution PATH se fait au premier appel (lazy) pour ne pas bloquer
+        # la construction du Container dans des environnements sans regctl.
         if binary is not None:
             if not Path(binary).is_file():
                 raise RegctlError(f"regctl binary not found: {binary}")
-            self._bin = binary
-            return
+            self._bin: str | None = binary
+        else:
+            self._bin = None
+
+    def _resolve(self) -> str:
+        if self._bin is not None:
+            return self._bin
         resolved = shutil.which("regctl")
         if not resolved:
             raise RegctlError("regctl binary not found in PATH")
         self._bin = resolved
+        return self._bin
 
     def list_tags(self, repo_ref: str) -> list[str]:
         out = self._run(["tag", "ls", repo_ref])
@@ -69,7 +78,7 @@ class RegctlAdapter:
     def _run(self, args: list[str]) -> str:
         try:
             r = subprocess.run(  # noqa: S603
-                [self._bin, *args],
+                [self._resolve(), *args],
                 check=False,
                 capture_output=True,
                 text=True,

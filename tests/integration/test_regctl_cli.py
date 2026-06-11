@@ -119,9 +119,12 @@ def test_inspect_absent_created_is_none(
 
 
 def test_no_binary_in_path_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Résolution lazy : la construction réussit dans un env sans regctl ; l'erreur
+    # ne survient qu'au premier appel (pour ne pas bloquer build_container).
     monkeypatch.setenv("PATH", "")
+    adapter = RegctlAdapter()
     with pytest.raises(RegctlError, match="not found in PATH"):
-        RegctlAdapter()
+        adapter.list_tags("docker.io/redis")
 
 
 # Fix 3 — _json non-dict branch
