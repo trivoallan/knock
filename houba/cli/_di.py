@@ -11,6 +11,7 @@ from houba.adapters.buildkit_cli import BuildkitAdapter
 from houba.adapters.git_cli import GitCliAdapter
 from houba.adapters.gitlab_http import GitLabHttpAdapter
 from houba.adapters.harbor_http import HarborHttpAdapter
+from houba.adapters.regctl_cli import RegctlAdapter
 from houba.adapters.skopeo_cli import SkopeoAdapter
 from houba.adapters.system_clock import SystemClock
 from houba.adapters.teams_webhook import TeamsWebhookAdapter
@@ -22,6 +23,7 @@ class Container:
     settings: Settings
     harbor: HarborHttpAdapter
     skopeo: SkopeoAdapter
+    registry: RegctlAdapter
     builder: BuildkitAdapter
     git: GitCliAdapter
     gitlab: GitLabHttpAdapter
@@ -47,6 +49,7 @@ def build_container(settings: Settings | None = None) -> Container:
         settings=settings,
         harbor=harbor,
         skopeo=SkopeoAdapter(),
+        registry=RegctlAdapter(),
         builder=BuildkitAdapter(),
         git=GitCliAdapter(),
         gitlab=gitlab,
