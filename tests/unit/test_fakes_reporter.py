@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from houba.ports.reporter import Counts, ErrorInfo, OperationEvent
+from houba.use_cases.report import RunReport
 from tests.fakes.reporter import FakeReporter
 
 
@@ -20,3 +21,10 @@ def test_fake_reporter_journals_calls() -> None:
     assert r.operations == [ev]
     assert r.failures == [("nginx", ErrorInfo("RegctlError", "boom", 2))]
     assert r.policies_completed == [("redis", Counts(imported=1))]
+
+
+def test_fake_reporter_journals_run_completed() -> None:
+    r = FakeReporter()
+    report = RunReport(mode="apply", status="ok", totals=Counts(), policies=[])
+    r.run_completed(report)
+    assert r.runs_completed == [report]
