@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Structurizr — C4 viewer",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "docker run -it --rm -p 8080:8080 -v \"${workspaceFolder}/docs/architecture:/usr/local/structurizr\" structurizr/structurizr local",
+      "serverReadyAction": {
+        "pattern": "Tomcat started on port",
+        "uriFormat": "http://localhost:8080",
+        "action": "openExternally"
+      }
+    }
+  ]
+}
