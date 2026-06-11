@@ -1,8 +1,8 @@
 # SLSA / in-toto attestation — design (roadmap ①, the heavy-provenance layer)
 
-> **Status:** brainstorm → approved direction, pre-plan. Builds on the provenance
-> *annotation* stamp (`houba/domain/stamp.py`, v0.2.0) and the rebuild path (Phase 6,
-> `buildkit_cli`). The terminal step after this spec is `writing-plans`.
+> **Status:** approved design, all open questions resolved (§7), pre-implementation. Builds
+> on the provenance *annotation* stamp (`houba/domain/stamp.py`, v0.2.0) and the rebuild path
+> (Phase 6, `buildkit_cli`). The terminal step after this spec is `writing-plans`.
 
 ## 1. Context & motivation
 
@@ -42,8 +42,9 @@ attestations, not ad-hoc labels."* This makes the front door not just *stamped* 
   referrer to the subject digest. **One adapter in v1** (`cosign`), configurable across the
   keyless / KMS / static-key trust models — so the *port* lands now and the second adapter,
   if ever needed, is additive.
-- **Discovery via the OCI Referrers API** (cosign attach / referrers), stored alongside the
-  image in the registry. Nothing new in the manifest; verifiers walk referrers.
+- **Discovery via the OCI Referrers API**, stored alongside the image in the registry, with
+  **automatic fallback to cosign's `sha256-<digest>.att` tag schema** on registries that don't
+  yet serve the Referrers API (Q4). Nothing new in the manifest; verifiers walk referrers.
 - **Config sub-block `AttestSettings`** (`HOUBA_ATTEST_*`), JSON-Schema-published like the
   rest. Attestation is **off by default** (empty signer ⇒ no attestation, mirroring empty
   `HOUBA_LABEL_PREFIX` ⇒ no labels).
@@ -57,7 +58,7 @@ attestations, not ad-hoc labels."* This makes the front door not just *stamped* 
 - **Multi-platform attestation fan-out** — follows the rebuild path's single-platform v1.
 - **Attestation on the pure copy path (no rebuild).** v1 attaches the houba predicate only
   where there *is* a transform to attest. Copy-path provenance stays at the annotation layer
-  until there's demand. (Open question Q3.)
+  until there's demand. (Resolved: Q3 — rebuild-only in v1, copy as fast-follow.)
 
 ## 4. Architecture — hexagonal placement
 
@@ -98,9 +99,11 @@ adapters/cosign_cli.py  (subprocess; retry on transient via _Transient)
 ### Two attestations, by design
 1. **`https://slsa.dev/provenance/v1`** — emitted by **BuildKit**, attached by BuildKit. The
    *build* facts. houba's job is only to *enable* it (and ensure `builder.id` is meaningful).
-2. **houba transform predicate** (predicateType TBD — see Q1) — emitted by **houba domain**,
-   signed + attached by the **`AttestorPort`**. The *hardening lineage*. This is the novel
-   artifact and the reason houba exists; it is to attestations what `io.houba.*` is to labels.
+2. **houba transform predicate** (`predicateType: https://houba.dev/predicate/transform/v1`)
+   — emitted by **houba domain**, signed + attached by the **`AttestorPort`**. The *hardening
+   lineage*. This is the novel artifact and the reason houba exists; it is to attestations
+   what `io.houba.*` is to labels. **Standalone** by design (Q2): BuildKit's provenance is
+   left untouched and houba never has to intercept or rewrite it.
 
 ## 5. Config — `AttestSettings` (`HOUBA_ATTEST_*`)
 
@@ -135,18 +138,23 @@ These are part of the *same change* as the implementing spec, not follow-ups:
 - **JSON Schema** — publish the derived schema for the houba predicate and the new config
   block; validate inputs against it.
 
-## 7. Open questions for the plan
+## 7. Resolved decisions (carried into `writing-plans`)
 
-- **Q1 — predicate type URI.** Stable namespace for the houba transform predicate
-  (e.g. `https://houba.dev/predicate/transform/v1`). Must be a URI; needn't resolve; must be
-  generic (no deploying-org reference). Decide before freezing the schema — it is public API.
-- **Q2 — one predicate or two on the houba side?** Fold lineage into a SLSA *provenance*
-  predicate (`buildDefinition.externalParameters`) vs. a standalone houba predicate. Leaning
-  **standalone** (clean separation, no schema fight with BuildKit's provenance), but worth a
-  second look against tooling that only understands `slsa.dev/provenance`.
-- **Q3 — attest the copy path too?** v1 attests only rebuilds. A copy is also a houba
-  transformation event (it *is* the front door) and arguably deserves a minimal predicate.
-  Deferred unless a downstream verifier needs uniform coverage.
-- **Q4 — DSSE bundle storage shape.** cosign's referrer layout is the default; confirm the
-  target registry (Harbor) serves the Referrers API at the deployed version, else fall back
-  to the tag-schema (`sha256-<digest>.att`) cosign uses for non-referrer registries.
+All four open questions are settled; the plan starts from these, not from options.
+
+- **Q1 — predicate type URI → `https://houba.dev/predicate/transform/v1`.** A project-branded
+  vanity URI (the convention SLSA itself follows with `slsa.dev`); needn't resolve, stays
+  stable across repo moves, generic (no deploying-org reference). This is frozen public API —
+  the `predicateType` and its Pydantic-derived JSON Schema are versioned at `/v1`.
+- **Q2 — standalone houba predicate (two attestations).** BuildKit's `slsa.dev/provenance/v1`
+  is left untouched; houba emits a *separate* transform predicate. Clean standard-vs-novel
+  split, no interception/rewrite of BuildKit's output. Verifiers that only understand
+  `slsa.dev/provenance` still get the build facts; houba-aware verifiers read both.
+- **Q3 — rebuild-only in v1; copy path is a fast-follow.** v1 attests where there is an actual
+  transform to describe (richest predicate, smallest surface). The known consequence is a
+  temporary coverage gap for pure copies — pure-copy signing (minimal predicate: source
+  digest, empty transform list) is a focused follow-up once the signer port is proven, and is
+  what fully unlocks uniform admission enforcement ("coverage gates value").
+- **Q4 — Referrers API with automatic tag-schema fallback.** cosign's default behaviour: use
+  the OCI Referrers API where served, fall back to `sha256-<digest>.att` tags otherwise. No
+  minimum-registry-version requirement forced now; works across Harbor versions out of the box.
