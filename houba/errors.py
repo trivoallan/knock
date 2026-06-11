@@ -10,19 +10,10 @@ __all__ = [
     "BuildkitError",
     "ConfigError",
     "DomainError",
-    "GitError",
-    "GitLabError",
-    "HarborAuthError",
-    "HarborError",
-    "HarborNotFoundError",
-    "HarborTransientError",
     "HoubaError",
     "InternalError",
-    "NoTagsToImportError",
     "PolicyValidationError",
-    "PropertiesValidationError",
     "RegctlError",
-    "SkopeoError",
     "exit_code_for",
 ]
 
@@ -35,56 +26,20 @@ class DomainError(HoubaError):
     """Erreur métier ou de validation (exit 1)."""
 
 
-class PropertiesValidationError(DomainError):
-    """`properties.yml` invalide (schéma, regex malformée, valeur inattendue)."""
-
-
 class PolicyValidationError(DomainError):
     """`MirrorPolicy` YAML invalid (schema, unknown field, inconsistent spec)."""
-
-
-class NoTagsToImportError(DomainError):
-    """Aucun tag source ne satisfait les filtres après application du calcul."""
 
 
 class AdapterError(HoubaError):
     """Erreur infrastructure / dépendance externe (exit 2)."""
 
 
-class HarborError(AdapterError):
-    """Erreur de communication ou de protocole avec Harbor."""
-
-
-class HarborAuthError(HarborError):
-    """Échec d'authentification Harbor (HTTP 401 / 403)."""
-
-
-class HarborNotFoundError(HarborError):
-    """Ressource Harbor absente (HTTP 404)."""
-
-
-class HarborTransientError(HarborError):
-    """Erreur transitoire Harbor (5xx, timeout) — éligible au retry."""
-
-
-class GitError(AdapterError):
-    """Erreur d'invocation `git` (clone, commit, push)."""
-
-
 class RegctlError(AdapterError):
     """Erreur d'invocation `regctl` (tag ls, inspect, copy, mod, rm)."""
 
 
-class SkopeoError(AdapterError):
-    """Erreur d'invocation `skopeo` (inspect, list-tags, copy)."""
-
-
 class BuildkitError(AdapterError):
     """Erreur d'invocation `buildctl` (build, push d'image)."""
-
-
-class GitLabError(AdapterError):
-    """Erreur de communication avec l'API REST GitLab."""
 
 
 class ConfigError(HoubaError):
