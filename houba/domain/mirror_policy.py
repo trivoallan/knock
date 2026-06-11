@@ -157,10 +157,11 @@ def mirror_policy_json_schema() -> dict[str, Any]:
     Published for editor/CI validation of policy files (see CLAUDE.md: JSON Schema
     systematically). Derived from the Pydantic models — never hand-written.
 
-    Note: transform steps are authored in YAML as a single-key map ``{stepName: params}``,
-    while this schema reflects the normalized internal ``{name, params}`` form — so this
-    schema validates the internal model, not the raw YAML transform-step encoding (full
-    YAML-shape validation is a later concern).
+    Note: transform steps are authored in YAML as a single-key map ``{stepName: params}``.
+    The published ``TransformStep`` definition is a discriminated ``oneOf`` over the
+    registered steps (derived from each step's params model — see
+    ``houba.domain.transforms.schema``), so editors/CI validate the authoring YAML form
+    and each step's params.
     """
     schema = MirrorPolicy.model_json_schema(by_alias=True)
     # Tighten the open {name, params} TransformStep into a discriminated union derived
