@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
-from houba.config import RegistryConfig
+from houba.config import CACertSource, PackageMirror, RegistryConfig
 from houba.domain.mirror_policy import parse_mirror_policy
-from houba.errors import PolicyValidationError
+from houba.domain.transform import transform_version
+from houba.errors import ConfigError, PolicyValidationError
 from houba.ports.registry import ImageInfo
 from houba.use_cases.reconcile import (
     RunSummary,
@@ -14,6 +16,7 @@ from houba.use_cases.reconcile import (
     to_mirror_artifact,
     to_source_artifact,
 )
+from tests.fakes.image_builder import FakeImageBuilder
 from tests.fakes.registry import FakeRegistryPort
 
 NOW = datetime(2026, 6, 11, tzinfo=UTC)
@@ -76,7 +79,11 @@ def test_reconcile_copies_new_tags_and_stamps() -> None:
     summary = reconcile_policies(
         [POLICY],
         registry=fake,
+        builder=FakeImageBuilder(),
         roster=ROSTER,
+        ca_certs={},
+        package_mirrors={},
+        build_platform="linux/amd64",
         now=NOW,
         label_prefix="io.houba",
         dry_run_tags=False,
@@ -102,7 +109,11 @@ def test_reconcile_dry_run_tags_skips_mutations() -> None:
     summary = reconcile_policies(
         [POLICY],
         registry=fake,
+        builder=FakeImageBuilder(),
         roster=ROSTER,
+        ca_certs={},
+        package_mirrors={},
+        build_platform="linux/amd64",
         now=NOW,
         label_prefix="io.houba",
         dry_run_tags=True,
@@ -141,7 +152,11 @@ spec:
         reconcile_policies(
             [policy],
             registry=fake,
+            builder=FakeImageBuilder(),
             roster=ROSTER,
+            ca_certs={},
+            package_mirrors={},
+            build_platform="linux/amd64",
             now=NOW,
             label_prefix="io.houba",
             dry_run_tags=False,
@@ -165,7 +180,11 @@ def test_reconcile_updates_changed_stable_tag() -> None:
     summary = reconcile_policies(
         [POLICY],
         registry=fake,
+        builder=FakeImageBuilder(),
         roster=ROSTER,
+        ca_certs={},
+        package_mirrors={},
+        build_platform="linux/amd64",
         now=NOW,
         label_prefix="io.houba",
         dry_run_tags=False,
@@ -194,7 +213,11 @@ def test_reconcile_idempotent_when_unchanged() -> None:
     summary = reconcile_policies(
         [POLICY],
         registry=fake,
+        builder=FakeImageBuilder(),
         roster=ROSTER,
+        ca_certs={},
+        package_mirrors={},
+        build_platform="linux/amd64",
         now=NOW,
         label_prefix="io.houba",
         dry_run_tags=False,
@@ -222,7 +245,11 @@ def test_reconcile_deletes_orphan_stamped_tag() -> None:
     summary = reconcile_policies(
         [POLICY],
         registry=fake,
+        builder=FakeImageBuilder(),
         roster=ROSTER,
+        ca_certs={},
+        package_mirrors={},
+        build_platform="linux/amd64",
         now=NOW,
         label_prefix="io.houba",
         dry_run_tags=False,
@@ -251,7 +278,11 @@ def test_reconcile_does_not_delete_unstamped_tag() -> None:
     summary = reconcile_policies(
         [POLICY],
         registry=fake,
+        builder=FakeImageBuilder(),
         roster=ROSTER,
+        ca_certs={},
+        package_mirrors={},
+        build_platform="linux/amd64",
         now=NOW,
         label_prefix="io.houba",
         dry_run_tags=False,
@@ -259,3 +290,103 @@ def test_reconcile_does_not_delete_unstamped_tag() -> None:
     )
     assert "harbor.corp/lib/redis:manual-tag" not in fake.deleted
     assert summary.deleted == 0
+
+
+HARDENED_NOW = datetime(2026, 6, 11, tzinfo=UTC)
+
+
+def _hardened_policy() -> object:
+    return parse_mirror_policy(Path("docs/examples/hardened/redis.yml").read_text())
+
+
+def _run(registry: FakeRegistryPort, builder: FakeImageBuilder, **over: object) -> RunSummary:
+    kwargs: dict[str, object] = dict(
+        registry=registry,
+        builder=builder,
+        roster={"local": RegistryConfig(host="reg.local")},
+        ca_certs={"corp": CACertSource(pem="PEMDATA")},
+        package_mirrors={"corp": PackageMirror(apt="https://mirror.corp")},
+        build_platform="linux/amd64",
+        now=HARDENED_NOW,
+        label_prefix="io.houba",
+        dry_run_tags=False,
+        dry_run_deletions=False,
+    )
+    kwargs.update(over)
+    return reconcile_policies(  # type: ignore[arg-type]
+        [_hardened_policy()], **kwargs
+    )
+
+
+def test_transformed_variant_builds_then_stamps_lineage() -> None:
+    src_repo = "docker.io/library/redis"
+    registry = FakeRegistryPort(
+        tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": []},
+        infos={
+            f"{src_repo}:7.2.5": ImageInfo(
+                digest="sha256:src", created=HARDENED_NOW, annotations={}
+            )
+        },
+    )
+    builder = FakeImageBuilder()
+    summary = _run(registry, builder)
+
+    assert summary.imported == 1
+    assert len(builder.requests) == 1
+    req = builder.requests[0]
+    assert req.image_ref == "reg.local/hardened/redis:7.2.5"
+    assert req.platform == "linux/amd64"
+    df = builder.dockerfiles[0]
+    assert "update-ca-certificates" in df and "/etc/apt/sources.list" in df
+    assert builder.contexts[0]["corp.crt"] == "PEMDATA"
+    assert registry.copied == []
+    _ref, ann = registry.annotated[0]
+    assert ann["io.houba.transform.steps"] == "injectCA,rewritePackageSources"
+    assert ann["io.houba.transform.version"].startswith("sha256:")
+
+
+def test_transformed_variant_skips_when_version_matches() -> None:
+    src_repo = "docker.io/library/redis"
+    steps = (
+        parse_mirror_policy(Path("docs/examples/hardened/redis.yml").read_text())
+        .spec.imports[0]
+        .transform
+    )
+    tv = transform_version(
+        steps, cert_contents={"corp": "PEMDATA"}, apt_mirror="https://mirror.corp", apk_mirror=None
+    )
+
+    registry = FakeRegistryPort(
+        tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": ["7.2.5"]},
+        infos={
+            f"{src_repo}:7.2.5": ImageInfo(
+                digest="sha256:src", created=HARDENED_NOW, annotations={}
+            ),
+            "reg.local/hardened/redis:7.2.5": ImageInfo(
+                digest="sha256:built",
+                created=HARDENED_NOW,
+                annotations={
+                    "org.opencontainers.image.base.digest": "sha256:src",
+                    "io.houba.transform.version": tv,
+                },
+            ),
+        },
+    )
+    builder = FakeImageBuilder()
+    summary = _run(registry, builder)
+    assert summary.imported == 0 and summary.updated == 0
+    assert builder.requests == []
+
+
+def test_unknown_cert_name_raises_config_error() -> None:
+    src_repo = "docker.io/library/redis"
+    registry = FakeRegistryPort(
+        tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": []},
+        infos={
+            f"{src_repo}:7.2.5": ImageInfo(
+                digest="sha256:src", created=HARDENED_NOW, annotations={}
+            )
+        },
+    )
+    with pytest.raises(ConfigError, match="unknown CA cert"):
+        _run(registry, FakeImageBuilder(), ca_certs={})

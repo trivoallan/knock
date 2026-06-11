@@ -4,16 +4,31 @@ real registries via the RegistryPort (copy path). Depends only on ports.
 
 from __future__ import annotations
 
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
-from houba.config import RegistryConfig, resolve_registry
+from houba.config import (
+    CACertSource,
+    PackageMirror,
+    RegistryConfig,
+    resolve_ca_certs,
+    resolve_mirror,
+    resolve_registry,
+)
 from houba.domain.collision import AliasTarget, detect_alias_collisions
 from houba.domain.expand import ExpandedImport, expand_import
-from houba.domain.mirror_policy import MirrorPolicy
+from houba.domain.mirror_policy import MirrorPolicy, TransformStep
 from houba.domain.policy_merge import resolve_imports
 from houba.domain.reconcile import MirrorArtifact, SourceArtifact, reconcile_import
 from houba.domain.stamp import build_stamp_annotations
+from houba.domain.transform import (
+    render_dockerfile,
+    transform_version,
+    validate_transform_steps,
+)
+from houba.ports.image_builder import BuildRequest, ImageBuilderPort
 from houba.ports.registry import ImageInfo, RegistryPort
 
 BASE_DIGEST_KEY = "org.opencontainers.image.base.digest"
@@ -25,11 +40,75 @@ def to_source_artifact(info: ImageInfo, *, now: datetime) -> SourceArtifact:
     return SourceArtifact(digest=info.digest, pushed_at=info.created or now)
 
 
-def to_mirror_artifact(info: ImageInfo) -> MirrorArtifact | None:
+def to_mirror_artifact(
+    info: ImageInfo, *, transform_version_key: str | None = None
+) -> MirrorArtifact | None:
     base = info.annotations.get(BASE_DIGEST_KEY)
     if base is None:
         return None
-    return MirrorArtifact(base_digest=base)
+    tv = info.annotations.get(transform_version_key) if transform_version_key else None
+    return MirrorArtifact(base_digest=base, transform_version=tv)
+
+
+@dataclass(frozen=True)
+class _ResolvedTransform:
+    steps: list[TransformStep]
+    cert_files: list[tuple[str, str]]  # (filename ending in .crt, PEM content)
+    apt_mirror: str | None
+    apk_mirror: str | None
+    version: str
+
+
+def _resolve_transform(
+    steps: list[TransformStep],
+    ca_certs: dict[str, CACertSource],
+    package_mirrors: dict[str, PackageMirror],
+) -> _ResolvedTransform:
+    cert_names: list[str] = []
+    apt = apk = None
+    for step in steps:
+        if step.name == "injectCA":
+            cert_names = list(step.params["certs"])
+        elif step.name == "rewritePackageSources":
+            m = resolve_mirror(step.params["mirror"], package_mirrors)
+            apt, apk = m.apt, m.apk
+    contents: dict[str, str] = {}
+    cert_files: list[tuple[str, str]] = []
+    for name, src in resolve_ca_certs(cert_names, ca_certs):
+        pem = src.pem if src.pem is not None else Path(src.path).read_text()  # type: ignore[arg-type]
+        contents[name] = pem
+        cert_files.append((f"{name}.crt", pem))
+    version = transform_version(steps, cert_contents=contents, apt_mirror=apt, apk_mirror=apk)
+    return _ResolvedTransform(
+        steps=steps, cert_files=cert_files, apt_mirror=apt, apk_mirror=apk, version=version
+    )
+
+
+def _build_variant(
+    *,
+    builder: ImageBuilderPort,
+    source_ref: str,
+    dest_ref: str,
+    resolved: _ResolvedTransform,
+    platform: str,
+) -> None:
+    with tempfile.TemporaryDirectory(prefix="houba-build-") as tmp:
+        ctx = Path(tmp)
+        for filename, content in resolved.cert_files:
+            (ctx / filename).write_text(content)
+        dockerfile = render_dockerfile(
+            source_ref,
+            ca_cert_filenames=[f for f, _ in resolved.cert_files],
+            apt_mirror=resolved.apt_mirror,
+            apk_mirror=resolved.apk_mirror,
+        )
+        df_path = ctx / "Dockerfile"
+        df_path.write_text(dockerfile)
+        builder.build_and_push(
+            BuildRequest(
+                dockerfile_path=df_path, context_dir=ctx, image_ref=dest_ref, platform=platform
+            )
+        )
 
 
 @dataclass(frozen=True)
@@ -65,7 +144,11 @@ def reconcile_policies(
     policies: list[MirrorPolicy],
     *,
     registry: RegistryPort,
+    builder: ImageBuilderPort,
     roster: dict[str, RegistryConfig],
+    ca_certs: dict[str, CACertSource],
+    package_mirrors: dict[str, PackageMirror],
+    build_platform: str,
     now: datetime,
     label_prefix: str,
     dry_run_tags: bool,
@@ -78,6 +161,8 @@ def reconcile_policies(
         src_tags = registry.list_tags(_source_repo(policy))
         for resolved in resolve_imports(policy.spec):
             expanded = expand_import(resolved, src_tags)
+            for v in expanded.variants:
+                validate_transform_steps(v.transform)
             for dest in resolved.destinations or []:
                 _name, cfg = resolve_registry(dest.registry, roster)
                 dest_repo = f"{cfg.host}/{dest.project}/{dest.repository}"
@@ -118,13 +203,26 @@ def reconcile_policies(
             tag: to_source_artifact(registry.inspect(f"{src_repo}:{tag}"), now=now)
             for tag in selected
         }
+        tv_key = f"{label_prefix}.transform.version" if label_prefix else None
+        resolved_by_variant: dict[str, _ResolvedTransform] = {}
+        transform_versions: dict[str, str | None] = {}
+        for v in plan.expanded.variants:
+            if v.transform:
+                rt = _resolve_transform(v.transform, ca_certs, package_mirrors)
+                resolved_by_variant[v.name] = rt
+                transform_versions[v.name] = rt.version
+
         mirror: dict[str, MirrorArtifact] = {}
         for out_tag in registry.list_tags(plan.dest_repo):
-            ma = to_mirror_artifact(registry.inspect(f"{plan.dest_repo}:{out_tag}"))
+            ma = to_mirror_artifact(
+                registry.inspect(f"{plan.dest_repo}:{out_tag}"), transform_version_key=tv_key
+            )
             if ma is not None:
                 mirror[out_tag] = ma
 
-        result = reconcile_import(plan.expanded, source, mirror, now)
+        result = reconcile_import(
+            plan.expanded, source, mirror, now, transform_versions=transform_versions
+        )
 
         for vr, vplan in zip(result.variants, plan.expanded.variants, strict=True):
             out_to_src: dict[str, str] = {t + vplan.suffix: t for t in vplan.tags}
@@ -134,24 +232,33 @@ def reconcile_policies(
                     counts.imported += 1
                 else:
                     counts.updated += 1
+                stamp = build_stamp_annotations(
+                    prefix=label_prefix,
+                    source_registry=plan.policy.spec.source.registry,
+                    source_repository=plan.policy.spec.source.repository,
+                    source_tag=src_tag,
+                    source_digest=source[src_tag].digest,
+                    created=now,
+                    team=(plan.policy.metadata.labels or {}).get("team"),
+                    artifact_type=plan.policy.spec.artifact_type.value,
+                    policy=plan.policy.metadata.name,
+                    import_name=plan.expanded.name,
+                    variant=vr.variant,
+                    transform_steps=[s.name for s in vplan.transform] or None,
+                    transform_version_value=transform_versions.get(vplan.name),
+                )
                 if not dry_run_tags:
-                    registry.copy(f"{src_repo}:{src_tag}", f"{plan.dest_repo}:{out_tag}")
-                    registry.annotate(
-                        f"{plan.dest_repo}:{out_tag}",
-                        build_stamp_annotations(
-                            prefix=label_prefix,
-                            source_registry=plan.policy.spec.source.registry,
-                            source_repository=plan.policy.spec.source.repository,
-                            source_tag=src_tag,
-                            source_digest=source[src_tag].digest,
-                            created=now,
-                            team=(plan.policy.metadata.labels or {}).get("team"),
-                            artifact_type=plan.policy.spec.artifact_type.value,
-                            policy=plan.policy.metadata.name,
-                            import_name=plan.expanded.name,
-                            variant=vr.variant,
-                        ),
-                    )
+                    if vplan.transform:
+                        _build_variant(
+                            builder=builder,
+                            source_ref=f"{src_repo}@{source[src_tag].digest}",
+                            dest_ref=f"{plan.dest_repo}:{out_tag}",
+                            resolved=resolved_by_variant[vplan.name],
+                            platform=build_platform,
+                        )
+                    else:
+                        registry.copy(f"{src_repo}:{src_tag}", f"{plan.dest_repo}:{out_tag}")
+                    registry.annotate(f"{plan.dest_repo}:{out_tag}", stamp)
             for alias_name, target in vr.aliases.items():
                 counts.aliased += 1
                 if not dry_run_tags:
