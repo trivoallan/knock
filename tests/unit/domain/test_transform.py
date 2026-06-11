@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 
 from houba.domain.mirror_policy import TransformStep
-from houba.domain.transform import render_dockerfile, validate_transform_steps
+from houba.domain.transform import render_dockerfile, transform_version, validate_transform_steps
 from houba.errors import PolicyValidationError
 
 
@@ -91,3 +91,45 @@ def test_render_both_steps_ca_before_rewrite() -> None:
         apk_mirror=None,
     )
     assert df.index("update-ca-certificates") < df.index("/etc/apt/sources.list")
+
+
+# ---------------------------------------------------------------------------
+# transform_version
+# ---------------------------------------------------------------------------
+
+
+def _steps() -> list[TransformStep]:
+    return [
+        _step("injectCA", {"certs": ["corp"]}),
+        _step("rewritePackageSources", {"mirror": "corp"}),
+    ]
+
+
+def test_transform_version_is_stable() -> None:
+    v1 = transform_version(
+        _steps(), cert_contents={"corp": "PEM"}, apt_mirror="https://m", apk_mirror=None
+    )
+    v2 = transform_version(
+        _steps(), cert_contents={"corp": "PEM"}, apt_mirror="https://m", apk_mirror=None
+    )
+    assert v1 == v2 and v1.startswith("sha256:")
+
+
+def test_transform_version_changes_with_cert_content() -> None:
+    base = transform_version(
+        _steps(), cert_contents={"corp": "PEM"}, apt_mirror="https://m", apk_mirror=None
+    )
+    rotated = transform_version(
+        _steps(), cert_contents={"corp": "NEWPEM"}, apt_mirror="https://m", apk_mirror=None
+    )
+    assert base != rotated
+
+
+def test_transform_version_changes_with_mirror() -> None:
+    a = transform_version(
+        _steps(), cert_contents={"corp": "PEM"}, apt_mirror="https://a", apk_mirror=None
+    )
+    b = transform_version(
+        _steps(), cert_contents={"corp": "PEM"}, apt_mirror="https://b", apk_mirror=None
+    )
+    assert a != b

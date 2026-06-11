@@ -5,6 +5,9 @@ No I/O, no config import — the application layer resolves names to data and pa
 
 from __future__ import annotations
 
+import hashlib
+import json
+
 from houba.domain.mirror_policy import TransformStep
 from houba.errors import PolicyValidationError
 
@@ -71,3 +74,22 @@ def render_dockerfile(
     if rewrites:
         lines.append("RUN set -eux; " + "; ".join(rewrites))
     return "\n".join(lines) + "\n"
+
+
+def transform_version(
+    steps: list[TransformStep],
+    *,
+    cert_contents: dict[str, str],
+    apt_mirror: str | None,
+    apk_mirror: str | None,
+) -> str:
+    """Content hash of the *resolved* transform. Changes when steps, cert bytes,
+    or mirror URLs change — drives transform-aware change detection."""
+    payload = {
+        "steps": [[s.name, s.params] for s in steps],
+        "certs": {k: cert_contents[k] for k in sorted(cert_contents)},
+        "apt": apt_mirror,
+        "apk": apk_mirror,
+    }
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return "sha256:" + hashlib.sha256(blob).hexdigest()
