@@ -6,6 +6,7 @@ Voir spec §3 et §6.3 (mapping exception → exit code).
 from __future__ import annotations
 
 import importlib.metadata
+import sys
 
 import typer
 from pydantic import ValidationError
@@ -44,11 +45,10 @@ def _run() -> None:
         app()
     except (ValidationError, SettingsError) as e:
         typer.echo(f"Configuration invalide : {e}", err=True)
-        raise typer.Exit(3) from e
+        sys.exit(3)
     except HoubaError as e:
-        code = exit_code_for(e)
         typer.echo(f"{type(e).__name__}: {e}", err=True)
-        raise typer.Exit(code) from e
+        sys.exit(exit_code_for(e))
 
 
 if __name__ == "__main__":
