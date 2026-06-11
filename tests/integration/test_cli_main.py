@@ -3,6 +3,7 @@ from unittest.mock import patch
 import pytest
 import typer
 from pydantic import ValidationError
+from pydantic_settings import SettingsError
 from typer.testing import CliRunner
 
 from houba.cli.main import _run, app
@@ -29,6 +30,20 @@ def test_run_maps_validation_error_to_exit_3() -> None:
 
     def _raise() -> None:
         raise ValidationError.from_exception_data("Settings", [])
+
+    with patch("houba.cli.main.app", side_effect=_raise):
+        with pytest.raises(typer.Exit) as excinfo:
+            _run()
+    assert excinfo.value.exit_code == 3
+
+
+def test_run_maps_settings_error_to_exit_3() -> None:
+    """SettingsError (ex. HOUBA_REGISTRIES au JSON malformé) → exit 3 (config)."""
+
+    def _raise() -> None:
+        raise SettingsError(
+            "error parsing value for field 'registries' from source 'EnvSettingsSource'"
+        )
 
     with patch("houba.cli.main.app", side_effect=_raise):
         with pytest.raises(typer.Exit) as excinfo:
