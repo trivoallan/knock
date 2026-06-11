@@ -80,6 +80,7 @@ jobs:
         with:
           context: .
           push: false
+          load: true              # load the built image into the docker daemon so the smoke test can run it
           tags: houba:ci-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
