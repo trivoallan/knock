@@ -18,7 +18,7 @@ jobs:
       # Config: release-please-config.json + .release-please-manifest.json.
       # While < 1.0.0, `feat:` bumps minor and breaking changes are capped at
       # minor (bump-minor-pre-major) — no automatic jump to 1.0.0.
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         with:
           # Prefer a PAT (fine-grained: contents + pull-requests write) so the
           # release PR triggers CI; falls back to GITHUB_TOKEN until the
