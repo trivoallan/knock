@@ -60,11 +60,24 @@ def reconcile_variant(
     now: datetime,
     grace: timedelta = DEFAULT_GRACE,
 ) -> VariantReconcile:
+    """Reconcile one variant against a destination's mirror state.
+
+    Pre-condition: every tag in ``plan.tags`` must be a key in ``source`` (the
+    caller — expand_import selection + the source-state fetch — must be
+    consistent). A missing tag is a caller-contract violation, raised as KeyError.
+    """
     to_import: list[str] = []
     to_update: list[str] = []
     for src_tag in plan.tags:
         out_tag = src_tag + plan.suffix
-        decision = _classify(source[src_tag], mirror.get(out_tag), now, grace)
+        try:
+            src = source[src_tag]
+        except KeyError as exc:
+            raise KeyError(
+                f"source tag {src_tag!r} absent from source state — "
+                "expand_import selection and source fetch must be consistent"
+            ) from exc
+        decision = _classify(src, mirror.get(out_tag), now, grace)
         if decision == "import":
             to_import.append(out_tag)
         elif decision == "update":
@@ -92,6 +105,11 @@ def reconcile_import(
     now: datetime,
     grace: timedelta = DEFAULT_GRACE,
 ) -> ImportReconcile:
+    """Reconcile all variants of an expanded import; delegates to reconcile_variant.
+
+    The same source pre-condition applies: every tag selected by expand_import
+    must be present in ``source`` (selection and source-state fetch must be consistent).
+    """
     variants = [reconcile_variant(v, source, mirror, now, grace) for v in expanded.variants]
 
     # Desired output names across ALL variants: concrete output tags + alias names.

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from houba.domain.expand import ExpandedImport, VariantPlan
 from houba.domain.reconcile import (
     ImportReconcile,
@@ -146,3 +148,10 @@ def test_reconcile_import_aliases_are_not_deleted() -> None:
     }
     got = reconcile_import(exp, source, mirror, NOW, GRACE)
     assert got.to_delete == []  # the aliases 7.2/latest are desired alias names → not deleted
+
+
+def test_reconcile_variant_missing_source_tag_raises_clear_error() -> None:
+    plan = _plan("standard", "", tags=["1.0.0", "2.0.0"], aliases={})
+    source = {"1.0.0": _src("sha256:a", 30)}  # 2.0.0 missing → contract violation
+    with pytest.raises(KeyError, match=r"2\.0\.0"):
+        reconcile_variant(plan, source, {}, NOW, GRACE)
