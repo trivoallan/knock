@@ -61,7 +61,7 @@ When adding a new external dependency, the pattern is always: **port (Protocol +
 
 ## Craftsmanship & engineering standards
 
-**Spec-driven, composable workflows.** Use Claude Code skills as stacked building blocks: the Superpowers skills supply engineering discipline (`brainstorming` → `writing-plans` → `subagent-driven-development` → `test-driven-development` → `finishing-a-development-branch`). Plans live under `docs/superpowers/plans/` and are deleted after the work merges; specs under `docs/superpowers/specs/`. When a recurring task lacks a skill, author one rather than re-improvising.
+**Spec-driven, composable workflows.** Use Claude Code skills as stacked building blocks: the Superpowers skills supply engineering discipline (`brainstorming` → `writing-plans` → `subagent-driven-development` → `test-driven-development` → `finishing-a-development-branch`). **Plans never land on `main`** — `docs/superpowers/plans/` is gitignored, so a plan is a local working artifact for the duration of its feature branch only (never committed, never merged). Specs *do* persist, under `docs/superpowers/specs/`. When a recurring task lacks a skill, author one rather than re-improvising.
 
 **Architecture philosophy.**
 - Prefer declarative specs over imperative code paths — the product policy is a Pydantic `properties.yml` schema; extend that schema before adding ad-hoc Python branching.
