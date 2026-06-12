@@ -179,3 +179,44 @@ def test_classify_copy_path_unchanged_when_no_transform_either_side() -> None:
     src = SourceArtifact(digest="sha256:s", pushed_at=NOW)
     mir = MirrorArtifact(base_digest="sha256:s")  # transform_version defaults None
     assert _classify(src, mir, NOW, GRACE, desired_transform_version=None) == "skip"
+
+
+# ---------------------------------------------------------------------------
+# marked / to_unmark (Task 3)
+# ---------------------------------------------------------------------------
+
+_NOW_T3 = datetime(2026, 6, 12, tzinfo=UTC)
+
+
+def _expanded_single_tag() -> ExpandedImport:
+    # one variant, no suffix, selecting tag "7.2.0"
+    return ExpandedImport(
+        name="stable",
+        destinations=None,
+        platforms=None,
+        archive=None,
+        variants=[VariantPlan(name="default", suffix="", transform=[], tags=["7.2.0"], aliases={})],
+    )
+
+
+def test_to_unmark_is_marked_intersect_desired() -> None:
+    expanded = _expanded_single_tag()
+    src = {"7.2.0": SourceArtifact(digest="sha256:s", pushed_at=_NOW_T3)}
+    # mirror has the desired tag (stamped) plus an obsolete tag "6.0.0"
+    mirror = {
+        "7.2.0": MirrorArtifact(base_digest="sha256:s"),
+        "6.0.0": MirrorArtifact(base_digest="sha256:old"),
+    }
+    # "7.2.0" carries a stale mark and is desired again → to_unmark; "6.0.0" is undesired
+    result = reconcile_import(expanded, src, mirror, _NOW_T3, marked={"7.2.0"})
+    assert result.to_unmark == ["7.2.0"]
+    assert result.to_delete == ["6.0.0"]
+
+
+def test_marked_defaults_to_empty_and_to_unmark_empty() -> None:
+    expanded = _expanded_single_tag()
+    src = {"7.2.0": SourceArtifact(digest="sha256:s", pushed_at=_NOW_T3)}
+    mirror = {"7.2.0": MirrorArtifact(base_digest="sha256:s")}
+    result = reconcile_import(expanded, src, mirror, _NOW_T3)
+    assert result.to_unmark == []
+    assert result.to_delete == []
