@@ -13,6 +13,9 @@ spec:
   jobTemplate:
     spec:
       backoffLimit: 0 # a failed reconcile reports per-policy and exits; let the next schedule retry
+      completionMode: Indexed
+      completions: 1   # = N shards (= SHARD_COUNT in houba-config). Base is 1 (today's behaviour); overlays bump both together.
+      parallelism: 1   # = M concurrent pods (M ≤ N; cap to protect buildkitd).
       template:
         metadata:
           labels:
@@ -49,7 +52,8 @@ spec:
             - name: houba
               image: houba # rewritten by the kustomize images transformer
               command: ["/bin/sh", "-c"]
-              args: ['exec houba reconcile "$POLICY_DIR"']
+              args:
+                ['exec houba reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX" --shard-count "$SHARD_COUNT"']
               env:
                 # Source-registry auth (opt-in). DOCKER_CONFIG is read by BOTH regctl
                 # (copy path) and buildctl (rebuild path); REGCTL_CONFIG keeps regctl's
