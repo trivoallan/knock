@@ -14,6 +14,14 @@ class ImageInfo:
     annotations: dict[str, str]  # OCI annotations (incl. recorded base.digest on mirror)
 
 
+@dataclass(frozen=True)
+class Referrer:
+    digest: str  # the referrer manifest digest
+    artifact_type: str
+    annotations: dict[str, str]
+    subject_tag: str  # the output-tag whose manifest it refers to
+
+
 class RegistryPort(Protocol):
     def configure_registry(self, host: str, *, tls_verify: bool, ca_cert: str | None) -> None: ...
     def list_tags(self, repo_ref: str) -> list[str]: ...
@@ -25,3 +33,8 @@ class RegistryPort(Protocol):
 
     def delete_tag(self, image_ref: str) -> None: ...
     def login(self, host: str, *, username: str, password: str, tls_verify: bool) -> None: ...
+    def list_referrers(self, image_ref: str, artifact_type: str) -> list[Referrer]: ...
+    def put_referrer(
+        self, image_ref: str, artifact_type: str, annotations: dict[str, str]
+    ) -> None: ...
+    def delete_referrer(self, referrer_ref: str) -> None: ...

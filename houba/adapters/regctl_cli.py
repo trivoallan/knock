@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from houba.errors import RegctlError
-from houba.ports.registry import ImageInfo
+from houba.ports.registry import ImageInfo, Referrer
 
 
 class RegctlAdapter:
@@ -97,6 +97,17 @@ class RegctlAdapter:
             args += ["--tls", "disabled"]
         args.append(host)
         self._run(args, stdin=password)
+
+    def list_referrers(self, image_ref: str, artifact_type: str) -> list[Referrer]:
+        raise NotImplementedError  # implemented in Task 8
+
+    def put_referrer(
+        self, image_ref: str, artifact_type: str, annotations: dict[str, str]
+    ) -> None:
+        raise NotImplementedError  # implemented in Task 8
+
+    def delete_referrer(self, referrer_ref: str) -> None:
+        raise NotImplementedError  # implemented in Task 8
 
     def _run(self, args: list[str], *, stdin: str | None = None) -> str:
         try:
