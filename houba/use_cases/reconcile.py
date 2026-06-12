@@ -29,7 +29,12 @@ from houba.domain.collision import (
     detect_alias_collisions,
     detect_dest_repo_collisions,
 )
+from houba.domain.deletion_mode import DeletionMode, resolve_deletion_mode
 from houba.domain.expand import ExpandedImport, VariantPlan, expand_import
+from houba.domain.lifecycle import (
+    PENDING_DELETION_ARTIFACT_TYPE,
+    build_pending_deletion_annotations,
+)
 from houba.domain.mirror_policy import MirrorPolicy, TransformStep
 from houba.domain.policy_merge import resolve_imports
 from houba.domain.reconcile import (
@@ -44,7 +49,7 @@ from houba.domain.transforms.registry import DEFAULT_REGISTRY
 from houba.domain.transforms.render import render, transform_version, validate_transform_steps
 from houba.errors import ConfigError, InternalError, exit_code_for
 from houba.ports.image_builder import BuildRequest, ImageBuilderPort
-from houba.ports.registry import ImageInfo, RegistryPort
+from houba.ports.registry import ImageInfo, Referrer, RegistryPort
 from houba.ports.reporter import Counts, ErrorInfo, OperationEvent, OperationKind, Reporter
 from houba.use_cases.report import (
     Operation,
@@ -224,6 +229,7 @@ def _counts_of(operations: list[Operation]) -> Counts:
         deleted=n("deleted"),
         aliased=n("aliased"),
         skipped=n("skipped"),
+        marked=n("marked"),
         failed=sum(1 for op in operations if op.error is not None),
     )
 
@@ -235,6 +241,7 @@ def _merge_counts(parts: list[Counts]) -> Counts:
         deleted=sum(c.deleted for c in parts),
         aliased=sum(c.aliased for c in parts),
         skipped=sum(c.skipped for c in parts),
+        marked=sum(c.marked for c in parts),
         failed=sum(c.failed for c in parts),
     )
 
@@ -250,6 +257,7 @@ def _apply_plan(
     now: datetime,
     dry_run_tags: bool,
     dry_run_deletions: bool,
+    deletion_mode: DeletionMode,
     reporter: Reporter,
     policy_name: str,
     executor: ThreadPoolExecutor | None,
@@ -271,8 +279,24 @@ def _apply_plan(
         if ma is not None:
             mirror[out_tag] = ma
 
+    marked_referrers: dict[str, list[Referrer]] = {}
+    for out_tag in mirror:
+        refs = registry.list_referrers(
+            f"{plan.dest_repo}:{out_tag}", PENDING_DELETION_ARTIFACT_TYPE
+        )
+        if refs:
+            marked_referrers[out_tag] = refs
+
     result = reconcile_import(
-        plan.expanded, source, mirror, now, transform_versions=transform_versions
+        plan.expanded,
+        source,
+        mirror,
+        now,
+        transform_versions=transform_versions,
+        marked=set(marked_referrers),
+    )
+    effective_mode = resolve_deletion_mode(
+        plan.policy.spec.deletion_mode, plan.config.deletion_mode, deletion_mode
     )
 
     def emit_applied(op: Operation, variant: str) -> None:
@@ -423,6 +447,44 @@ def _apply_plan(
             emit_failed(op, "", info)
             return op
 
+    def _do_mark(w: _DeleteWork) -> Operation:
+        try:
+            if not dry_run_deletions:
+                registry.put_referrer(
+                    f"{plan.dest_repo}:{w.out_tag}",
+                    PENDING_DELETION_ARTIFACT_TYPE,
+                    build_pending_deletion_annotations(
+                        prefix=label_prefix,
+                        marked_at=now,
+                        reason="dropped-from-selection",
+                        policy=plan.policy.metadata.name,
+                        import_name=plan.expanded.name,
+                    ),
+                )
+            op = Operation(
+                kind="marked",
+                out_tag=w.out_tag,
+                src_tag=None,
+                digest=None,
+                applied=not dry_run_deletions,
+            )
+            emit_applied(op, "")
+            return op
+        except Exception as exc:
+            info = ErrorInfo(
+                type=type(exc).__name__, message=str(exc), exit_code=exit_code_for(exc)
+            )
+            op = Operation(
+                kind="marked",
+                out_tag=w.out_tag,
+                src_tag=None,
+                digest=None,
+                applied=False,
+                error=info,
+            )
+            emit_failed(op, "", info)
+            return op
+
     # Stage 1: imports/updates, all variants flattened, input order preserved.
     import_items: list[_ImportWork] = []
     for vr, vplan in zip(result.variants, plan.expanded.variants, strict=True):
@@ -447,9 +509,24 @@ def _apply_plan(
             alias_items.append(_AliasWork(variant=vr.variant, alias=alias_name, target=target))
     alias_ops = _run_stage(alias_items, _do_alias, executor=executor)
 
-    # Barrier. Stage 3: deletions (target-level).
-    delete_items = [_DeleteWork(out_tag=t) for t in result.to_delete]
-    delete_ops = _run_stage(delete_items, _do_delete, executor=executor)
+    # Barrier. Stage 3: lifecycle (target-level) — purge OR mark.
+    if effective_mode == DeletionMode.mark:
+        mark_items = [_DeleteWork(out_tag=t) for t in result.to_delete if t not in marked_referrers]
+        lifecycle_ops = _run_stage(mark_items, _do_mark, executor=executor)
+    else:
+        delete_items = [_DeleteWork(out_tag=t) for t in result.to_delete]
+        lifecycle_ops = _run_stage(delete_items, _do_delete, executor=executor)
+
+    # Auto-unmark (mode-independent): tags that re-entered the desired set lose any
+    # stale houba pending-deletion mark — runs in purge mode too. Quiet cleanup (no
+    # event); best-effort so a transient failure doesn't fail the target (retried next run).
+    if not dry_run_deletions:
+        for out_tag in result.to_unmark:
+            for ref in marked_referrers.get(out_tag, []):
+                try:
+                    registry.delete_referrer(f"{plan.dest_repo}@{ref.digest}")
+                except Exception:  # noqa: S110 — best-effort cleanup, retried next run
+                    pass
 
     # Reassemble per-variant reports, preserving input order.
     imports_by_variant: dict[str, list[Operation]] = defaultdict(list)
@@ -486,13 +563,13 @@ def _apply_plan(
             )
         )
 
-    target_ops_all = [op for v in variant_reports for op in v.operations] + delete_ops
-    target_totals = _merge_counts([v.totals for v in variant_reports] + [_counts_of(delete_ops)])
+    target_ops_all = [op for v in variant_reports for op in v.operations] + lifecycle_ops
+    target_totals = _merge_counts([v.totals for v in variant_reports] + [_counts_of(lifecycle_ops)])
     return TargetReport(
         dest_repo=plan.dest_repo,
         status=_node_status(target_ops_all),
         variants=variant_reports,
-        operations=delete_ops,
+        operations=lifecycle_ops,
         totals=target_totals,
     )
 
@@ -511,6 +588,7 @@ def reconcile_policies(
     dry_run_tags: bool,
     dry_run_deletions: bool,
     reporter: Reporter,
+    deletion_mode: DeletionMode = DeletionMode.purge,
     work_dir: Path | None = None,
     max_concurrency: int = 1,
     shard_index: int = 0,
@@ -614,6 +692,7 @@ def reconcile_policies(
                             now=now,
                             dry_run_tags=dry_run_tags,
                             dry_run_deletions=dry_run_deletions,
+                            deletion_mode=deletion_mode,
                             reporter=reporter,
                             policy_name=policy.metadata.name,
                             executor=executor,

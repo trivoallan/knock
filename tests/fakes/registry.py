@@ -12,12 +12,14 @@ class FakeRegistryPort:
         tags: dict[str, list[str]] | None = None,
         infos: dict[str, ImageInfo] | None = None,
         fail_copy: set[str] | None = None,
+        fail_put: set[str] | None = None,
         copy_barrier: object | None = None,  # threading.Barrier; typed loosely to avoid an import
         referrers: dict[str, list[Referrer]] | None = None,
     ) -> None:
         self._tags = tags or {}
         self._infos = infos or {}
         self._fail_copy = fail_copy or set()
+        self._fail_put = fail_put or set()
         self._copy_barrier = copy_barrier
         self._referrers = referrers or {}
         self.copied: list[tuple[str, str]] = []
@@ -67,6 +69,8 @@ class FakeRegistryPort:
     def put_referrer(
         self, image_ref: str, artifact_type: str, annotations: dict[str, str]
     ) -> None:
+        if image_ref in self._fail_put:
+            raise RegctlError(f"fake put_referrer failure for {image_ref}")
         self.marked.append((image_ref, artifact_type, annotations))
 
     def delete_referrer(self, referrer_ref: str) -> None:
