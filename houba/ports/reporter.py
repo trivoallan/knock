@@ -22,6 +22,7 @@ class Counts:
     deleted: int = 0
     aliased: int = 0
     skipped: int = 0
+    failed: int = 0
 
 
 @dataclass(frozen=True)
