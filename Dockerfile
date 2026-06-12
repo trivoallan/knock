@@ -23,5 +23,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=build /src/dist/*.whl /tmp/
 RUN pip install --no-cache-dir /tmp/*.whl && rm /tmp/*.whl
 
+# houba's own deployment runs hardened (runAsNonRoot + readOnlyRootFilesystem).
+# Run as a NUMERIC non-root uid: kubelet can only satisfy runAsNonRoot from a
+# numeric image USER (a username string is rejected), and the manifests set no
+# runAsUser. HOME points at /tmp — the sole writable mount under a read-only
+# root fs — so regctl/buildctl can write their config there.
+ENV HOME=/tmp
+USER 65532:65532
+
 ENTRYPOINT ["houba"]
 CMD ["--help"]
