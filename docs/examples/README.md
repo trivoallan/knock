@@ -138,6 +138,25 @@ docker rm -f houba-demo-registry
   `setTimezone` and fan it into **`-eu` / `-us` variants** via the per-variant
   `suffix` (the first worked example of `variants`). Run it end-to-end in kind with
   `make demo-transform` — see the [`local-transform` overlay](../../deploy/overlays/local-transform).
+- **[`pending-deletion/pending-deletion.yml`](pending-deletion/pending-deletion.yml)** —
+  `deletionMode: mark`: when a tag drops out of the selection, houba attaches a
+  `pending-deletion` OCI referrer instead of deleting it. See
+  [Pending-deletion (delegated deletion)](#pending-deletion-delegated-deletion) below.
+
+### Pending-deletion (delegated deletion)
+
+`pending-deletion/pending-deletion.yml` sets `deletionMode: mark`. When a tag drops out of the
+selection, houba does **not** delete it — it attaches a `pending-deletion` OCI referrer
+(`application/vnd.houba.lifecycle.pending+json`, carrying `io.houba.lifecycle.marked-at` /
+`io.houba.lifecycle.reason` / `io.houba.lifecycle.state` and the policy/import identity).
+The digest is unchanged and the tag stays pullable. An external reaper lists these referrers,
+checks production usage, and purges. If the tag re-enters the selection on a later run, houba
+clears the mark. If `deletionMode` is later removed or changed to `purge`, the next reconcile
+hard-deletes any still-undesired tags (the stale marks become moot).
+
+Resolution is a cascade (most-specific wins): `deletionMode` on the policy wins, else the
+destination's `deletion_mode` (in `HOUBA_REGISTRIES`), else the global `HOUBA_DELETION_MODE`
+(default `purge`).
 
 ### Transform vocabulary
 
