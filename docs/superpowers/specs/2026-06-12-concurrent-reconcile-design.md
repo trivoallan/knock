@@ -1,7 +1,7 @@
 # Concurrent reconcile — execution model
 
 - **Date:** 2026-06-12
-- **Status:** approved (design), not yet implemented
+- **Status:** approved (design), not yet implemented. Amended 2026-06-12 for horizontal scale-out — see the [horizontal sharding spec](2026-06-12-horizontal-sharding-design.md).
 - **Scope:** `use_cases/reconcile.py` orchestration + report model; one adapter (`structlog_reporter`); one config var; one CLI flag.
 
 ## Context & motivation
@@ -14,8 +14,9 @@ plans/destinations, then variants, then tags. Every expensive operation is I/O �
 This work is **anticipatory**: there is no measured latency pain today. The goal is therefore
 **a clean, well-bounded concurrency model that respects the hexagonal architecture** — not the
 optimisation of a specific hotspot. We want the boundary placed correctly now, so that turning on
-parallelism is a local change and so that the next obvious step (parallelising across policies) layers
-on without re-architecture.
+parallelism is a local change. Scaling *across* policies is **not** an in-process concern: it is handled
+by horizontal sharding across pods (see the [horizontal sharding spec](2026-06-12-horizontal-sharding-design.md)),
+so per-pod execution stays single-policy-at-a-time by design.
 
 ## Goals
 
@@ -24,11 +25,13 @@ on without re-architecture.
 2. Keep `domain/` pure and the adapters untouched (except a lock in the reporter adapter).
 3. Collect partial failures instead of aborting a whole policy on the first failing tag.
 4. Make concurrency a bounded, configurable knob with a deterministic sequential fallback.
-5. Leave a clean seam for per-policy parallelism as a later, additive change.
+5. Stay compatible with horizontal scale-out: a pod threads *tags within a policy*; *policies* are scaled
+   across pods by sharding, not by in-process threads.
 
 ## Non-goals
 
-- Parallelising **across policies** (kept sequential — see *Future work*).
+- Parallelising **across policies** in-process (sequential per pod *by design* — policies scale across
+  pods via [sharding](2026-06-12-horizontal-sharding-design.md), not threads).
 - Parallelising **across plans/destinations** within a policy (kept sequential in v1).
 - Parallelising the **plan phase** reads (`inspect`/`list_tags`) — marginal payoff vs. build cost; out of scope.
 - Rewriting adapters to `asyncio` — rejected (see *Decisions*).
@@ -51,8 +54,8 @@ The subprocess/HTTP adapters (`skopeo`/`regctl`/`buildkit`) are unchanged. The o
 
 A single bounded `ThreadPoolExecutor` is created **once** in `reconcile_policies` and shared across the
 run. Policies and plans iterate sequentially around it; only the tag-level stages inside a single plan's
-apply fan out onto it. Because the pool already exists at run scope, per-policy parallelism later means
-"submit policies to the same pool" — not a re-architecture.
+apply fan out onto it. Scaling *policies* is done by running more pods (horizontal sharding), not by
+submitting policies to this pool — so this pool stays a per-pod, tag-level device.
 
 `max_concurrency == 1` ⇒ **no pool**: stages run as a direct `[fn(it) for it in items]` map, giving a
 deterministic sequential code path for debugging.
@@ -142,15 +145,19 @@ Model changes:
   auth/hosts config file (regctl/skopeo), which is **written only** during the serial login barrier and
   **read only** during apply. Safe *as long as no login runs during the fan-out* — guaranteed by
   policies-sequential + login-before-apply.
-- ⚠️ **This login-config file is exactly the state to guard the day we parallelise policies.** Recorded
-  here so the future change adds a lock (or per-registry login serialisation) deliberately, not by accident.
+- ⚠️ **The login-config file is per-process state.** Because policies are *not* parallelised in-process
+  (they scale across pods, each its own process with its own home/filesystem), there is no cross-instance
+  race on it — each pod logs in independently. This is precisely why horizontal scaling uses separate
+  processes (sharding), not a shared in-process pool over policies.
 - Reporter → guarded by its own lock (above).
 
 ## Determinism
 
 The streamed events interleave, but the final `RunReport` must be **deterministic regardless of thread
-completion order**: operations within each variant/target are sorted (e.g. by `out_tag`) before assembling
-the report, so the JSON stdout contract is stable.
+completion order**. This is achieved by **preserving input (selection) order**, not by sorting:
+`_run_stage` returns results in submission order (`[f.result() for f in futures]` joins in order), and the
+report is assembled in that order — so the JSON stdout contract is stable and unchanged vs. the sequential
+path.
 
 ## Testing strategy
 
@@ -179,8 +186,18 @@ Strict TDD per house rule: failing test → red → minimal impl → green → c
   (`HOUBA_MAX_CONCURRENCY` / `--concurrency`), not policy schema. If a CLI-usage doc lists flags, add
   `--concurrency/-j` there.
 
-## Future work (out of scope here, seam left in place)
+## Relationship to horizontal scale-out
 
-- **Per-policy parallelism:** submit policies to the same run-scoped pool. Requires guarding the
-  registry login-config file (see audit ⚠️) and deciding cross-policy failure aggregation. The pool
-  lifetime and report tree already accommodate it.
+This in-process threading is the **scale-up** axis (parallel *tags* within one pod). The **scale-out**
+axis (parallel *policies* across pods) is a separate design — see the
+[horizontal sharding spec](2026-06-12-horizontal-sharding-design.md). They compose: a sharded pod owns a
+subset of policies and threads the tags within each.
+
+- **buildkitd coupling.** The *build* path (`build_and_push`) terminates at `buildkitd`, deployed
+  `replicas: 1` today. In-pod build threading (and cross-pod sharding) only yields real build parallelism
+  once buildkitd scales (replicas + Service + registry cache — detailed in the sharding spec). So
+  `max_concurrency` is primarily a **copy-path** knob; the build-path ceiling is buildkitd capacity. Keep
+  the default modest (4).
+- **Idempotency.** `copy` (by digest), `annotate` (overwrite), and `alias` (overwrite) are idempotent, so a
+  re-run or an overlapping run converges without corruption. Deletes are authoritative-per-repo and safe
+  under single-owner sharding; the sharding spec carries the owning invariant.
