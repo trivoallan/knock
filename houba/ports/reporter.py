@@ -42,6 +42,8 @@ class OperationEvent:
     src_tag: str | None
     digest: str | None
     applied: bool
+    transform_steps: tuple[str, ...] | None = None  # applied step names (rebuild); None on a copy
+    out_digest: str | None = None  # produced (post-annotate) digest; None unless applied
 
 
 class Reporter(Protocol):

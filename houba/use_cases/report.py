@@ -24,9 +24,11 @@ class Operation(BaseModel):
     kind: OperationKind
     out_tag: str
     src_tag: str | None = None
-    digest: str | None = None
+    digest: str | None = None  # source/base digest (provenance), NOT the produced image
     applied: bool  # False => planned only (dry-run) or failed
     error: ErrorInfo | None = None  # set => this operation failed
+    transform_steps: list[str] | None = None  # applied step names (rebuild); None on a copy
+    out_digest: str | None = None  # produced (post-annotate) digest; None unless applied
 
 
 class VariantReport(BaseModel):

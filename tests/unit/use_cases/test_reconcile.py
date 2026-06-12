@@ -410,6 +410,41 @@ def test_transformed_variant_builds_then_stamps_lineage() -> None:
     assert ann["io.houba.transform.version"].startswith("sha256:")
 
 
+def test_report_op_on_rebuild_carries_transform_steps_and_out_digest() -> None:
+    src_repo = "docker.io/library/redis"
+    registry = FakeRegistryPort(
+        tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": []},
+        infos={
+            f"{src_repo}:7.2.5": ImageInfo(
+                digest="sha256:src", created=HARDENED_NOW, annotations={}
+            )
+        },
+    )
+    report = _run_hardened(registry, FakeImageBuilder())
+    [op] = report.policies[0].targets[0].variants[0].operations
+    assert op.kind == "imported"
+    # the applied transform steps make a rebuild distinguishable from a copy
+    assert op.transform_steps == ["injectCA", "rewritePackageSources"]
+    # the produced (post-annotate) digest, distinct from the source/base digest
+    assert op.out_digest is not None and op.out_digest.startswith("sha256:")
+    assert op.digest == "sha256:src"
+
+
+def test_report_op_on_copy_has_no_transform_steps_but_records_out_digest() -> None:
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": []},
+        infos={"docker.io/library/redis:7.2.0": _info("sha256:a")},
+    )
+    report = _run([POLICY], registry=fake)
+    imported = [
+        o for o in report.policies[0].targets[0].variants[0].operations if o.kind == "imported"
+    ]
+    assert imported
+    for o in imported:
+        assert o.transform_steps is None
+        assert o.out_digest is not None and o.out_digest.startswith("sha256:")
+
+
 def test_transformed_variant_skips_when_version_matches() -> None:
     src_repo = "docker.io/library/redis"
     steps = (

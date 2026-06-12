@@ -49,6 +49,51 @@ def test_structlog_reporter_renders_operation_failed() -> None:
     assert rec["exit_code"] == 2
 
 
+def test_structlog_reporter_surfaces_transform_steps_and_out_digest() -> None:
+    buf = io.StringIO()
+    configure(format_="json", level="INFO", stream=buf)
+    r = StructlogReporter()
+    # rebuild op: carries the applied steps + the produced (post-annotate) digest
+    r.operation_applied(
+        OperationEvent(
+            "debian-tz",
+            "reg/demo/debian",
+            "eu",
+            "imported",
+            "bookworm-slim-eu",
+            "bookworm-slim",
+            "sha256:src",
+            True,
+            transform_steps=("setTimezone",),
+            out_digest="sha256:out",
+        )
+    )
+    # copy/skip op: no transform, nothing produced → keys are omitted entirely
+    r.operation_applied(
+        OperationEvent(
+            "busybox",
+            "reg/demo/busybox",
+            "default",
+            "skipped",
+            "1.37",
+            "1.37",
+            "sha256:b",
+            False,
+        )
+    )
+
+    ops = [
+        json.loads(line)
+        for line in buf.getvalue().splitlines()
+        if line.strip() and json.loads(line)["event"] == "operation"
+    ]
+    rebuilt, copied = ops[0], ops[1]
+    assert rebuilt["transform_steps"] == ["setTimezone"]
+    assert rebuilt["out_digest"] == "sha256:out"
+    assert "transform_steps" not in copied
+    assert "out_digest" not in copied
+
+
 def test_structlog_reporter_text_mode_is_human_readable() -> None:
     buf = io.StringIO()
     configure(format_="text", level="INFO", stream=buf)

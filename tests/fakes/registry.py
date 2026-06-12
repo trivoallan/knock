@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+
 from houba.errors import RegctlError
 from houba.ports.registry import ImageInfo
 
@@ -41,8 +43,10 @@ class FakeRegistryPort:
             raise RegctlError(f"fake copy failure for {dst_ref}")
         self.copied.append((src_ref, dst_ref))
 
-    def annotate(self, image_ref: str, annotations: dict[str, str]) -> None:
+    def annotate(self, image_ref: str, annotations: dict[str, str]) -> str:
         self.annotated.append((image_ref, annotations))
+        # deterministic synthetic post-annotate digest (distinct per ref)
+        return f"sha256:{hashlib.sha256(image_ref.encode()).hexdigest()}"
 
     def delete_tag(self, image_ref: str) -> None:
         self.deleted.append(image_ref)

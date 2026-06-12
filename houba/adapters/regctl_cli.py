@@ -58,11 +58,13 @@ class RegctlAdapter:
     def copy(self, src_ref: str, dst_ref: str) -> None:
         self._run(["image", "copy", src_ref, dst_ref])
 
-    def annotate(self, image_ref: str, annotations: dict[str, str]) -> None:
+    def annotate(self, image_ref: str, annotations: dict[str, str]) -> str:
         args = ["image", "mod", image_ref, "--replace"]
         for key, value in annotations.items():
             args += ["--annotation", f"{key}={value}"]
         self._run(args)
+        # `image mod --replace` rewrites the tag; read back the resulting manifest digest.
+        return self._run(["image", "digest", image_ref]).strip()
 
     def delete_tag(self, image_ref: str) -> None:
         self._run(["tag", "rm", image_ref])

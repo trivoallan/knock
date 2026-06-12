@@ -82,7 +82,7 @@ def test_annotate_emits_one_flag_per_annotation(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     log = _log(tmp_path, monkeypatch)
-    RegctlAdapter().annotate(
+    result = RegctlAdapter().annotate(
         "harbor.corp/lib/redis:7.2.0",
         {"org.opencontainers.image.base.digest": "sha256:src", "io.houba.lineage": "copy"},
     )
@@ -90,6 +90,9 @@ def test_annotate_emits_one_flag_per_annotation(
     assert "image mod" in line
     assert "--annotation org.opencontainers.image.base.digest=sha256:src" in line
     assert "--annotation io.houba.lineage=copy" in line
+    # annotate returns the resulting (post-mod) manifest digest, read back via `image digest`
+    assert result == "sha256:abc123"
+    assert "image digest harbor.corp/lib/redis:7.2.0" in line
 
 
 def test_delete_tag_invokes_tag_rm(
