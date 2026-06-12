@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from houba.domain.deletion_mode import DeletionMode
 from houba.domain.mirror_policy import (
     Archive,
     ArtifactType,
@@ -319,3 +320,31 @@ def test_json_schema_is_stable_and_serializable() -> None:
 
     # must be JSON-serializable (publishable for editor/CI validation)
     json.dumps(mirror_policy_json_schema())
+
+
+_BASE = """
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/redis
+  {deletion_mode_line}
+  imports:
+    - name: stable
+      tags:
+        includeRegex: "^7\\\\."
+"""
+
+
+def test_deletion_mode_defaults_to_none() -> None:
+    policy = parse_mirror_policy(_BASE.format(deletion_mode_line=""))
+    assert policy.spec.deletion_mode is None
+
+
+def test_deletion_mode_parses_mark() -> None:
+    policy = parse_mirror_policy(_BASE.format(deletion_mode_line="deletionMode: mark"))
+    assert policy.spec.deletion_mode is DeletionMode.mark
