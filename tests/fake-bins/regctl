@@ -67,8 +67,17 @@ case "$cmd" in
         ;;
     "registry login"|"registry set")
         : ;;
-    "image copy"|"image mod"|"tag rm")
+    "image copy"|"image mod"|"tag rm"|"artifact put"|"manifest delete")
         : ;;
+    "artifact list")
+        case "$scenario" in
+            referrers-one)
+                printf '{"descriptors":[{"digest":"sha256:ref1","artifactType":"application/vnd.houba.lifecycle.pending+json","annotations":{}}]}\n' ;;
+            referrers-empty)
+                printf '{"descriptors":[]}\n' ;;
+            *) printf '{"descriptors":[]}\n' ;;
+        esac
+        ;;
     *)
         echo "fake-regctl: unknown command '$cmd'" >&2
         exit 99

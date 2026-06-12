@@ -196,3 +196,74 @@ def test_configure_registry_tls_enabled_no_cacert(
     text = log.read_text()
     assert "registry set harbor.corp --tls enabled" in text
     assert "--cacert" not in text
+
+
+def test_put_referrer_invokes_artifact_put_with_subject(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().put_referrer(
+        "harbor.corp/lib/redis:6.0.0",
+        "application/vnd.houba.lifecycle.pending+json",
+        {"io.houba.lifecycle.state": "pending-deletion"},
+    )
+    line = log.read_text()
+    assert "artifact put" in line
+    assert "--subject harbor.corp/lib/redis:6.0.0" in line
+    assert "--artifact-type application/vnd.houba.lifecycle.pending+json" in line
+    assert "--annotation io.houba.lifecycle.state=pending-deletion" in line
+
+
+def test_delete_referrer_invokes_manifest_delete(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().delete_referrer("harbor.corp/lib/redis@sha256:ref1")
+    assert "manifest delete harbor.corp/lib/redis@sha256:ref1" in log.read_text()
+
+
+def test_list_referrers_parses_descriptors(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "referrers-one")
+    got = RegctlAdapter().list_referrers(
+        "harbor.corp/lib/redis:6.0.0", "application/vnd.houba.lifecycle.pending+json"
+    )
+    assert len(got) == 1
+    assert got[0].digest == "sha256:ref1"
+    assert got[0].artifact_type == "application/vnd.houba.lifecycle.pending+json"
+    assert got[0].subject_tag == "harbor.corp/lib/redis:6.0.0"
+
+
+def test_list_referrers_empty_when_none(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "referrers-empty")
+    assert (
+        RegctlAdapter().list_referrers("harbor.corp/lib/redis:6.0.0", "application/vnd.houba.x")
+        == []
+    )
+
+
+def test_put_referrer_failure_raises_regctl_error(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "fail")
+    with pytest.raises(RegctlError):
+        RegctlAdapter().put_referrer("r:1", "application/vnd.houba.x", {})
+
+
+def test_delete_referrer_failure_raises_regctl_error(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "fail")
+    with pytest.raises(RegctlError):
+        RegctlAdapter().delete_referrer("harbor.corp/lib/redis@sha256:ref1")
+
+
+def test_list_referrers_failure_raises_regctl_error(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "fail")
+    with pytest.raises(RegctlError):
+        RegctlAdapter().list_referrers("harbor.corp/lib/redis:6.0.0", "application/vnd.houba.x")
