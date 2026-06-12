@@ -1,0 +1,34 @@
+# TRANSFORM demo — the rebuild (transform) path, runnable self-contained: buildkitd
+# + the same throwaway registry:2 as lite, but NO Harbor and NO org config.
+# Demonstrates setTimezone fanned into -europe / -us variants via the per-variant suffix.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: houba
+
+resources:
+  - ../../base
+  - registry.yaml
+  - secret-registries.yaml
+
+components:
+  - ../../components/buildkitd
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  # buildkitd config marking the in-cluster HTTP registry as plain-HTTP (mounted by the patch).
+  - name: buildkitd-config
+    files:
+      - buildkitd.toml
+  # Point the reconcile + blast-radius at the timezone example.
+  - name: houba-config
+    behavior: merge
+    literals:
+      - POLICY_DIR=/policies/current/docs/examples/timezone
+      - BLAST_REPOS=demo/debian
+
+patches:
+  - path: patch-suspend.yaml
+  - path: patch-buildkitd-insecure.yaml

@@ -1,0 +1,19 @@
+# Mount the overlay-local buildkitd.toml. buildkitd reads /etc/buildkit/buildkitd.toml
+# by default, so no --config arg is needed. Volume + volumeMount merge by `name`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buildkitd
+spec:
+  template:
+    spec:
+      containers:
+        - name: buildkitd
+          volumeMounts:
+            - name: buildkitd-config
+              mountPath: /etc/buildkit
+              readOnly: true
+      volumes:
+        - name: buildkitd-config
+          configMap:
+            name: buildkitd-config
