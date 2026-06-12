@@ -122,3 +122,23 @@ def test_reconcile_invalid_policy_raises(
     result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "--dry-run"])
     assert result.exit_code != 0
     assert isinstance(result.exception, PolicyValidationError)
+
+
+def test_reconcile_accepts_concurrency_flag(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    _env(monkeypatch)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "empty")
+    (tmp_path / "redis.yml").write_text(POLICY)
+    result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "--dry-run", "-j", "4"])
+    assert result.exit_code == 0, result.stdout
+    assert "status=ok" in result.stdout
+
+
+def test_reconcile_rejects_zero_concurrency(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    _env(monkeypatch)
+    (tmp_path / "redis.yml").write_text(POLICY)
+    result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "-j", "0"])
+    assert result.exit_code != 0  # Typer rejects below the min

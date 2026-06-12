@@ -24,6 +24,15 @@ def reconcile(
     verbose: Annotated[
         bool, typer.Option("--verbose", "-v", help="Unfold per-operation detail in text output.")
     ] = False,
+    concurrency: Annotated[
+        int | None,
+        typer.Option(
+            "--concurrency",
+            "-j",
+            min=1,
+            help="Max parallel tag operations (overrides HOUBA_MAX_CONCURRENCY; 1 = sequential).",
+        ),
+    ] = None,
 ) -> None:
     """Reconcile all MirrorPolicy files under DIRECTORY against their destinations."""
     container = build_container()
@@ -44,6 +53,9 @@ def reconcile(
         dry_run_deletions=dry_run or container.settings.dry_run_deletions,
         reporter=container.reporter,
         work_dir=container.settings.work_dir,
+        max_concurrency=(
+            concurrency if concurrency is not None else container.settings.max_concurrency
+        ),
     )
     render_report(report, fmt=container.settings.log_format, verbose=verbose, stream=sys.stdout)
     raise typer.Exit(report_exit_code(report))
