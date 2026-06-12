@@ -12,6 +12,10 @@ from houba.use_cases.report import Operation, RunReport
 
 def _op_line(op: Operation) -> str:
     src = f"  ⇐ {op.src_tag}" if op.src_tag else ""
+    if op.error is not None:
+        return (
+            f"        {op.kind:<9}{op.out_tag}{src}  FAILED: {op.error.type}: {op.error.message}\n"
+        )
     planned = "" if op.applied else "  (planned)"
     return f"        {op.kind:<9}{op.out_tag}{src}{planned}\n"
 
@@ -23,13 +27,15 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
 
     for p in report.policies:
         if p.status == "failed":
-            assert p.error is not None  # status=failed always carries an error
+            assert p.error is not None  # status=failed always carries a policy-level error
             stream.write(f"✗ {p.name}  FAILED: {p.error.type}: {p.error.message}\n")
         else:
             t = p.totals
+            mark = "✓" if p.status == "ok" else "≈"
+            label = "" if p.status == "ok" else "  PARTIAL"
             stream.write(
-                f"✓ {p.name}  imported={t.imported} updated={t.updated} "
-                f"deleted={t.deleted} aliased={t.aliased} skipped={t.skipped}\n"
+                f"{mark} {p.name}{label}  imported={t.imported} updated={t.updated} "
+                f"deleted={t.deleted} aliased={t.aliased} skipped={t.skipped} failed={t.failed}\n"
             )
         if verbose:
             for tgt in p.targets:
@@ -41,9 +47,10 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
                     stream.write(_op_line(op))
 
     t = report.totals
-    failed = sum(1 for p in report.policies if p.status == "failed")
+    failed_policies = sum(1 for p in report.policies if p.status == "failed")
     stream.write(
         f"reconcile [{report.mode}] status={report.status}  "
         f"imported={t.imported} updated={t.updated} deleted={t.deleted} "
-        f"aliased={t.aliased} skipped={t.skipped} failed_policies={failed}\n"
+        f"aliased={t.aliased} skipped={t.skipped} failed={t.failed} "
+        f"failed_policies={failed_policies}\n"
     )
