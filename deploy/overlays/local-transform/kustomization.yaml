@@ -32,3 +32,17 @@ configMapGenerator:
 patches:
   - path: patch-suspend.yaml
   - path: patch-buildkitd-insecure.yaml
+  # The rootless buildkit image does NOT auto-load /etc/buildkit/buildkitd.toml (its
+  # advertised default): without this, the daemon keeps talking HTTPS and the push to the
+  # plain-HTTP registry fails ("server gave HTTP response to HTTPS client"). Point it at
+  # the mounted config explicitly by appending --config to the component's args.
+  - target:
+      kind: Deployment
+      name: buildkitd
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --config
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: /etc/buildkit/buildkitd.toml

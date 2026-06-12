@@ -1,5 +1,6 @@
-# Mount the overlay-local buildkitd.toml. buildkitd reads /etc/buildkit/buildkitd.toml
-# by default, so no --config arg is needed. Volume + volumeMount merge by `name`.
+# Mount the overlay-local buildkitd.toml at /etc/buildkit. The daemon is then pointed
+# at it via --config (appended to args in kustomization.yaml) — the rootless buildkit
+# image does NOT auto-load the default config path. Volume + volumeMount merge by `name`.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

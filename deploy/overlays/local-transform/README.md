@@ -29,9 +29,12 @@ make demo-transform   # build image → up stack → one rebuild reconcile → b
 
 The rebuilt images are **pushed by buildkit** to the throwaway `registry:2`, which serves
 plain HTTP. buildkitd defaults to HTTPS, so [`buildkitd.toml`](buildkitd.toml) marks that one
-registry `http = true` and [`patch-buildkitd-insecure.yaml`](patch-buildkitd-insecure.yaml)
-mounts it at `/etc/buildkit` (buildkitd reads it by default). This lives **here**, in the
-overlay — the shared [`components/buildkitd`](../../components/buildkitd) primitive stays generic.
+registry `http = true`, [`patch-buildkitd-insecure.yaml`](patch-buildkitd-insecure.yaml) mounts
+it at `/etc/buildkit`, and the kustomization appends `--config /etc/buildkit/buildkitd.toml` to
+the daemon's args — the **rootless** buildkit image does *not* auto-load that path, so without the
+explicit `--config` the push fails with `server gave HTTP response to HTTPS client`. All of this
+lives **here**, in the overlay — the shared [`components/buildkitd`](../../components/buildkitd)
+primitive stays generic.
 
 ## Running before merge
 

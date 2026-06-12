@@ -106,7 +106,7 @@ The buildkit adapter emits `--output=type=image,name=…,push=true` with **no** 
   http = true
 ```
 
-Delivered as a `configMapGenerator` (`buildkitd-config`) and mounted by `patch-buildkitd-insecure.yaml` at `/etc/buildkit` — buildkitd reads `/etc/buildkit/buildkitd.toml` **by default**, so no `--config` arg and no change to the container's `args` are required. The patch is a strategic merge that appends a volume and a volumeMount (both keyed by `name`), and kustomize's name-reference transformer rewrites the volume's `configMap.name` to the hashed generator name:
+Delivered as a `configMapGenerator` (`buildkitd-config`) and mounted by `patch-buildkitd-insecure.yaml` at `/etc/buildkit`. **The rootless buildkit image does NOT auto-load `/etc/buildkit/buildkitd.toml`** (despite that being the advertised default — its entrypoint is `rootlesskit buildkitd`, and the default path is not honored): the daemon must be pointed at the file explicitly with `--config /etc/buildkit/buildkitd.toml`, appended to the component's `args` via a JSON6902 patch. Without it the daemon keeps talking HTTPS and the push fails with `server gave HTTP response to HTTPS client`. The mount itself is a strategic-merge patch that appends a volume and a volumeMount (both keyed by `name`):
 
 ```yaml
 # patch-buildkitd-insecure.yaml
