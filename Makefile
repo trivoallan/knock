@@ -10,9 +10,13 @@ NS      ?= houba
 # it, so we render then apply.
 KUSTOMIZE = kubectl kustomize --load-restrictor LoadRestrictionsNone
 KUBECTL   = kubectl
+# Overlay used by `blast-radius` (overridden by demo-transform). Default keeps demo-lite as-is.
+OVERLAY  ?= deploy/overlays/local-lite
 
 .PHONY: help cluster image up-lite demo-lite demo-lite-run \
-        up-full demo-full demo-full-run blast-radius logs down
+        up-full demo-full demo-full-run \
+        up-transform demo-transform demo-transform-run \
+        blast-radius logs down
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -47,10 +51,24 @@ demo-full-run: ## Fire a one-shot hardening reconcile
 	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=600s
 
+# ---- TRANSFORM (rebuild path, no Harbor) ----------------------------------
+up-transform: cluster image ## Bring up the transform stack (buildkitd, throwaway registry, no Harbor)
+	$(KUSTOMIZE) deploy/overlays/local-transform | $(KUBECTL) apply -f -
+	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
+
+demo-transform: up-transform demo-transform-run ## Transform stack + one rebuild reconcile + report
+	@sleep 3
+	$(MAKE) blast-radius OVERLAY=deploy/overlays/local-transform
+
+demo-transform-run: ## Fire a one-shot rebuild reconcile (setTimezone variants)
+	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
+	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=600s
+
 # ---- consumer / ops ------------------------------------------------------
 blast-radius: ## (Re)run the blast-radius consumer and print its report
 	-$(KUBECTL) -n $(NS) delete job houba-blast-radius --ignore-not-found
-	$(KUSTOMIZE) deploy/overlays/local-lite | $(KUBECTL) apply -f - >/dev/null
+	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-blast-radius --timeout=120s
 	$(KUBECTL) -n $(NS) logs job/houba-blast-radius
 
