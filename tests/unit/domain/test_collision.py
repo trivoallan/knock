@@ -49,7 +49,7 @@ def test_dest_repo_collision_raises_when_two_policies_share_a_repo() -> None:
         ("harbor.corp/lib/redis", "redis"),
         ("harbor.corp/lib/redis", "redis-clone"),  # same repo, different policy
     ]
-    with pytest.raises(PolicyValidationError, match="harbor.corp/lib/redis"):
+    with pytest.raises(PolicyValidationError, match=r"harbor\.corp/lib/redis"):
         detect_dest_repo_collisions(owners)
 
 

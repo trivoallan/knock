@@ -716,7 +716,7 @@ spec:
         tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": []},
         infos={"docker.io/library/redis:7.2.0": _info("sha256:a")},
     )
-    with pytest.raises(PolicyValidationError, match="harbor.corp/lib/redis"):
+    with pytest.raises(PolicyValidationError, match=r"harbor\.corp/lib/redis"):
         _run([POLICY, clash], registry=fake)  # both → harbor.corp/lib/redis
     assert fake.copied == []  # invariant ran before any mutation
 
