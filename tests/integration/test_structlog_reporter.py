@@ -32,6 +32,23 @@ def test_structlog_reporter_emits_json_events() -> None:
     assert fail["exit_code"] == 2
 
 
+def test_structlog_reporter_renders_operation_failed() -> None:
+    buf = io.StringIO()
+    configure(format_="json", level="INFO", stream=buf)
+    r = StructlogReporter()
+    r.operation_failed(
+        OperationEvent(
+            "redis", "harbor/lib/redis", "v7", "imported", "7.3.0", "7.3.0", "sha256:b", False
+        ),
+        ErrorInfo("RegctlError", "boom", 2),
+    )
+    lines = [json.loads(line) for line in buf.getvalue().splitlines() if line.strip()]
+    rec = next(line for line in lines if line["event"] == "operation.failed")
+    assert rec["out_tag"] == "7.3.0"
+    assert rec["error_type"] == "RegctlError"
+    assert rec["exit_code"] == 2
+
+
 def test_structlog_reporter_text_mode_is_human_readable() -> None:
     buf = io.StringIO()
     configure(format_="text", level="INFO", stream=buf)
