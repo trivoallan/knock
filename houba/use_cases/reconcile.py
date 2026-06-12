@@ -24,7 +24,11 @@ from houba.config import (
     resolve_mirror,
     resolve_registry,
 )
-from houba.domain.collision import AliasTarget, detect_alias_collisions
+from houba.domain.collision import (
+    AliasTarget,
+    detect_alias_collisions,
+    detect_dest_repo_collisions,
+)
 from houba.domain.expand import ExpandedImport, VariantPlan, expand_import
 from houba.domain.mirror_policy import MirrorPolicy, TransformStep
 from houba.domain.policy_merge import resolve_imports
@@ -33,6 +37,7 @@ from houba.domain.reconcile import (
     SourceArtifact,
     reconcile_import,
 )
+from houba.domain.sharding import owns
 from houba.domain.stamp import build_stamp_annotations
 from houba.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
 from houba.domain.transforms.registry import DEFAULT_REGISTRY
@@ -157,6 +162,17 @@ class _Plan:
 def _source_repo(policy: MirrorPolicy) -> str:
     s = policy.spec.source
     return f"{s.registry}/{s.repository}"
+
+
+def _resolved_dest_repos(policy: MirrorPolicy, roster: dict[str, RegistryConfig]) -> list[str]:
+    """Every destination repo a policy writes to, resolved against the roster.
+    Pure: uses resolve_imports + resolve_registry only (no expand, no registry calls)."""
+    repos: list[str] = []
+    for resolved in resolve_imports(policy.spec):
+        for dest in resolved.destinations or []:
+            _name, cfg = resolve_registry(dest.registry, roster)
+            repos.append(f"{cfg.host}/{dest.project}/{dest.repository}")
+    return repos
 
 
 def _run_stage[T](
@@ -490,8 +506,25 @@ def reconcile_policies(
     reporter: Reporter,
     work_dir: Path | None = None,
     max_concurrency: int = 1,
+    shard_index: int = 0,
+    shard_count: int = 1,
 ) -> RunReport:
     mode: RunMode = "dry-run" if (dry_run_tags or dry_run_deletions) else "apply"
+
+    # --- Ownership invariant over ALL policies (pure, no I/O), then shard filter. ---
+    # Every pod sees the full policy set (git-synced) and enforces one-owner-per-repo
+    # identically; it then applies only the policies it owns. shard_count == 1 ⇒ all.
+    owners = [
+        (repo, policy.metadata.name)
+        for policy in policies
+        for repo in _resolved_dest_repos(policy, roster)
+    ]
+    detect_dest_repo_collisions(owners)
+    policies = [
+        p
+        for p in policies
+        if owns(p.metadata.name, shard_index=shard_index, shard_count=shard_count)
+    ]
 
     # --- Plan phase (fail-fast): expand, resolve destinations + transforms, collision-check.
     # Transform resolution (unknown cert/mirror names, unreadable cert files) surfaces all

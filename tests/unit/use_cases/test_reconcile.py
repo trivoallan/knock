@@ -81,6 +81,8 @@ def _run(policies, **kw):  # type: ignore[no-untyped-def]
         dry_run_deletions=kw.pop("dry_run_deletions", False),
         reporter=kw.pop("reporter", FakeReporter()),
         max_concurrency=kw.pop("max_concurrency", 1),
+        shard_index=kw.pop("shard_index", 0),
+        shard_count=kw.pop("shard_count", 1),
     )
     return reconcile_policies(policies, **defaults)
 
@@ -646,3 +648,79 @@ def test_reconcile_sequential_and_concurrent_agree() -> None:
     seq = _run([CONCURRENCY_POLICY], registry=_three_tag_registry(), max_concurrency=1)
     par = _run([CONCURRENCY_POLICY], registry=_three_tag_registry(), max_concurrency=3)
     assert seq.model_dump() == par.model_dump()
+
+
+SECOND_POLICY = parse_mirror_policy("""
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata: { name: nginx }
+spec:
+  artifactType: image
+  source: { registry: docker.io, repository: library/nginx }
+  imports:
+    - name: v1
+      tags: { includeRegex: "^1\\\\." }
+      destinations: [{ project: lib, repository: nginx }]
+""")
+
+
+def _two_policy_registry() -> FakeRegistryPort:
+    return FakeRegistryPort(
+        tags={
+            "docker.io/library/redis": ["7.2.0"],
+            "docker.io/library/nginx": ["1.25.0"],
+            "harbor.corp/lib/redis": [],
+            "harbor.corp/lib/nginx": [],
+        },
+        infos={
+            "docker.io/library/redis:7.2.0": _info("sha256:a"),
+            "docker.io/library/nginx:1.25.0": _info("sha256:b"),
+        },
+    )
+
+
+def test_shard_filter_applies_only_owned_policies() -> None:
+    from houba.domain.sharding import owns
+
+    policies = [POLICY, SECOND_POLICY]
+    owned0 = {
+        p.metadata.name for p in policies if owns(p.metadata.name, shard_index=0, shard_count=2)
+    }
+    report = _run(policies, registry=_two_policy_registry(), shard_index=0, shard_count=2)
+    assert {p.name for p in report.policies} == owned0
+
+
+def test_shards_partition_the_policy_set() -> None:
+    policies = [POLICY, SECOND_POLICY]
+    r0 = _run(policies, registry=_two_policy_registry(), shard_index=0, shard_count=2)
+    r1 = _run(policies, registry=_two_policy_registry(), shard_index=1, shard_count=2)
+    seen = {p.name for p in r0.policies} | {p.name for p in r1.policies}
+    assert seen == {"redis", "nginx"}
+    assert not ({p.name for p in r0.policies} & {p.name for p in r1.policies})
+
+
+def test_dest_repo_collision_fails_before_any_mutation() -> None:
+    clash = parse_mirror_policy("""
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata: { name: redis-clone }
+spec:
+  artifactType: image
+  source: { registry: docker.io, repository: library/redis }
+  imports:
+    - name: v7
+      tags: { includeRegex: "^7\\\\." }
+      destinations: [{ project: lib, repository: redis }]
+""")
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": []},
+        infos={"docker.io/library/redis:7.2.0": _info("sha256:a")},
+    )
+    with pytest.raises(PolicyValidationError, match="harbor.corp/lib/redis"):
+        _run([POLICY, clash], registry=fake)  # both → harbor.corp/lib/redis
+    assert fake.copied == []  # invariant ran before any mutation
+
+
+def test_shard_count_one_processes_all() -> None:
+    report = _run([POLICY, SECOND_POLICY], registry=_two_policy_registry())
+    assert {p.name for p in report.policies} == {"redis", "nginx"}
