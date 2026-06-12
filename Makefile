@@ -16,7 +16,7 @@ OVERLAY  ?= deploy/overlays/local-lite
 .PHONY: help cluster image up-lite demo-lite demo-lite-run \
         up-full demo-full demo-full-run \
         up-transform demo-transform demo-transform-run \
-        blast-radius logs down
+        blast-radius docker-auth logs down
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -71,6 +71,14 @@ blast-radius: ## (Re)run the blast-radius consumer and print its report
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-blast-radius --timeout=120s
 	$(KUBECTL) -n $(NS) logs job/houba-blast-radius
+
+docker-auth: ## Seed source-registry creds (set DOCKER_USER + DOCKER_PASS) so pulls authenticate (avoids rate limits)
+	@test -n "$$DOCKER_USER" && test -n "$$DOCKER_PASS" || \
+	  { echo "ERROR: set DOCKER_USER and DOCKER_PASS (a Docker Hub username + access token)"; exit 1; }
+	@printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}' \
+	  "$$(printf '%s:%s' "$$DOCKER_USER" "$$DOCKER_PASS" | base64 | tr -d '\n')" \
+	  | $(KUBECTL) -n $(NS) create secret generic houba-docker-config \
+	      --from-file=config.json=/dev/stdin --dry-run=client -o yaml | $(KUBECTL) apply -f -
 
 logs: ## Tail the last reconcile run's logs
 	$(KUBECTL) -n $(NS) logs job/houba-reconcile-run -f

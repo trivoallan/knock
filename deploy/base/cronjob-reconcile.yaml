@@ -50,6 +50,15 @@ spec:
               image: houba # rewritten by the kustomize images transformer
               command: ["/bin/sh", "-c"]
               args: ['exec houba reconcile "$POLICY_DIR"']
+              env:
+                # Source-registry auth (opt-in). DOCKER_CONFIG is read by BOTH regctl
+                # (copy path) and buildctl (rebuild path); REGCTL_CONFIG keeps regctl's
+                # own destination logins on the writable /tmp mount, off the read-only
+                # Docker config. Seed the secret with `make docker-auth` to authenticate.
+                - name: DOCKER_CONFIG
+                  value: /docker-config
+                - name: REGCTL_CONFIG
+                  value: /tmp/.regctl/config.json
               envFrom:
                 - configMapRef:
                     name: houba-config
@@ -73,8 +82,19 @@ spec:
                   readOnly: true
                 - name: work
                   mountPath: /tmp
+                - name: docker-config
+                  mountPath: /docker-config
+                  readOnly: true
           volumes:
             - name: policies
               emptyDir: {}
             - name: work
               emptyDir: {}
+            # Opt-in source-registry auth: absent secret ⇒ empty mount ⇒ anonymous pulls.
+            - name: docker-config
+              secret:
+                secretName: houba-docker-config
+                optional: true
+                items:
+                  - key: config.json
+                    path: config.json
