@@ -33,6 +33,18 @@ layering, ports, or adapters change.
 The prose companion to this model — the problem framing, the hexagon, the policy schema, the
 reconcile loop, the provenance stamp — lives in [`design.md`](design.md).
 
+## Documentation & decisions
+
+The workspace also embeds two documentation panes (attached to the `houba` software system, so
+they render in the interactive viewer):
+
+- **Documentation** — [`design.md`](design.md), via `!docs`.
+- **Decisions** — the design specs as ADRs. [`decisions/`](decisions/) holds one **thin ADR per
+  spec** (status + date + the decision, with a `## Status` link graph), each linking to the full
+  spec under [`docs/superpowers/specs/`](../superpowers/specs/). They use sequential `NNNN-*.md`
+  filenames (adr-tools format) because the importer derives each decision's ID from the leading
+  number — the dated spec filenames would otherwise all collide on `2026`.
+
 ## Render it
 
 ### Interactive viewer (Structurizr)
@@ -53,13 +65,15 @@ Use the consolidated `structurizr/structurizr` image. (The older `structurizr/cl
 deprecated and no longer functional — its entrypoint only prints a migration banner.)
 
 Validate the DSL and run the model inspections — a good CI gate for the maintenance contract
-below:
+below. Gate on `error,warning`; the one known false-positive (`model.element.noview` on houba,
+which is only ever a view *subject*/boundary, never a plain element) is downgraded to `ignore` in
+`workspace.dsl`, so the gate exits cleanly:
 
 ```sh
 docker run --rm -v "$(git rev-parse --show-toplevel)/docs/architecture:/work" \
   structurizr/structurizr validate -workspace /work/workspace.dsl
 docker run --rm -v "$(git rev-parse --show-toplevel)/docs/architecture:/work" \
-  structurizr/structurizr inspect -workspace /work/workspace.dsl
+  structurizr/structurizr inspect -workspace /work/workspace.dsl -s error,warning
 ```
 
 Export both views as committable Mermaid (renders natively on GitHub) or PlantUML:
@@ -78,6 +92,10 @@ Whenever a spec adds or changes an **actor**, an **external system**, or an **in
 anything visible at context or landscape level — update `workspace.dsl` **in the same change as
 the spec**. A spec under `docs/superpowers/specs/` that shifts the architecture is not complete
 until the C4 model reflects it. The model must never drift from the specs.
+
+Likewise, a **new spec** gets a thin ADR in [`decisions/`](decisions/) (next `NNNN-`, status +
+date + the decision, linking to the full spec) in the same change — so the Decisions pane stays
+complete.
 
 The **Container**, **Hexagon**, and **Component** views track the *code* rather than the specs:
 when houba grows a new port/adapter pair, a new domain concern, or a changed layer boundary, update

@@ -1,11 +1,26 @@
 workspace "houba" "Single front door / stamper for external container images." {
 
+    # houba is the subject of the Context / Container / Component / Deployment views — always
+    # drawn as the boundary, never as a plain element — so the "element not on any view"
+    # inspection false-positives on it (it does render as a box in the Landscape view).
+    # Downgrade just that one inspection; every other inspection stays a hard CI gate.
+    properties {
+        "structurizr.inspection.model.element.noview" "ignore"
+    }
+
     model {
         platformEng = person "Platform / Security Engineer" "Owns the hardening policy and the registry roster; operates houba as the single front door for external images."
         productTeam = person "Product / Application Team" "Declares its imports as MirrorPolicy files and consumes the hardened, stamped images."
         incidentResponder = person "Incident Responder (SRE / Security)" "At CVE time, computes the blast-radius from houba's provenance stamp."
 
         houba = softwareSystem "houba" "Single front door / stamper: mirrors external container images, optionally rebuilds them through a hardening policy, and stamps them with standardized, portable provenance." "Target" {
+            # Documentation + decisions attached to houba (rendered in the viewer's panes):
+            #   !docs → the design overview (docs/architecture/design.md).
+            #   !adrs → the design specs as ADRs (docs/architecture/decisions/), linking out
+            #           to the full specs under docs/superpowers/specs/.
+            !docs design.md
+            !adrs decisions
+
             houbaCli = container "houba CLI" "Reconcile engine: loads MirrorPolicy files, mirrors or rebuilds images and stamps them with provenance. Runs as a CLI / Job; the runtime image bundles regctl + buildctl." "Python · Typer" {
 
                 group "CLI" {
@@ -72,31 +87,31 @@ workspace "houba" "Single front door / stamper for external container images." {
         platformEng -> cliReconcile "Configures policy + roster, runs / schedules reconcile" "CLI"
         productTeam -> ucLoader "Provides MirrorPolicy files" "YAML"
 
-        cliMain -> cliReconcile "Registers the command"
-        cliReconcile -> cliDi "Builds the composition root"
-        cliReconcile -> ucLoader "Loads policies"
-        cliReconcile -> ucReconcile "Runs reconciliation"
-        cliReconcile -> cliRender "Renders the report"
-        cliReconcile -> portClock "Reads now()"
-        cliDi -> config "Reads HOUBA_* settings"
-        cliDi -> adRegctl "Wires"
-        cliDi -> adBuildkit "Wires"
-        cliDi -> adReporter "Wires"
-        cliDi -> adClock "Wires"
+        cliMain -> cliReconcile "Registers the command" "Typer"
+        cliReconcile -> cliDi "Builds the composition root" "Python"
+        cliReconcile -> ucLoader "Loads policies" "Python"
+        cliReconcile -> ucReconcile "Runs reconciliation" "Python"
+        cliReconcile -> cliRender "Renders the report" "Python"
+        cliReconcile -> portClock "Reads now()" "Protocol"
+        cliDi -> config "Reads HOUBA_* settings" "Pydantic Settings"
+        cliDi -> adRegctl "Wires" "DI"
+        cliDi -> adBuildkit "Wires" "DI"
+        cliDi -> adReporter "Wires" "DI"
+        cliDi -> adClock "Wires" "DI"
 
-        ucLoader -> domSchema "Parses MirrorPolicy"
-        ucReconcile -> ucReport "Builds the RunReport"
-        ucReconcile -> domPlanning "Computes the import / update / delete plan"
-        ucReconcile -> domTransform "Renders & versions transforms"
-        ucReconcile -> domStamp "Builds provenance annotations"
-        ucReconcile -> portRegistry "Uses"
-        ucReconcile -> portBuilder "Uses"
-        ucReconcile -> portReporter "Uses"
+        ucLoader -> domSchema "Parses MirrorPolicy" "Pydantic"
+        ucReconcile -> ucReport "Builds the RunReport" "Python"
+        ucReconcile -> domPlanning "Computes the import / update / delete plan" "Python"
+        ucReconcile -> domTransform "Renders & versions transforms" "Python"
+        ucReconcile -> domStamp "Builds provenance annotations" "Python"
+        ucReconcile -> portRegistry "Uses" "Protocol"
+        ucReconcile -> portBuilder "Uses" "Protocol"
+        ucReconcile -> portReporter "Uses" "Protocol"
 
-        adRegctl -> portRegistry "Implements"
-        adBuildkit -> portBuilder "Implements"
-        adReporter -> portReporter "Implements"
-        adClock -> portClock "Implements"
+        adRegctl -> portRegistry "Implements" "Protocol"
+        adBuildkit -> portBuilder "Implements" "Protocol"
+        adReporter -> portReporter "Implements" "Protocol"
+        adClock -> portClock "Implements" "Protocol"
 
         adRegctl -> sourceRegistries "Lists tags, inspects digests, copies images" "regctl"
         adRegctl -> destRegistries "Reads mirror state; copies, stamps, retags, deletes" "regctl (dist-spec)"
@@ -105,12 +120,12 @@ workspace "houba" "Single front door / stamper for external container images." {
         # Coarse hexagon relationships — rendered only in the synthetic "Hexagon" view.
         platformEng -> layCli "Runs / schedules reconcile" "CLI"
         productTeam -> layCli "Provides MirrorPolicy files" "YAML"
-        layCli -> layUc "Invokes use cases"
-        layCli -> config "Reads settings"
-        layCli -> layAdapters "Wires (composition root)"
-        layUc -> layDomain "Orchestrates pure logic"
-        layUc -> layPorts "Depends on"
-        layAdapters -> layPorts "Implement"
+        layCli -> layUc "Invokes use cases" "Python"
+        layCli -> config "Reads settings" "Pydantic Settings"
+        layCli -> layAdapters "Wires (composition root)" "DI"
+        layUc -> layDomain "Orchestrates pure logic" "Python"
+        layUc -> layPorts "Depends on" "Protocol"
+        layAdapters -> layPorts "Implement" "Protocol"
         layAdapters -> sourceRegistries "Lists, inspects, copies images" "regctl"
         layAdapters -> destRegistries "Copies, stamps, retags, deletes" "regctl"
         layAdapters -> buildkit "Submits the hardening rebuild" "buildctl"
@@ -118,11 +133,11 @@ workspace "houba" "Single front door / stamper for external container images." {
         # Reference deployment — kind-based, doubles as the production blueprint.
         # See docs/superpowers/specs/2026-06-11-reference-deployment-design.md.
         reference = deploymentEnvironment "Reference (kind)" {
-            deploymentNode "Operator host (laptop / CI runner)" "Runs kind; hosts the policy repo clone" {
+            deploymentNode "Operator host (laptop / CI runner)" "Runs kind; hosts the policy repo clone" "Host (macOS / Linux)" {
                 policyRepo = infrastructureNode "Policy GitOps repo" "MirrorPolicy YAML; a merged PR is the front door" "git"
 
                 deploymentNode "kind cluster" "Kubernetes, single node" "kind" {
-                    deploymentNode "namespace: houba" "" "Kubernetes Namespace" {
+                    deploymentNode "namespace: houba" "houba's workloads: reconcile CronJob, buildkitd, blast-radius Job" "Kubernetes Namespace" {
                         deploymentNode "CronJob: houba-reconcile" "Hourly in prod; one-shot Job in demo" "Kubernetes CronJob" {
                             houbaInstance = softwareSystemInstance houba
                             gitSync = infrastructureNode "git-sync sidecar" "Syncs the policy repo into /policies" "git-sync"
@@ -138,7 +153,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                 }
             }
 
-            deploymentNode "Internet / org network" "External to the cluster" {
+            deploymentNode "Internet / org network" "External to the cluster" "Network" {
                 srcInstance = softwareSystemInstance sourceRegistries
                 pkgInstance = softwareSystemInstance packageMirror
             }
