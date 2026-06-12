@@ -434,6 +434,9 @@ def reconcile_policies(
             for plan in policy_plans:
                 cfg = plan.config
                 if cfg.host not in logged_in:
+                    registry.configure_registry(
+                        cfg.host, tls_verify=cfg.tls_verify, ca_cert=cfg.ca_cert
+                    )
                     if cfg.username is not None and cfg.password is not None:
                         registry.login(
                             cfg.host,

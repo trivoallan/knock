@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from houba.config import CACertSource, PackageMirror, RegistryConfig
-from houba.domain.mirror_policy import parse_mirror_policy
+from houba.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
 from houba.domain.transforms.base import ResolvedResource, ResolvedStep
 from houba.domain.transforms.render import transform_version
 from houba.errors import ConfigError, PolicyValidationError, RegctlError
@@ -494,3 +494,52 @@ def test_missing_cert_file_raises_config_error_before_mutation() -> None:
     with pytest.raises(ConfigError, match="cannot read CA cert file"):
         _run_hardened(registry, builder, ca_certs={"corp": CACertSource(path="/no/such/cert.pem")})
     assert registry.copied == [] and registry.deleted == [] and builder.requests == []
+
+
+def _copy_policy() -> MirrorPolicy:
+    return parse_mirror_policy(
+        """
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: busybox-copy
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/busybox
+  imports:
+    - name: stable
+      tags:
+        includeRegex: "^1\\\\.36\\\\.0$"
+      destinations:
+        - project: demo
+          repository: busybox
+"""
+    )
+
+
+def test_configure_registry_called_once_per_host_before_copy() -> None:
+    src_repo = "docker.io/library/busybox"
+    registry = FakeRegistryPort(
+        tags={src_repo: ["1.36.0"], "reg.local/demo/busybox": []},
+        infos={
+            f"{src_repo}:1.36.0": ImageInfo(digest="sha256:s", created=HARDENED_NOW, annotations={})
+        },
+    )
+    builder = FakeImageBuilder()
+    reconcile_policies(
+        [_copy_policy()],
+        registry=registry,
+        builder=builder,
+        roster={"local": RegistryConfig(host="reg.local", tls_verify=False, ca_cert="/ca.pem")},
+        ca_certs={},
+        package_mirrors={},
+        build_platform="linux/amd64",
+        now=HARDENED_NOW,
+        label_prefix="io.houba",
+        dry_run_tags=False,
+        dry_run_deletions=False,
+        reporter=FakeReporter(),
+    )
+    assert registry.configured == [("reg.local", False, "/ca.pem")]

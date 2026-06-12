@@ -15,6 +15,10 @@ class FakeRegistryPort:
         self.annotated: list[tuple[str, dict[str, str]]] = []
         self.deleted: list[str] = []
         self.logins: list[tuple[str, str, bool]] = []
+        self.configured: list[tuple[str, bool, str | None]] = []
+
+    def configure_registry(self, host: str, *, tls_verify: bool, ca_cert: str | None) -> None:
+        self.configured.append((host, tls_verify, ca_cert))
 
     def list_tags(self, repo_ref: str) -> list[str]:
         return list(self._tags.get(repo_ref, []))

@@ -20,13 +20,9 @@ idempotent — unchanged tags are skipped via the recorded `base.digest`.
 docker run -d -p 5001:5000 --name houba-demo-registry registry:2
 ```
 
-The standard `registry:2` serves **HTTP**, so tell regctl not to use TLS for it. *(This
-is a one-time local-registry quirk — houba doesn't yet configure per-registry TLS/auth
-itself; that's wired in a later phase. Real registries use HTTPS and need no such step.)*
-
-```bash
-regctl registry set localhost:5001 --tls disabled
-```
+The standard `registry:2` serves **HTTP**. Set `tls_verify: false` in the registry entry
+below and houba will run `regctl registry set … --tls disabled` automatically before
+reconciling. *(Real registries use HTTPS and need no such step.)*
 
 ## 2. Point houba at the registry
 
@@ -127,8 +123,9 @@ docker rm -f houba-demo-registry
   `latest` → the highest overall. Larger image, slower to copy:
   `uv run houba reconcile docs/examples/redis`.
 - **[`hardened/redis.yml`](hardened/redis.yml)** — the **rebuild path**: inject internal
-  CA certs + rewrite package sources to an internal mirror, then stamp the result. ⚠️
-  **Requires the transform engine (Phase 6, in progress)** — it won't run yet. Design:
+  CA certs + rewrite package sources to an internal mirror, then stamp the result. The
+  transform engine is implemented; running it needs a BuildKit daemon (`buildctl`) plus the
+  org's `HOUBA_TRANSFORM_CA_CERTS` / `HOUBA_TRANSFORM_PACKAGE_MIRRORS` config. Design:
   [the transform/hardening spec](../superpowers/specs/2026-06-11-image-transform-hardening-design.md).
 
 ### Transform vocabulary

@@ -175,3 +175,21 @@ def test_login_tls_disabled(
     log = _log(tmp_path, monkeypatch)
     RegctlAdapter().login("localhost:5000", username="u", password="p", tls_verify=False)
     assert "--tls disabled" in log.read_text()
+
+
+def test_configure_registry_tls_disabled_with_cacert(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().configure_registry("localhost:5000", tls_verify=False, ca_cert="/etc/ca.pem")
+    assert "registry set localhost:5000 --tls disabled --cacert /etc/ca.pem" in log.read_text()
+
+
+def test_configure_registry_tls_enabled_no_cacert(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().configure_registry("harbor.corp", tls_verify=True, ca_cert=None)
+    text = log.read_text()
+    assert "registry set harbor.corp --tls enabled" in text
+    assert "--cacert" not in text

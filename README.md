@@ -71,6 +71,17 @@ You still need `skopeo`, `buildctl`, and `git` on `PATH` when running from sourc
 | `HOUBA_DRY_RUN_TAGS` | no | `false` | Skip image pushes |
 | `HOUBA_DRY_RUN_DELETIONS` | no | `false` | Skip deletions |
 | `HOUBA_WORK_DIR` | no | `/tmp/houba-work` | Scratch directory for clones/builds |
+| `HOUBA_REGISTRIES` | no | `{}` | JSON map of logical registry names to `RegistryConfig` objects (see below) |
+
+**`RegistryConfig` fields** (each entry in `HOUBA_REGISTRIES`):
+
+| Field | Required | Description |
+|---|---|---|
+| `host` | yes | Registry host, e.g. `harbor.example.com` or `localhost:5001` |
+| `username` | no | Registry username (must be set together with `password`) |
+| `password` | no | Registry password (must be set together with `username`) |
+| `tls_verify` | no | Set to `false` for plain-HTTP registries (default `true`); houba runs `regctl registry set … --tls disabled` automatically |
+| `ca_cert` | no | Path to a CA PEM regctl should trust for this registry's TLS (for registries behind an internal CA). |
 
 ### Capture production fixtures (development)
 
