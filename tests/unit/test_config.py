@@ -222,3 +222,32 @@ def test_registry_config_ca_cert_parses_from_env(monkeypatch: pytest.MonkeyPatch
         ' "ca_cert": "/etc/houba/registry-ca.pem"}}',
     )
     assert Settings().registries["corp"].ca_cert == "/etc/houba/registry-ca.pem"
+
+
+# ---------------------------------------------------------------------------
+# Task 3 — max_concurrency
+# ---------------------------------------------------------------------------
+
+
+def test_max_concurrency_defaults_to_4() -> None:
+    from houba.config import Settings
+
+    assert Settings().max_concurrency == 4
+
+
+def test_max_concurrency_read_from_env(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from houba.config import Settings
+
+    monkeypatch.setenv("HOUBA_MAX_CONCURRENCY", "8")
+    assert Settings().max_concurrency == 8
+
+
+def test_max_concurrency_rejects_zero(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    import pytest
+    from pydantic import ValidationError
+
+    from houba.config import Settings
+
+    monkeypatch.setenv("HOUBA_MAX_CONCURRENCY", "0")
+    with pytest.raises(ValidationError):
+        Settings()

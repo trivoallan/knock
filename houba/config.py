@@ -82,6 +82,7 @@ class Settings(BaseSettings):
     transform_ca_certs: dict[str, CACertSource] = Field(default_factory=dict)
     transform_package_mirrors: dict[str, PackageMirror] = Field(default_factory=dict)
     build_platform: str = "linux/amd64"
+    max_concurrency: int = Field(default=4, ge=1)
 
 
 def resolve_registry(
