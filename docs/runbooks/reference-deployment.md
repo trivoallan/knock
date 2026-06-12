@@ -76,6 +76,21 @@ kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/overlays/prod | 
 > runnable standalone against the examples). `kubectl apply -k` cannot pass the flag, so
 > render-then-apply.
 
+## Horizontal sharding (optional)
+
+houba scales out by **policy ownership**: each pod reconciles a disjoint subset of policies, so no two
+pods ever write the same destination repository (a global invariant forbids two policies sharing a repo).
+
+To shard across N pods, run the reconcile CronJob as an **Indexed Job**: set both `completions: N` and the
+`SHARD_COUNT` ConfigMap value to N (they must match), and optionally `parallelism: M` (M ≤ N) to cap
+concurrent pods — useful because the build path is bounded by `buildkitd` capacity. Kubernetes injects
+`JOB_COMPLETION_INDEX` per pod; houba receives it as `--shard-index`. `N = 1` (the base default) reconciles
+every policy in one pod, exactly as before.
+
+> Build throughput is capped by `buildkitd` (a single `replicas: 1` Deployment by default). Scaling the
+> build path means scaling buildkitd (replicas + the existing Service, ideally with a registry-backed
+> build cache) — see the horizontal-sharding design spec.
+
 ## Security posture (read before prod)
 
 - **buildkitd is rootless** (no privileged container) but needs *unconfined*
