@@ -543,3 +543,48 @@ def test_configure_registry_called_once_per_host_before_copy() -> None:
         reporter=FakeReporter(),
     )
     assert registry.configured == [("reg.local", False, "/ca.pem")]
+
+
+def test_reconcile_collects_partial_tag_failure() -> None:
+    fake = FakeRegistryPort(
+        tags={
+            "docker.io/library/redis": ["7.2.0", "7.3.0"],
+            "harbor.corp/lib/redis": [],
+        },
+        infos={
+            "docker.io/library/redis:7.2.0": _info("sha256:a"),
+            "docker.io/library/redis:7.3.0": _info("sha256:b"),
+        },
+        fail_copy={"harbor.corp/lib/redis:7.3.0"},
+    )
+    report = _run([POLICY], registry=fake)
+    assert report.status == "partial"
+    policy = report.policies[0]
+    assert policy.status == "partial"
+    assert policy.totals.imported == 1
+    assert policy.totals.failed == 1
+    assert ("docker.io/library/redis:7.2.0", "harbor.corp/lib/redis:7.2.0") in fake.copied
+    ops = [op for t in policy.targets for v in t.variants for op in v.operations]
+    failed = [op for op in ops if op.error is not None]
+    assert [op.out_tag for op in failed] == ["7.3.0"]
+    assert failed[0].error.type == "RegctlError"
+    from houba.use_cases.report import report_exit_code
+
+    assert report_exit_code(report) == 2
+
+
+def test_reconcile_collects_alias_failure() -> None:
+    # POLICY aliases 7.2.0 to "7.2" and "latest"; fail the "latest" alias copy.
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": []},
+        infos={"docker.io/library/redis:7.2.0": _info("sha256:a")},
+        fail_copy={"harbor.corp/lib/redis:latest"},
+    )
+    report = _run([POLICY], registry=fake)
+    assert report.status == "partial"
+    ops = [op for t in report.policies[0].targets for v in t.variants for op in v.operations]
+    aliased_failed = [op for op in ops if op.kind == "aliased" and op.error is not None]
+    assert [op.out_tag for op in aliased_failed] == ["latest"]
+    assert report.policies[0].totals.imported == 1
+    assert report.policies[0].totals.failed == 1
+    assert ("harbor.corp/lib/redis:7.2.0", "harbor.corp/lib/redis:7.2") in fake.copied
