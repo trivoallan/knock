@@ -223,8 +223,12 @@ Use-case tests (fakes, in-memory):
 5. **Global invariant runs before filtering** — a dest-repo collision fails **every** shard, before any
    mutation (no copies recorded).
 6. **`shard_count == 1` parity** — identical `RunReport` to today.
-7. **Idempotency** — running the same shard twice against a fake seeded with the first run's writes is a
-   no-op (all `skipped`).
+7. **Idempotency / delete-safety** — realised as a *domain property*, not a stateful-fake use-case test:
+   `reconcile_import` already returns empty import/update/delete sets when the mirror matches the source
+   within the stability window (covered by `tests/unit/domain/test_reconcile.py`), and the adapter ops
+   (`copy` by digest, `annotate`/`alias` overwrite) are idempotent. Under the ownership invariant (item 3),
+   each repo has a single writer, so a delete has no concurrent importer to race. We assert the invariant and
+   rely on the existing domain convergence tests.
 
 Strict TDD per house rule: failing test → red → minimal impl → green → commit, one behaviour per commit.
 
