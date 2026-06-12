@@ -23,6 +23,13 @@ class StructlogReporter:
         self._log.info("policy.started", policy=name, source=source)
 
     def operation_applied(self, ev: OperationEvent) -> None:
+        # transform_steps/out_digest are only meaningful on applied imported/updated ops;
+        # omit them otherwise so copy/skip/alias lines stay terse.
+        extra: dict[str, object] = {}
+        if ev.transform_steps is not None:
+            extra["transform_steps"] = list(ev.transform_steps)
+        if ev.out_digest is not None:
+            extra["out_digest"] = ev.out_digest
         with self._lock:
             self._log.info(
                 "operation",
@@ -34,6 +41,7 @@ class StructlogReporter:
                 src_tag=ev.src_tag,
                 digest=ev.digest,
                 applied=ev.applied,
+                **extra,
             )
 
     def operation_failed(self, ev: OperationEvent, error: ErrorInfo) -> None:

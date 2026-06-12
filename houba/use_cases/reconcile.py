@@ -286,6 +286,8 @@ def _apply_plan(
                 src_tag=op.src_tag,
                 digest=op.digest,
                 applied=op.applied,
+                transform_steps=tuple(op.transform_steps) if op.transform_steps else None,
+                out_digest=op.out_digest,
             )
         )
 
@@ -305,7 +307,9 @@ def _apply_plan(
         )
 
     def _do_import(w: _ImportWork) -> Operation:
+        steps = [s.name for s in w.vplan.transform] or None  # applied steps; None on a copy
         try:
+            out_digest: str | None = None
             if not dry_run_tags:
                 if w.vplan.transform:
                     _build_variant(
@@ -318,7 +322,7 @@ def _apply_plan(
                     )
                 else:
                     registry.copy(f"{src_repo}:{w.src_tag}", f"{plan.dest_repo}:{w.out_tag}")
-                registry.annotate(
+                out_digest = registry.annotate(
                     f"{plan.dest_repo}:{w.out_tag}",
                     build_stamp_annotations(
                         prefix=label_prefix,
@@ -332,7 +336,7 @@ def _apply_plan(
                         policy=plan.policy.metadata.name,
                         import_name=plan.expanded.name,
                         variant=w.variant,
-                        transform_steps=[s.name for s in w.vplan.transform] or None,
+                        transform_steps=steps,
                         transform_version_value=transform_versions.get(w.vplan.name),
                     ),
                 )
@@ -342,6 +346,8 @@ def _apply_plan(
                 src_tag=w.src_tag,
                 digest=source[w.src_tag].digest,
                 applied=not dry_run_tags,
+                transform_steps=steps,
+                out_digest=out_digest,
             )
             emit_applied(op, w.variant)
             return op
@@ -356,6 +362,7 @@ def _apply_plan(
                 digest=source[w.src_tag].digest,
                 applied=False,
                 error=info,
+                transform_steps=steps,
             )
             emit_failed(op, w.variant, info)
             return op
