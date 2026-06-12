@@ -1,0 +1,37 @@
+# Rebuild path, runnable self-contained (no Harbor, no org config): rebuild debian
+# through the transform engine and fan ONE source tag into two regional variants via
+# the per-variant `suffix`. setTimezone is the only built-in step needing no org config.
+#
+# In-cluster:  make demo-transform
+# Locally (needs a BuildKit daemon on PATH):
+#   uv run houba reconcile docs/examples/timezone
+#
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: debian-tz
+  labels:
+    team: platform            # stable owner key → stamped as io.houba.owner.team
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/debian
+  imports:
+    - name: slim
+      tags:
+        semverOnly: false     # bookworm-slim is not a semver tag
+        includeRegex: "^bookworm-slim$"
+      variants:
+        - name: eu
+          suffix: "-eu"
+          transform:
+            - setTimezone: { zone: Europe/Paris }
+        - name: us
+          suffix: "-us"
+          transform:
+            - setTimezone: { zone: America/New_York }
+      destinations:
+        # `registry` omitted → resolves to the single configured registry ("local").
+        - project: demo
+          repository: debian

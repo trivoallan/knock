@@ -1,0 +1,48 @@
+# TRANSFORM demo — the rebuild (transform) path, runnable self-contained: buildkitd
+# + the same throwaway registry:2 as lite, but NO Harbor and NO org config.
+# Demonstrates setTimezone fanned into -eu / -us variants via the per-variant suffix.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: houba
+
+resources:
+  - ../../base
+  - registry.yaml
+  - secret-registries.yaml
+
+components:
+  - ../../components/buildkitd
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  # buildkitd config marking the in-cluster HTTP registry as plain-HTTP (mounted by the patch).
+  - name: buildkitd-config
+    files:
+      - buildkitd.toml
+  # Point the reconcile + blast-radius at the timezone example.
+  - name: houba-config
+    behavior: merge
+    literals:
+      - POLICY_DIR=/policies/current/docs/examples/timezone
+      - BLAST_REPOS=demo/debian
+
+patches:
+  - path: patch-suspend.yaml
+  - path: patch-buildkitd-insecure.yaml
+  # The rootless buildkit image does NOT auto-load /etc/buildkit/buildkitd.toml (its
+  # advertised default): without this, the daemon keeps talking HTTPS and the push to the
+  # plain-HTTP registry fails ("server gave HTTP response to HTTPS client"). Point it at
+  # the mounted config explicitly by appending --config to the component's args.
+  - target:
+      kind: Deployment
+      name: buildkitd
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --config
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: /etc/buildkit/buildkitd.toml
