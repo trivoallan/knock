@@ -41,7 +41,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     domStamp = component "provenance stamp" "Builds the OCI-standard + io.houba.* provenance annotations." "Pure Python" "Domain"
                 }
                 group "Ports" {
-                    portRegistry = component "RegistryPort" "OCI registry ops: list, inspect, copy, annotate, delete, login." "typing.Protocol" "Port"
+                    portRegistry = component "RegistryPort" "OCI registry ops: list, inspect, copy, annotate, delete, login, referrer list/put/delete." "typing.Protocol" "Port"
                     portBuilder = component "ImageBuilderPort" "Build and push an image from a Dockerfile + context." "typing.Protocol" "Port"
                     portReporter = component "Reporter" "In-flight reconcile event journal." "typing.Protocol" "Port"
                     portClock = component "ClockPort" "Injectable now()." "typing.Protocol" "Port"
@@ -70,6 +70,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         buildkit = softwareSystem "BuildKit" "OCI build engine houba drives to rebuild and harden images." "External"
         packageMirror = softwareSystem "Internal Package Mirror" "The organization's internal apt/apk mirror; the hardening rebuild rewrites the image's package sources to it." "External"
         observability = softwareSystem "Observability / CMDB" "The organization's existing query stack; reads the provenance stamp to answer blast-radius questions during an incident." "External,Downstream"
+        reaper = softwareSystem "Deletion reaper (external)" "Verifies prod usage and purges tags houba marked pending-deletion." "External,Downstream"
 
         platformEng -> houba "Configures the hardening policy + registry roster, runs / schedules reconcile" "CLI"
         productTeam -> houba "Declares its imports as MirrorPolicy files" "YAML"
@@ -80,6 +81,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         productTeam -> destRegistries "Pulls the hardened images" "docker pull (OCI)"
         observability -> destRegistries "Reads provenance stamps on images" "scan / API" "DataCoupling"
         incidentResponder -> observability "Queries blast-radius (at CVE time)" "Query UI"
+        reaper -> destRegistries "Discovers pending-deletion referrers, verifies usage, purges" "OCI referrers API" "DataCoupling"
 
         # Component-level relationships — the source of truth for the Component view.
         # Structurizr implies the container/system-level edges for the views above
