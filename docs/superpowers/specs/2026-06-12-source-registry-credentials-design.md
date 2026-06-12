@@ -48,16 +48,21 @@ A generic (`Opaque`) secret named `houba-docker-config` with a single key **`con
 
 ### Makefile affordance — `make docker-auth`
 
-A one-command way to seed the secret from the operator's existing Docker login:
+A one-command way to seed the secret from a Docker Hub username + access token, building an **inline-auth** `config.json`:
 
 ```make
-docker-auth: ## Load your local Docker Hub creds so source pulls are authenticated (avoids rate limits)
-	$(KUBECTL) -n $(NS) create secret generic houba-docker-config \
-	  --from-file=config.json=$$HOME/.docker/config.json \
-	  --dry-run=client -o yaml | $(KUBECTL) apply -f -
+docker-auth: ## Seed source-registry creds (set DOCKER_USER + DOCKER_PASS) so pulls authenticate (avoids rate limits)
+	@test -n "$$DOCKER_USER" && test -n "$$DOCKER_PASS" || \
+	  { echo "ERROR: set DOCKER_USER and DOCKER_PASS (a Docker Hub username + access token)"; exit 1; }
+	@printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}' \
+	  "$$(printf '%s:%s' "$$DOCKER_USER" "$$DOCKER_PASS" | base64 | tr -d '\n')" \
+	  | $(KUBECTL) -n $(NS) create secret generic houba-docker-config \
+	      --from-file=config.json=/dev/stdin --dry-run=client -o yaml | $(KUBECTL) apply -f -
 ```
 
-`make docker-auth && make demo-transform` then pulls `debian` authenticated. Idempotent (apply-from-dry-run). Prerequisite: the operator is logged in locally (`docker login`), so `$HOME/.docker/config.json` exists.
+`DOCKER_USER=<user> DOCKER_PASS=<token> make docker-auth && make demo-transform` then pulls `debian` authenticated. Idempotent (apply-from-dry-run).
+
+**Why not copy `~/.docker/config.json`?** Verification surfaced that under Docker Desktop (macOS/Windows) that file carries only a `credsStore` keychain reference, **no inline `auth`** — so a copied config authenticates nothing in-cluster. Building the config from explicit `DOCKER_USER`/`DOCKER_PASS` is portable across all hosts/CI. (An access token, not the account password, is the right `DOCKER_PASS`.)
 
 ### Docs
 
@@ -78,15 +83,15 @@ docker-auth: ## Load your local Docker Hub creds so source pulls are authenticat
 
 ## Testing & verification
 
-No application code, so verification is operational plus the one already-proven fact:
+No application code, so verification is operational. All of the following were **proven in kind** during implementation:
 
-1. **regctl write-target (proven above)**: with `DOCKER_CONFIG` set read-only and `REGCTL_CONFIG` set, regctl's destination `registry set`/`login` writes to `REGCTL_CONFIG` and leaves the Docker config untouched.
-2. **Kustomize** — `kubectl kustomize deploy/overlays/local-transform` (and `local-lite`, `local-full`) still render; the rendered reconcile container has `DOCKER_CONFIG`/`REGCTL_CONFIG` env and the optional `houba-docker-config` mount at `/docker-config`.
-3. **Opt-in absent** — without the secret, the reconcile Job still starts and runs (anonymous); the optional volume mounts empty.
-4. **Opt-in present (end-to-end)** — `make docker-auth` (from a host logged into Docker Hub) then `make demo-transform`: the `debian` base pull is **authenticated** and the rebuild completes past the point that previously returned 429. Equivalently for the copy path, `make demo-lite` keeps working with the secret present (regctl uses the Docker config for docker.io).
+1. **regctl write-target**: with `DOCKER_CONFIG` set read-only and `REGCTL_CONFIG` set, regctl's destination `registry set` writes to `REGCTL_CONFIG` and leaves the Docker config untouched.
+2. **Kustomize** — `local-lite`, `local-transform`, `local-full` all render with the reconcile container carrying `DOCKER_CONFIG`/`REGCTL_CONFIG` env and the optional `houba-docker-config` mount; `BUILDKIT_HOST` still composes (env strategic-merge).
+3. **Opt-in absent** — with no secret, the reconcile pod reaches `Running` (the `optional: true` volume mounts empty, no `FailedMount`); pulls stay anonymous.
+4. **Opt-in present — creds are consumed by buildkit (proven)**: seeding `houba-docker-config` with a (bogus) inline auth changed the source-pull error from `429 Too Many Requests` (anonymous) to **`401 unauthorized`** — buildkit read the mounted `config.json` and authenticated. With *valid* `DOCKER_USER`/`DOCKER_PASS` the pull succeeds and bypasses the anonymous rate limit; `make docker-auth` correctly emits `config.json = {"auths":{"https://index.docker.io/v1/":{"auth":"<base64 user:pass>"}}}`.
 
 ## Risks
 
-- **Docker config format** — must be a valid Docker `config.json` with an `auths` entry for `https://index.docker.io/v1/`. `make docker-auth` copies the operator's working one, sidestepping hand-authoring.
-- **Stale/expired creds** — an invalid `config.json` makes pulls fail differently than anonymous; documented in the rate-limit note.
+- **Docker config format** — must be a valid Docker `config.json` with an `auths` entry for `https://index.docker.io/v1/`. `make docker-auth` builds it from `DOCKER_USER`/`DOCKER_PASS`, sidestepping hand-authoring and the non-portable Docker Desktop `credsStore` case (where `~/.docker/config.json` holds no inline auth).
+- **Stale/expired creds** — an invalid token makes pulls fail with `401 unauthorized` rather than the anonymous `429`; documented in the rate-limit note. `DOCKER_PASS` should be a Docker Hub access token, not the account password.
 - **`optional: true` reliance** — the base must keep the secret volume optional so the default (no secret) path never fails to schedule.

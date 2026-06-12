@@ -46,13 +46,16 @@ revert before merging.
 ## Docker Hub rate limits
 
 The rebuild pulls the source image (`debian`) from Docker Hub. Anonymous pulls are
-rate-limited; if a run fails with `toomanyrequests` / `429`, authenticate the source:
+rate-limited; if a run fails with `toomanyrequests` / `429`, authenticate the source with a
+Docker Hub username + access token:
 
 ```bash
-docker login                # if you are not already logged in
-make docker-auth            # seeds the optional houba-docker-config secret from ~/.docker/config.json
+DOCKER_USER=<user> DOCKER_PASS=<token> make docker-auth   # seeds the optional houba-docker-config secret
 make demo-transform
 ```
 
-`docker-auth` is opt-in and base-wide: both the copy path (regctl) and the rebuild path
-(buildctl) read the mounted Docker `config.json`. Without the secret, pulls stay anonymous.
+`docker-auth` builds an **inline-auth** Docker `config.json` from those vars — portable, unlike
+copying `~/.docker/config.json`, which under Docker Desktop holds only a keychain reference
+(`credsStore`) and no usable in-cluster credentials. It is opt-in and base-wide: both the copy
+path (regctl) and the rebuild path (buildctl) read the mounted config. Without the secret,
+pulls stay anonymous.
