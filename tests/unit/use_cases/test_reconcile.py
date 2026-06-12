@@ -80,6 +80,7 @@ def _run(policies, **kw):  # type: ignore[no-untyped-def]
         dry_run_tags=kw.pop("dry_run_tags", False),
         dry_run_deletions=kw.pop("dry_run_deletions", False),
         reporter=kw.pop("reporter", FakeReporter()),
+        max_concurrency=kw.pop("max_concurrency", 1),
     )
     return reconcile_policies(policies, **defaults)
 
@@ -588,3 +589,60 @@ def test_reconcile_collects_alias_failure() -> None:
     assert report.policies[0].totals.imported == 1
     assert report.policies[0].totals.failed == 1
     assert ("harbor.corp/lib/redis:7.2.0", "harbor.corp/lib/redis:7.2") in fake.copied
+
+
+CONCURRENCY_POLICY = parse_mirror_policy("""
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata: { name: redis }
+spec:
+  artifactType: image
+  source: { registry: docker.io, repository: library/redis }
+  imports:
+    - name: v7
+      tags: { includeRegex: "^7\\\\." }
+      destinations: [{ project: lib, repository: redis }]
+""")
+
+
+def _three_tag_registry(**kw):  # type: ignore[no-untyped-def]
+    return FakeRegistryPort(
+        tags={
+            "docker.io/library/redis": ["7.0.0", "7.1.0", "7.2.0"],
+            "harbor.corp/lib/redis": [],
+        },
+        infos={
+            "docker.io/library/redis:7.0.0": _info("sha256:a"),
+            "docker.io/library/redis:7.1.0": _info("sha256:b"),
+            "docker.io/library/redis:7.2.0": _info("sha256:c"),
+        },
+        **kw,
+    )
+
+
+def test_reconcile_imports_run_concurrently() -> None:
+    import threading
+
+    # A barrier of 3 only releases when all three imports are in `copy` at once.
+    # Under sequential execution the first copy would block forever (timeout) and
+    # raise BrokenBarrierError, surfacing as failed ops.
+    barrier = threading.Barrier(3, timeout=5)
+    fake = _three_tag_registry(copy_barrier=barrier)
+    report = _run([CONCURRENCY_POLICY], registry=fake, max_concurrency=3)
+    assert report.status == "ok"
+    assert report.totals.imported == 3
+    assert len(fake.copied) == 3
+
+
+def test_reconcile_report_is_deterministic_under_concurrency() -> None:
+    fake = _three_tag_registry()
+    report = _run([CONCURRENCY_POLICY], registry=fake, max_concurrency=3)
+    variant = report.policies[0].targets[0].variants[0]
+    # Operations keep input (selection) order regardless of completion order.
+    assert [op.out_tag for op in variant.operations] == ["7.0.0", "7.1.0", "7.2.0"]
+
+
+def test_reconcile_sequential_and_concurrent_agree() -> None:
+    seq = _run([CONCURRENCY_POLICY], registry=_three_tag_registry(), max_concurrency=1)
+    par = _run([CONCURRENCY_POLICY], registry=_three_tag_registry(), max_concurrency=3)
+    assert seq.model_dump() == par.model_dump()

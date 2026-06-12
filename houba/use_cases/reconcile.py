@@ -10,6 +10,7 @@ import tempfile
 from collections import defaultdict
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -488,6 +489,7 @@ def reconcile_policies(
     dry_run_deletions: bool,
     reporter: Reporter,
     work_dir: Path | None = None,
+    max_concurrency: int = 1,
 ) -> RunReport:
     mode: RunMode = "dry-run" if (dry_run_tags or dry_run_deletions) else "apply"
 
@@ -536,71 +538,77 @@ def reconcile_policies(
     reporter.run_started(len(plans_by_policy), mode=mode)
     logged_in: set[str] = set()
     policy_reports: list[PolicyReport] = []
-    for policy, policy_plans in plans_by_policy:
-        source_ref = _source_repo(policy)
-        reporter.policy_started(policy.metadata.name, source_ref)
-        try:
-            targets: list[TargetReport] = []
-            for plan in policy_plans:
-                cfg = plan.config
-                if cfg.host not in logged_in:
-                    registry.configure_registry(
-                        cfg.host, tls_verify=cfg.tls_verify, ca_cert=cfg.ca_cert
-                    )
-                    if cfg.username is not None and cfg.password is not None:
-                        registry.login(
-                            cfg.host,
-                            username=cfg.username,
-                            password=cfg.password.get_secret_value(),
-                            tls_verify=cfg.tls_verify,
+    with ExitStack() as stack:
+        executor: ThreadPoolExecutor | None = (
+            stack.enter_context(ThreadPoolExecutor(max_workers=max_concurrency))
+            if max_concurrency > 1
+            else None
+        )
+        for policy, policy_plans in plans_by_policy:
+            source_ref = _source_repo(policy)
+            reporter.policy_started(policy.metadata.name, source_ref)
+            try:
+                targets: list[TargetReport] = []
+                for plan in policy_plans:
+                    cfg = plan.config
+                    if cfg.host not in logged_in:
+                        registry.configure_registry(
+                            cfg.host, tls_verify=cfg.tls_verify, ca_cert=cfg.ca_cert
                         )
-                    logged_in.add(cfg.host)
-                targets.append(
-                    _apply_plan(
-                        plan,
-                        registry=registry,
-                        builder=builder,
-                        label_prefix=label_prefix,
-                        build_platform=build_platform,
-                        work_dir=work_dir,
-                        now=now,
-                        dry_run_tags=dry_run_tags,
-                        dry_run_deletions=dry_run_deletions,
-                        reporter=reporter,
-                        policy_name=policy.metadata.name,
-                        executor=None,
+                        if cfg.username is not None and cfg.password is not None:
+                            registry.login(
+                                cfg.host,
+                                username=cfg.username,
+                                password=cfg.password.get_secret_value(),
+                                tls_verify=cfg.tls_verify,
+                            )
+                        logged_in.add(cfg.host)
+                    targets.append(
+                        _apply_plan(
+                            plan,
+                            registry=registry,
+                            builder=builder,
+                            label_prefix=label_prefix,
+                            build_platform=build_platform,
+                            work_dir=work_dir,
+                            now=now,
+                            dry_run_tags=dry_run_tags,
+                            dry_run_deletions=dry_run_deletions,
+                            reporter=reporter,
+                            policy_name=policy.metadata.name,
+                            executor=executor,
+                        )
+                    )
+                all_ops = [op for t in targets for v in t.variants for op in v.operations] + [
+                    op for t in targets for op in t.operations
+                ]
+                totals = _merge_counts([t.totals for t in targets])
+                reporter.policy_completed(policy.metadata.name, totals)
+                policy_reports.append(
+                    PolicyReport(
+                        name=policy.metadata.name,
+                        source=source_ref,
+                        status=_node_status(all_ops),
+                        error=None,
+                        totals=totals,
+                        targets=targets,
                     )
                 )
-            all_ops = [op for t in targets for v in t.variants for op in v.operations] + [
-                op for t in targets for op in t.operations
-            ]
-            totals = _merge_counts([t.totals for t in targets])
-            reporter.policy_completed(policy.metadata.name, totals)
-            policy_reports.append(
-                PolicyReport(
-                    name=policy.metadata.name,
-                    source=source_ref,
-                    status=_node_status(all_ops),
-                    error=None,
-                    totals=totals,
-                    targets=targets,
+            except Exception as exc:
+                info = ErrorInfo(
+                    type=type(exc).__name__, message=str(exc), exit_code=exit_code_for(exc)
                 )
-            )
-        except Exception as exc:
-            info = ErrorInfo(
-                type=type(exc).__name__, message=str(exc), exit_code=exit_code_for(exc)
-            )
-            reporter.policy_failed(policy.metadata.name, info)
-            policy_reports.append(
-                PolicyReport(
-                    name=policy.metadata.name,
-                    source=source_ref,
-                    status="failed",
-                    error=info,
-                    totals=Counts(),
-                    targets=[],
+                reporter.policy_failed(policy.metadata.name, info)
+                policy_reports.append(
+                    PolicyReport(
+                        name=policy.metadata.name,
+                        source=source_ref,
+                        status="failed",
+                        error=info,
+                        totals=Counts(),
+                        targets=[],
+                    )
                 )
-            )
 
     statuses = [p.status for p in policy_reports]
     if all(s == "ok" for s in statuses):

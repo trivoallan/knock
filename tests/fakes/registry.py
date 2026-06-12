@@ -10,10 +10,12 @@ class FakeRegistryPort:
         tags: dict[str, list[str]] | None = None,
         infos: dict[str, ImageInfo] | None = None,
         fail_copy: set[str] | None = None,
+        copy_barrier: object | None = None,  # threading.Barrier; typed loosely to avoid an import
     ) -> None:
         self._tags = tags or {}
         self._infos = infos or {}
         self._fail_copy = fail_copy or set()
+        self._copy_barrier = copy_barrier
         self.copied: list[tuple[str, str]] = []
         self.annotated: list[tuple[str, dict[str, str]]] = []
         self.deleted: list[str] = []
@@ -33,6 +35,8 @@ class FakeRegistryPort:
             raise KeyError(f"FakeRegistryPort: no seeded ImageInfo for {image_ref!r}") from None
 
     def copy(self, src_ref: str, dst_ref: str) -> None:
+        if self._copy_barrier is not None:
+            self._copy_barrier.wait()  # type: ignore[attr-defined]
         if dst_ref in self._fail_copy:
             raise RegctlError(f"fake copy failure for {dst_ref}")
         self.copied.append((src_ref, dst_ref))
