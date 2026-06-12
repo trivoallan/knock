@@ -5,7 +5,6 @@ from houba.use_cases.report import RunReport
 from tests.fakes.reporter import FakeReporter
 
 
-
 def test_fake_reporter_journals_calls() -> None:
     r = FakeReporter()
     r.run_started(2, mode="apply")
@@ -36,8 +35,14 @@ def test_fake_reporter_journals_operation_failed() -> None:
 
     r = FakeReporter()
     ev = OperationEvent(
-        policy="redis", dest_repo="harbor.corp/lib/redis", variant="v7",
-        kind="imported", out_tag="7.3.0", src_tag="7.3.0", digest="sha256:b", applied=False,
+        policy="redis",
+        dest_repo="harbor.corp/lib/redis",
+        variant="v7",
+        kind="imported",
+        out_tag="7.3.0",
+        src_tag="7.3.0",
+        digest="sha256:b",
+        applied=False,
     )
     err = ErrorInfo("RegctlError", "boom", 2)
     r.operation_failed(ev, err)

@@ -66,23 +66,36 @@ def test_render_text_verbose_unfolds_operations() -> None:
 
 def _partial_report() -> RunReport:
     failed_op = Operation(
-        kind="imported", out_tag="7.3.0", src_tag="7.3.0", applied=False,
+        kind="imported",
+        out_tag="7.3.0",
+        src_tag="7.3.0",
+        applied=False,
         error=ErrorInfo("RegctlError", "boom", 2),
     )
     ok_op = Operation(
         kind="imported", out_tag="7.2.0", src_tag="7.2.0", digest="sha256:a", applied=True
     )
     variant = VariantReport(
-        name="v7", suffix="", status="partial",
-        totals=Counts(imported=1, failed=1), operations=[ok_op, failed_op],
+        name="v7",
+        suffix="",
+        status="partial",
+        totals=Counts(imported=1, failed=1),
+        operations=[ok_op, failed_op],
     )
     target = TargetReport(
-        dest_repo="harbor.corp/lib/redis", status="partial",
-        variants=[variant], operations=[], totals=Counts(imported=1, failed=1),
+        dest_repo="harbor.corp/lib/redis",
+        status="partial",
+        variants=[variant],
+        operations=[],
+        totals=Counts(imported=1, failed=1),
     )
     policy = PolicyReport(
-        name="redis", source="docker.io/library/redis", status="partial", error=None,
-        totals=Counts(imported=1, failed=1), targets=[target],
+        name="redis",
+        source="docker.io/library/redis",
+        status="partial",
+        error=None,
+        totals=Counts(imported=1, failed=1),
+        targets=[target],
     )
     return RunReport(
         mode="apply", status="partial", totals=Counts(imported=1, failed=1), policies=[policy]
