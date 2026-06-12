@@ -142,3 +142,26 @@ def test_reconcile_rejects_zero_concurrency(
     (tmp_path / "redis.yml").write_text(POLICY)
     result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "-j", "0"])
     assert result.exit_code != 0  # Typer rejects below the min
+
+
+def test_reconcile_accepts_shard_flags(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    _env(monkeypatch)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "empty")
+    (tmp_path / "redis.yml").write_text(POLICY)
+    result = CliRunner().invoke(
+        app, ["reconcile", str(tmp_path), "--dry-run", "--shard-index", "0", "--shard-count", "2"]
+    )
+    assert result.exit_code == 0, result.stdout
+
+
+def test_reconcile_rejects_index_ge_count(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    _env(monkeypatch)
+    (tmp_path / "redis.yml").write_text(POLICY)
+    result = CliRunner().invoke(
+        app, ["reconcile", str(tmp_path), "--shard-index", "2", "--shard-count", "2"]
+    )
+    assert result.exit_code != 0  # index must be < count

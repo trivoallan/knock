@@ -10,6 +10,7 @@ import typer
 
 from houba.cli._di import build_container
 from houba.cli.render import render_report
+from houba.errors import ConfigError
 from houba.logging import configure
 from houba.use_cases.loader import load_policy_dir
 from houba.use_cases.reconcile import reconcile_policies
@@ -33,10 +34,25 @@ def reconcile(
             help="Max parallel tag operations (overrides HOUBA_MAX_CONCURRENCY; 1 = sequential).",
         ),
     ] = None,
+    shard_index: Annotated[
+        int,
+        typer.Option(
+            "--shard-index",
+            min=0,
+            help="This shard's 0-based index (pass $JOB_COMPLETION_INDEX in an Indexed Job).",
+        ),
+    ] = 0,
+    shard_count: Annotated[
+        int,
+        typer.Option("--shard-count", min=1, help="Total shards N (1 = process all policies)."),
+    ] = 1,
 ) -> None:
     """Reconcile all MirrorPolicy files under DIRECTORY against their destinations."""
     container = build_container()
     configure(format_=container.settings.log_format, level=container.settings.log_level)
+
+    if shard_index >= shard_count:
+        raise ConfigError(f"--shard-index ({shard_index}) must be < --shard-count ({shard_count})")
 
     policies = load_policy_dir(directory)
     report = reconcile_policies(
@@ -56,6 +72,8 @@ def reconcile(
         max_concurrency=(
             concurrency if concurrency is not None else container.settings.max_concurrency
         ),
+        shard_index=shard_index,
+        shard_count=shard_count,
     )
     render_report(report, fmt=container.settings.log_format, verbose=verbose, stream=sys.stdout)
     raise typer.Exit(report_exit_code(report))
