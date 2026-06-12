@@ -2,13 +2,23 @@
 
 **The single front door for the external container images your organization runs.**
 
-> **Status — early development.** Foundations and I/O adapters are in place (`v0.2`); the derive-and-stamp engine and the provenance schema are the current focus ([roadmap](docs/roadmap.md)). Not yet production-ready.
+> **Status — young but functional (`v0.3`).** The full hexagon, both the copy and the
+> rebuild / derive-and-stamp paths, the pluggable transform engine, and the OCI provenance stamp
+> are delivered; SLSA attestations and a coverage-gap audit are next ([roadmap](docs/roadmap.md)).
+> Not yet battle-hardened for production.
 
-Every public image that enters your registry passes through houba: it is rebuilt with your hardening policy — internal CA certificates, internal package mirrors — and stamped with **standardized, portable provenance** (OCI annotations + SLSA attestations).
+Every public image that enters your registry passes through houba: it is mirrored — or, when you
+declare a hardening policy, rebuilt with internal CA certificates and internal package mirrors —
+and stamped with **standardized, portable provenance** (OCI annotations; SLSA attestations on the
+roadmap).
 
-The payoff lands the morning a critical CVE drops. Because every running image carries a consistent provenance stamp, *"what's our blast radius, and who owns it?"* becomes **one query** in the observability stack you already have — not a frantic spreadsheet. houba produces the stamp; your tools (Datadog, PowerBI, Wiz…) read it.
+The payoff lands the morning a critical CVE drops. Because every image that came in through houba
+carries a consistent provenance stamp, *"what's our blast radius, and who owns it?"* becomes **one
+query** in the observability stack you already have — not a frantic spreadsheet. houba produces the
+stamp; your tools (Datadog, PowerBI, Wiz…) read it.
 
-houba is **not** an image mirror. `skopeo sync` and Harbor replication copy images byte-for-byte. houba *transforms* them and makes them *traceable*.
+houba is **not** an image mirror. `skopeo sync` and Harbor replication copy images byte-for-byte.
+houba *stamps* every image with portable provenance — and *hardens* the ones you choose to rebuild.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
@@ -17,16 +27,26 @@ houba is **not** an image mirror. `skopeo sync` and Harbor replication copy imag
 
 ## How it works
 
-For each image you bring in, you declare a small policy (source, tag-selection rules, hardening steps). houba then:
+For each image you bring in, you declare a small `MirrorPolicy` (source, tag-selection rules,
+optional hardening steps). `houba reconcile` then, per policy:
 
-1. Lists tags on the source registry (via `skopeo`).
-2. Selects which tags to derive — regex include/exclude filters, semver ordering, a 7-day stability window for moving digests.
-3. Rebuilds each selected image through your hardening policy (via `buildctl` / BuildKit): internal CA certificates, internal package mirrors, configurable steps.
-4. Stamps the result with standardized provenance (OCI annotations today; SLSA attestations on the roadmap).
-5. Pushes the derived image to your registry, optionally archiving superseded tags.
-6. Notifies on success / failure (Teams webhook).
+1. Lists tags on the source registry (via `regctl`).
+2. Selects which tags to import — regex include/exclude filters, semver ordering, moving-tag
+   aliases, and a 7-day stability window for moving digests.
+3. For each tag: **mirrors** it as-is (`regctl copy`), or — when the policy declares a `transform`
+   — **rebuilds** it through BuildKit (`buildctl`) with your hardening steps (internal CAs,
+   internal package mirrors, timezone, …).
+4. **Stamps** the result with standardized provenance — OCI-standard annotations plus an
+   `io.houba.*` transformation lineage (SLSA attestations on the roadmap).
+5. Pushes to your registry, updates the moving-tag aliases, and archives superseded tags.
+6. Reports the run — a human/JSON report to stdout, a structured event journal to stderr — and
+   exits with a code reflecting the worst policy outcome.
 
-See the [roadmap](docs/roadmap.md) for what is built versus planned, and the [design overview](docs/design.md) for the architecture.
+Change detection is provenance-based and idempotent: re-running `reconcile` is a no-op unless the
+source digest moved (past the stability window) or you changed the hardening.
+
+See the [roadmap](docs/roadmap.md) for what is built versus planned, and the
+[design overview](docs/architecture/design.md) for the architecture.
 
 ### Run it as a deployment
 
@@ -46,10 +66,11 @@ See [docs/runbooks/reference-deployment.md](docs/runbooks/reference-deployment.m
 
 ### Install
 
-`houba` is published as a Docker image bundling skopeo, BuildKit (`buildctl`), git, and the Python CLI itself:
+`houba` is published as a Docker image bundling `regctl`, BuildKit (`buildctl`), and the Python CLI
+itself:
 
 ```bash
-docker pull ghcr.io/<your-org>/houba:v0-rc
+docker pull ghcr.io/<your-org>/houba:0.3
 ```
 
 Or from source with [uv](https://github.com/astral-sh/uv):
@@ -61,51 +82,50 @@ uv sync
 uv run houba --help
 ```
 
-You still need `skopeo`, `buildctl`, and `git` on `PATH` when running from source.
+When running from source you need `regctl` on `PATH` (plus `buildctl` if you use the rebuild path).
 
 ### Configuration
 
-`houba` reads its configuration from environment variables (12-factor). All variables are namespaced `HOUBA_*`.
+`houba` reads its configuration from environment variables (12-factor). All variables are
+namespaced `HOUBA_*`.
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `HOUBA_HARBOR_URL` | yes | — | Base URL of the Harbor instance (e.g. `https://harbor.example.com`) |
-| `HOUBA_HARBOR_USER` | yes | — | Harbor robot account (e.g. `robot$houba`) |
-| `HOUBA_HARBOR_PASSWORD` | yes | — | Secret token for the robot account |
-| `HOUBA_HARBOR_PROJECT_DEFAULT` | no | — | Default Harbor project when not specified per-product |
-| `HOUBA_GITLAB_URL` | yes | — | Base URL of the GitLab instance |
-| `HOUBA_GITLAB_TOKEN` | yes | — | Personal access token (read/write API) |
-| `HOUBA_GITLAB_GROUP` | yes | — | GitLab group containing per-product repositories |
-| `HOUBA_TEAMS_WEBHOOK_URL` | no | — | Disables notifications when absent |
-| `HOUBA_LABEL_PREFIX` | no | `io.houba` | OCI label key prefix (e.g. `org.example.mirror`) |
-| `HOUBA_LOG_FORMAT` | no | `text` | `text` or `json` |
-| `HOUBA_LOG_LEVEL` | no | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
-| `HOUBA_DRY_RUN_TAGS` | no | `false` | Skip image pushes |
-| `HOUBA_DRY_RUN_DELETIONS` | no | `false` | Skip deletions |
-| `HOUBA_WORK_DIR` | no | `/tmp/houba-work` | Scratch directory for clones/builds |
-| `HOUBA_MAX_CONCURRENCY` | no | `4` | Max parallel tag operations per run (`1` = sequential). Override per run with `--concurrency`/`-j`. |
-| `HOUBA_REGISTRIES` | no | `{}` | JSON map of logical registry names to `RegistryConfig` objects (see below) |
+| `HOUBA_REGISTRIES` | yes¹ | `{}` | JSON map of logical registry name → `RegistryConfig` (source and destination registries; see below). |
+| `HOUBA_LABEL_PREFIX` | no | `io.houba` | Prefix for houba's own provenance annotations (empty ⇒ no houba labels). |
+| `HOUBA_BUILD_PLATFORM` | no | `linux/amd64` | Platform for the rebuild path (single-platform). |
+| `HOUBA_MAX_CONCURRENCY` | no | `4` | Max parallel tag operations per run (`1` = sequential). Override per run with `--concurrency` / `-j`. |
+| `HOUBA_WORK_DIR` | no | `/tmp/houba-work` | Scratch directory for build contexts. |
+| `HOUBA_TRANSFORM_CA_CERTS` | no | `{}` | JSON map of name → CA source, resolved by the `injectCA` transform. |
+| `HOUBA_TRANSFORM_PACKAGE_MIRRORS` | no | `{}` | JSON map of name → package mirror, resolved by `rewritePackageSources`. |
+| `HOUBA_LOG_FORMAT` | no | `text` | `text` or `json`. |
+| `HOUBA_LOG_LEVEL` | no | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
+| `HOUBA_DRY_RUN_TAGS` | no | `false` | Skip image copies / pushes. |
+| `HOUBA_DRY_RUN_DELETIONS` | no | `false` | Skip deletions. |
+
+¹ Defaults to empty, but at least one registry must be configured to reconcile anything.
 
 **`RegistryConfig` fields** (each entry in `HOUBA_REGISTRIES`):
 
 | Field | Required | Description |
 |---|---|---|
-| `host` | yes | Registry host, e.g. `harbor.example.com` or `localhost:5001` |
-| `username` | no | Registry username (must be set together with `password`) |
-| `password` | no | Registry password (must be set together with `username`) |
-| `tls_verify` | no | Set to `false` for plain-HTTP registries (default `true`); houba runs `regctl registry set … --tls disabled` automatically |
-| `ca_cert` | no | Path to a CA PEM regctl should trust for this registry's TLS (for registries behind an internal CA). |
+| `host` | yes | Registry host, e.g. `harbor.example.com` or `localhost:5001`. |
+| `username` | no | Registry username (must be set together with `password`). |
+| `password` | no | Registry password (must be set together with `username`). |
+| `tls_verify` | no | Set to `false` for plain-HTTP registries (default `true`); houba runs `regctl registry set … --tls disabled` automatically. |
+| `ca_cert` | no | Path to a CA PEM `regctl` should trust for this registry's TLS (registries behind an internal CA). |
 
-### Capture production fixtures (development)
+> The transform rosters are separate, named indirections so policies stay portable and this repo
+> stays generic: a policy references `injectCA: {certs: [corp]}` / `rewritePackageSources:
+> {mirror: internal}`, and `corp` / `internal` resolve to org-specific data here. A `CACertSource`
+> is `{path}` **or** `{pem}`; a package mirror is `{apt}` and/or `{apk}`.
 
-To capture a snapshot of an existing Harbor project for use in tests:
+### Try it
 
-```bash
-houba dev capture --project <project> --repository <repository> \
-  --output tests/fixtures/captured/
-```
-
-See [docs/runbooks/capture-fixtures.md](docs/runbooks/capture-fixtures.md).
+Runnable `MirrorPolicy` walkthroughs live in [`docs/examples/`](docs/examples/README.md): mirror a
+few busybox tags into a local registry with derived moving-tag aliases, select redis by semver, or
+rebuild Debian into per-region timezone variants. Every `reconcile` is **plan-then-apply** — pass
+`--dry-run` to see the plan first.
 
 ---
 
@@ -115,37 +135,40 @@ See [docs/runbooks/capture-fixtures.md](docs/runbooks/capture-fixtures.md).
 
 ```
 houba/
-├── domain/         pure business logic (semver, properties, tag filter, purge, plan, labels)
-├── ports/          typing.Protocol interfaces (harbor, source_registry, image_builder,
-│                   git_repo, gitlab, notifier, clock)
-├── adapters/       concrete implementations (httpx, subprocess)
-├── use_cases/      orchestration (Phase C)
-└── cli/            Typer entry points
+├── domain/      pure logic — mirror_policy, selection, aliases, semver, expand,
+│                policy_merge, variants, reconcile, collision, stamp, transforms/
+├── ports/       typing.Protocol interfaces — registry, image_builder, reporter, clock
+├── adapters/    concrete I/O — regctl_cli, buildkit_cli, structlog_reporter, system_clock
+├── use_cases/   orchestration — loader, reconcile_policies, report
+└── cli/         Typer entry points — reconcile, version
 ```
 
 **Golden rules**
 
-- `domain/` never imports I/O (no `httpx`, no `requests`, no `subprocess`).
-- `use_cases/` receive ports by constructor injection; they don't import adapters.
-- `cli/` does parsing only; everything else is delegated.
+- `domain/` never imports I/O (no `httpx`, no `subprocess`, no `os.environ`, no clock).
+- `use_cases/` receive ports by injection; they never import adapters.
+- `cli/` parses arguments and maps exceptions to exit codes; everything else is delegated.
 - Environment variables are read only inside `houba/config.py`.
 
-This makes the business logic 100% unit-testable with in-memory fakes (`tests/fakes/*`), and the adapters integration-testable in isolation with `respx` (HTTP) or fake-bin shell scripts (CLI tools).
+The current adapters all shell out via `subprocess` (`regctl`, `buildctl`) or use the stdlib —
+there is no HTTP client. This keeps the business logic 100 % unit-testable with in-memory fakes
+(`tests/fakes/*`), and the adapters integration-testable in isolation with fake-bin shell scripts.
+The full picture — and the C4 model — is in [`docs/architecture/`](docs/architecture/design.md).
 
 ---
 
 ## Development
 
 ```bash
-uv sync                                       # install deps
-uv run pytest                                 # full suite
-uv run pytest tests/unit/domain --cov-fail-under=90
+uv sync                                                        # install deps
+uv run pytest                                                  # full suite
+uv run pytest tests/unit/domain --cov=houba.domain --cov-fail-under=90
 uv run ruff check . && uv run ruff format --check .
 uv run mypy houba
-docker build -t houba:dev .                   # build the runtime image
+docker build -t houba:dev .                                    # build the runtime image
 ```
 
-Current test coverage: **92.5 % global**, **96 % on `domain/`**.
+Coverage gates enforced in CI: **≥ 80 % global**, **≥ 90 % on `houba.domain`**.
 
 ---
 
