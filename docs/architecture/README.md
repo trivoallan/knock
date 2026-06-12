@@ -1,7 +1,7 @@
 # houba — C4 architecture model
 
 [`workspace.dsl`](workspace.dsl) is the [C4 model](https://c4model.com) of houba, written in
-[Structurizr DSL](https://docs.structurizr.com/dsl). One model, three views:
+[Structurizr DSL](https://docs.structurizr.com/dsl). One model, six views:
 
 - **System Landscape** — houba in its enterprise context, all the way to incident-time
   blast-radius. This carries the product thesis: the provenance *stamp* is read downstream by
@@ -9,13 +9,29 @@
 - **System Context** — houba and the systems it integrates with directly (source registries,
   destination registries, BuildKit, and the internal package mirror the hardening rebuild
   pulls from).
+- **Container** — houba is a single deployable unit: the `houba` CLI (the reconcile engine; the
+  runtime image bundles `regctl` + `buildctl`). This view draws the system boundary around that
+  one container and the external systems it drives.
+- **Hexagon** — a synthetic overview of the same CLI: the six layers (**cli** → **use cases** →
+  **domain**, with **ports** ← **adapters**) as single boxes. The fastest read of the architecture:
+  it makes the dependency inversion explicit — use cases *and* adapters both point at the ports —
+  and shows the driven adapters reaching the external systems.
+- **Component** — the same hexagon fully exploded: every fine-grained component — the thin Typer
+  **cli**, the **use cases** (loader + reconcile orchestrator + the `RunReport` contract), the pure
+  **domain** (policy schema, planning pipeline, transform engine, provenance stamp), each **port**
+  (`typing.Protocol` seam), and each **adapter** wired to its external system.
 - **Deployment (Reference / kind)** — the [reference deployment](../superpowers/specs/2026-06-11-reference-deployment-design.md):
   a kind cluster running houba as a Kubernetes CronJob (optionally a sharded Indexed Job for horizontal scale-out, git-sync'd policies, rootless `buildkitd`,
   a `registry:2`/Harbor destination) through to a blast-radius consumer Job. The *same* manifests
   double as the production blueprint — which is why this view maps the deployment 1:1.
 
-This model is the **source of truth** for the context and landscape levels. It must not drift
-from the specs — see the [maintenance contract](#maintenance-contract).
+This model is the **source of truth** for the context and landscape levels (kept in sync with the
+specs — see the [maintenance contract](#maintenance-contract)). The Container, Hexagon, and
+Component views document houba's internal structure **as built**; keep them in step with the code when the
+layering, ports, or adapters change.
+
+The prose companion to this model — the problem framing, the hexagon, the policy schema, the
+reconcile loop, the provenance stamp — lives in [`design.md`](design.md).
 
 ## Render it
 
@@ -62,5 +78,9 @@ Whenever a spec adds or changes an **actor**, an **external system**, or an **in
 anything visible at context or landscape level — update `workspace.dsl` **in the same change as
 the spec**. A spec under `docs/superpowers/specs/` that shifts the architecture is not complete
 until the C4 model reflects it. The model must never drift from the specs.
+
+The **Container**, **Hexagon**, and **Component** views track the *code* rather than the specs:
+when houba grows a new port/adapter pair, a new domain concern, or a changed layer boundary, update
+them in the same change as the code.
 
 The same rule lives in the repository [`CLAUDE.md`](../../CLAUDE.md) so every session sees it.
