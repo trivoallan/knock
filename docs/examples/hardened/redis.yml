@@ -1,4 +1,4 @@
-# Hardening (rebuild path) — REQUIRES THE TRANSFORM ENGINE (Phase 6, in progress).
+# Hardening (rebuild path) — uses the transform engine (delivered).
 # Design: docs/superpowers/specs/2026-06-11-image-transform-hardening-design.md
 #
 # Unlike the copy-path examples (../busybox, ../redis), this one REBUILDS the image
@@ -10,7 +10,7 @@
 #   HOUBA_TRANSFORM_CA_CERTS='{"corp": {"path": "/etc/houba/certs/corp-root.pem"}}'
 #   HOUBA_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian", "apk": "https://mirror.corp/alpine"}}'
 #
-# This will run with `houba reconcile docs/examples/hardened` once the rebuild path lands.
+# Run it with `houba reconcile docs/examples/hardened`.
 #
 apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy
