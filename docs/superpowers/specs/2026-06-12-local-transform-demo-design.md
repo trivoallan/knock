@@ -37,7 +37,7 @@ Add a third tier, **`local-transform`**, that runs the **rebuild path** (buildki
 ### Image & transform
 
 - **Base image:** `debian:bookworm-slim`. Verified to ship `/usr/share/zoneinfo` (so `setTimezone` is *effective*, not merely stamped), ~75 MB, and provides the `sh`/`ln`/`echo` the rendered fragment needs. `America/New_York` and `Europe/Paris` are both in its bundled tzdata.
-- **Transform:** `setTimezone: { zone: <tz> }` — the only built-in step with **no external resource dependency** (`injectCA` needs CA certs, `rewritePackageSources` needs mirrors; both are org config). Its fragment (for the Europe variant) is:
+- **Transform:** `setTimezone: { zone: <tz> }` — the only built-in step with **no external resource dependency** (`injectCA` needs CA certs, `rewritePackageSources` needs mirrors; both are org config). Its fragment (for the `eu` variant) is:
   ```
   RUN ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo Europe/Paris > /etc/timezone
   ENV TZ=Europe/Paris
@@ -65,8 +65,8 @@ spec:
         semverOnly: false          # bookworm-slim is not a semver tag
         includeRegex: "^bookworm-slim$"
       variants:
-        - name: europe
-          suffix: "-europe"
+        - name: eu
+          suffix: "-eu"
           transform:
             - setTimezone: { zone: Europe/Paris }
         - name: us
@@ -78,7 +78,7 @@ spec:
           repository: debian
 ```
 
-Produces `demo/debian:bookworm-slim-europe` and `demo/debian:bookworm-slim-us`. (Per `houba/domain/variants.py`, an explicit variant uses its own `transform`; the suffix is applied to every output tag and alias of that variant during reconcile.) It must validate against the published policy JSON Schema (same gate as the other examples).
+Produces `demo/debian:bookworm-slim-eu` and `demo/debian:bookworm-slim-us`. (Per `houba/domain/variants.py`, an explicit variant uses its own `transform`; the suffix is applied to every output tag and alias of that variant during reconcile.) It must validate against the published policy JSON Schema (same gate as the other examples).
 
 ### New overlay — `deploy/overlays/local-transform/`
 
@@ -160,7 +160,7 @@ demo-transform-run: ## Fire a one-shot rebuild reconcile
 ### Docs & architecture sync (CLAUDE.md conventions)
 
 - **Overlay README** `deploy/overlays/local-transform/README.md` — what it is, the lite/transform/full positioning, and the insecure-HTTP note.
-- **Examples** — update `docs/examples/README.md` with the `timezone/debian.yml` walkthrough: the copy ↔ rebuild contrast against `busybox`, and the variant/`suffix` fan-out (`-europe` / `-us`) as the first worked example of variants in the examples set.
+- **Examples** — update `docs/examples/README.md` with the `timezone/debian.yml` walkthrough: the copy ↔ rebuild contrast against `busybox`, and the variant/`suffix` fan-out (`-eu` / `-us`) as the first worked example of variants in the examples set.
 - **C4 model — unchanged, and that is deliberate.** The intermediate tier introduces no new actor, external system, or integration: buildkitd (rebuild engine) and the in-cluster registry already exist in the model. `workspace.dsl` describes context/landscape, not deployment-overlay packaging, so it does not drift. (Noted here to satisfy the "spec that shifts architecture must update C4" gate — this spec does not shift it.)
 
 ## Testing & verification
@@ -171,9 +171,9 @@ This tier is manifests + one example policy; there is no new application code, s
 2. **Kustomize build** — `kustomize build deploy/overlays/local-transform` renders without error; the rendered buildkitd Deployment mounts `buildkitd-config` at `/etc/buildkit`.
 3. **End-to-end** — `make demo-transform`:
    - `houba-reconcile-run` Job reaches `Complete` (the rebuild + push to the HTTP registry succeeds — proves the `buildkitd.toml` `http = true` took effect).
-   - Both variant tags exist: `demo/debian:bookworm-slim-europe` and `demo/debian:bookworm-slim-us` (proves suffix application).
+   - Both variant tags exist: `demo/debian:bookworm-slim-eu` and `demo/debian:bookworm-slim-us` (proves suffix application).
    - Each rebuilt image carries the stamps: `…transform.steps` includes `setTimezone`, `…transform.version` is set, `…base.digest` equals the source digest — and the two variants share the **same** `base.digest` but differ in `transform.version`.
-   - `docker run --rm demo/debian:bookworm-slim-europe date` shows CEST/CET (`Europe/Paris`) and `…-us date` shows EST/EDT (`America/New_York`) — the transforms are **effective**, not just stamped.
+   - `docker run --rm demo/debian:bookworm-slim-eu date` shows CEST/CET (`Europe/Paris`) and `…-us date` shows EST/EDT (`America/New_York`) — the transforms are **effective**, not just stamped.
    - The blast-radius report lists `demo/debian` grouping both variant tags under a single `base.digest`.
 
 ### Pre-merge verification caveat

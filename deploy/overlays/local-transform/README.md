@@ -17,7 +17,7 @@ in-cluster `registry:2` as lite, **no Harbor, no ExternalSecret, no CA/mirror co
 
 [`docs/examples/timezone/debian.yml`](../../../docs/examples/timezone/debian.yml) mirrors
 one source tag (`debian:bookworm-slim`) and fans it into two **regional variants** via the
-per-variant `suffix` — `bookworm-slim-europe` (Europe/Paris) and `bookworm-slim-us`
+per-variant `suffix` — `bookworm-slim-eu` (Europe/Paris) and `bookworm-slim-us`
 (America/New_York). Both rebuild from the same source digest, so they share one
 `base.digest` but carry different `transform.version`.
 

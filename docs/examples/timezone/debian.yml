@@ -23,8 +23,8 @@ spec:
         semverOnly: false     # bookworm-slim is not a semver tag
         includeRegex: "^bookworm-slim$"
       variants:
-        - name: europe
-          suffix: "-europe"
+        - name: eu
+          suffix: "-eu"
           transform:
             - setTimezone: { zone: Europe/Paris }
         - name: us

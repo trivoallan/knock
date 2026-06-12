@@ -129,7 +129,7 @@ docker rm -f houba-demo-registry
   [the transform/hardening spec](../superpowers/specs/2026-06-11-image-transform-hardening-design.md).
 - **[`timezone/debian.yml`](timezone/debian.yml)** — the **rebuild path, runnable
   self-contained** (no Harbor, no org config): rebuild `debian:bookworm-slim` through
-  `setTimezone` and fan it into **`-europe` / `-us` variants** via the per-variant
+  `setTimezone` and fan it into **`-eu` / `-us` variants** via the per-variant
   `suffix` (the first worked example of `variants`). Run it end-to-end in kind with
   `make demo-transform` — see the [`local-transform` overlay](../../deploy/overlays/local-transform).
 

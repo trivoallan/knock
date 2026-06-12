@@ -17,11 +17,11 @@ def test_timezone_example_declares_two_regional_variants() -> None:
 
     assert imp.variants is not None
     assert [(v.name, v.suffix) for v in imp.variants] == [
-        ("europe", "-europe"),
+        ("eu", "-eu"),
         ("us", "-us"),
     ]
-    europe, us = imp.variants
-    assert [(s.name, s.params) for s in europe.transform] == [
+    eu, us = imp.variants
+    assert [(s.name, s.params) for s in eu.transform] == [
         ("setTimezone", {"zone": "Europe/Paris"}),
     ]
     assert [(s.name, s.params) for s in us.transform] == [

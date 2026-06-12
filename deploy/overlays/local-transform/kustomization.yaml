@@ -1,6 +1,6 @@
 # TRANSFORM demo — the rebuild (transform) path, runnable self-contained: buildkitd
 # + the same throwaway registry:2 as lite, but NO Harbor and NO org config.
-# Demonstrates setTimezone fanned into -europe / -us variants via the per-variant suffix.
+# Demonstrates setTimezone fanned into -eu / -us variants via the per-variant suffix.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
