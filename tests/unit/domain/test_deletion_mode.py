@@ -9,9 +9,7 @@ def test_policy_wins_over_destination_and_global() -> None:
 
 
 def test_destination_used_when_policy_unset() -> None:
-    assert (
-        resolve_deletion_mode(None, DeletionMode.mark, DeletionMode.purge) == DeletionMode.mark
-    )
+    assert resolve_deletion_mode(None, DeletionMode.mark, DeletionMode.purge) == DeletionMode.mark
 
 
 def test_global_used_when_policy_and_destination_unset() -> None:

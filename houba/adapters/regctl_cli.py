@@ -127,9 +127,7 @@ class RegctlAdapter:
             )
         return out
 
-    def put_referrer(
-        self, image_ref: str, artifact_type: str, annotations: dict[str, str]
-    ) -> None:
+    def put_referrer(self, image_ref: str, artifact_type: str, annotations: dict[str, str]) -> None:
         args = ["artifact", "put", "--subject", image_ref, "--artifact-type", artifact_type]
         for key, value in annotations.items():
             args += ["--annotation", f"{key}={value}"]

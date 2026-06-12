@@ -61,14 +61,10 @@ class FakeRegistryPort:
         self.logins.append((host, username, tls_verify))
 
     def list_referrers(self, image_ref: str, artifact_type: str) -> list[Referrer]:
-        return [
-            r for r in self._referrers.get(image_ref, []) if r.artifact_type == artifact_type
-        ]
+        return [r for r in self._referrers.get(image_ref, []) if r.artifact_type == artifact_type]
 
     # Journals only; _referrers is a read-fixture seeded via the constructor (see list_referrers).
-    def put_referrer(
-        self, image_ref: str, artifact_type: str, annotations: dict[str, str]
-    ) -> None:
+    def put_referrer(self, image_ref: str, artifact_type: str, annotations: dict[str, str]) -> None:
         if image_ref in self._fail_put:
             raise RegctlError(f"fake put_referrer failure for {image_ref}")
         self.marked.append((image_ref, artifact_type, annotations))
