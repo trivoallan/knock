@@ -64,6 +64,62 @@ def test_render_text_verbose_unfolds_operations() -> None:
     assert "7.2.0" in out
 
 
+def _partial_report() -> RunReport:
+    failed_op = Operation(
+        kind="imported",
+        out_tag="7.3.0",
+        src_tag="7.3.0",
+        applied=False,
+        error=ErrorInfo("RegctlError", "boom", 2),
+    )
+    ok_op = Operation(
+        kind="imported", out_tag="7.2.0", src_tag="7.2.0", digest="sha256:a", applied=True
+    )
+    variant = VariantReport(
+        name="v7",
+        suffix="",
+        status="partial",
+        totals=Counts(imported=1, failed=1),
+        operations=[ok_op, failed_op],
+    )
+    target = TargetReport(
+        dest_repo="harbor.corp/lib/redis",
+        status="partial",
+        variants=[variant],
+        operations=[],
+        totals=Counts(imported=1, failed=1),
+    )
+    policy = PolicyReport(
+        name="redis",
+        source="docker.io/library/redis",
+        status="partial",
+        error=None,
+        totals=Counts(imported=1, failed=1),
+        targets=[target],
+    )
+    return RunReport(
+        mode="apply", status="partial", totals=Counts(imported=1, failed=1), policies=[policy]
+    )
+
+
+def test_render_text_marks_partial_policy() -> None:
+    buf = io.StringIO()
+    render_report(_partial_report(), fmt="text", verbose=False, stream=buf)
+    out = buf.getvalue()
+    assert "PARTIAL" in out
+    assert "failed=1" in out
+    assert "status=partial" in out
+
+
+def test_render_text_verbose_marks_failed_operation() -> None:
+    buf = io.StringIO()
+    render_report(_partial_report(), fmt="text", verbose=True, stream=buf)
+    out = buf.getvalue()
+    assert "7.3.0" in out
+    assert "FAILED" in out
+    assert "RegctlError" in out
+
+
 def test_render_text_marks_failed_policy() -> None:
     failed = PolicyReport(
         name="nginx",

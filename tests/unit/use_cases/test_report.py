@@ -92,3 +92,77 @@ def test_report_exit_code_single_failure() -> None:
     )
     report = RunReport(mode="apply", status="failed", totals=Counts(), policies=[failed])
     assert report_exit_code(report) == 2
+
+
+def test_counts_failed_defaults_to_zero() -> None:
+    assert Counts().failed == 0
+
+
+def test_counts_failed_accepts_nonzero() -> None:
+    assert Counts(failed=2).failed == 2
+
+
+def test_operation_carries_optional_error() -> None:
+    op = Operation(
+        kind="imported",
+        out_tag="7.2.0",
+        applied=False,
+        error=ErrorInfo(type="RegctlError", message="boom", exit_code=2),
+    )
+    assert op.error is not None
+    assert op.error.exit_code == 2
+
+
+def test_report_exit_code_walks_operation_errors() -> None:
+    failed_op = Operation(
+        kind="imported",
+        out_tag="7.3.0",
+        applied=False,
+        error=ErrorInfo(type="RegctlError", message="boom", exit_code=2),
+    )
+    variant = VariantReport(
+        name="v7", suffix="", status="partial", totals=Counts(failed=1), operations=[failed_op]
+    )
+    target = TargetReport(
+        dest_repo="harbor.corp/lib/redis",
+        status="partial",
+        variants=[variant],
+        operations=[],
+        totals=Counts(failed=1),
+    )
+    policy = PolicyReport(
+        name="redis",
+        source="s",
+        status="partial",
+        error=None,
+        totals=Counts(failed=1),
+        targets=[target],
+    )
+    report = RunReport(mode="apply", status="partial", totals=Counts(failed=1), policies=[policy])
+    assert report_exit_code(report) == 2
+
+
+def test_report_exit_code_walks_target_level_operation_errors() -> None:
+    failed_delete = Operation(
+        kind="deleted",
+        out_tag="9.9.9",
+        applied=False,
+        error=ErrorInfo(type="RegctlError", message="delete failed", exit_code=2),
+    )
+    target = TargetReport(
+        dest_repo="harbor.corp/lib/redis",
+        status="partial",
+        variants=[],
+        operations=[failed_delete],
+        totals=Counts(failed=1),
+    )
+    policy = PolicyReport(
+        name="redis",
+        source="s",
+        status="partial",
+        error=None,
+        totals=Counts(failed=1),
+        targets=[target],
+    )
+    report = RunReport(mode="apply", status="partial", totals=Counts(failed=1), policies=[policy])
+    assert report_exit_code(report) == 2

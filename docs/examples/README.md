@@ -155,6 +155,10 @@ The copy-path examples keep `registry` off the destinations (resolved to the sin
 configured `local` registry), so they stay portable — the same policy file works against
 any registry roster.
 
+> **One repository per policy.** Each destination repository must be owned by exactly one `MirrorPolicy` —
+> two policies writing the same repo is rejected at load time (they would mutually delete each other's
+> tags). This is also what makes horizontal sharding safe (one writer per repo).
+
 > A policy is just data. `uv run python -c "import json,houba.domain.mirror_policy as m;
 > print(json.dumps(m.MirrorPolicy.model_json_schema(), indent=2))"` prints the JSON Schema
 > if you want editor validation.

@@ -10,7 +10,7 @@
   destination registries, BuildKit, and the internal package mirror the hardening rebuild
   pulls from).
 - **Deployment (Reference / kind)** — the [reference deployment](../superpowers/specs/2026-06-11-reference-deployment-design.md):
-  a kind cluster running houba as a Kubernetes CronJob (git-sync'd policies, rootless `buildkitd`,
+  a kind cluster running houba as a Kubernetes CronJob (optionally a sharded Indexed Job for horizontal scale-out, git-sync'd policies, rootless `buildkitd`,
   a `registry:2`/Harbor destination) through to a blast-radius consumer Job. The *same* manifests
   double as the production blueprint — which is why this view maps the deployment 1:1.
 

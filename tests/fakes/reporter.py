@@ -11,6 +11,7 @@ class FakeReporter:
         self.runs_started: list[tuple[int, str]] = []
         self.policies_started: list[tuple[str, str]] = []
         self.operations: list[OperationEvent] = []
+        self.operation_failures: list[tuple[OperationEvent, ErrorInfo]] = []
         self.failures: list[tuple[str, ErrorInfo]] = []
         self.policies_completed: list[tuple[str, Counts]] = []
         self.runs_completed: list[RunReport] = []
@@ -23,6 +24,9 @@ class FakeReporter:
 
     def operation_applied(self, ev: OperationEvent) -> None:
         self.operations.append(ev)
+
+    def operation_failed(self, ev: OperationEvent, error: ErrorInfo) -> None:
+        self.operation_failures.append((ev, error))
 
     def policy_failed(self, name: str, error: ErrorInfo) -> None:
         self.failures.append((name, error))

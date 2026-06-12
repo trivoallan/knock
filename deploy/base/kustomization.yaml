@@ -34,6 +34,10 @@ configMapGenerator:
       - POLICY_DIR=/policies/current/docs/examples/busybox
       # Repos the blast-radius consumer walks (matches the busybox example).
       - BLAST_REPOS=demo/busybox
+      # Number of shards for the Indexed reconcile Job (= completions). Both
+      # this value and jobTemplate.spec.completions must be bumped together per
+      # overlay; base is 1 (identical to the former non-indexed behaviour).
+      - SHARD_COUNT=1
   # The blast-radius consumer script, mounted into its Job. Canonical copy
   # lives at scripts/blast-radius.sh so it is also runnable standalone.
   - name: houba-blast-radius

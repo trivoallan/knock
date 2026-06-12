@@ -80,6 +80,9 @@ def _run(policies, **kw):  # type: ignore[no-untyped-def]
         dry_run_tags=kw.pop("dry_run_tags", False),
         dry_run_deletions=kw.pop("dry_run_deletions", False),
         reporter=kw.pop("reporter", FakeReporter()),
+        max_concurrency=kw.pop("max_concurrency", 1),
+        shard_index=kw.pop("shard_index", 0),
+        shard_count=kw.pop("shard_count", 1),
     )
     return reconcile_policies(policies, **defaults)
 
@@ -543,3 +546,181 @@ def test_configure_registry_called_once_per_host_before_copy() -> None:
         reporter=FakeReporter(),
     )
     assert registry.configured == [("reg.local", False, "/ca.pem")]
+
+
+def test_reconcile_collects_partial_tag_failure() -> None:
+    fake = FakeRegistryPort(
+        tags={
+            "docker.io/library/redis": ["7.2.0", "7.3.0"],
+            "harbor.corp/lib/redis": [],
+        },
+        infos={
+            "docker.io/library/redis:7.2.0": _info("sha256:a"),
+            "docker.io/library/redis:7.3.0": _info("sha256:b"),
+        },
+        fail_copy={"harbor.corp/lib/redis:7.3.0"},
+    )
+    report = _run([POLICY], registry=fake)
+    assert report.status == "partial"
+    policy = report.policies[0]
+    assert policy.status == "partial"
+    assert policy.totals.imported == 1
+    assert policy.totals.failed == 1
+    assert ("docker.io/library/redis:7.2.0", "harbor.corp/lib/redis:7.2.0") in fake.copied
+    ops = [op for t in policy.targets for v in t.variants for op in v.operations]
+    failed = [op for op in ops if op.error is not None]
+    assert [op.out_tag for op in failed] == ["7.3.0"]
+    assert failed[0].error.type == "RegctlError"
+    from houba.use_cases.report import report_exit_code
+
+    assert report_exit_code(report) == 2
+
+
+def test_reconcile_collects_alias_failure() -> None:
+    # POLICY aliases 7.2.0 to "7.2" and "latest"; fail the "latest" alias copy.
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": []},
+        infos={"docker.io/library/redis:7.2.0": _info("sha256:a")},
+        fail_copy={"harbor.corp/lib/redis:latest"},
+    )
+    report = _run([POLICY], registry=fake)
+    assert report.status == "partial"
+    ops = [op for t in report.policies[0].targets for v in t.variants for op in v.operations]
+    aliased_failed = [op for op in ops if op.kind == "aliased" and op.error is not None]
+    assert [op.out_tag for op in aliased_failed] == ["latest"]
+    assert report.policies[0].totals.imported == 1
+    assert report.policies[0].totals.failed == 1
+    assert ("harbor.corp/lib/redis:7.2.0", "harbor.corp/lib/redis:7.2") in fake.copied
+
+
+CONCURRENCY_POLICY = parse_mirror_policy("""
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata: { name: redis }
+spec:
+  artifactType: image
+  source: { registry: docker.io, repository: library/redis }
+  imports:
+    - name: v7
+      tags: { includeRegex: "^7\\\\." }
+      destinations: [{ project: lib, repository: redis }]
+""")
+
+
+def _three_tag_registry(**kw):  # type: ignore[no-untyped-def]
+    return FakeRegistryPort(
+        tags={
+            "docker.io/library/redis": ["7.0.0", "7.1.0", "7.2.0"],
+            "harbor.corp/lib/redis": [],
+        },
+        infos={
+            "docker.io/library/redis:7.0.0": _info("sha256:a"),
+            "docker.io/library/redis:7.1.0": _info("sha256:b"),
+            "docker.io/library/redis:7.2.0": _info("sha256:c"),
+        },
+        **kw,
+    )
+
+
+def test_reconcile_imports_run_concurrently() -> None:
+    import threading
+
+    # A barrier of 3 only releases when all three imports are in `copy` at once.
+    # Under sequential execution the first copy would block forever (timeout) and
+    # raise BrokenBarrierError, surfacing as failed ops.
+    barrier = threading.Barrier(3, timeout=5)
+    fake = _three_tag_registry(copy_barrier=barrier)
+    report = _run([CONCURRENCY_POLICY], registry=fake, max_concurrency=3)
+    assert report.status == "ok"
+    assert report.totals.imported == 3
+    assert len(fake.copied) == 3
+
+
+def test_reconcile_report_is_deterministic_under_concurrency() -> None:
+    fake = _three_tag_registry()
+    report = _run([CONCURRENCY_POLICY], registry=fake, max_concurrency=3)
+    variant = report.policies[0].targets[0].variants[0]
+    # Operations keep input (selection) order regardless of completion order.
+    assert [op.out_tag for op in variant.operations] == ["7.0.0", "7.1.0", "7.2.0"]
+
+
+def test_reconcile_sequential_and_concurrent_agree() -> None:
+    seq = _run([CONCURRENCY_POLICY], registry=_three_tag_registry(), max_concurrency=1)
+    par = _run([CONCURRENCY_POLICY], registry=_three_tag_registry(), max_concurrency=3)
+    assert seq.model_dump() == par.model_dump()
+
+
+SECOND_POLICY = parse_mirror_policy("""
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata: { name: nginx }
+spec:
+  artifactType: image
+  source: { registry: docker.io, repository: library/nginx }
+  imports:
+    - name: v1
+      tags: { includeRegex: "^1\\\\." }
+      destinations: [{ project: lib, repository: nginx }]
+""")
+
+
+def _two_policy_registry() -> FakeRegistryPort:
+    return FakeRegistryPort(
+        tags={
+            "docker.io/library/redis": ["7.2.0"],
+            "docker.io/library/nginx": ["1.25.0"],
+            "harbor.corp/lib/redis": [],
+            "harbor.corp/lib/nginx": [],
+        },
+        infos={
+            "docker.io/library/redis:7.2.0": _info("sha256:a"),
+            "docker.io/library/nginx:1.25.0": _info("sha256:b"),
+        },
+    )
+
+
+def test_shard_filter_applies_only_owned_policies() -> None:
+    from houba.domain.sharding import owns
+
+    policies = [POLICY, SECOND_POLICY]
+    owned0 = {
+        p.metadata.name for p in policies if owns(p.metadata.name, shard_index=0, shard_count=2)
+    }
+    report = _run(policies, registry=_two_policy_registry(), shard_index=0, shard_count=2)
+    assert {p.name for p in report.policies} == owned0
+
+
+def test_shards_partition_the_policy_set() -> None:
+    policies = [POLICY, SECOND_POLICY]
+    r0 = _run(policies, registry=_two_policy_registry(), shard_index=0, shard_count=2)
+    r1 = _run(policies, registry=_two_policy_registry(), shard_index=1, shard_count=2)
+    seen = {p.name for p in r0.policies} | {p.name for p in r1.policies}
+    assert seen == {"redis", "nginx"}
+    assert not ({p.name for p in r0.policies} & {p.name for p in r1.policies})
+
+
+def test_dest_repo_collision_fails_before_any_mutation() -> None:
+    clash = parse_mirror_policy("""
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata: { name: redis-clone }
+spec:
+  artifactType: image
+  source: { registry: docker.io, repository: library/redis }
+  imports:
+    - name: v7
+      tags: { includeRegex: "^7\\\\." }
+      destinations: [{ project: lib, repository: redis }]
+""")
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.0"], "harbor.corp/lib/redis": []},
+        infos={"docker.io/library/redis:7.2.0": _info("sha256:a")},
+    )
+    with pytest.raises(PolicyValidationError, match=r"harbor\.corp/lib/redis"):
+        _run([POLICY, clash], registry=fake)  # both → harbor.corp/lib/redis
+    assert fake.copied == []  # invariant ran before any mutation
+
+
+def test_shard_count_one_processes_all() -> None:
+    report = _run([POLICY, SECOND_POLICY], registry=_two_policy_registry())
+    assert {p.name for p in report.policies} == {"redis", "nginx"}

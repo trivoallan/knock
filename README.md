@@ -83,6 +83,7 @@ You still need `skopeo`, `buildctl`, and `git` on `PATH` when running from sourc
 | `HOUBA_DRY_RUN_TAGS` | no | `false` | Skip image pushes |
 | `HOUBA_DRY_RUN_DELETIONS` | no | `false` | Skip deletions |
 | `HOUBA_WORK_DIR` | no | `/tmp/houba-work` | Scratch directory for clones/builds |
+| `HOUBA_MAX_CONCURRENCY` | no | `4` | Max parallel tag operations per run (`1` = sequential). Override per run with `--concurrency`/`-j`. |
 | `HOUBA_REGISTRIES` | no | `{}` | JSON map of logical registry names to `RegistryConfig` objects (see below) |
 
 **`RegistryConfig` fields** (each entry in `HOUBA_REGISTRIES`):
