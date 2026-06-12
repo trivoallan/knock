@@ -1,0 +1,22 @@
+# buildkitd's TCP endpoint is unauthenticated, so restrict who can reach it.
+# Only the houba reconcile pod may open the gRPC port. In production, add mTLS
+# on top of this (client certs) — a NetworkPolicy is necessary, not sufficient.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: buildkitd-allow-reconcile
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: buildkitd
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: houba
+              app.kubernetes.io/component: reconcile
+      ports:
+        - protocol: TCP
+          port: 1234

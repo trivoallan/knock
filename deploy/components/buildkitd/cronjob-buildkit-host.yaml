@@ -1,0 +1,15 @@
+# Point houba's buildctl client at the in-cluster buildkitd.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: houba-reconcile
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: houba
+              env:
+                - name: BUILDKIT_HOST
+                  value: tcp://buildkitd.houba.svc.cluster.local:1234

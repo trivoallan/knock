@@ -1,0 +1,54 @@
+# The reference consumer: reads the provenance stamp and computes blast radius.
+# On-demand (re-run with `make blast-radius`); ttl-cleaned after it finishes.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: houba-blast-radius
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: houba
+        app.kubernetes.io/component: blast-radius
+    spec:
+      serviceAccountName: houba
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: blast-radius
+          image: houba # rewritten by the kustomize images transformer; has regctl + python3
+          command: ["bash", "/scripts/blast-radius.sh"]
+          env:
+            - name: HOME # regctl persists its registry config under $HOME/.regctl
+              value: /tmp
+            - name: BLAST_REPOS
+              valueFrom:
+                configMapKeyRef:
+                  name: houba-config
+                  key: BLAST_REPOS
+          envFrom:
+            - secretRef:
+                name: houba-registries # same roster houba uses (host + creds)
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+            - name: home
+              mountPath: /tmp
+      volumes:
+        - name: script
+          configMap:
+            name: houba-blast-radius
+            defaultMode: 0755
+        - name: home
+          emptyDir: {}

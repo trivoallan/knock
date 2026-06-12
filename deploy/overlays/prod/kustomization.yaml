@@ -1,0 +1,38 @@
+# PROD blueprint — copy this overlay into your environment.
+# Same base as the demos (anti-drift); differs only in: real registry via
+# ExternalSecret, the org policy repo, a pinned published image, the rebuild
+# add-on, and the live hourly schedule (no suspend).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: houba
+
+resources:
+  - ../../base
+  - externalsecret.yaml
+
+components:
+  - ../../components/buildkitd
+
+# Pinned, published image (the demos use a kind-loaded houba:dev instead).
+images:
+  - name: houba
+    newName: ghcr.io/trivoallan/houba
+    newTag: v0.2.0
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: houba-config
+    behavior: merge
+    literals:
+      # Point at YOUR policy repo (the front door). Reconcile the whole tree.
+      - POLICY_REPO_URL=https://gitlab.example.com/platform/houba-policies
+      - POLICY_REPO_REF=main
+      - POLICY_DIR=/policies/current
+      # Repos the blast-radius consumer walks — set to your mirrored namespaces.
+      - BLAST_REPOS=mirror/busybox mirror/redis
+      # Org-specific transform data lives here (policies only NAME these):
+      #   HOUBA_TRANSFORM_CA_CERTS={"corp":{"path":"/etc/houba/certs/corp-root.pem"}}
+      #   HOUBA_TRANSFORM_PACKAGE_MIRRORS={"corp":{"apt":"https://mirror.corp/debian"}}

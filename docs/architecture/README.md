@@ -1,7 +1,7 @@
 # houba — C4 architecture model
 
 [`workspace.dsl`](workspace.dsl) is the [C4 model](https://c4model.com) of houba, written in
-[Structurizr DSL](https://docs.structurizr.com/dsl). One model, two views:
+[Structurizr DSL](https://docs.structurizr.com/dsl). One model, three views:
 
 - **System Landscape** — houba in its enterprise context, all the way to incident-time
   blast-radius. This carries the product thesis: the provenance *stamp* is read downstream by
@@ -9,6 +9,10 @@
 - **System Context** — houba and the systems it integrates with directly (source registries,
   destination registries, BuildKit, and the internal package mirror the hardening rebuild
   pulls from).
+- **Deployment (Reference / kind)** — the [reference deployment](../superpowers/specs/2026-06-11-reference-deployment-design.md):
+  a kind cluster running houba as a Kubernetes CronJob (git-sync'd policies, rootless `buildkitd`,
+  a `registry:2`/Harbor destination) through to a blast-radius consumer Job. The *same* manifests
+  double as the production blueprint — which is why this view maps the deployment 1:1.
 
 This model is the **source of truth** for the context and landscape levels. It must not drift
 from the specs — see the [maintenance contract](#maintenance-contract).

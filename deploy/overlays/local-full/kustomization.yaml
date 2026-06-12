@@ -1,0 +1,37 @@
+# FULL demo — rebuild (hardening) path into a realistic Harbor destination.
+# Adds buildkitd, injects a (demo) internal CA, rewrites package sources, and
+# reconciles the hardened example. Heavier than lite: Harbor is installed
+# separately (see README.md / `make demo-full`).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: houba
+
+resources:
+  - ../../base
+  - secret-registries.yaml
+
+components:
+  - ../../components/buildkitd
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  # Add the demo CA to the trust store; mounted into the houba container (see patch-ca-mount).
+  - name: houba-ca
+    files:
+      - corp-root.pem
+  # Override the reconcile target + transform roster (the policy only NAMES `corp`;
+  # the org-specific data lives here, per houba's "policy is portable" rule).
+  - name: houba-config
+    behavior: merge
+    literals:
+      - POLICY_DIR=/policies/current/docs/examples/hardened
+      - BLAST_REPOS=hardened/redis
+      - HOUBA_TRANSFORM_CA_CERTS={"corp":{"path":"/etc/houba/certs/corp-root.pem"}}
+      - HOUBA_TRANSFORM_PACKAGE_MIRRORS={"corp":{"apt":"https://deb.debian.org/debian"}}
+
+patches:
+  - path: patch-ca-mount.yaml
+  - path: patch-suspend.yaml

@@ -1,0 +1,35 @@
+# houba — ALTERNATIVE TRIGGER (documented variant, not the reference spine).
+#
+# The reference deployment runs houba as a Kubernetes CronJob (see deploy/ and
+# docs/runbooks/reference-deployment.md). For GitLab shops that prefer it, this runs
+# the SAME `houba reconcile` against the SAME policy repo on a pipeline *schedule* —
+# GitLab is already a first-class houba integration, so this is a natural fit.
+#
+# Setup:
+#   1. Project → CI/CD → Schedules: add an hourly schedule.
+#   2. Project → CI/CD → Variables: set HOUBA_REGISTRIES (masked) = the roster JSON
+#      (host + robot-account creds). Add transform vars if you use the rebuild path.
+
+stages: [reconcile]
+
+reconcile:
+  stage: reconcile
+  image: ghcr.io/trivoallan/houba:v0.2.0
+  # Only on a schedule (and manual), never on every push.
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+  variables:
+    HOUBA_LOG_FORMAT: json
+    HOUBA_LOG_LEVEL: INFO
+    # HOUBA_REGISTRIES is injected as a masked CI/CD variable (do NOT commit it).
+  script:
+    - houba reconcile docs/examples/busybox
+  # Plan-only on merge requests: surface what WOULD change without mutating anything.
+  # Duplicate this job with `HOUBA_DRY_RUN_TAGS=true HOUBA_DRY_RUN_DELETIONS=true`
+  # under `if: $CI_PIPELINE_SOURCE == "merge_request_event"` to gate policy PRs.
+
+# Rebuild path: add a buildkitd `services:` entry and set
+#   BUILDKIT_HOST: tcp://localhost:1234
+# then reconcile a policy that carries a `transform:` block.
