@@ -14,6 +14,12 @@ idempotent — unchanged tags are skipped via the recorded `base.digest`.
 - **[regctl](https://github.com/regclient/regclient/blob/main/docs/install.md)** on your `PATH` — houba shells out to it for all registry operations.
 - **Docker** (or Podman) — to run a throwaway local registry.
 
+> **Docker Hub rate limits.** Pulls from `docker.io` are rate-limited when anonymous. If a
+> reconcile fails with `429 / toomanyrequests`, run `docker login` then (in the kind demo)
+> `make docker-auth` to seed the optional `houba-docker-config` secret from your
+> `~/.docker/config.json` — both the copy (regctl) and rebuild (buildctl) paths then pull
+> authenticated.
+
 ## 1. Start a local destination registry
 
 ```bash

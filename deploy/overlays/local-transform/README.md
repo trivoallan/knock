@@ -42,3 +42,17 @@ The in-cluster `git-sync` clones `POLICY_REPO_REF` (default `main`), so the `tim
 example is only visible once merged. To try it from a feature branch, add
 `POLICY_REPO_REF=<branch>` to the `houba-config` generator in `kustomization.yaml` and
 revert before merging.
+
+## Docker Hub rate limits
+
+The rebuild pulls the source image (`debian`) from Docker Hub. Anonymous pulls are
+rate-limited; if a run fails with `toomanyrequests` / `429`, authenticate the source:
+
+```bash
+docker login                # if you are not already logged in
+make docker-auth            # seeds the optional houba-docker-config secret from ~/.docker/config.json
+make demo-transform
+```
+
+`docker-auth` is opt-in and base-wide: both the copy path (regctl) and the rebuild path
+(buildctl) read the mounted Docker `config.json`. Without the secret, pulls stay anonymous.
