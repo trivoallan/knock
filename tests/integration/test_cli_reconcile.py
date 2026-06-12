@@ -5,7 +5,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+import houba.cli.reconcile as cli_reconcile
 from houba.cli.main import app
+from houba.domain.deletion_mode import DeletionMode
 from houba.errors import PolicyValidationError
 
 POLICY = """
@@ -165,3 +167,25 @@ def test_reconcile_rejects_index_ge_count(
         app, ["reconcile", str(tmp_path), "--shard-index", "2", "--shard-count", "2"]
     )
     assert result.exit_code != 0  # index must be < count
+
+
+def test_cli_threads_global_deletion_mode(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    _env(monkeypatch)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "empty")
+    monkeypatch.setenv("HOUBA_DELETION_MODE", "mark")
+    (tmp_path / "redis.yml").write_text(POLICY)
+
+    captured: dict[str, object] = {}
+
+    real = cli_reconcile.reconcile_policies
+
+    def spy(*args: object, **kwargs: object):  # type: ignore[no-untyped-def]
+        captured["deletion_mode"] = kwargs.get("deletion_mode")
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(cli_reconcile, "reconcile_policies", spy)
+    result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "--dry-run"])
+    assert result.exit_code == 0, result.stdout
+    assert captured["deletion_mode"] is DeletionMode.mark
