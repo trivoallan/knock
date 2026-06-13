@@ -35,6 +35,7 @@ class FakeRegistryPort:
         self.configured: list[tuple[str, bool, str | None]] = []
         self.marked: list[tuple[str, str, dict[str, str]]] = []
         self.unmarked: list[str] = []
+        self.artifact_referrers: list[tuple[str, str, str, bytes, dict[str, str]]] = []
 
     def configure_registry(self, host: str, *, tls_verify: bool, ca_cert: str | None) -> None:
         self.configured.append((host, tls_verify, ca_cert))
@@ -64,6 +65,18 @@ class FakeRegistryPort:
         self.annotated.append((image_ref, annotations))
         # deterministic synthetic post-annotate digest (distinct per ref)
         return f"sha256:{hashlib.sha256(image_ref.encode()).hexdigest()}"
+
+    def put_artifact_referrer(
+        self,
+        subject_ref: str,
+        *,
+        artifact_type: str,
+        media_type: str,
+        blob: bytes,
+        annotations: dict[str, str],
+    ) -> str:
+        self.artifact_referrers.append((subject_ref, artifact_type, media_type, blob, annotations))
+        return f"sha256:{hashlib.sha256(blob).hexdigest()}"
 
     def delete_tag(self, image_ref: str) -> None:
         if image_ref in self._fail_delete:
