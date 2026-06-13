@@ -46,7 +46,7 @@ def test_attach_stamps_referrer_on_digest() -> None:
     assert outcome.format == "sarif"
     assert outcome.facts["vuln.critical"] == "1"
     # one referrer attached to the digest-pinned subject
-    (subject, atype, media, blob, annotations) = reg.referrers[0]
+    (subject, atype, media, blob, annotations) = reg.artifact_referrers[0]
     assert subject == "harbor.corp/lib/redis@sha256:abc"
     assert atype == SCAN_RESULT_ARTIFACT_TYPE
     assert media == "application/sarif+json"

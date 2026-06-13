@@ -56,8 +56,6 @@ def test_fake_journals_configure_registry() -> None:
 
 
 def test_put_artifact_referrer_journals_and_returns_blob_digest() -> None:
-    from tests.fakes.registry import FakeRegistryPort
-
     reg = FakeRegistryPort()
     out = reg.put_artifact_referrer(
         "harbor.corp/lib/redis@sha256:abc",

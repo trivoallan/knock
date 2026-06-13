@@ -44,15 +44,16 @@ def attach_scan(
     info = registry.inspect(image_ref)
     subject = pin_to_digest(image_ref, info.digest)
     fmt = resolve_format(report_bytes, format_override, formats)
-    summary = formats.get(fmt).summarize(report_bytes)
+    mapper = formats.get(fmt)
+    summary = mapper.summarize(report_bytes)
     now = clock.now()
     annotations = build_scan_annotations(
         summary, prefix=label_prefix, subject_digest=info.digest, fmt=fmt, timestamp=now
     )
-    referrer = registry.put_referrer(
+    referrer = registry.put_artifact_referrer(
         subject,
         artifact_type=SCAN_RESULT_ARTIFACT_TYPE,
-        media_type=formats.get(fmt).report_media_type,
+        media_type=mapper.report_media_type,
         blob=report_bytes,
         annotations=annotations,
     )
