@@ -62,3 +62,28 @@ def test_attach_unrecognized_report_errors(
     )
     assert result.exit_code != 0
     assert isinstance(result.exception, UnknownFormatError)
+
+
+def test_attach_reads_report_from_stdin(
+    monkeypatch: pytest.MonkeyPatch, fake_bin_path: Path
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "default")
+    result = CliRunner().invoke(
+        app, ["attach", "harbor.corp/lib/redis:7.2.0", "--report", "-"], input=SARIF
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "attached sarif scan" in result.stdout
+
+
+def test_attach_format_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "default")
+    report = tmp_path / "scan.sarif.json"
+    report.write_text(SARIF)
+    result = CliRunner().invoke(
+        app,
+        ["attach", "harbor.corp/lib/redis:7.2.0", "--report", str(report), "--format", "sarif"],
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "attached sarif scan" in result.stdout

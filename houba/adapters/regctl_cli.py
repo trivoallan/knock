@@ -103,7 +103,6 @@ class RegctlAdapter:
             ]
             for key, value in annotations.items():
                 args += ["--annotation", f"{key}={value}"]
-            args.append(subject_ref)
             out = self._run(args)
         return out.strip()
 

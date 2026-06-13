@@ -263,6 +263,7 @@ def test_put_artifact_referrer_invokes_artifact_put_with_flags(
     assert "--file-media-type application/sarif+json" in line
     assert "--annotation io.houba.scan.tool=trivy" in line
     assert "--annotation io.houba.scan.vuln.critical=0" in line
+    assert line.split().count("harbor.corp/lib/redis@sha256:abc") == 1
     assert digest == "harbor.corp/lib/redis@sha256:ref123"
 
 

@@ -1,7 +1,8 @@
 """Render a RunReport to a stream: `json` (machine contract) or `text` (human recap).
 
 Result goes to stdout; the structlog journal goes to stderr. `--verbose` unfolds
-targets/variants/operations under each policy."""
+targets/variants/operations under each policy.  The module also provides
+`render_scan_outcome` for the `houba attach` scan outcome (`text`/`json`)."""
 
 from __future__ import annotations
 
