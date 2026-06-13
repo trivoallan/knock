@@ -24,6 +24,7 @@ from houba.config import (
     resolve_mirror,
     resolve_registry,
 )
+from houba.domain.attestation import build_transform_statement
 from houba.domain.collision import (
     AliasTarget,
     detect_alias_collisions,
@@ -43,7 +44,6 @@ from houba.domain.reconcile import (
     reconcile_import,
 )
 from houba.domain.sharding import owns
-from houba.domain.attestation import build_transform_statement
 from houba.domain.stamp import build_stamp_annotations
 from houba.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
 from houba.domain.transforms.registry import DEFAULT_REGISTRY
