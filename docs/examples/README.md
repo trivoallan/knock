@@ -142,6 +142,12 @@ docker rm -f houba-demo-registry
   `suffix` (the first worked example of `variants`). Run it end-to-end in kind with
   `make demo-transform` — see the [`local-transform` overlay](../../deploy/overlays/local-transform).
   Deployment: [timezone · rebuild](../architecture/_export/structurizr-DeployTimezone.mmd).
+- **[`attested/redis.yml`](attested/redis.yml)** — the **rebuild path, signed**: the same
+  hardening rebuild as `hardened/`, but with attestation enabled so the output carries two
+  in-toto attestations — BuildKit's `slsa.dev/provenance/v1` and houba's
+  `https://houba.dev/predicate/transform/v1`. **Requires the attestation path**: set
+  `HOUBA_ATTEST_SIGNER` (`keyless` | `kms` | `key`) and a `cosign` on `PATH`; off by default.
+  Design: [the SLSA/in-toto attestation spec](../superpowers/specs/2026-06-11-slsa-attestation-design.md).
 - **[`pending-deletion/pending-deletion.yml`](pending-deletion/pending-deletion.yml)** —
   `deletionMode: mark`: when a tag drops out of the selection, houba attaches a
   `pending-deletion` OCI referrer instead of deleting it. See
@@ -231,6 +237,25 @@ touching the registry.
 Hardening steps are pluggable primitives: `injectCA`, `rewritePackageSources`, and
 `setTimezone` (e.g. `setTimezone: { zone: Europe/Paris }`). Adding a primitive is a
 single self-contained compiler in `houba/domain/transforms/steps.py`.
+
+### Signed attestations (SLSA / in-toto)
+
+On the **rebuild path**, houba can additionally **sign** the result. Set
+`HOUBA_ATTEST_SIGNER` to `keyless`, `kms`, or `key` (default `""` = off, no attestation —
+exactly like an empty `HOUBA_LABEL_PREFIX` emits no labels) and ensure `cosign` is on `PATH`.
+Two attestations are produced, attached to the image digest as OCI referrers:
+
+- **`https://slsa.dev/provenance/v1`** — emitted by BuildKit (the build facts). houba only
+  enables it (`--opt attest:provenance=mode=max`).
+- **`https://houba.dev/predicate/transform/v1`** — houba's transform/hardening lineage
+  (which policy/import/variant, the source digest, the resolved steps, the builder id),
+  signed via the configured signer.
+
+Trust is org configuration, never baked in: `keyless` uses Fulcio + an OIDC identity
+(point `HOUBA_ATTEST_FULCIO_URL` at an internal CA if you run one); `kms`/`key` sign with
+`HOUBA_ATTEST_KEY_REF` (a KMS URI or a key path). A blank `HOUBA_ATTEST_REKOR_URL` writes
+**no transparency-log entry** — the air-gapped path. v1 attests **rebuilds only**; pure
+copies stay at the annotation layer. See [`attested/redis.yml`](attested/redis.yml).
 
 ### Upgrade note
 
