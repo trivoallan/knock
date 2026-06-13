@@ -38,11 +38,11 @@ integration-testable in isolation.
 
 ```mermaid
 flowchart TD
-    cli["<b>cli/</b> — Typer, thin<br/>main · reconcile · render · _di (composition root)"]
-    uc["<b>use_cases/</b><br/>loader · reconcile_policies (orchestrator) · report (RunReport)<br/><i>receive ports by keyword injection — never import adapters</i>"]
-    domain["<b>domain/</b> — pure<br/>mirror_policy · selection · aliases · semver · expand<br/>policy_merge · variants · reconcile · collision · stamp · transforms/*"]
-    ports["<b>ports/</b> — typing.Protocol<br/>RegistryPort · ImageBuilderPort · Reporter · ClockPort"]
-    adapters["<b>adapters/</b><br/>RegctlAdapter · BuildkitAdapter · StructlogReporter · SystemClock"]
+    cli["<b>cli/</b> — Typer, thin<br/>reconcile · purge · attach · audit · version · render · _di (composition root)"]
+    uc["<b>use_cases/</b><br/>loader · reconcile (orchestrator) · purge · attach · audit · report (RunReport)<br/><i>receive ports by keyword injection — never import adapters</i>"]
+    domain["<b>domain/</b> — pure<br/>mirror_policy · selection · aliases · semver · expand · policy_merge · variants<br/>reconcile · collision · sharding · stamp · attestation · coverage · lifecycle · purge · transforms/*"]
+    ports["<b>ports/</b> — typing.Protocol<br/>RegistryPort · ImageBuilderPort · AttestorPort · UsageOraclePort · Reporter · ClockPort"]
+    adapters["<b>adapters/</b><br/>RegctlAdapter · BuildkitAdapter · CosignAdapter · CommandUsageAdapter · StructlogReporter · SystemClock"]
 
     cli --> uc
     uc --> domain
@@ -225,9 +225,13 @@ registries — a runtime fact resolved downstream), and no human owner (resolved
 joining the stable `team` key to a directory / CMDB). Immutable build facts on the artifact;
 mutable org facts stay out. The three-level identity is `policy → import → variant`.
 
-Heavy, signed provenance (**SLSA / in-toto attestations**) is **designed but not yet implemented**
-(see the SLSA attestation spec under `docs/superpowers/specs/`); today's reality is annotations
-only.
+Heavy, signed provenance (**SLSA / in-toto attestations**) is **implemented** on the rebuild path
+via `AttestorPort` → `CosignAdapter` (the pure builder is `domain/attestation.py`): cosign attaches
+a signed DSSE attestation as an OCI referrer to the produced digest. It is **off by default**
+(`HOUBA_ATTEST_SIGNER=""`) and supports `keyless` (Fulcio/Rekor), `kms`, and `key` signers — so a
+registry with no signing config still gets the annotation stamp, and turning attestation on adds the
+signed layer without changing the stamp. See the SLSA attestation spec under
+`docs/superpowers/specs/`.
 
 ## Tag selection & expansion
 
@@ -262,19 +266,27 @@ flowchart LR
     cfg["<b>ConfigError</b> — exit 3<br/>missing / invalid configuration"]
     intl["<b>InternalError</b> — exit 4<br/>bug / assertion"]
     pol["PolicyValidationError"]
+    scan["ScanReportError"]
+    fmt["UnknownFormatError"]
     reg["RegctlError"]
     bk["BuildkitError"]
+    cos["CosignError"]
+    orc["UsageOracleError"]
 
     base --> dom
     base --> adp
     base --> cfg
     base --> intl
     dom --> pol
+    dom --> scan
+    dom --> fmt
     adp --> reg
     adp --> bk
+    adp --> cos
+    adp --> orc
 
     classDef leaf fill:#eef1f5,stroke:#69707a,color:#1f2933;
-    class pol,reg,bk leaf;
+    class pol,scan,fmt,reg,bk,cos,orc leaf;
 ```
 
 Anything not under `HoubaError` (e.g. a stray `KeyError`) ⇒ exit 4. Pydantic `ValidationError` /
@@ -293,6 +305,10 @@ retry logic anywhere — the current adapters shell out and surface failures imm
   resolve against
 - `HOUBA_BUILD_PLATFORM` (default `linux/amd64`), `HOUBA_WORK_DIR`
 - `HOUBA_LOG_FORMAT` / `HOUBA_LOG_LEVEL`, `HOUBA_DRY_RUN_TAGS` / `HOUBA_DRY_RUN_DELETIONS`
+- `HOUBA_ATTEST_*` — SLSA/in-toto signing (off by default): `HOUBA_ATTEST_SIGNER`
+  (`""` | `keyless` | `kms` | `key`), `HOUBA_ATTEST_KEY_REF` (required for `kms`/`key`),
+  `HOUBA_ATTEST_FULCIO_URL` / `HOUBA_ATTEST_REKOR_URL` / `HOUBA_ATTEST_BUILDER_ID`
+- `HOUBA_PURGE_MIN_IDLE_DAYS` — the idle window `houba purge` requires before reaping a marked tag
 
 Nested registry / cert / mirror configs are JSON sub-objects inside their env var (not separate
 env prefixes). Resolver helpers (`resolve_registry`, `resolve_ca_certs`, `resolve_mirror`) raise
@@ -305,25 +321,35 @@ for *talking to* a registry, path-only) is deliberately distinct from `transform
 
 ## CLI
 
-Two commands (`houba …`):
+Five commands (`houba …`):
 
 - **`reconcile <directory> [--dry-run] [--verbose]`** — load every `*.yml` / `*.yaml` policy in
   the directory, reconcile them, render a report to **stdout** (text or JSON) while a structured
   event journal goes to **stderr**, and exit with `report_exit_code`.
+- **`purge [--registry NAME] [--apply]`** — the reference reaper: walk `pending-deletion` marks and
+  delete tags not seen in production within `HOUBA_PURGE_MIN_IDLE_DAYS` (resolved against a usage
+  oracle). Dry-run by default; `--apply` actually deletes (still gated by `HOUBA_DRY_RUN_DELETIONS`).
+- **`attach <image-ref> --report <file|-> [--format F] [--output text|json]`** — ingest a scan
+  report produced upstream and attach it as a stamped OCI referrer on the image.
+- **`audit [--registry NAME] [--fail-on-uncovered]`** — coverage-gap report: walk the registry and
+  list images that do **not** carry houba's stamp; `--fail-on-uncovered` makes it a CI gate.
 - **`version`** — print the installed version.
 
-(`cli/render.py` is the report formatter used by `reconcile`, not a separate command.)
+(`cli/render.py` is the shared report formatter, not a separate command.)
 
 ## Status
 
 - **Delivered** — the full hexagon (`domain/`, `ports/`, `adapters/`, `use_cases/`, `cli/`); both
   the copy and the **rebuild / derive-and-stamp** paths; the pluggable transform engine with three
-  built-in steps; the OCI-standard + `io.houba.*` provenance stamp; provenance-based,
-  transform-aware change detection; a `regctl` + `buildctl` runtime image; and a kind-based
-  [reference deployment](README.md) that doubles as the production blueprint.
-- **Deferred** — SLSA / in-toto attestations (designed, not built); deb822 (`*.sources`) package
-  sources in `rewritePackageSources`; multi-platform rebuild (the copy path is multi-arch, the
-  rebuild path is single-platform).
+  built-in steps; the OCI-standard + `io.houba.*` provenance stamp **plus signed SLSA / in-toto
+  attestations** (cosign, off by default); provenance-based, transform-aware change detection; the
+  `reconcile` / `purge` / `attach` / `audit` commands (delegated deletion + the reference reaper, scan
+  ingestion, and the coverage-gap audit); concurrent + horizontally-shardable reconcile; a `regctl`
+  + `buildctl` + `cosign` runtime image; and a kind-based [reference deployment](README.md) that
+  doubles as the production blueprint.
+- **Deferred** — deb822 (`*.sources`) package sources in `rewritePackageSources`; multi-platform
+  rebuild (the copy path is multi-arch, the rebuild path is single-platform); the remaining roadmap
+  verbs (`archive_restore`, `product_init` / `product_delete`).
 - **Out of scope** — runtime presence / fleet inventory (the org's observability stack assembles
   the blast-radius query by reading the stamp); end-of-life awareness (carried by the sibling tool
   `regis`).

@@ -23,14 +23,18 @@ Two consequences drive everything below:
   Harbor / source-registry adapters, `houba dev capture`.
 - **Phase B (delivered)** — all I/O adapters (BuildKit, git, GitLab, Teams), Harbor write-side,
   composition root, runtime image bundling skopeo + buildctl + git.
-- **Phase C (current)** — the derive-and-stamp engine, re-scoped below.
+- **Phase C (largely delivered)** — the derive-and-stamp engine. ①–④ are shipped (provenance
+  schema + signed SLSA/in-toto attestations, derive-and-stamp, composable transforms, coverage
+  audit), plus delegated deletion and the reference reaper (part of ⑤) and `houba attach` (scan
+  ingestion). Remaining: `archive_restore` (rest of ⑤), scaffolding ⑥, and the decision on ⑦.
+  Per-item status is marked inline below.
 
 ## Phase C — ordered by the thesis, not by the inherited Groovy use-case list
 
 The original plan put `product_import` last ("the big one"). With *the label is the product*, the
 order inverts.
 
-### ① Provenance schema — the public contract *(new)*
+### ① Provenance schema — the public contract *(new)* — ✅ delivered
 
 The first thing to freeze, because it is the API. Decisions to make here:
 
@@ -45,32 +49,32 @@ The first thing to freeze, because it is the API. Decisions to make here:
 - Refactor `houba/domain/labels.py`: today it emits `io.houba.*` for *everything*; split into
   standard-vs-novel per the above.
 
-### ② Derive-and-stamp engine *(= the former `product_import`, recast)*
+### ② Derive-and-stamp engine *(= the former `product_import`, recast)* — ✅ delivered
 
 The core verb, promoted to second. Transform (inject CA, rewrite repos) **and** stamp. The
 transformation is the means; the stamp is the deliverable.
 
-### ③ Composable transformation primitives
+### ③ Composable transformation primitives — ✅ delivered
 
 Generalize the hardening steps into declarative, composable primitives — `inject-ca`,
 `rewrite-package-sources`, `set-label`, `set-timezone` — of which any one organization's scripts are
 a *configuration*, not hardcoded behavior. This is the essentialization step.
 
-### ④ Coverage audit *(new)*
+### ④ Coverage audit *(new)* — ✅ delivered (`houba audit`)
 
 "Show me the images in the registry that do **not** carry houba's stamp" — a coverage-gap report.
 This is what makes the front door *verifiable*, and therefore enforceable. Without it, "mandatory
 front door" is a wish.
 
-### ⑤ Lifecycle — `archive_purge` / `archive_restore`
+### ⑤ Lifecycle — `archive_purge` / `archive_restore` — ◑ partial (delegated deletion + `houba purge` shipped; `archive_restore` remaining)
 
 Retention. Real, but after the core loop.
 
-### ⑥ Scaffolding — `product_init` / `product_delete`
+### ⑥ Scaffolding — `product_init` / `product_delete` — ⬜ not started
 
 CRUD around the declaration. Secondary.
 
-### ⑦ `proxycache_update` — under review / candidate to cut
+### ⑦ `proxycache_update` — under review / candidate to cut — ⬜ decision pending
 
 Pure pass-through, no transform, no stamp. It does not fit the stamper essence. Likely belongs in a
 separate tool, or is dropped.
