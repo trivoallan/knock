@@ -87,6 +87,11 @@ class Settings(BaseSettings):
     build_platform: str = "linux/amd64"
     max_concurrency: int = Field(default=4, ge=1)
 
+    # houba purge (the reference reaper) — unused by reconcile.
+    usage_oracle_cmd: str | None = None
+    usage_oracle_timeout: int = Field(default=30, ge=1)
+    purge_min_idle_days: int | None = Field(default=None, ge=1)
+
 
 def resolve_registry(
     name: str | None, roster: dict[str, RegistryConfig]
