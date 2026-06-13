@@ -46,3 +46,14 @@ def test_purge_dry_run_reports_without_deleting(
     result = runner.invoke(app, ["purge"])  # no --apply ⇒ dry-run
     assert result.exit_code == 0, result.stdout
     assert "dry-run" in result.stdout
+
+
+def test_dry_run_deletions_env_forces_dry_run_despite_apply(
+    monkeypatch: pytest.MonkeyPatch, fake_bin_path: Path
+) -> None:
+    _env(monkeypatch, fake_bin_path)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "repos")
+    monkeypatch.setenv("HOUBA_DRY_RUN_DELETIONS", "true")
+    result = runner.invoke(app, ["purge", "--apply"])  # --apply, but env forces dry-run
+    assert result.exit_code == 0, result.stdout
+    assert "dry-run" in result.stdout  # mode reflects effective_apply=False

@@ -31,6 +31,10 @@ def purge(
         raise ConfigError("houba purge requires HOUBA_PURGE_MIN_IDLE_DAYS (idle window in days)")
     oracle = build_usage_oracle(settings)
 
+    # HOUBA_DRY_RUN_DELETIONS is the deployment-wide deletion kill-switch (shared with
+    # reconcile): it forces dry-run even when --apply is passed. --apply is the explicit
+    # per-invocation gate; the env var is belt-and-suspenders for a destructive command.
+    effective_apply = apply and not settings.dry_run_deletions
     report = purge_marks(
         registry=container.registry,
         oracle=oracle,
@@ -39,7 +43,7 @@ def purge(
         label_prefix=settings.label_prefix,
         min_idle_days=settings.purge_min_idle_days,
         now=container.clock.now(),
-        apply=apply,
+        apply=effective_apply,
     )
     _render(report, fmt=settings.log_format)
     raise typer.Exit(purge_exit_code(report))
