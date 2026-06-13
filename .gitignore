@@ -21,7 +21,10 @@ dist/
 docs/superpowers/plans/
 
 # Structurizr generated artifacts — docs/architecture/workspace.dsl is the source of truth.
+# The Mermaid exports (_export/*.mmd) ARE committed so the views render on GitHub without a
+# Structurizr instance; refresh them whenever workspace.dsl changes (see the maintenance contract).
 docs/architecture/.structurizr/
 docs/architecture/workspace.json
-docs/architecture/_export/
+docs/architecture/_export/*
+!docs/architecture/_export/*.mmd
 docs/architecture/build/

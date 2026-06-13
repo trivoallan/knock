@@ -1,0 +1,124 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: houba - houba CLI"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Platform / Security Engineer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Owns the hardening policy and<br />the registry roster; operates<br />houba as the single front<br />door for external images.</div>"]
+    style 1 fill:#52606d,stroke:#39434c,color:#ffffff
+    2["<div style='font-weight: bold'>Product / Application Team</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Declares its imports as<br />MirrorPolicy files and<br />consumes the hardened,<br />stamped images.</div>"]
+    style 2 fill:#52606d,stroke:#39434c,color:#ffffff
+
+    31("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
+    style 31 fill:#69707a,stroke:#494e55,color:#ffffff
+    32("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
+    style 32 fill:#69707a,stroke:#494e55,color:#ffffff
+    33("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
+    style 33 fill:#69707a,stroke:#494e55,color:#ffffff
+
+    subgraph 4 ["houba"]
+      style 4 fill:#ffffff,stroke:#154da4,color:#154da4
+
+      subgraph 5 ["houba CLI"]
+        style 5 fill:#ffffff,stroke:#19458c,color:#19458c
+
+        subgraph group1 ["Adapters"]
+          style group1 fill:#ffffff,stroke:#cccccc,color:#cccccc,stroke-dasharray:5
+
+          21("<div style='font-weight: bold'>RegctlAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: regctl]</div><div style='font-size: 80%; margin-top:10px'>Drives the regctl CLI via<br />subprocess.</div>")
+          style 21 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
+          22("<div style='font-weight: bold'>BuildkitAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: buildctl]</div><div style='font-size: 80%; margin-top:10px'>Drives buildctl against<br />buildkitd via subprocess.</div>")
+          style 22 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
+          23("<div style='font-weight: bold'>StructlogReporter</div><div style='font-size: 70%; margin-top: 0px'>[Component: structlog]</div><div style='font-size: 80%; margin-top:10px'>Writes the event journal to<br />stderr.</div>")
+          style 23 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
+          24("<div style='font-weight: bold'>SystemClock</div><div style='font-size: 70%; margin-top: 0px'>[Component: stdlib]</div><div style='font-size: 80%; margin-top:10px'>OS wall clock.</div>")
+          style 24 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
+        end
+
+        subgraph group2 ["CLI"]
+          style group2 fill:#ffffff,stroke:#cccccc,color:#cccccc,stroke-dasharray:5
+
+          6("<div style='font-weight: bold'>main</div><div style='font-size: 70%; margin-top: 0px'>[Component: Typer]</div><div style='font-size: 80%; margin-top:10px'>Typer entrypoint; maps<br />exceptions to exit codes.</div>")
+          style 6 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+          7("<div style='font-weight: bold'>reconcile</div><div style='font-size: 70%; margin-top: 0px'>[Component: Typer]</div><div style='font-size: 80%; margin-top:10px'>The reconcile command: builds<br />the composition root, runs<br />the loop, renders the report.</div>")
+          style 7 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+          8("<div style='font-weight: bold'>render</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Formats the RunReport to<br />stdout (text / JSON).</div>")
+          style 8 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+          9("<div style='font-weight: bold'>_di</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Composition root: wires ports<br />to adapters.</div>")
+          style 9 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+        end
+
+        subgraph group3 ["Domain (pure)"]
+          style group3 fill:#ffffff,stroke:#cccccc,color:#cccccc,stroke-dasharray:5
+
+          13("<div style='font-weight: bold'>policy schema</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pydantic]</div><div style='font-size: 80%; margin-top:10px'>MirrorPolicy model +<br />published JSON Schema.</div>")
+          style 13 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
+          14("<div style='font-weight: bold'>planning pipeline</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Tag selection, aliases,<br />semver, variants, expand,<br />reconcile plan, collision,<br />sharding.</div>")
+          style 14 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
+          15("<div style='font-weight: bold'>transform engine</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Pluggable transform-step<br />vocabulary: base, steps,<br />registry, render, version.</div>")
+          style 15 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
+          16("<div style='font-weight: bold'>provenance stamp</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Builds the OCI-standard +<br />io.houba.* provenance<br />annotations.</div>")
+          style 16 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
+        end
+
+        subgraph group4 ["Ports"]
+          style group4 fill:#ffffff,stroke:#cccccc,color:#cccccc,stroke-dasharray:5
+
+          17("<div style='font-weight: bold'>RegistryPort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>OCI registry ops: list,<br />inspect, copy, annotate,<br />delete, login, referrer<br />list/put/delete.</div>")
+          style 17 fill:#e9d8fd,stroke:#a397b1,color:#322659
+          18("<div style='font-weight: bold'>ImageBuilderPort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Build and push an image from<br />a Dockerfile + context.</div>")
+          style 18 fill:#e9d8fd,stroke:#a397b1,color:#322659
+          19("<div style='font-weight: bold'>Reporter</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>In-flight reconcile event<br />journal.</div>")
+          style 19 fill:#e9d8fd,stroke:#a397b1,color:#322659
+          20("<div style='font-weight: bold'>ClockPort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Injectable now().</div>")
+          style 20 fill:#e9d8fd,stroke:#a397b1,color:#322659
+        end
+
+        subgraph group5 ["Use cases"]
+          style group5 fill:#ffffff,stroke:#cccccc,color:#cccccc,stroke-dasharray:5
+
+          10("<div style='font-weight: bold'>loader</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Loads and parses every<br />MirrorPolicy file in a<br />directory.</div>")
+          style 10 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+          11("<div style='font-weight: bold'>reconcile_policies</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Orchestrator: concurrent<br />plan-then-apply over all<br />policies, isolated per<br />policy, shardable for<br />scale-out.</div>")
+          style 11 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+          12("<div style='font-weight: bold'>report</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pydantic]</div><div style='font-size: 80%; margin-top:10px'>RunReport contract +<br />worst-wins exit code.</div>")
+          style 12 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+        end
+
+        25("<div style='font-weight: bold'>config</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pydantic Settings]</div><div style='font-size: 80%; margin-top:10px'>Reads HOUBA_* settings +<br />roster resolvers — the only<br />os.environ reader.</div>")
+        style 25 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+      end
+
+    end
+
+    2-. "<div>Pulls the hardened images</div><div style='font-size: 70%'>[docker pull (OCI)]</div>" .->32
+    1-. "<div>Configures policy + roster,<br />runs / schedules reconcile</div><div style='font-size: 70%'>[CLI]</div>" .->7
+    2-. "<div>Provides MirrorPolicy files</div><div style='font-size: 70%'>[YAML]</div>" .->10
+    6-. "<div>Registers the command</div><div style='font-size: 70%'>[Typer]</div>" .->7
+    7-. "<div>Builds the composition root</div><div style='font-size: 70%'>[Python]</div>" .->9
+    7-. "<div>Loads policies</div><div style='font-size: 70%'>[Python]</div>" .->10
+    7-. "<div>Runs reconciliation</div><div style='font-size: 70%'>[Python]</div>" .->11
+    7-. "<div>Renders the report</div><div style='font-size: 70%'>[Python]</div>" .->8
+    7-. "<div>Reads now()</div><div style='font-size: 70%'>[Protocol]</div>" .->20
+    9-. "<div>Reads HOUBA_* settings</div><div style='font-size: 70%'>[Pydantic Settings]</div>" .->25
+    9-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->21
+    9-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->22
+    9-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->23
+    9-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->24
+    10-. "<div>Parses MirrorPolicy</div><div style='font-size: 70%'>[Pydantic]</div>" .->13
+    11-. "<div>Builds the RunReport</div><div style='font-size: 70%'>[Python]</div>" .->12
+    11-. "<div>Computes the import / update<br />/ delete plan</div><div style='font-size: 70%'>[Python]</div>" .->14
+    11-. "<div>Renders & versions transforms</div><div style='font-size: 70%'>[Python]</div>" .->15
+    11-. "<div>Builds provenance annotations</div><div style='font-size: 70%'>[Python]</div>" .->16
+    11-. "<div>Uses</div><div style='font-size: 70%'>[Protocol]</div>" .->17
+    11-. "<div>Uses</div><div style='font-size: 70%'>[Protocol]</div>" .->18
+    11-. "<div>Uses</div><div style='font-size: 70%'>[Protocol]</div>" .->19
+    21-. "<div>Implements</div><div style='font-size: 70%'>[Protocol]</div>" .->17
+    22-. "<div>Implements</div><div style='font-size: 70%'>[Protocol]</div>" .->18
+    23-. "<div>Implements</div><div style='font-size: 70%'>[Protocol]</div>" .->19
+    24-. "<div>Implements</div><div style='font-size: 70%'>[Protocol]</div>" .->20
+    21-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->31
+    21-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->32
+    22-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->33
+
+  end
