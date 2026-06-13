@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 
 from houba.errors import RegctlError
-from houba.ports.registry import ImageInfo
+from houba.ports.registry import ImageInfo, Referrer
 
 
 class FakeRegistryPort:
@@ -12,17 +12,23 @@ class FakeRegistryPort:
         tags: dict[str, list[str]] | None = None,
         infos: dict[str, ImageInfo] | None = None,
         fail_copy: set[str] | None = None,
+        fail_put: set[str] | None = None,
         copy_barrier: object | None = None,  # threading.Barrier; typed loosely to avoid an import
+        referrers: dict[str, list[Referrer]] | None = None,
     ) -> None:
         self._tags = tags or {}
         self._infos = infos or {}
         self._fail_copy = fail_copy or set()
+        self._fail_put = fail_put or set()
         self._copy_barrier = copy_barrier
+        self._referrers = referrers or {}
         self.copied: list[tuple[str, str]] = []
         self.annotated: list[tuple[str, dict[str, str]]] = []
         self.deleted: list[str] = []
         self.logins: list[tuple[str, str, bool]] = []
         self.configured: list[tuple[str, bool, str | None]] = []
+        self.marked: list[tuple[str, str, dict[str, str]]] = []
+        self.unmarked: list[str] = []
 
     def configure_registry(self, host: str, *, tls_verify: bool, ca_cert: str | None) -> None:
         self.configured.append((host, tls_verify, ca_cert))
@@ -53,3 +59,15 @@ class FakeRegistryPort:
 
     def login(self, host: str, *, username: str, password: str, tls_verify: bool) -> None:
         self.logins.append((host, username, tls_verify))
+
+    def list_referrers(self, image_ref: str, artifact_type: str) -> list[Referrer]:
+        return [r for r in self._referrers.get(image_ref, []) if r.artifact_type == artifact_type]
+
+    # Journals only; _referrers is a read-fixture seeded via the constructor (see list_referrers).
+    def put_referrer(self, image_ref: str, artifact_type: str, annotations: dict[str, str]) -> None:
+        if image_ref in self._fail_put:
+            raise RegctlError(f"fake put_referrer failure for {image_ref}")
+        self.marked.append((image_ref, artifact_type, annotations))
+
+    def delete_referrer(self, referrer_ref: str) -> None:
+        self.unmarked.append(referrer_ref)

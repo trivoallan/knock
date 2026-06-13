@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from houba.errors import RegctlError
-from houba.ports.registry import ImageInfo
+from houba.ports.registry import ImageInfo, Referrer
 
 
 class RegctlAdapter:
@@ -97,6 +97,44 @@ class RegctlAdapter:
             args += ["--tls", "disabled"]
         args.append(host)
         self._run(args, stdin=password)
+
+    def list_referrers(self, image_ref: str, artifact_type: str) -> list[Referrer]:
+        payload = self._json(
+            [
+                "artifact",
+                "list",
+                image_ref,
+                "--filter-artifact-type",
+                artifact_type,
+                "--format",
+                "{{json .}}",
+            ]
+        )
+        raw = payload.get("descriptors")
+        descriptors = raw if isinstance(raw, list) else []
+        out: list[Referrer] = []
+        for d in descriptors:
+            if not isinstance(d, dict):
+                continue
+            ann = d.get("annotations")
+            out.append(
+                Referrer(
+                    digest=str(d.get("digest", "")),
+                    artifact_type=str(d.get("artifactType", "")),
+                    annotations=dict(ann) if isinstance(ann, dict) else {},
+                    subject_tag=image_ref,
+                )
+            )
+        return out
+
+    def put_referrer(self, image_ref: str, artifact_type: str, annotations: dict[str, str]) -> None:
+        args = ["artifact", "put", "--subject", image_ref, "--artifact-type", artifact_type]
+        for key, value in annotations.items():
+            args += ["--annotation", f"{key}={value}"]
+        self._run(args, stdin="")
+
+    def delete_referrer(self, referrer_ref: str) -> None:
+        self._run(["manifest", "delete", referrer_ref])
 
     def _run(self, args: list[str], *, stdin: str | None = None) -> str:
         try:

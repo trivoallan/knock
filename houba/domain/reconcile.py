@@ -111,6 +111,7 @@ class ImportReconcile:
     name: str
     variants: list[VariantReconcile]
     to_delete: list[str]
+    to_unmark: list[str]
 
 
 def reconcile_import(
@@ -120,13 +121,20 @@ def reconcile_import(
     now: datetime,
     grace: timedelta = DEFAULT_GRACE,
     *,
+    marked: set[str] | None = None,
     transform_versions: dict[str, str | None] | None = None,
 ) -> ImportReconcile:
     """Reconcile all variants of an expanded import; delegates to reconcile_variant.
 
     The same source pre-condition applies: every tag selected by expand_import
     must be present in ``source`` (selection and source-state fetch must be consistent).
+
+    ``marked`` are mirror output-tags currently carrying a houba pending-deletion
+    referrer; tags that re-entered the desired set are returned in ``to_unmark``
+    (the use case clears their marks). Mode-agnostic: purge vs mark is applied
+    by the use case.
     """
+    marked = marked or set()
     tv = transform_versions or {}
     variants = [
         reconcile_variant(
@@ -147,4 +155,7 @@ def reconcile_import(
         desired.update(alias + v.suffix for alias in v.aliases)
 
     to_delete = sorted(t for t in mirror if t not in desired)
-    return ImportReconcile(name=expanded.name, variants=variants, to_delete=to_delete)
+    to_unmark = sorted(t for t in marked if t in desired)
+    return ImportReconcile(
+        name=expanded.name, variants=variants, to_delete=to_delete, to_unmark=to_unmark
+    )

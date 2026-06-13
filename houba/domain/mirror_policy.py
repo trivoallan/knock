@@ -13,6 +13,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from pydantic.alias_generators import to_camel
 
+from houba.domain.deletion_mode import DeletionMode
 from houba.errors import PolicyValidationError
 
 
@@ -104,6 +105,7 @@ class ImportProfile(_CamelModel):
 class Spec(_CamelModel):
     artifact_type: ArtifactType
     source: Source
+    deletion_mode: DeletionMode | None = None  # None ⇒ defer to destination/global cascade
     defaults: Defaults | None = None
     imports: list[ImportProfile] = Field(min_length=1)
 

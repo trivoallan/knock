@@ -251,3 +251,31 @@ def test_max_concurrency_rejects_zero(monkeypatch) -> None:  # type: ignore[no-u
     monkeypatch.setenv("HOUBA_MAX_CONCURRENCY", "0")
     with pytest.raises(ValidationError):
         Settings()
+
+
+# ---------------------------------------------------------------------------
+# Task 5 — HOUBA_DELETION_MODE global + RegistryConfig.deletion_mode
+# ---------------------------------------------------------------------------
+
+
+from houba.domain.deletion_mode import DeletionMode  # noqa: E402
+
+
+def test_settings_deletion_mode_defaults_to_purge(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("HOUBA_DELETION_MODE", raising=False)
+    assert Settings().deletion_mode is DeletionMode.purge
+
+
+def test_settings_deletion_mode_from_env(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("HOUBA_DELETION_MODE", "mark")
+    assert Settings().deletion_mode is DeletionMode.mark
+
+
+def test_registry_config_deletion_mode_defaults_none() -> None:
+    cfg = RegistryConfig(host="harbor.corp")
+    assert cfg.deletion_mode is None
+
+
+def test_registry_config_deletion_mode_parsed() -> None:
+    cfg = RegistryConfig(host="harbor.corp", deletion_mode="mark")
+    assert cfg.deletion_mode is DeletionMode.mark

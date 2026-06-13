@@ -12,6 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from houba.domain.deletion_mode import DeletionMode
 from houba.errors import ConfigError
 
 
@@ -25,6 +26,7 @@ class RegistryConfig(BaseModel):
     password: SecretStr | None = None
     tls_verify: bool = True
     ca_cert: str | None = None  # path to a CA PEM regctl should trust for this registry's TLS
+    deletion_mode: DeletionMode | None = None  # destination-level cascade override
 
     @model_validator(mode="after")
     def _credentials_both_or_neither(self) -> RegistryConfig:
@@ -77,6 +79,7 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARN", "WARNING", "ERROR"] = "INFO"
     dry_run_tags: bool = False
     dry_run_deletions: bool = False
+    deletion_mode: DeletionMode = DeletionMode.purge  # global cascade baseline
     work_dir: Path = Path("/tmp/houba-work")  # noqa: S108
 
     transform_ca_certs: dict[str, CACertSource] = Field(default_factory=dict)
