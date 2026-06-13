@@ -4,41 +4,46 @@
 [Structurizr DSL](https://docs.structurizr.com/dsl). One model, five structural views plus one
 deployment view per worked example (and the production blueprint):
 
-- **System Landscape** — houba in its enterprise context, all the way to incident-time
-  blast-radius. This carries the product thesis: the provenance *stamp* is read downstream by
-  the observability / CMDB stack — houba never calls it, the coupling is the data.
-- **System Context** — houba and the systems it integrates with directly (source registries,
-  destination registries, BuildKit, and the internal package mirror the hardening rebuild
-  pulls from).
-- **Container** — houba is a single deployable unit: the `houba` CLI (the reconcile engine; the
-  runtime image bundles `regctl` + `buildctl`). This view draws the system boundary around that
-  one container and the external systems it drives.
-- **Hexagon** — a synthetic overview of the same CLI: the six layers (**cli** → **use cases** →
-  **domain**, with **ports** ← **adapters**) as single boxes. The fastest read of the architecture:
-  it makes the dependency inversion explicit — use cases *and* adapters both point at the ports —
-  and shows the driven adapters reaching the external systems.
-- **Component** — the same hexagon fully exploded: every fine-grained component — the thin Typer
-  **cli**, the **use cases** (loader + reconcile orchestrator + the `RunReport` contract), the pure
-  **domain** (policy schema, planning pipeline, transform engine, provenance stamp), each **port**
-  (`typing.Protocol` seam), and each **adapter** wired to its external system.
+- **[System Landscape](_export/structurizr-Landscape.mmd)** — houba in its enterprise context, all
+  the way to incident-time blast-radius. This carries the product thesis: the provenance *stamp* is
+  read downstream by the observability / CMDB stack — houba never calls it, the coupling is the data.
+- **[System Context](_export/structurizr-Context.mmd)** — houba and the systems it integrates with
+  directly (source registries, destination registries, BuildKit, and the internal package mirror
+  the hardening rebuild pulls from).
+- **[Container](_export/structurizr-Container.mmd)** — houba is a single deployable unit: the
+  `houba` CLI (the reconcile engine; the runtime image bundles `regctl` + `buildctl`). This view
+  draws the system boundary around that one container and the external systems it drives.
+- **[Hexagon](_export/structurizr-Hexagon.mmd)** — a synthetic overview of the same CLI: the six
+  layers (**cli** → **use cases** → **domain**, with **ports** ← **adapters**) as single boxes. The
+  fastest read of the architecture: it makes the dependency inversion explicit — use cases *and*
+  adapters both point at the ports — and shows the driven adapters reaching the external systems.
+- **[Component](_export/structurizr-Component.mmd)** — the same hexagon fully exploded: every
+  fine-grained component — the thin Typer **cli**, the **use cases** (loader + reconcile
+  orchestrator + the `RunReport` contract), the pure **domain** (policy schema, planning pipeline,
+  transform engine, provenance stamp), each **port** (`typing.Protocol` seam), and each **adapter**
+  wired to its external system.
 - **Deployment — one view per worked example, plus the production blueprint.** The
   [reference deployment](../superpowers/specs/2026-06-11-reference-deployment-design.md) — a kind
   cluster running houba as a Kubernetes CronJob (git-sync'd policies, rootless `buildkitd` for the
   rebuild path, a blast-radius consumer Job) — is rendered **once per example**, each scoped to the
   kind overlay that runs it, so each diagram reads cleanly and carries its own overlay facts (rather
   than one cramped view merging every overlay):
-  - **busybox · copy (`local-lite`)** and **redis · copy (`local-lite`)** — the copy path into a
+  - **[busybox · copy](_export/structurizr-DeployBusybox.mmd)** and
+    **[redis · copy](_export/structurizr-DeployRedis.mmd)** — `local-lite`: the copy path into a
     throwaway `registry:2` (plain HTTP), no `buildkitd`.
-  - **pending-deletion · mark (`local-lite` + reaper)** — copy path with `deletionMode: mark`; an
-    external reaper discovers the `pending-deletion` referrers and owns the purge.
-  - **timezone · rebuild (`local-transform`)** — the rebuild path, self-contained: `buildkitd` +
-    `registry:2`, no Harbor, no org config (`setTimezone` fanned into `-eu`/`-us` variants).
-  - **hardened · rebuild + Harbor (`local-full`)** — the rebuild path with org config: `buildkitd`
-    runs `injectCA` + `rewritePackageSources`, the CA bundle is mounted, and an `ExternalSecret`
-    supplies the Harbor (TLS) push token.
-  - **Production blueprint (`prod` overlay)** — the *same* kustomize base on a real cluster
-    (anti-drift: the demo IS the blueprint), with `ExternalSecret`-sourced creds, the org policy
-    repo, a pinned published image, the hourly schedule, and the rebuild add-on present.
+  - **[pending-deletion · mark](_export/structurizr-DeployPendingDeletion.mmd)** — `local-lite` +
+    reaper: copy path with `deletionMode: mark`; an external reaper discovers the `pending-deletion`
+    referrers and owns the purge.
+  - **[timezone · rebuild](_export/structurizr-DeployTimezone.mmd)** — `local-transform`: the
+    rebuild path, self-contained: `buildkitd` + `registry:2`, no Harbor, no org config
+    (`setTimezone` fanned into `-eu`/`-us` variants).
+  - **[hardened · rebuild + Harbor](_export/structurizr-DeployHardened.mmd)** — `local-full`: the
+    rebuild path with org config: `buildkitd` runs `injectCA` + `rewritePackageSources`, the CA
+    bundle is mounted, and an `ExternalSecret` supplies the Harbor (TLS) push token.
+  - **[Production blueprint](_export/structurizr-DeployProd.mmd)** — `prod` overlay: the *same*
+    kustomize base on a real cluster (anti-drift: the demo IS the blueprint), with
+    `ExternalSecret`-sourced creds, the org policy repo, a pinned published image, the hourly
+    schedule, and the rebuild add-on present.
 
   (Optionally a sharded Indexed Job swaps in for the CronJob for horizontal scale-out.) These views
   track the [`deploy/` overlays](../../deploy/overlays) and the [`docs/examples/`](../examples)
@@ -95,7 +100,7 @@ docker run --rm -v "$(git rev-parse --show-toplevel)/docs/architecture:/work" \
   structurizr/structurizr inspect -workspace /work/workspace.dsl -s error,warning
 ```
 
-Export every view as committable Mermaid (renders natively on GitHub) or PlantUML:
+Export every view as committable Mermaid or PlantUML:
 
 ```sh
 docker run --rm -v "$(git rev-parse --show-toplevel)/docs/architecture:/work" \
@@ -106,8 +111,11 @@ docker run --rm -v "$(git rev-parse --show-toplevel)/docs/architecture:/work" \
 Supported `-format` values include `mermaid`, `plantuml/c4plantuml`, `dot`, and `json`.
 
 The Mermaid exports are **committed** under [`_export/`](_export) (one `.mmd` per view —
-`structurizr-Deploy*.mmd` for the per-example deployment views) so they render on GitHub without a
-Structurizr instance. Re-run the command above after editing `workspace.dsl` to refresh them — the
+`structurizr-Deploy*.mmd` for the per-example deployment views), so the diagrams are reviewable
+without a Structurizr instance — the view list above links straight to them. A raw `.mmd` file
+shows as source on GitHub (GitHub only auto-renders Mermaid inside a ```` ```mermaid ```` fence in a
+Markdown file); to see it rendered, paste it into [mermaid.live](https://mermaid.live) or any
+Mermaid viewer. Re-run the command above after editing `workspace.dsl` to refresh them — the
 maintenance contract treats them as generated artifacts that must not drift from the DSL.
 
 ## Maintenance contract
