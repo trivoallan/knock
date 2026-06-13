@@ -58,6 +58,9 @@ The **Upstream Scanner** system (CI pipeline, registry-native scanner, or scan s
 modelled as an external producer: it generates the scan report and hands it to houba via
 `houba attach`. The relationship is explicitly scanner → houba (ingest-only); houba never
 calls or discovers the scanner, keeping the coupling to a file hand-off at the boundary.
+The houba→Signing service edge (introduced for the rebuild path in #49) now also covers
+`houba attach` signing the scan referrer (`https://houba.dev/predicate/scan/v1`) — no new
+model element; the same Signing service and Transparency log systems are reused.
 
 The prose companion to this model — the problem framing, the hexagon, the policy schema, the
 reconcile loop, the provenance stamp — lives in [`design.md`](design.md).
