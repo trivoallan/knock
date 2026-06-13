@@ -23,3 +23,20 @@ The referrer manifest carries the summary annotations (`io.houba.scan.*`) and th
 SARIF as its blob. Re-running `attach` after a fresh scan adds a new referrer (history).
 
 `sample.sarif.json` in this directory is a runnable example report (1 critical, 1 medium).
+
+## 3. Sign it (verifiable scan provenance)
+
+With a signer configured, `houba attach` also emits a **signed** in-toto attestation
+(`https://houba.dev/predicate/scan/v1`) over the image digest — additive to the raw report
+referrer above. This is what lets an admission controller *require* a signed scan.
+
+```bash
+export HOUBA_ATTEST_SIGNER=keyless          # or kms | key
+export HOUBA_ATTEST_BUILDER_ID=houba://ci   # identifies this houba attester
+houba attach harbor.corp/lib/redis:7.2.0 --report scan.sarif.json
+# attached sarif scan (trivy 0.50.1) → harbor.corp/lib/redis@sha256:ref…
+#   subject=sha256:abc…  vuln.critical=1 …
+#   signed: https://houba.dev/predicate/scan/v1 → sha256:att…
+```
+
+Off by default: with no `HOUBA_ATTEST_SIGNER`, only the unsigned referrer is attached.
