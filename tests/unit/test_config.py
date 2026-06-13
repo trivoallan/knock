@@ -279,3 +279,66 @@ def test_registry_config_deletion_mode_defaults_none() -> None:
 def test_registry_config_deletion_mode_parsed() -> None:
     cfg = RegistryConfig(host="harbor.corp", deletion_mode="mark")
     assert cfg.deletion_mode is DeletionMode.mark
+
+
+# ---------------------------------------------------------------------------
+# SLSA attestation config (HOUBA_ATTEST_*)
+# ---------------------------------------------------------------------------
+
+
+from houba.config import AttestSettings, attest_settings_json_schema  # noqa: E402
+
+
+def test_attest_off_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    for k in ("SIGNER", "KEY_REF", "FULCIO_URL", "REKOR_URL", "BUILDER_ID"):
+        monkeypatch.delenv(f"HOUBA_ATTEST_{k}", raising=False)
+    s = Settings()
+    assert s.attest_signer == ""
+    assert s.attest.signer == ""  # the typed DTO view
+
+
+def test_attest_fields_parse_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOUBA_ATTEST_SIGNER", "keyless")
+    monkeypatch.setenv("HOUBA_ATTEST_FULCIO_URL", "https://fulcio.corp")
+    monkeypatch.setenv("HOUBA_ATTEST_REKOR_URL", "https://rekor.corp")
+    monkeypatch.setenv("HOUBA_ATTEST_BUILDER_ID", "https://houba.corp/builders/main")
+    a = Settings().attest
+    assert a.signer == "keyless"
+    assert a.fulcio_url == "https://fulcio.corp"
+    assert a.rekor_url == "https://rekor.corp"
+    assert a.builder_id == "https://houba.corp/builders/main"
+
+
+def test_attest_signer_invalid_value_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOUBA_ATTEST_SIGNER", "pgp")
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_kms_signer_requires_key_ref(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOUBA_ATTEST_SIGNER", "kms")
+    monkeypatch.delenv("HOUBA_ATTEST_KEY_REF", raising=False)
+    with pytest.raises(ValidationError, match="KEY_REF"):
+        Settings()
+
+
+def test_key_signer_with_key_ref_ok(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOUBA_ATTEST_SIGNER", "key")
+    monkeypatch.setenv("HOUBA_ATTEST_KEY_REF", "/keys/cosign.key")
+    a = Settings().attest
+    assert a.signer == "key"
+    assert a.key_ref == "/keys/cosign.key"
+
+
+def test_attest_settings_model_validates_key_requirement() -> None:
+    with pytest.raises(ValueError, match="requires"):
+        AttestSettings(signer="kms")
+    assert AttestSettings(signer="kms", key_ref="awskms://k").key_ref == "awskms://k"
+
+
+def test_attest_schema_is_serializable_and_lists_fields() -> None:
+    import json
+
+    schema = attest_settings_json_schema()
+    json.dumps(schema)
+    assert set(schema["properties"]) == {"signer", "key_ref", "fulcio_url", "rekor_url", "builder_id"}
