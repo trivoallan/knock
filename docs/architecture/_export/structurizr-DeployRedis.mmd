@@ -4,51 +4,51 @@ graph LR
   subgraph diagram ["Deployment View: houba - redis · copy (local-lite)"]
     style diagram fill:#ffffff,stroke:#ffffff
 
-    subgraph 144 ["Operator host"]
-      style 144 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 152 ["Operator host"]
+      style 152 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      145("<div style='font-weight: bold'>Policy repo</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git / GitOps]</div><div style='font-size: 80%; margin-top:10px'>docs/examples/redis/redis.yml<br />— semver 7.2.x, aliases track<br />highest patch</div>")
-      style 145 fill:#8a94a0,stroke:#606770,color:#ffffff
-      subgraph 146 ["kind cluster"]
-        style 146 fill:#ffffff,stroke:#444444,color:#ffffff
+      153("<div style='font-weight: bold'>Policy repo</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git / GitOps]</div><div style='font-size: 80%; margin-top:10px'>docs/examples/redis/redis.yml<br />— semver 7.2.x, aliases track<br />highest patch</div>")
+      style 153 fill:#8a94a0,stroke:#606770,color:#ffffff
+      subgraph 154 ["kind cluster"]
+        style 154 fill:#ffffff,stroke:#444444,color:#ffffff
 
-        subgraph 147 ["namespace: houba"]
-          style 147 fill:#ffffff,stroke:#444444,color:#ffffff
+        subgraph 155 ["namespace: houba"]
+          style 155 fill:#ffffff,stroke:#444444,color:#ffffff
 
-          subgraph 148 ["CronJob: houba-reconcile"]
-            style 148 fill:#ffffff,stroke:#444444,color:#ffffff
+          subgraph 156 ["CronJob: houba-reconcile"]
+            style 156 fill:#ffffff,stroke:#444444,color:#ffffff
 
-            149("<div style='font-weight: bold'>houba CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
-            style 149 fill:#2563c9,stroke:#19458c,color:#ffffff
-            150("<div style='font-weight: bold'>git-sync sidecar</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git-sync]</div><div style='font-size: 80%; margin-top:10px'>Clones the policy repo into<br />/policies</div>")
-            style 150 fill:#8a94a0,stroke:#606770,color:#ffffff
+            157("<div style='font-weight: bold'>houba CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
+            style 157 fill:#2563c9,stroke:#19458c,color:#ffffff
+            158("<div style='font-weight: bold'>git-sync sidecar</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git-sync]</div><div style='font-size: 80%; margin-top:10px'>Clones the policy repo into<br />/policies</div>")
+            style 158 fill:#8a94a0,stroke:#606770,color:#ffffff
           end
 
-          151("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>BLAST_REPOS=demo/redis —<br />reads stamps, answers the<br />CVE-time query</div>")
-          style 151 fill:#8a94a0,stroke:#606770,color:#ffffff
+          159("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>BLAST_REPOS=demo/redis —<br />reads stamps, answers the<br />CVE-time query</div>")
+          style 159 fill:#8a94a0,stroke:#606770,color:#ffffff
         end
 
-        subgraph 152 ["namespace: registry"]
-          style 152 fill:#ffffff,stroke:#444444,color:#ffffff
+        subgraph 160 ["namespace: registry"]
+          style 160 fill:#ffffff,stroke:#444444,color:#ffffff
 
-          153("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
-          style 153 fill:#69707a,stroke:#494e55,color:#ffffff
+          161("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
+          style 161 fill:#69707a,stroke:#494e55,color:#ffffff
         end
 
       end
 
     end
 
-    subgraph 155 ["Internet"]
-      style 155 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 163 ["Internet"]
+      style 163 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      156("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
-      style 156 fill:#69707a,stroke:#494e55,color:#ffffff
+      164("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
+      style 164 fill:#69707a,stroke:#494e55,color:#ffffff
     end
 
-    149-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->153
-    149-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->156
-    150-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->145
-    151-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl]</div>" .->153
+    157-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->161
+    157-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->164
+    158-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->153
+    159-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl]</div>" .->161
 
   end

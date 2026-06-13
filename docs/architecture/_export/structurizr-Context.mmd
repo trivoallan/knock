@@ -8,32 +8,32 @@ graph LR
     style 1 fill:#52606d,stroke:#39434c,color:#ffffff
     2["<div style='font-weight: bold'>Product / Application Team</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Declares its imports as<br />MirrorPolicy files and<br />consumes the hardened,<br />stamped images.</div>"]
     style 2 fill:#52606d,stroke:#39434c,color:#ffffff
-    38("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
-    style 38 fill:#69707a,stroke:#494e55,color:#ffffff
-    39("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
-    style 39 fill:#69707a,stroke:#494e55,color:#ffffff
     4("<div style='font-weight: bold'>houba</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Single front door / stamper:<br />mirrors external container<br />images, optionally rebuilds<br />them through a hardening<br />policy, and stamps them with<br />standardized, portable<br />provenance.</div>")
     style 4 fill:#1f6feb,stroke:#154da4,color:#ffffff
-    40("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
-    style 40 fill:#69707a,stroke:#494e55,color:#ffffff
-    44("<div style='font-weight: bold'>Usage oracle / observability</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Answers 'was this image's<br />content seen in production<br />lately?' (e.g. Datadog).<br />Queried point-in-time by<br />houba purge; never owned by<br />houba.</div>")
-    style 44 fill:#69707a,stroke:#494e55,color:#ffffff
-    45("<div style='font-weight: bold'>Signing / Key service</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>KMS or Fulcio (keyless CA)<br />that houba's attestor uses to<br />sign in-toto attestations<br />(DSSE). Trust is org<br />configuration, not baked in.</div>")
-    style 45 fill:#69707a,stroke:#494e55,color:#ffffff
-    46("<div style='font-weight: bold'>Transparency log (Rekor)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Optional append-only<br />signature log; blank in<br />air-gapped orgs. houba can<br />point at one but never<br />deploys it.</div>")
-    style 46 fill:#0f766e,stroke:#0a524d,color:#ffffff
-    47("<div style='font-weight: bold'>Upstream Scanner</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces vulnerability / EOL<br />scan reports (CI pipeline,<br />registry-native scanner, or<br />scan service). houba ingests<br />the report; it never calls<br />the scanner.</div>")
+    41("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
+    style 41 fill:#69707a,stroke:#494e55,color:#ffffff
+    42("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
+    style 42 fill:#69707a,stroke:#494e55,color:#ffffff
+    43("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
+    style 43 fill:#69707a,stroke:#494e55,color:#ffffff
+    47("<div style='font-weight: bold'>Usage oracle / observability</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Answers 'was this image's<br />content seen in production<br />lately?' (e.g. Datadog).<br />Queried point-in-time by<br />houba purge; never owned by<br />houba.</div>")
     style 47 fill:#69707a,stroke:#494e55,color:#ffffff
+    48("<div style='font-weight: bold'>Signing / Key service</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>KMS or Fulcio (keyless CA)<br />that houba's attestor uses to<br />sign in-toto attestations<br />(DSSE). Trust is org<br />configuration, not baked in.</div>")
+    style 48 fill:#69707a,stroke:#494e55,color:#ffffff
+    49("<div style='font-weight: bold'>Transparency log (Rekor)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Optional append-only<br />signature log; blank in<br />air-gapped orgs. houba can<br />point at one but never<br />deploys it.</div>")
+    style 49 fill:#0f766e,stroke:#0a524d,color:#ffffff
+    50("<div style='font-weight: bold'>Upstream Scanner</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces vulnerability / EOL<br />scan reports (CI pipeline,<br />registry-native scanner, or<br />scan service). houba ingests<br />the report; it never calls<br />the scanner.</div>")
+    style 50 fill:#69707a,stroke:#494e55,color:#ffffff
 
     1-. "<div>Configures the hardening<br />policy + registry roster,<br />runs / schedules reconcile</div><div style='font-size: 70%'>[CLI]</div>" .->4
     2-. "<div>Declares its imports as<br />MirrorPolicy files</div><div style='font-size: 70%'>[YAML]</div>" .->4
-    4-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->38
-    4-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->39
-    4-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->40
-    2-. "<div>Pulls the hardened images</div><div style='font-size: 70%'>[docker pull (OCI)]</div>" .->39
-    4-. "<div>Queries prod usage at purge<br />time (houba purge)</div><div style='font-size: 70%'>[subprocess (HOUBA_USAGE_ORACLE_CMD)]</div>" .->44
-    4-. "<div>Signs in-toto attestations<br />(DSSE)</div><div style='font-size: 70%'>[cosign]</div>" .->45
-    4-. "<div>Records the signature<br />(optional; blank => skipped)</div><div style='font-size: 70%'>[cosign / rekor]</div>" .->46
-    47-. "<div>Produces scan reports<br />ingested by</div><div style='font-size: 70%'>[SARIF / file]</div>" .->4
+    4-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->41
+    4-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->42
+    4-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->43
+    2-. "<div>Pulls the hardened images</div><div style='font-size: 70%'>[docker pull (OCI)]</div>" .->42
+    4-. "<div>Queries prod usage at purge<br />time (houba purge)</div><div style='font-size: 70%'>[subprocess (HOUBA_USAGE_ORACLE_CMD)]</div>" .->47
+    4-. "<div>Signs in-toto attestations<br />(DSSE)</div><div style='font-size: 70%'>[cosign]</div>" .->48
+    4-. "<div>Records the signature<br />(optional; blank => skipped)</div><div style='font-size: 70%'>[cosign / rekor]</div>" .->49
+    50-. "<div>Produces scan reports<br />ingested by</div><div style='font-size: 70%'>[SARIF / file]</div>" .->4
 
   end

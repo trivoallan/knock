@@ -27,6 +27,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     cliMain = component "main" "Typer entrypoint; maps exceptions to exit codes." "Typer"
                     cliReconcile = component "reconcile" "The reconcile command: builds the composition root, runs the loop, renders the report." "Typer"
                     cliPurge = component "purge" "The purge command: scans pending-deletion marks, queries the usage oracle, applies hard-deletes for safely-unused tags." "Typer"
+                    cliAudit = component "audit" "The audit command: catalog-walks the registry, reports images missing the provenance stamp." "Typer"
                     cliRender = component "render" "Formats the RunReport to stdout (text / JSON)." "Python"
                     cliDi = component "_di" "Composition root: wires ports to adapters." "Python"
                 }
@@ -34,6 +35,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     ucLoader = component "loader" "Loads and parses every MirrorPolicy file in a directory." "Python"
                     ucReconcile = component "reconcile_policies" "Orchestrator: concurrent plan-then-apply over all policies, isolated per policy, shardable for scale-out." "Python"
                     ucPurge = component "purge (use case)" "Catalog-walks the registry for pending-deletion referrers; asks the usage oracle per digest; hard-deletes only the safely-unused. Fail-closed: oracle error ⇒ nothing purged." "Python"
+                    ucAudit = component "audit (use case)" "Catalog-walks the registry and classifies each image as stamped or not; emits the coverage report + exit code." "Python"
                     ucReport = component "report" "RunReport contract + worst-wins exit code." "Pydantic"
                 }
                 group "Domain (pure)" {
@@ -41,6 +43,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     domPlanning = component "planning pipeline" "Tag selection, aliases, semver, variants, expand, reconcile plan, collision, sharding." "Pure Python" "Domain"
                     domTransform = component "transform engine" "Pluggable transform-step vocabulary: base, steps, registry, render, version." "Pure Python" "Domain"
                     domStamp = component "provenance stamp" "Builds the OCI-standard + io.houba.* provenance annotations." "Pure Python" "Domain"
+                    domCoverage = component "coverage" "Pure stamp-presence predicate: is the image houba-stamped?" "Pure Python" "Domain"
                     domAttestation = component "attestation predicate" "Builds the in-toto transform Statement (predicate type /v1)." "Pure Python" "Domain"
                 }
                 group "Ports" {
@@ -106,6 +109,11 @@ workspace "houba" "Single front door / stamper for external container images." {
 
         cliMain -> cliReconcile "Registers the command" "Typer"
         cliMain -> cliPurge "Registers the command" "Typer"
+        cliMain -> cliAudit "Registers the command" "Typer"
+        cliAudit -> cliDi "Builds the composition root" "Python"
+        cliAudit -> ucAudit "Runs the audit" "Python"
+        ucAudit -> domCoverage "Classifies each image" "Python"
+        ucAudit -> portRegistry "Catalog-walks + reads annotations" "Protocol"
         cliPurge -> cliDi "Builds the composition root" "Python"
         cliPurge -> ucPurge "Runs the purge" "Python"
         cliPurge -> portClock "Reads now()" "Protocol"
