@@ -13,15 +13,21 @@ class FakeRegistryPort:
         infos: dict[str, ImageInfo] | None = None,
         fail_copy: set[str] | None = None,
         fail_put: set[str] | None = None,
+        fail_delete: set[str] | None = None,
+        fail_inspect: set[str] | None = None,
         copy_barrier: object | None = None,  # threading.Barrier; typed loosely to avoid an import
         referrers: dict[str, list[Referrer]] | None = None,
+        repositories: dict[str, list[str]] | None = None,
     ) -> None:
         self._tags = tags or {}
         self._infos = infos or {}
         self._fail_copy = fail_copy or set()
         self._fail_put = fail_put or set()
+        self._fail_delete = fail_delete or set()
+        self._fail_inspect = fail_inspect or set()
         self._copy_barrier = copy_barrier
         self._referrers = referrers or {}
+        self._repositories = repositories or {}
         self.copied: list[tuple[str, str]] = []
         self.annotated: list[tuple[str, dict[str, str]]] = []
         self.deleted: list[str] = []
@@ -33,10 +39,15 @@ class FakeRegistryPort:
     def configure_registry(self, host: str, *, tls_verify: bool, ca_cert: str | None) -> None:
         self.configured.append((host, tls_verify, ca_cert))
 
+    def list_repositories(self, registry: str) -> list[str]:
+        return list(self._repositories.get(registry, []))
+
     def list_tags(self, repo_ref: str) -> list[str]:
         return list(self._tags.get(repo_ref, []))
 
     def inspect(self, image_ref: str) -> ImageInfo:
+        if image_ref in self._fail_inspect:
+            raise RegctlError(f"fake inspect failure for {image_ref}")
         try:
             return self._infos[image_ref]
         except KeyError:
@@ -55,6 +66,8 @@ class FakeRegistryPort:
         return f"sha256:{hashlib.sha256(image_ref.encode()).hexdigest()}"
 
     def delete_tag(self, image_ref: str) -> None:
+        if image_ref in self._fail_delete:
+            raise RegctlError(f"fake delete failure for {image_ref}")
         self.deleted.append(image_ref)
 
     def login(self, host: str, *, username: str, password: str, tls_verify: bool) -> None:

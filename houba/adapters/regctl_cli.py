@@ -33,6 +33,16 @@ class RegctlAdapter:
         self._bin = resolved
         return self._bin
 
+    def list_repositories(self, registry: str) -> list[str]:
+        try:
+            out = self._run(["repo", "ls", registry])
+        except RegctlError as e:
+            msg = str(e).lower()
+            if "name_unknown" in msg or "not known to registry" in msg:
+                return []
+            raise
+        return [line.strip() for line in out.splitlines() if line.strip()]
+
     def list_tags(self, repo_ref: str) -> list[str]:
         try:
             out = self._run(["tag", "ls", repo_ref])

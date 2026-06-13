@@ -14,6 +14,7 @@ __all__ = [
     "InternalError",
     "PolicyValidationError",
     "RegctlError",
+    "UsageOracleError",
     "exit_code_for",
 ]
 
@@ -40,6 +41,10 @@ class RegctlError(AdapterError):
 
 class BuildkitError(AdapterError):
     """Erreur d'invocation `buildctl` (build, push d'image)."""
+
+
+class UsageOracleError(AdapterError):
+    """Erreur d'invocation de l'oracle d'usage (commande externe injoignable / sortie invalide)."""
 
 
 class ConfigError(HoubaError):

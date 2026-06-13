@@ -12,6 +12,7 @@ import typer
 from pydantic import ValidationError
 from pydantic_settings import SettingsError
 
+from houba.cli.purge import purge as purge_cmd
 from houba.cli.reconcile import reconcile as reconcile_cmd
 from houba.errors import HoubaError, exit_code_for
 
@@ -19,6 +20,7 @@ app = typer.Typer(name="houba", no_args_is_help=True, add_completion=False)
 
 
 app.command(name="reconcile")(reconcile_cmd)
+app.command(name="purge")(purge_cmd)
 
 
 @app.command()

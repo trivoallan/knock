@@ -33,6 +33,12 @@ case "$cmd" in
             *) printf '7.2.0\n' ;;
         esac
         ;;
+    "repo ls")
+        case "$scenario" in
+            repos) printf 'lib/redis\nlib/nginx\n' ;;
+            *) : ;;
+        esac
+        ;;
     "image digest")
         printf 'sha256:abc123\n'
         ;;
