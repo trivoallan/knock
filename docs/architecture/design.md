@@ -254,15 +254,27 @@ The pure planning pipeline, all in `domain/`:
 `houba/errors.py` defines the `HoubaError` hierarchy; `exit_code_for(exc)` walks the exception's
 MRO and returns the first matching branch's code:
 
-```
-HoubaError                       (base)
-├── DomainError        exit 1     business / validation
-│   └── PolicyValidationError
-├── AdapterError       exit 2     infra / external dependency
-│   ├── RegctlError
-│   └── BuildkitError
-├── ConfigError        exit 3     missing / invalid configuration
-└── InternalError      exit 4     bug / assertion
+```mermaid
+flowchart LR
+    base["<b>HoubaError</b><br/><i>base</i>"]
+    dom["<b>DomainError</b> — exit 1<br/>business / validation"]
+    adp["<b>AdapterError</b> — exit 2<br/>infra / external dependency"]
+    cfg["<b>ConfigError</b> — exit 3<br/>missing / invalid configuration"]
+    intl["<b>InternalError</b> — exit 4<br/>bug / assertion"]
+    pol["PolicyValidationError"]
+    reg["RegctlError"]
+    bk["BuildkitError"]
+
+    base --> dom
+    base --> adp
+    base --> cfg
+    base --> intl
+    dom --> pol
+    adp --> reg
+    adp --> bk
+
+    classDef leaf fill:#eef1f5,stroke:#69707a,color:#1f2933;
+    class pol,reg,bk leaf;
 ```
 
 Anything not under `HoubaError` (e.g. a stray `KeyError`) ⇒ exit 4. Pydantic `ValidationError` /
