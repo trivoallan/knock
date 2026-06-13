@@ -333,3 +333,15 @@ New `HOUBA_*` settings (the only place env is read; JSON-in-a-var convention pre
   many lines of stdin/stdout) is a forward-compatible refinement — note it, don't build it yet.
 - **`--repo` / `--policy` filters.** Deferred; `--registry` covers the v1 need. Add when a real run
   needs finer bounding.
+
+## 14. As-built notes (post-implementation reconciliation)
+
+Shipped per [ADR 0013](../../architecture/decisions/0013-purge-reaper.md). Deltas from the design above, recorded so the spec does not drift from the code:
+
+- **`decide_purge` takes primitives, not `UsageObservation`.** Shipped: `decide_purge(last_seen: datetime | None, *, observed: bool)`. The codebase invariant is that `domain/` never imports `ports/`; the use case bridges the oracle's `UsageObservation` into these primitives (mirroring how `use_cases/reconcile.py` bridges `ImageInfo` via `to_source_artifact`). Supersedes the §5 `decide_purge(observation)` sketch.
+- **`parse_pending_mark` lives in `domain/lifecycle.py`** — beside #41's `build_pending_deletion_annotations` writer (not in `domain/purge.py`) — so a round-trip unit test guarantees read/write key parity. The writer is keyword-only with `import_name`; the shared constant is `PENDING_DELETION_ARTIFACT_TYPE`.
+- **Reporting is a self-contained `PurgeReport`/`PurgeOutcome`** (Pydantic) rendered by the CLI, **not** the policy-centric `Reporter`. §6.4's proposal to extend `OperationKind`/`Counts` was intentionally dropped: it would couple the reaper to reconcile's event surface, against the discipline-B isolation this design requires. The C4 model carries no `ucPurge → Reporter` edge.
+- **`HOUBA_DRY_RUN_DELETIONS` is honoured as the second mutation gate** (§3): the CLI computes `effective_apply = apply and not settings.dry_run_deletions`, so the env var forces dry-run even with `--apply`.
+- **`marked_at` / mark-`reason` are parsed but not separately emitted in v1.** `parse_pending_mark` extracts the full mark (identity + `marked_at` + `reason`); the v1 `PurgeOutcome.reason` carries the **oracle's** `detail` (the more actionable "why"). Surfacing `marked_at` for audit is a cheap follow-up, not a v1 deliverable.
+- **`RegctlAdapter.list_repositories` treats a `NAME_UNKNOWN` registry as empty** (`[]` → zero candidates → nothing purged; mirrors `list_tags`). Genuine access/pagination failures still raise `RegctlError` and abort the walk (§6.3/§12) — only the benign "registry has no repos yet" case is swallowed.
+- **The catalog walk is sequential in v1.** The concurrency/sharding reuse noted in §4 is deferred; `purge_marks` is structured to adopt it without reshaping.

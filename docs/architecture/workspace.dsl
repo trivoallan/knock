@@ -124,7 +124,6 @@ workspace "houba" "Single front door / stamper for external container images." {
         ucPurge -> portRegistry "Lists repos + referrers; hard-deletes purged tags" "Protocol"
         ucPurge -> portUsageOracle "Was this digest seen in prod?" "Protocol"
         ucPurge -> portClock "Computes idle window" "Protocol"
-        ucPurge -> portReporter "Emits protect / purge / error events" "Protocol"
 
         adRegctl -> portRegistry "Implements" "Protocol"
         adBuildkit -> portBuilder "Implements" "Protocol"

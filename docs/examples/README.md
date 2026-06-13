@@ -198,9 +198,11 @@ have a reaper, `deletionMode: mark` still works; just don't run `houba purge`.
    # purge  myimage:old-tag  [deleted]
    ```
 
-**Fail-closed.** If the usage oracle is unreachable or returns an error for any digest,
-`houba purge` aborts without deleting anything. This is intentional: a silent oracle failure
-must not trigger a mass purge of potentially live images.
+**Fail-closed.** If the usage oracle errors, times out, or returns an unparseable answer for a
+candidate, `houba purge` treats that candidate as **still in use**: it protects the tag (never
+deletes it) and continues to the next candidate. A flaky oracle can therefore only ever *spare*
+tags, never trigger a mass purge of potentially live images. (If `HOUBA_USAGE_ORACLE_CMD` is not
+configured at all, purge refuses to start — exit 3 — rather than run blind.)
 
 **Oracle is replaceable.** Set `HOUBA_USAGE_ORACLE_CMD` to any executable that speaks the
 contract: reads a JSON object from stdin (`{"digest","image_ref","identity","since"}`) and
