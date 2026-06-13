@@ -10,10 +10,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from houba.domain.scan.attestation import build_scan_statement
 from houba.domain.scan.detect import resolve_format
 from houba.domain.scan.formats.registry import DEFAULT_REGISTRY, Registry
 from houba.domain.scan.refs import pin_to_digest
 from houba.domain.scan.summary import build_scan_annotations
+from houba.ports.attestor import AttestationRef, AttestorPort
 from houba.ports.clock import ClockPort
 from houba.ports.registry import RegistryPort
 
@@ -29,6 +31,7 @@ class ScanOutcome:
     format: str
     facts: dict[str, str]
     timestamp: datetime
+    attestation: AttestationRef | None = None
 
 
 def attach_scan(
@@ -40,6 +43,8 @@ def attach_scan(
     label_prefix: str,
     format_override: str | None = None,
     formats: Registry = DEFAULT_REGISTRY,
+    attestor: AttestorPort | None = None,
+    builder_id: str = "",
 ) -> ScanOutcome:
     info = registry.inspect(image_ref)
     subject = pin_to_digest(image_ref, info.digest)
@@ -57,6 +62,20 @@ def attach_scan(
         blob=report_bytes,
         media_type=mapper.report_media_type,
     )
+    attestation: AttestationRef | None = None
+    if attestor is not None:
+        statement = build_scan_statement(
+            subject_name=image_ref,
+            subject_digest=info.digest,
+            scanner_name=summary.tool,
+            scanner_version=summary.tool_version,
+            fmt=fmt,
+            summary=summary.facts,
+            report_digest=referrer,
+            attested_at=now.isoformat(),
+            builder_id=builder_id,
+        )
+        attestation = attestor.attest(subject, statement)
     return ScanOutcome(
         subject_digest=info.digest,
         referrer_digest=referrer,
@@ -65,4 +84,5 @@ def attach_scan(
         format=fmt,
         facts=summary.facts,
         timestamp=now,
+        attestation=attestation,
     )
