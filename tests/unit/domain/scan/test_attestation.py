@@ -40,8 +40,15 @@ def test_predicate_fields() -> None:
 
 def test_subject_digest_without_algo_prefix_assumes_sha256() -> None:
     s = build_scan_statement(
-        subject_name="x", subject_digest="deadbeef", scanner_name="trivy", scanner_version="",
-        fmt="sarif", summary={}, report_digest="", attested_at="t", builder_id="",
+        subject_name="x",
+        subject_digest="deadbeef",
+        scanner_name="trivy",
+        scanner_version="",
+        fmt="sarif",
+        summary={},
+        report_digest="",
+        attested_at="t",
+        builder_id="",
     )
     assert s["subject"][0]["digest"] == {"sha256": "deadbeef"}
 
@@ -50,5 +57,10 @@ def test_json_schema_is_derived() -> None:
     schema = scan_predicate_json_schema()
     assert schema["type"] == "object"
     assert set(schema["properties"]) == {
-        "scanner", "format", "summary", "report_digest", "attested_at", "builder_id"
+        "scanner",
+        "format",
+        "summary",
+        "report_digest",
+        "attested_at",
+        "builder_id",
     }

@@ -5,12 +5,10 @@ from datetime import UTC, datetime
 
 import pytest
 
-import pytest
-
 from houba.errors import CosignError, UnknownFormatError
-from tests.fakes.attestor import FakeAttestor
 from houba.ports.registry import ImageInfo
 from houba.use_cases.attach import SCAN_RESULT_ARTIFACT_TYPE, attach_scan
+from tests.fakes.attestor import FakeAttestor
 from tests.fakes.clock import FakeClock
 from tests.fakes.registry import FakeRegistryPort
 
@@ -69,8 +67,13 @@ def test_attach_signs_when_attestor_present() -> None:
     reg = _registry()
     att = FakeAttestor()
     outcome = attach_scan(
-        REF, SARIF, registry=reg, clock=FakeClock(TS), label_prefix="io.houba",
-        attestor=att, builder_id="houba://ci",
+        REF,
+        SARIF,
+        registry=reg,
+        clock=FakeClock(TS),
+        label_prefix="io.houba",
+        attestor=att,
+        builder_id="houba://ci",
     )
     assert outcome.attestation is not None
     assert outcome.attestation.predicate_type == "https://houba.dev/predicate/scan/v1"
@@ -94,6 +97,11 @@ def test_attach_signing_failure_propagates_after_referrer_attached() -> None:
     att = FakeAttestor(fail=True)
     with pytest.raises(CosignError):
         attach_scan(
-            REF, SARIF, registry=reg, clock=FakeClock(TS), label_prefix="io.houba", attestor=att,
+            REF,
+            SARIF,
+            registry=reg,
+            clock=FakeClock(TS),
+            label_prefix="io.houba",
+            attestor=att,
         )
     assert reg.artifact_referrers  # raw referrer attached before the signing attempt
