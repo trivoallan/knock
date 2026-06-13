@@ -15,6 +15,7 @@ class FakeRegistryPort:
         fail_put: set[str] | None = None,
         copy_barrier: object | None = None,  # threading.Barrier; typed loosely to avoid an import
         referrers: dict[str, list[Referrer]] | None = None,
+        repositories: dict[str, list[str]] | None = None,
     ) -> None:
         self._tags = tags or {}
         self._infos = infos or {}
@@ -22,6 +23,7 @@ class FakeRegistryPort:
         self._fail_put = fail_put or set()
         self._copy_barrier = copy_barrier
         self._referrers = referrers or {}
+        self._repositories = repositories or {}
         self.copied: list[tuple[str, str]] = []
         self.annotated: list[tuple[str, dict[str, str]]] = []
         self.deleted: list[str] = []
@@ -32,6 +34,9 @@ class FakeRegistryPort:
 
     def configure_registry(self, host: str, *, tls_verify: bool, ca_cert: str | None) -> None:
         self.configured.append((host, tls_verify, ca_cert))
+
+    def list_repositories(self, registry: str) -> list[str]:
+        return list(self._repositories.get(registry, []))
 
     def list_tags(self, repo_ref: str) -> list[str]:
         return list(self._tags.get(repo_ref, []))

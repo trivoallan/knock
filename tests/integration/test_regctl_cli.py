@@ -267,3 +267,19 @@ def test_list_referrers_failure_raises_regctl_error(
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "fail")
     with pytest.raises(RegctlError):
         RegctlAdapter().list_referrers("harbor.corp/lib/redis:6.0.0", "application/vnd.houba.x")
+
+
+def test_list_repositories_parses_lines(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "repos")
+    adapter = RegctlAdapter(str(fake_bin_path / "regctl"))
+    assert adapter.list_repositories("harbor.example") == ["lib/redis", "lib/nginx"]
+
+
+def test_list_repositories_empty_registry(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "empty")
+    adapter = RegctlAdapter(str(fake_bin_path / "regctl"))
+    assert adapter.list_repositories("harbor.example") == []
