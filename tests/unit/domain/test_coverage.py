@@ -8,14 +8,18 @@ def test_stamped_via_prefixed_policy_key() -> None:
 
 
 def test_unstamped_when_no_houba_keys() -> None:
-    assert is_stamped({"org.opencontainers.image.source": "docker.io/x"}, prefix="io.houba") is False
+    assert (
+        is_stamped({"org.opencontainers.image.source": "docker.io/x"}, prefix="io.houba") is False
+    )
     assert is_stamped({}, prefix="io.houba") is False
 
 
 def test_base_digest_alone_is_not_stamped_under_nonempty_prefix() -> None:
     # The strong signal is the prefixed key; base.digest alone (an OCI-standard key another
     # tool could set) is NOT treated as a houba stamp when a prefix is configured.
-    assert is_stamped({"org.opencontainers.image.base.digest": "sha256:x"}, prefix="io.houba") is False
+    assert (
+        is_stamped({"org.opencontainers.image.base.digest": "sha256:x"}, prefix="io.houba") is False
+    )
 
 
 def test_empty_prefix_falls_back_to_base_digest() -> None:
