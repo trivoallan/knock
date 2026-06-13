@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+# Fake cosign for integration tests.
+# Scenario via FAKE_COSIGN_SCENARIO; every call's argv is appended to FAKE_COSIGN_LOG.
+set -e
+
+[ -n "${FAKE_COSIGN_LOG:-}" ] && echo "$@" >> "$FAKE_COSIGN_LOG"
+
+case "${FAKE_COSIGN_SCENARIO:-success}" in
+    success)
+        echo "Using predicate from file"
+        echo "Pushing attestation manifest to registry" >&2
+        echo "sha256:1111111111111111111111111111111111111111111111111111111111111111" >&2
+        ;;
+    fail)
+        echo "cosign: simulated failure" >&2
+        exit 1
+        ;;
+    *)
+        echo "fake-cosign: unknown scenario ${FAKE_COSIGN_SCENARIO}" >&2
+        exit 99
+        ;;
+esac
