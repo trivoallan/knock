@@ -62,3 +62,34 @@ def test_build_emits_platform_opt(
         )
     )
     assert "--opt=platform=linux/amd64" in log.read_text()
+
+
+def test_build_emits_provenance_opt_when_requested(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = tmp_path / "buildctl.log"
+    monkeypatch.setenv("FAKE_BUILDCTL_LOG", str(log))
+    df = tmp_path / "Dockerfile"
+    df.write_text("FROM scratch\n")
+    BuildkitAdapter().build_and_push(
+        BuildRequest(
+            dockerfile_path=df,
+            context_dir=tmp_path,
+            image_ref="reg/x:1",
+            provenance=True,
+        )
+    )
+    assert "--opt=attest:provenance=mode=max" in log.read_text()
+
+
+def test_build_omits_provenance_opt_by_default(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = tmp_path / "buildctl.log"
+    monkeypatch.setenv("FAKE_BUILDCTL_LOG", str(log))
+    df = tmp_path / "Dockerfile"
+    df.write_text("FROM scratch\n")
+    BuildkitAdapter().build_and_push(
+        BuildRequest(dockerfile_path=df, context_dir=tmp_path, image_ref="reg/x:1")
+    )
+    assert "attest:provenance" not in log.read_text()

@@ -42,6 +42,10 @@ class BuildkitAdapter:
         ]
         if request.platform:
             args.append(f"--opt=platform={request.platform}")
+        if request.provenance:
+            # BuildKit emits + attaches its own slsa.dev/provenance/v1 referrer at push;
+            # houba only enables it (mode=max captures the full build trace).
+            args.append("--opt=attest:provenance=mode=max")
         for k, v in sorted(request.build_args.items()):
             args.append(f"--opt=build-arg:{k}={v}")
         try:

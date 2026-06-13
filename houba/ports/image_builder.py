@@ -14,6 +14,7 @@ class BuildRequest:
     image_ref: str
     build_args: dict[str, str] = field(default_factory=dict)
     platform: str | None = None
+    provenance: bool = False  # enable BuildKit's native SLSA provenance attestation
 
 
 class ImageBuilderPort(Protocol):
