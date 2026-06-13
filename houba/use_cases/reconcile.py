@@ -43,11 +43,13 @@ from houba.domain.reconcile import (
     reconcile_import,
 )
 from houba.domain.sharding import owns
+from houba.domain.attestation import build_transform_statement
 from houba.domain.stamp import build_stamp_annotations
 from houba.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
 from houba.domain.transforms.registry import DEFAULT_REGISTRY
 from houba.domain.transforms.render import render, transform_version, validate_transform_steps
 from houba.errors import ConfigError, InternalError, exit_code_for
+from houba.ports.attestor import AttestorPort
 from houba.ports.image_builder import BuildRequest, ImageBuilderPort
 from houba.ports.registry import ImageInfo, Referrer, RegistryPort
 from houba.ports.reporter import Counts, ErrorInfo, OperationEvent, OperationKind, Reporter
@@ -138,6 +140,7 @@ def _build_variant(
     resolved: _ResolvedTransform,
     platform: str,
     work_dir: Path | None = None,
+    provenance: bool = False,
 ) -> None:
     if work_dir is not None:
         work_dir.mkdir(parents=True, exist_ok=True)
@@ -150,7 +153,11 @@ def _build_variant(
         df_path.write_text(rendered.dockerfile)
         builder.build_and_push(
             BuildRequest(
-                dockerfile_path=df_path, context_dir=ctx, image_ref=dest_ref, platform=platform
+                dockerfile_path=df_path,
+                context_dir=ctx,
+                image_ref=dest_ref,
+                platform=platform,
+                provenance=provenance,
             )
         )
 
@@ -261,6 +268,8 @@ def _apply_plan(
     reporter: Reporter,
     policy_name: str,
     executor: ThreadPoolExecutor | None,
+    attestor: AttestorPort | None,
+    attest_builder_id: str,
 ) -> TargetReport:
     src_repo = _source_repo(plan.policy)
     selected = sorted({tag for v in plan.expanded.variants for tag in v.tags})
@@ -343,6 +352,7 @@ def _apply_plan(
                         resolved=plan.transforms[w.vplan.name],
                         platform=build_platform,
                         work_dir=work_dir,
+                        provenance=attestor is not None,
                     )
                 else:
                     registry.copy(f"{src_repo}:{w.src_tag}", f"{plan.dest_repo}:{w.out_tag}")
@@ -364,6 +374,26 @@ def _apply_plan(
                         transform_version_value=transform_versions.get(w.vplan.name),
                     ),
                 )
+                # Heavy provenance (rebuild only): sign houba's transform predicate over
+                # the stamped output digest. Inside the try => a signing failure fails the
+                # operation (visible in the report) rather than leaving a silent gap.
+                if attestor is not None and w.vplan.transform and out_digest is not None:
+                    attestor.attest(
+                        f"{plan.dest_repo}@{out_digest}",
+                        build_transform_statement(
+                            subject_name=f"{plan.dest_repo}:{w.out_tag}",
+                            subject_digest=out_digest,
+                            policy=plan.policy.metadata.name,
+                            import_name=plan.expanded.name,
+                            variant=w.variant,
+                            source=src_repo,
+                            source_digest=source[w.src_tag].digest,
+                            builder_id=attest_builder_id,
+                            created=now.isoformat(),
+                            transform_version=transform_versions.get(w.vplan.name) or "",
+                            steps=[(s.name, s.params) for s in w.vplan.transform],
+                        ),
+                    )
             op = Operation(
                 kind=w.kind,
                 out_tag=w.out_tag,
@@ -593,6 +623,8 @@ def reconcile_policies(
     max_concurrency: int = 1,
     shard_index: int = 0,
     shard_count: int = 1,
+    attestor: AttestorPort | None = None,
+    attest_builder_id: str = "",
 ) -> RunReport:
     mode: RunMode = "dry-run" if (dry_run_tags or dry_run_deletions) else "apply"
 
@@ -696,6 +728,8 @@ def reconcile_policies(
                             reporter=reporter,
                             policy_name=policy.metadata.name,
                             executor=executor,
+                            attestor=attestor,
+                            attest_builder_id=attest_builder_id,
                         )
                     )
                 all_ops = [op for t in targets for v in t.variants for op in v.operations] + [
