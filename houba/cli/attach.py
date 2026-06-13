@@ -39,5 +39,7 @@ def attach(
         clock=container.clock,
         label_prefix=container.settings.label_prefix,
         format_override=format_,
+        attestor=container.attestor,
+        builder_id=container.settings.attest_builder_id,
     )
     render_scan_outcome(outcome, fmt=output, stream=sys.stdout)
