@@ -4,22 +4,22 @@
 [Structurizr DSL](https://docs.structurizr.com/dsl). One model, five structural views plus one
 deployment view per worked example (and the production blueprint):
 
-- **System Landscape** ([Mermaid](_export/structurizr-Landscape.mmd)) — houba in its enterprise
+- **[System Landscape](_export/structurizr-Landscape.mmd)** — houba in its enterprise
   context, all the way to incident-time blast-radius. This carries the product thesis: the
   provenance *stamp* is read downstream by the observability / CMDB stack — houba never calls it,
   the coupling is the data.
-- **System Context** ([Mermaid](_export/structurizr-Context.mmd)) — houba and the systems it
+- **[System Context](_export/structurizr-Context.mmd)** — houba and the systems it
   integrates with directly (source registries, destination registries, BuildKit, and the internal
   package mirror the hardening rebuild pulls from).
-- **Container** ([Mermaid](_export/structurizr-Container.mmd)) — houba is a single deployable unit:
+- **[Container](_export/structurizr-Container.mmd)** — houba is a single deployable unit:
   the `houba` CLI (the reconcile engine; the runtime image bundles `regctl` + `buildctl`). This view
   draws the system boundary around that one container and the external systems it drives.
-- **Hexagon** ([Mermaid](_export/structurizr-Hexagon.mmd)) — a synthetic overview of the same CLI:
+- **[Hexagon](_export/structurizr-Hexagon.mmd)** — a synthetic overview of the same CLI:
   the six layers (**cli** → **use cases** → **domain**, with **ports** ← **adapters**) as single
   boxes. The fastest read of the architecture: it makes the dependency inversion explicit — use
   cases *and* adapters both point at the ports — and shows the driven adapters reaching the external
   systems.
-- **Component** ([Mermaid](_export/structurizr-Component.mmd)) — the same hexagon fully exploded:
+- **[Component](_export/structurizr-Component.mmd)** — the same hexagon fully exploded:
   every fine-grained component — the thin Typer **cli**, the **use cases** (loader + reconcile
   orchestrator + the `RunReport` contract), the pure **domain** (policy schema, planning pipeline,
   transform engine, provenance stamp), each **port** (`typing.Protocol` seam), and each **adapter**
@@ -30,20 +30,20 @@ deployment view per worked example (and the production blueprint):
   rebuild path, a blast-radius consumer Job) — is rendered **once per example**, each scoped to the
   kind overlay that runs it, so each diagram reads cleanly and carries its own overlay facts (rather
   than one cramped view merging every overlay):
-  - **busybox · copy** ([Mermaid](_export/structurizr-DeployBusybox.mmd)) and **redis · copy**
-    ([Mermaid](_export/structurizr-DeployRedis.mmd)) — `local-lite`: the copy path into a throwaway
-    `registry:2` (plain HTTP), no `buildkitd`.
-  - **pending-deletion · mark** ([Mermaid](_export/structurizr-DeployPendingDeletion.mmd)) —
+  - **[busybox · copy](_export/structurizr-DeployBusybox.mmd)** and
+    **[redis · copy](_export/structurizr-DeployRedis.mmd)** — `local-lite`: the copy path into a
+    throwaway `registry:2` (plain HTTP), no `buildkitd`.
+  - **[pending-deletion · mark](_export/structurizr-DeployPendingDeletion.mmd)** —
     `local-lite` + reaper: copy path with `deletionMode: mark`; an external reaper discovers the
     `pending-deletion` referrers and owns the purge.
-  - **timezone · rebuild** ([Mermaid](_export/structurizr-DeployTimezone.mmd)) — `local-transform`:
+  - **[timezone · rebuild](_export/structurizr-DeployTimezone.mmd)** — `local-transform`:
     the rebuild path, self-contained: `buildkitd` + `registry:2`, no Harbor, no org config
     (`setTimezone` fanned into `-eu`/`-us` variants).
-  - **hardened · rebuild + Harbor** ([Mermaid](_export/structurizr-DeployHardened.mmd)) —
+  - **[hardened · rebuild + Harbor](_export/structurizr-DeployHardened.mmd)** —
     `local-full`: the rebuild path with org config: `buildkitd` runs `injectCA` +
     `rewritePackageSources`, the CA bundle is mounted, and an `ExternalSecret` supplies the Harbor
     (TLS) push token.
-  - **Production blueprint** ([Mermaid](_export/structurizr-DeployProd.mmd)) — `prod` overlay: the
+  - **[Production blueprint](_export/structurizr-DeployProd.mmd)** — `prod` overlay: the
     *same* kustomize base on a real cluster (anti-drift: the demo IS the blueprint), with
     `ExternalSecret`-sourced creds, the org policy repo, a pinned published image, the hourly
     schedule, and the rebuild add-on present.
