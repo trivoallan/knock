@@ -49,6 +49,7 @@ def test_attach_json_output_is_parseable(
     payload = json.loads(last)
     assert payload["format"] == "sarif"
     assert payload["subjectDigest"] == "sha256:abc123"
+    assert payload["attestation"] is None  # no signer configured → unsigned
 
 
 def test_attach_unrecognized_report_errors(
