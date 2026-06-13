@@ -81,6 +81,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         usageOracle = softwareSystem "Usage oracle / observability" "Answers 'was this image's content seen in production lately?' (e.g. Datadog). Queried point-in-time by houba purge; never owned by houba." "External"
         signingService = softwareSystem "Signing / Key service" "KMS or Fulcio (keyless CA) that houba's attestor uses to sign in-toto attestations (DSSE). Trust is org configuration, not baked in." "External"
         transparencyLog = softwareSystem "Transparency log (Rekor)" "Optional append-only signature log; blank in air-gapped orgs. houba can point at one but never deploys it." "External,Downstream"
+        upstreamScanner = softwareSystem "Upstream Scanner" "Produces vulnerability / EOL scan reports (CI pipeline, registry-native scanner, or scan service). houba ingests the report; it never calls the scanner." "External"
 
         platformEng -> houba "Configures the hardening policy + registry roster, runs / schedules reconcile" "CLI"
         productTeam -> houba "Declares its imports as MirrorPolicy files" "YAML"
@@ -95,6 +96,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         houba -> usageOracle "Queries prod usage at purge time (houba purge)" "subprocess (HOUBA_USAGE_ORACLE_CMD)"
         houba -> signingService "Signs in-toto attestations (DSSE)" "cosign"
         houba -> transparencyLog "Records the signature (optional; blank => skipped)" "cosign / rekor"
+        upstreamScanner -> houba "Produces scan reports ingested by" "SARIF / file"
 
         # Component-level relationships — the source of truth for the Component view.
         # Structurizr implies the container/system-level edges for the views above

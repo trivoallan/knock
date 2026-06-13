@@ -22,6 +22,8 @@ graph LR
     style 45 fill:#69707a,stroke:#494e55,color:#ffffff
     46("<div style='font-weight: bold'>Transparency log (Rekor)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Optional append-only<br />signature log; blank in<br />air-gapped orgs. houba can<br />point at one but never<br />deploys it.</div>")
     style 46 fill:#0f766e,stroke:#0a524d,color:#ffffff
+    47("<div style='font-weight: bold'>Upstream Scanner</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces vulnerability / EOL<br />scan reports (CI pipeline,<br />registry-native scanner, or<br />scan service). houba ingests<br />the report; it never calls<br />the scanner.</div>")
+    style 47 fill:#69707a,stroke:#494e55,color:#ffffff
 
     1-. "<div>Configures the hardening<br />policy + registry roster,<br />runs / schedules reconcile</div><div style='font-size: 70%'>[CLI]</div>" .->4
     2-. "<div>Declares its imports as<br />MirrorPolicy files</div><div style='font-size: 70%'>[YAML]</div>" .->4
@@ -32,5 +34,6 @@ graph LR
     4-. "<div>Queries prod usage at purge<br />time (houba purge)</div><div style='font-size: 70%'>[subprocess (HOUBA_USAGE_ORACLE_CMD)]</div>" .->44
     4-. "<div>Signs in-toto attestations<br />(DSSE)</div><div style='font-size: 70%'>[cosign]</div>" .->45
     4-. "<div>Records the signature<br />(optional; blank => skipped)</div><div style='font-size: 70%'>[cosign / rekor]</div>" .->46
+    47-. "<div>Produces scan reports<br />ingested by</div><div style='font-size: 70%'>[SARIF / file]</div>" .->4
 
   end
