@@ -262,6 +262,32 @@ Trust is org configuration, never baked in: `keyless` uses Fulcio + an OIDC iden
 **no transparency-log entry** — the air-gapped path. v1 attests **rebuilds only**; pure
 copies stay at the annotation layer. See [`attested/redis.yml`](attested/redis.yml).
 
+### Coverage audit (houba audit)
+
+Once images are flowing through houba, **`houba audit`** answers the coverage-gate question:
+*which images in the registry do NOT carry houba's provenance stamp?* It walks the configured
+registries (or a single `--registry NAME`), reads each image's annotations, and reports each as
+covered or uncovered — the blind-spot report that makes the front door verifiable.
+
+```bash
+# after a reconcile, against the local registry:2 from the walkthrough above
+uv run houba audit
+# UNCOVERED localhost:5001/demo/other-image:latest
+# audit  scanned=13 covered=12 uncovered=1 errored=0
+```
+
+It is **read-only** (never deletes or stamps) and **report-only by default** (exit 0). For a CI
+gate, pass `--fail-on-uncovered` to exit non-zero when any image lacks the stamp:
+
+```bash
+uv run houba audit --fail-on-uncovered    # exit 1 if uncovered > 0
+```
+
+An image counts as covered when it carries the houba lineage annotation (`io.houba.policy`, or
+the OCI `org.opencontainers.image.base.digest` when `HOUBA_LABEL_PREFIX` is empty). `HOUBA_LOG_FORMAT=json`
+emits the full structured `CoverageReport`. v1 audits the annotation stamp; signed-attestation
+coverage is a later tier.
+
 ### Upgrade note
 
 The `io.houba.transform.version` hash format changed when the pluggable registry landed;
