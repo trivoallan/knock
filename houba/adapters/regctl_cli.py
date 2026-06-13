@@ -77,35 +77,6 @@ class RegctlAdapter:
         # `image mod --replace` rewrites the tag; read back the resulting manifest digest.
         return self._run(["image", "digest", image_ref]).strip()
 
-    def put_artifact_referrer(
-        self,
-        subject_ref: str,
-        *,
-        artifact_type: str,
-        media_type: str,
-        blob: bytes,
-        annotations: dict[str, str],
-    ) -> str:
-        with tempfile.NamedTemporaryFile("wb", suffix=".blob") as f:
-            f.write(blob)
-            f.flush()
-            args = [
-                "artifact",
-                "put",
-                "--subject",
-                subject_ref,
-                "--artifact-type",
-                artifact_type,
-                "--file",
-                f.name,
-                "--file-media-type",
-                media_type,
-            ]
-            for key, value in annotations.items():
-                args += ["--annotation", f"{key}={value}"]
-            out = self._run(args)
-        return out.strip()
-
     def delete_tag(self, image_ref: str) -> None:
         self._run(["tag", "rm", image_ref])
 
@@ -167,11 +138,29 @@ class RegctlAdapter:
             )
         return out
 
-    def put_referrer(self, image_ref: str, artifact_type: str, annotations: dict[str, str]) -> None:
+    def put_referrer(
+        self,
+        image_ref: str,
+        artifact_type: str,
+        annotations: dict[str, str],
+        *,
+        blob: bytes = b"",
+        media_type: str | None = None,
+    ) -> str:
         args = ["artifact", "put", "--subject", image_ref, "--artifact-type", artifact_type]
         for key, value in annotations.items():
             args += ["--annotation", f"{key}={value}"]
-        self._run(args, stdin="")
+        if blob:
+            with tempfile.NamedTemporaryFile("wb", suffix=".blob") as f:
+                f.write(blob)
+                f.flush()
+                args += ["--file", f.name]
+                if media_type:
+                    args += ["--file-media-type", media_type]
+                out = self._run(args)
+        else:
+            out = self._run(args, stdin="")
+        return out.strip()
 
     def delete_referrer(self, referrer_ref: str) -> None:
         self._run(["manifest", "delete", referrer_ref])

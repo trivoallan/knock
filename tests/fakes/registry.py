@@ -66,18 +66,6 @@ class FakeRegistryPort:
         # deterministic synthetic post-annotate digest (distinct per ref)
         return f"sha256:{hashlib.sha256(image_ref.encode()).hexdigest()}"
 
-    def put_artifact_referrer(
-        self,
-        subject_ref: str,
-        *,
-        artifact_type: str,
-        media_type: str,
-        blob: bytes,
-        annotations: dict[str, str],
-    ) -> str:
-        self.artifact_referrers.append((subject_ref, artifact_type, media_type, blob, annotations))
-        return f"sha256:{hashlib.sha256(blob).hexdigest()}"
-
     def delete_tag(self, image_ref: str) -> None:
         if image_ref in self._fail_delete:
             raise RegctlError(f"fake delete failure for {image_ref}")
@@ -90,10 +78,24 @@ class FakeRegistryPort:
         return [r for r in self._referrers.get(image_ref, []) if r.artifact_type == artifact_type]
 
     # Journals only; _referrers is a read-fixture seeded via the constructor (see list_referrers).
-    def put_referrer(self, image_ref: str, artifact_type: str, annotations: dict[str, str]) -> None:
+    def put_referrer(
+        self,
+        image_ref: str,
+        artifact_type: str,
+        annotations: dict[str, str],
+        *,
+        blob: bytes = b"",
+        media_type: str | None = None,
+    ) -> str:
         if image_ref in self._fail_put:
             raise RegctlError(f"fake put_referrer failure for {image_ref}")
-        self.marked.append((image_ref, artifact_type, annotations))
+        if blob:
+            self.artifact_referrers.append(
+                (image_ref, artifact_type, media_type, blob, annotations)
+            )
+        else:
+            self.marked.append((image_ref, artifact_type, annotations))
+        return f"sha256:{hashlib.sha256(blob).hexdigest()}"
 
     def delete_referrer(self, referrer_ref: str) -> None:
         self.unmarked.append(referrer_ref)

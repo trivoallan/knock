@@ -245,16 +245,16 @@ def test_list_referrers_empty_when_none(
     )
 
 
-def test_put_artifact_referrer_invokes_artifact_put_with_flags(
+def test_put_referrer_with_blob_invokes_artifact_put_with_flags(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     log = _log(tmp_path, monkeypatch)
-    digest = RegctlAdapter().put_artifact_referrer(
+    digest = RegctlAdapter().put_referrer(
         "harbor.corp/lib/redis@sha256:abc",
-        artifact_type="application/vnd.houba.scan.result.v1",
-        media_type="application/sarif+json",
+        "application/vnd.houba.scan.result.v1",
+        {"io.houba.scan.tool": "trivy", "io.houba.scan.vuln.critical": "0"},
         blob=b'{"runs": []}',
-        annotations={"io.houba.scan.tool": "trivy", "io.houba.scan.vuln.critical": "0"},
+        media_type="application/sarif+json",
     )
     line = log.read_text()
     assert "artifact put" in line
@@ -307,15 +307,15 @@ def test_list_repositories_empty_registry(
     assert adapter.list_repositories("harbor.example") == []
 
 
-def test_put_artifact_referrer_failure_raises_regctl_error(
+def test_put_referrer_with_blob_failure_raises_regctl_error(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "fail")
     with pytest.raises(RegctlError):
-        RegctlAdapter().put_artifact_referrer(
+        RegctlAdapter().put_referrer(
             "r@sha256:abc",
-            artifact_type="t",
-            media_type="m",
+            "t",
+            {},
             blob=b"{}",
-            annotations={},
+            media_type="m",
         )
