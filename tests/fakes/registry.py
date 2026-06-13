@@ -18,6 +18,8 @@ class FakeRegistryPort:
         copy_barrier: object | None = None,  # threading.Barrier; typed loosely to avoid an import
         referrers: dict[str, list[Referrer]] | None = None,
         repositories: dict[str, list[str]] | None = None,
+        annotations: dict[str, dict[str, str]] | None = None,
+        fail_get: set[str] | None = None,
     ) -> None:
         self._tags = tags or {}
         self._infos = infos or {}
@@ -28,6 +30,8 @@ class FakeRegistryPort:
         self._copy_barrier = copy_barrier
         self._referrers = referrers or {}
         self._repositories = repositories or {}
+        self._annotations = annotations or {}
+        self._fail_get = fail_get or set()
         self.copied: list[tuple[str, str]] = []
         self.annotated: list[tuple[str, dict[str, str]]] = []
         self.deleted: list[str] = []
@@ -53,6 +57,11 @@ class FakeRegistryPort:
             return self._infos[image_ref]
         except KeyError:
             raise KeyError(f"FakeRegistryPort: no seeded ImageInfo for {image_ref!r}") from None
+
+    def get_annotations(self, image_ref: str) -> dict[str, str]:
+        if image_ref in self._fail_get:
+            raise RegctlError(f"fake get_annotations failure for {image_ref}")
+        return dict(self._annotations.get(image_ref, {}))
 
     def copy(self, src_ref: str, dst_ref: str) -> None:
         if self._copy_barrier is not None:

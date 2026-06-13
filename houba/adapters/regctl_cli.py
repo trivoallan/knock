@@ -66,6 +66,11 @@ class RegctlAdapter:
         created = self._parse_time(created_raw) if isinstance(created_raw, str) else None
         return ImageInfo(digest=digest, created=created, annotations=annotations)
 
+    def get_annotations(self, image_ref: str) -> dict[str, str]:
+        manifest = self._json(["manifest", "get", image_ref, "--format", "{{json .}}"])
+        raw = manifest.get("annotations")
+        return {str(k): str(v) for k, v in raw.items()} if isinstance(raw, dict) else {}
+
     def copy(self, src_ref: str, dst_ref: str) -> None:
         self._run(["image", "copy", src_ref, dst_ref])
 
