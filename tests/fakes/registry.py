@@ -13,6 +13,7 @@ class FakeRegistryPort:
         infos: dict[str, ImageInfo] | None = None,
         fail_copy: set[str] | None = None,
         fail_put: set[str] | None = None,
+        fail_delete: set[str] | None = None,
         copy_barrier: object | None = None,  # threading.Barrier; typed loosely to avoid an import
         referrers: dict[str, list[Referrer]] | None = None,
         repositories: dict[str, list[str]] | None = None,
@@ -21,6 +22,7 @@ class FakeRegistryPort:
         self._infos = infos or {}
         self._fail_copy = fail_copy or set()
         self._fail_put = fail_put or set()
+        self._fail_delete = fail_delete or set()
         self._copy_barrier = copy_barrier
         self._referrers = referrers or {}
         self._repositories = repositories or {}
@@ -60,6 +62,8 @@ class FakeRegistryPort:
         return f"sha256:{hashlib.sha256(image_ref.encode()).hexdigest()}"
 
     def delete_tag(self, image_ref: str) -> None:
+        if image_ref in self._fail_delete:
+            raise RegctlError(f"fake delete failure for {image_ref}")
         self.deleted.append(image_ref)
 
     def login(self, host: str, *, username: str, password: str, tls_verify: bool) -> None:
