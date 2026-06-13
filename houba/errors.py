@@ -9,6 +9,7 @@ __all__ = [
     "AdapterError",
     "BuildkitError",
     "ConfigError",
+    "CosignError",
     "DomainError",
     "HoubaError",
     "InternalError",
@@ -41,6 +42,10 @@ class RegctlError(AdapterError):
 
 class BuildkitError(AdapterError):
     """Erreur d'invocation `buildctl` (build, push d'image)."""
+
+
+class CosignError(AdapterError):
+    """Erreur d'invocation `cosign` (attest / sign d'attestations DSSE)."""
 
 
 class UsageOracleError(AdapterError):

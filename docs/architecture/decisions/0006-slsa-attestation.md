@@ -23,7 +23,16 @@ placed per the hexagonal layering and built on the rebuild path (`buildkit_cli`)
 
 ## Consequences
 
-Provenance becomes cryptographically verifiable, not merely readable. Approved design;
-implementation still pending (roadmap ①).
+Provenance becomes cryptographically verifiable, not merely readable. **Implemented**
+(roadmap ①, plan `docs/superpowers/plans/2026-06-13-slsa-attestation.md`): a pure-domain
+transform predicate (`houba/domain/attestation.py`, `predicateType:
+https://houba.dev/predicate/transform/v1`), a pluggable `AttestorPort` with a single
+`cosign` adapter (keyless / kms / key), and BuildKit's native `slsa.dev/provenance/v1`.
+Off by default (`HOUBA_ATTEST_SIGNER=""`), rebuild-only in v1.
+
+**Deviation from the design spec, ratified:** the spec §4 sketched `tenacity` retry in the
+cosign adapter. To honor the load-bearing CLAUDE.md invariant ("no retry logic anywhere"),
+the adapter is instead a thin fail-fast subprocess wrapper like `regctl`/`buildctl` —
+`cosign` already retries transient network calls internally. No `tenacity` dependency added.
 
 Full design spec: [2026-06-11-slsa-attestation-design.md](../../superpowers/specs/2026-06-11-slsa-attestation-design.md)

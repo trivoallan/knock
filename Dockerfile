@@ -16,6 +16,9 @@ COPY --from=moby/buildkit:v0.30.0 /usr/bin/buildctl /usr/bin/buildctl
 # regctl is houba's registry client (list/copy/annotate/delete/login/registry-set).
 COPY --from=regclient/regctl:v0.11.5 /regctl /usr/bin/regctl
 
+# cosign signs the in-toto attestations on the rebuild path (HOUBA_ATTEST_*).
+COPY --from=ghcr.io/sigstore/cosign/cosign:v2.4.1 /ko-app/cosign /usr/bin/cosign
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*

@@ -45,3 +45,9 @@ def test_policy_validation_error_is_domain_error_exit_1() -> None:
     err = PolicyValidationError("bad policy")
     assert isinstance(err, DomainError)
     assert exit_code_for(err) == 1
+
+
+def test_cosign_error_is_adapter_exit_2() -> None:
+    from houba.errors import CosignError, exit_code_for
+
+    assert exit_code_for(CosignError("boom")) == 2

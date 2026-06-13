@@ -75,6 +75,8 @@ def reconcile(
         ),
         shard_index=shard_index,
         shard_count=shard_count,
+        attestor=container.attestor,
+        attest_builder_id=container.settings.attest_builder_id,
     )
     render_report(report, fmt=container.settings.log_format, verbose=verbose, stream=sys.stdout)
     raise typer.Exit(report_exit_code(report))

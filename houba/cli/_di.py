@@ -9,11 +9,13 @@ from dataclasses import dataclass
 
 from houba.adapters.buildkit_cli import BuildkitAdapter
 from houba.adapters.command_usage import CommandUsageAdapter
+from houba.adapters.cosign_cli import CosignAdapter
 from houba.adapters.regctl_cli import RegctlAdapter
 from houba.adapters.structlog_reporter import StructlogReporter
 from houba.adapters.system_clock import SystemClock
 from houba.config import Settings
 from houba.errors import ConfigError
+from houba.ports.attestor import AttestorPort
 from houba.ports.usage_oracle import UsageOraclePort
 
 
@@ -24,16 +26,19 @@ class Container:
     builder: BuildkitAdapter
     clock: SystemClock
     reporter: StructlogReporter
+    attestor: AttestorPort | None
 
 
 def build_container(settings: Settings | None = None) -> Container:
     settings = settings or Settings()
+    attestor = CosignAdapter(settings.attest) if settings.attest_signer else None
     return Container(
         settings=settings,
         registry=RegctlAdapter(),
         builder=BuildkitAdapter(),
         clock=SystemClock(),
         reporter=StructlogReporter(),
+        attestor=attestor,
     )
 
 

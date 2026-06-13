@@ -7,7 +7,7 @@ Voir spec §6.1.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -65,6 +65,28 @@ class PackageMirror(BaseModel):
         return self
 
 
+class AttestSettings(BaseModel):
+    """SLSA/in-toto signing config — the typed view of the flat HOUBA_ATTEST_* vars.
+
+    Off by default: an empty signer => no attestation (mirroring empty
+    HOUBA_LABEL_PREFIX => no labels). kms/key require a key reference.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    signer: Literal["", "keyless", "kms", "key"] = ""
+    key_ref: str = ""  # KMS URI (kms) or key path (key)
+    fulcio_url: str = ""  # keyless CA; blank => public Fulcio
+    rekor_url: str = ""  # transparency log; blank => no log entry (air-gapped path)
+    builder_id: str = ""  # URI identifying this houba builder (feeds both predicates)
+
+    @model_validator(mode="after")
+    def _key_required_for_keyed_signers(self) -> AttestSettings:
+        if self.signer in ("kms", "key") and not self.key_ref:
+            raise ValueError(f"signer {self.signer!r} requires HOUBA_ATTEST_KEY_REF")
+        return self
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="HOUBA_",
@@ -86,6 +108,33 @@ class Settings(BaseSettings):
     transform_package_mirrors: dict[str, PackageMirror] = Field(default_factory=dict)
     build_platform: str = "linux/amd64"
     max_concurrency: int = Field(default=4, ge=1)
+
+    # SLSA/in-toto attestation (off by default). Flat HOUBA_ATTEST_* fields keep the
+    # single-Settings + single-underscore config invariant (CLAUDE.md); `.attest`
+    # groups them into the typed DTO the cosign adapter consumes.
+    attest_signer: Literal["", "keyless", "kms", "key"] = ""
+    attest_key_ref: str = ""
+    attest_fulcio_url: str = ""
+    attest_rekor_url: str = ""
+    attest_builder_id: str = ""
+
+    @property
+    def attest(self) -> AttestSettings:
+        return AttestSettings(
+            signer=self.attest_signer,
+            key_ref=self.attest_key_ref,
+            fulcio_url=self.attest_fulcio_url,
+            rekor_url=self.attest_rekor_url,
+            builder_id=self.attest_builder_id,
+        )
+
+    @model_validator(mode="after")
+    def _validate_attest(self) -> Settings:
+        # Building the DTO runs AttestSettings' own validation, so a bad
+        # HOUBA_ATTEST_* combo surfaces as a ValidationError at Settings() time
+        # (mapped to exit 3 in cli/main.py).
+        _ = self.attest
+        return self
 
     # houba purge (the reference reaper) — unused by reconcile.
     usage_oracle_cmd: str | None = None
@@ -139,3 +188,8 @@ def resolve_mirror(name: str, roster: dict[str, PackageMirror]) -> PackageMirror
         raise ConfigError(
             f"unknown package mirror {name!r}; configured: {sorted(roster)}"
         ) from None
+
+
+def attest_settings_json_schema() -> dict[str, Any]:
+    """Published JSON Schema for the attestation config block (derived, never hand-written)."""
+    return AttestSettings.model_json_schema()
