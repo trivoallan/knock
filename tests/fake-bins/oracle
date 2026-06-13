@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Fake usage oracle for integration tests.
+# Reads a JSON query on stdin; emits a last_seen per FAKE_ORACLE_SCENARIO;
+# appends the received stdin to FAKE_ORACLE_LOG (if set) for argument assertions.
+set -e
+input="$(cat)"
+[ -n "${FAKE_ORACLE_LOG:-}" ] && printf '%s\n' "$input" >> "$FAKE_ORACLE_LOG"
+scenario="${FAKE_ORACLE_SCENARIO:-not-seen}"
+case "$scenario" in
+    seen)     printf '{"last_seen":"2026-06-10T00:00:00Z","detail":"cluster prod-eu"}\n' ;;
+    not-seen) printf '{"last_seen":null,"detail":"no prod sightings"}\n' ;;
+    fail)     echo "oracle boom" >&2; exit 1 ;;
+    garbage)  printf 'not json\n' ;;
+    *)        printf '{"last_seen":null}\n' ;;
+esac
