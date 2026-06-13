@@ -85,8 +85,8 @@ case "$cmd" in
         esac
         ;;
     "artifact put")
-        # Serves BOTH put_referrer (annotation-only marker; discards stdout) and
-        # put_artifact_referrer (carries a blob; returns the printed referrer ref).
+        # Serves put_referrer: annotation-only (no blob; stdout ignored) and
+        # blob-carrying (returns the referrer digest).
         printf 'harbor.corp/lib/redis@sha256:ref123\n'
         ;;
     *)

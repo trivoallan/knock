@@ -55,14 +55,14 @@ def test_fake_journals_configure_registry() -> None:
     assert fake.configured == [("harbor.corp", False, "/ca.pem")]
 
 
-def test_put_artifact_referrer_journals_and_returns_blob_digest() -> None:
+def test_put_referrer_with_blob_journals_and_returns_blob_digest() -> None:
     reg = FakeRegistryPort()
-    out = reg.put_artifact_referrer(
+    out = reg.put_referrer(
         "harbor.corp/lib/redis@sha256:abc",
-        artifact_type="application/vnd.houba.scan.result.v1",
-        media_type="application/sarif+json",
+        "application/vnd.houba.scan.result.v1",
+        {"io.houba.scan.tool": "trivy"},
         blob=b"{}",
-        annotations={"io.houba.scan.tool": "trivy"},
+        media_type="application/sarif+json",
     )
     assert out.startswith("sha256:")
     assert reg.artifact_referrers == [

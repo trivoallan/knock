@@ -50,12 +50,12 @@ def attach_scan(
     annotations = build_scan_annotations(
         summary, prefix=label_prefix, subject_digest=info.digest, fmt=fmt, timestamp=now
     )
-    referrer = registry.put_artifact_referrer(
+    referrer = registry.put_referrer(
         subject,
-        artifact_type=SCAN_RESULT_ARTIFACT_TYPE,
-        media_type=mapper.report_media_type,
+        SCAN_RESULT_ARTIFACT_TYPE,
+        annotations,
         blob=report_bytes,
-        annotations=annotations,
+        media_type=mapper.report_media_type,
     )
     return ScanOutcome(
         subject_digest=info.digest,
