@@ -26,6 +26,10 @@ def test_recognizes_sarif_by_schema() -> None:
     assert SarifMapper().recognizes(json.loads(_sarif([])))
 
 
+def test_recognizes_sarif_by_runs_key() -> None:
+    assert SarifMapper().recognizes({"version": "2.1.0", "runs": []})
+
+
 def test_recognizes_rejects_non_sarif() -> None:
     assert not SarifMapper().recognizes({"bomFormat": "CycloneDX"})
 

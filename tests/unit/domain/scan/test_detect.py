@@ -22,6 +22,10 @@ def test_detect_returns_none_for_non_json() -> None:
     assert detect_format(b"not json at all") is None
 
 
+def test_detect_returns_none_for_json_array() -> None:
+    assert detect_format(b"[]") is None
+
+
 def test_resolve_uses_detection_when_no_override() -> None:
     assert resolve_format(SARIF, None) == "sarif"
 
