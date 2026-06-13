@@ -341,4 +341,10 @@ def test_attest_schema_is_serializable_and_lists_fields() -> None:
 
     schema = attest_settings_json_schema()
     json.dumps(schema)
-    assert set(schema["properties"]) == {"signer", "key_ref", "fulcio_url", "rekor_url", "builder_id"}
+    assert set(schema["properties"]) == {
+        "signer",
+        "key_ref",
+        "fulcio_url",
+        "rekor_url",
+        "builder_id",
+    }

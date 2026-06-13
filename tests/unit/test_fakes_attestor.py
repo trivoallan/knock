@@ -7,7 +7,10 @@ from tests.fakes.attestor import FakeAttestor
 
 
 def _statement() -> dict:
-    return {"predicateType": "https://houba.dev/predicate/transform/v1", "predicate": {"policy": "p"}}
+    return {
+        "predicateType": "https://houba.dev/predicate/transform/v1",
+        "predicate": {"policy": "p"},
+    }
 
 
 def test_fake_journals_calls_and_returns_ref() -> None:

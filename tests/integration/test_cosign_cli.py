@@ -47,7 +47,9 @@ def test_kms_signer_passes_key_and_rekor(
 ) -> None:
     log = tmp_path / "cosign.log"
     monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
-    cfg = AttestSettings(signer="kms", key_ref="awskms://alias/houba", rekor_url="https://rekor.corp")
+    cfg = AttestSettings(
+        signer="kms", key_ref="awskms://alias/houba", rekor_url="https://rekor.corp"
+    )
     CosignAdapter(cfg).attest(SUBJECT, STATEMENT)
 
     args = _log_text(log)
@@ -56,9 +58,7 @@ def test_kms_signer_passes_key_and_rekor(
     assert "--tlog-upload=false" not in args
 
 
-def test_failure_raises_cosign_error(
-    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_failure_raises_cosign_error(fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FAKE_COSIGN_SCENARIO", "fail")
     with pytest.raises(CosignError):
         CosignAdapter(AttestSettings(signer="keyless")).attest(SUBJECT, STATEMENT)

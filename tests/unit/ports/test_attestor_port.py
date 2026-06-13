@@ -4,7 +4,9 @@ from houba.ports.attestor import AttestationRef
 
 
 def test_attestation_ref_is_frozen_value() -> None:
-    ref = AttestationRef(predicate_type="https://houba.dev/predicate/transform/v1", referrer_digest="sha256:r")
+    ref = AttestationRef(
+        predicate_type="https://houba.dev/predicate/transform/v1", referrer_digest="sha256:r"
+    )
     assert ref.predicate_type == "https://houba.dev/predicate/transform/v1"
     assert ref.referrer_digest == "sha256:r"
     import dataclasses

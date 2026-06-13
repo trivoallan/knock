@@ -75,7 +75,9 @@ def test_rebuild_attests_with_transform_predicate() -> None:
     assert builder.requests[0].provenance is True
     assert len(attestor.attested) == 1
     subject_ref, statement = attestor.attested[0]
-    out_digest = registry.annotate("reg.local/hardened/redis:7.2.5", {})  # deterministic fake digest
+    out_digest = registry.annotate(
+        "reg.local/hardened/redis:7.2.5", {}
+    )  # deterministic fake digest
     assert subject_ref == f"reg.local/hardened/redis@{out_digest}"
     assert statement["predicateType"] == PREDICATE_TYPE
     pred = statement["predicate"]
