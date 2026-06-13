@@ -5,8 +5,10 @@ targets/variants/operations under each policy."""
 
 from __future__ import annotations
 
+import json
 from typing import TextIO
 
+from houba.use_cases.attach import ScanOutcome
 from houba.use_cases.report import Operation, RunReport
 
 
@@ -53,4 +55,28 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
         f"imported={t.imported} updated={t.updated} deleted={t.deleted} "
         f"aliased={t.aliased} skipped={t.skipped} failed={t.failed} "
         f"failed_policies={failed_policies}\n"
+    )
+
+
+def render_scan_outcome(outcome: ScanOutcome, *, fmt: str, stream: TextIO) -> None:
+    if fmt == "json":
+        stream.write(
+            json.dumps(
+                {
+                    "subjectDigest": outcome.subject_digest,
+                    "referrerDigest": outcome.referrer_digest,
+                    "tool": outcome.tool,
+                    "toolVersion": outcome.tool_version,
+                    "format": outcome.format,
+                    "facts": outcome.facts,
+                    "timestamp": outcome.timestamp.isoformat(),
+                }
+            )
+            + "\n"
+        )
+        return
+    facts = " ".join(f"{k}={v}" for k, v in outcome.facts.items())
+    stream.write(
+        f"attached {outcome.format} scan ({outcome.tool} {outcome.tool_version}) "
+        f"→ {outcome.referrer_digest}\n  subject={outcome.subject_digest}  {facts}\n"
     )
