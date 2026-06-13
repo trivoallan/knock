@@ -142,6 +142,8 @@ docker rm -f houba-demo-registry
   `deletionMode: mark`: when a tag drops out of the selection, houba attaches a
   `pending-deletion` OCI referrer instead of deleting it. See
   [Pending-deletion (delegated deletion)](#pending-deletion-delegated-deletion) below.
+- **[`oracles/datadog.sh`](oracles/datadog.sh)** — reference usage oracle for `houba purge`.
+  See [houba purge — the reference reaper](#houba-purge--the-reference-reaper) below.
 
 ### Pending-deletion (delegated deletion)
 
@@ -157,6 +159,65 @@ hard-deletes any still-undesired tags (the stale marks become moot).
 Resolution is a cascade (most-specific wins): `deletionMode` on the policy wins, else the
 destination's `deletion_mode` (in `HOUBA_REGISTRIES`), else the global `HOUBA_DELETION_MODE`
 (default `purge`).
+
+### houba purge — the reference reaper
+
+`houba purge` is the shipped reference implementation of the reaper role introduced by
+[delegated tag deletion (ADR 0012)](../architecture/decisions/0012-delegated-tag-deletion.md).
+It is isolated behind its own `UsageOraclePort` and is fully replaceable — if you already
+have a reaper, `deletionMode: mark` still works; just don't run `houba purge`.
+
+**The lifecycle of a purged tag:**
+
+1. A tag falls out of its policy selection (e.g. a version is removed from the semver range).
+   With `deletionMode: mark`, `houba reconcile` attaches a `pending-deletion` OCI referrer to
+   the tag instead of hard-deleting it. The digest is unchanged and the tag stays pullable.
+
+2. Run `houba purge` in **dry-run mode** (the default — no deletes happen):
+
+   ```bash
+   uv run houba purge
+   # protect  myimage:old-tag  reason=prod_sighting  last_seen=2026-06-12T14:05:00Z
+   ```
+
+   While the tag's digest is still seen in production (within `HOUBA_PURGE_MIN_IDLE_DAYS`),
+   purge reports it as `protect` — nothing is removed.
+
+3. After `HOUBA_PURGE_MIN_IDLE_DAYS` pass with no production sighting, a subsequent dry run
+   shows the tag as `purge`:
+
+   ```bash
+   uv run houba purge
+   # purge  myimage:old-tag  idle_since=2026-06-06T14:05:00Z
+   ```
+
+4. Apply the purge (removes the tag and clears the `pending-deletion` mark):
+
+   ```bash
+   uv run houba purge --apply
+   # purge  myimage:old-tag  [deleted]
+   ```
+
+**Fail-closed.** If the usage oracle is unreachable or returns an error for any digest,
+`houba purge` aborts without deleting anything. This is intentional: a silent oracle failure
+must not trigger a mass purge of potentially live images.
+
+**Oracle is replaceable.** Set `HOUBA_USAGE_ORACLE_CMD` to any executable that speaks the
+contract: reads a JSON object from stdin (`{"digest","image_ref","identity","since"}`) and
+writes `{"last_seen": "<ISO timestamp or null>"}` to stdout. The reference implementation
+for Datadog is at [`oracles/datadog.sh`](oracles/datadog.sh) — adapt the Datadog API call
+to your setup (endpoint, metric/log query, environment tag).
+
+**Required config:**
+
+```bash
+export HOUBA_PURGE_MIN_IDLE_DAYS=7          # idle window before a tag is eligible
+export HOUBA_USAGE_ORACLE_CMD=docs/examples/oracles/datadog.sh
+# plus DD_API_KEY, DD_APP_KEY, DD_SITE for the Datadog oracle
+```
+
+Both variables are required; missing either raises a `ConfigError` (exit code 3) before
+touching the registry.
 
 ### Transform vocabulary
 

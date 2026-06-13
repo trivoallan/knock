@@ -26,12 +26,14 @@ workspace "houba" "Single front door / stamper for external container images." {
                 group "CLI" {
                     cliMain = component "main" "Typer entrypoint; maps exceptions to exit codes." "Typer"
                     cliReconcile = component "reconcile" "The reconcile command: builds the composition root, runs the loop, renders the report." "Typer"
+                    cliPurge = component "purge" "The purge command: scans pending-deletion marks, queries the usage oracle, applies hard-deletes for safely-unused tags." "Typer"
                     cliRender = component "render" "Formats the RunReport to stdout (text / JSON)." "Python"
                     cliDi = component "_di" "Composition root: wires ports to adapters." "Python"
                 }
                 group "Use cases" {
                     ucLoader = component "loader" "Loads and parses every MirrorPolicy file in a directory." "Python"
                     ucReconcile = component "reconcile_policies" "Orchestrator: concurrent plan-then-apply over all policies, isolated per policy, shardable for scale-out." "Python"
+                    ucPurge = component "purge" "Catalog-walks the registry for pending-deletion referrers; asks the usage oracle per digest; hard-deletes only the safely-unused. Fail-closed: oracle error ⇒ nothing purged." "Python"
                     ucReport = component "report" "RunReport contract + worst-wins exit code." "Pydantic"
                 }
                 group "Domain (pure)" {
@@ -41,16 +43,18 @@ workspace "houba" "Single front door / stamper for external container images." {
                     domStamp = component "provenance stamp" "Builds the OCI-standard + io.houba.* provenance annotations." "Pure Python" "Domain"
                 }
                 group "Ports" {
-                    portRegistry = component "RegistryPort" "OCI registry ops: list, inspect, copy, annotate, delete, login, referrer list/put/delete." "typing.Protocol" "Port"
+                    portRegistry = component "RegistryPort" "OCI registry ops: list, inspect, copy, annotate, delete, login, referrer list/put/delete; list_repositories (catalog walk for purge)." "typing.Protocol" "Port"
                     portBuilder = component "ImageBuilderPort" "Build and push an image from a Dockerfile + context." "typing.Protocol" "Port"
                     portReporter = component "Reporter" "In-flight reconcile event journal." "typing.Protocol" "Port"
                     portClock = component "ClockPort" "Injectable now()." "typing.Protocol" "Port"
+                    portUsageOracle = component "UsageOraclePort" "Was this image digest seen in prod since a given timestamp? (stateless, point-in-time query)." "typing.Protocol" "Port"
                 }
                 group "Adapters" {
                     adRegctl = component "RegctlAdapter" "Drives the regctl CLI via subprocess." "regctl" "Adapter"
                     adBuildkit = component "BuildkitAdapter" "Drives buildctl against buildkitd via subprocess." "buildctl" "Adapter"
                     adReporter = component "StructlogReporter" "Writes the event journal to stderr." "structlog" "Adapter"
                     adClock = component "SystemClock" "OS wall clock." "stdlib" "Adapter"
+                    adUsageOracle = component "CommandUsageAdapter" "Shells out to HOUBA_USAGE_ORACLE_CMD; passes digest + idle window via stdin (JSON); expects {last_seen} on stdout." "subprocess" "Adapter"
                 }
                 config = component "config" "Reads HOUBA_* settings + roster resolvers — the only os.environ reader." "Pydantic Settings"
 
@@ -71,6 +75,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         packageMirror = softwareSystem "Internal Package Mirror" "The organization's internal apt/apk mirror; the hardening rebuild rewrites the image's package sources to it." "External"
         observability = softwareSystem "Observability / CMDB" "The organization's existing query stack; reads the provenance stamp to answer blast-radius questions during an incident." "External,Downstream"
         reaper = softwareSystem "Deletion reaper (external)" "Verifies prod usage and purges tags houba marked pending-deletion." "External,Downstream"
+        usageOracle = softwareSystem "Usage oracle / observability" "Answers 'was this image's content seen in production lately?' (e.g. Datadog). Queried point-in-time by houba purge; never owned by houba." "External"
 
         platformEng -> houba "Configures the hardening policy + registry roster, runs / schedules reconcile" "CLI"
         productTeam -> houba "Declares its imports as MirrorPolicy files" "YAML"
@@ -82,6 +87,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         observability -> destRegistries "Reads provenance stamps on images" "scan / API" "DataCoupling"
         incidentResponder -> observability "Queries blast-radius (at CVE time)" "Query UI"
         reaper -> destRegistries "Discovers pending-deletion referrers, verifies usage, purges" "OCI referrers API" "DataCoupling"
+        houba -> usageOracle "Queries prod usage at purge time (houba purge)" "subprocess (HOUBA_USAGE_ORACLE_CMD)"
 
         # Component-level relationships — the source of truth for the Component view.
         # Structurizr implies the container/system-level edges for the views above
@@ -90,6 +96,10 @@ workspace "houba" "Single front door / stamper for external container images." {
         productTeam -> ucLoader "Provides MirrorPolicy files" "YAML"
 
         cliMain -> cliReconcile "Registers the command" "Typer"
+        cliMain -> cliPurge "Registers the command" "Typer"
+        cliPurge -> cliDi "Builds the composition root" "Python"
+        cliPurge -> ucPurge "Runs the purge" "Python"
+        cliPurge -> portClock "Reads now()" "Protocol"
         cliReconcile -> cliDi "Builds the composition root" "Python"
         cliReconcile -> ucLoader "Loads policies" "Python"
         cliReconcile -> ucReconcile "Runs reconciliation" "Python"
@@ -100,6 +110,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         cliDi -> adBuildkit "Wires" "DI"
         cliDi -> adReporter "Wires" "DI"
         cliDi -> adClock "Wires" "DI"
+        cliDi -> adUsageOracle "Wires" "DI"
 
         ucLoader -> domSchema "Parses MirrorPolicy" "Pydantic"
         ucReconcile -> ucReport "Builds the RunReport" "Python"
@@ -110,14 +121,21 @@ workspace "houba" "Single front door / stamper for external container images." {
         ucReconcile -> portBuilder "Uses" "Protocol"
         ucReconcile -> portReporter "Uses" "Protocol"
 
+        ucPurge -> portRegistry "Lists repos + referrers; hard-deletes purged tags" "Protocol"
+        ucPurge -> portUsageOracle "Was this digest seen in prod?" "Protocol"
+        ucPurge -> portClock "Computes idle window" "Protocol"
+        ucPurge -> portReporter "Emits protect / purge / error events" "Protocol"
+
         adRegctl -> portRegistry "Implements" "Protocol"
         adBuildkit -> portBuilder "Implements" "Protocol"
         adReporter -> portReporter "Implements" "Protocol"
         adClock -> portClock "Implements" "Protocol"
+        adUsageOracle -> portUsageOracle "Implements" "Protocol"
 
         adRegctl -> sourceRegistries "Lists tags, inspects digests, copies images" "regctl"
         adRegctl -> destRegistries "Reads mirror state; copies, stamps, retags, deletes" "regctl (dist-spec)"
         adBuildkit -> buildkit "Submits the hardening rebuild (internal CA trust, package mirror)" "buildctl"
+        adUsageOracle -> usageOracle "Queries prod usage (HOUBA_USAGE_ORACLE_CMD)" "subprocess (stdin/stdout JSON)"
 
         # Coarse hexagon relationships — rendered only in the synthetic "Hexagon" view.
         platformEng -> layCli "Runs / schedules reconcile" "CLI"
@@ -131,6 +149,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         layAdapters -> sourceRegistries "Lists, inspects, copies images" "regctl"
         layAdapters -> destRegistries "Copies, stamps, retags, deletes" "regctl"
         layAdapters -> buildkit "Submits the hardening rebuild" "buildctl"
+        layAdapters -> usageOracle "Queries prod usage (purge)" "subprocess"
 
         # Deployments — one environment per worked example, each scoped to the kind overlay
         # that runs it (the demo IS the blueprint), plus the production blueprint. The old
@@ -326,7 +345,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         }
 
         component houbaCli "Hexagon" "Synthetic hexagonal overview: cli → use cases → domain, with ports ← adapters making the dependency inversion explicit (use cases and adapters both point at the ports). The driven adapters reach the external systems." {
-            include layCli layUc layDomain layPorts layAdapters config platformEng productTeam sourceRegistries destRegistries buildkit
+            include layCli layUc layDomain layPorts layAdapters config platformEng productTeam sourceRegistries destRegistries buildkit usageOracle
             autolayout lr
         }
 
