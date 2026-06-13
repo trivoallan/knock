@@ -123,25 +123,30 @@ docker rm -f houba-demo-registry
 
 - **[`busybox/busybox.yml`](busybox/busybox.yml)** — the smallest, fastest case: select
   `1.36.x`/`1.37.x`, alias `{major}.{minor}` + `latest`, mirror into `demo/busybox`. This
-  is the one the walkthrough above runs.
+  is the one the walkthrough above runs. Deployment:
+  [busybox · copy (Mermaid)](../architecture/_export/structurizr-DeployBusybox.mmd).
 - **[`redis/redis.yml`](redis/redis.yml)** — semver selection over a real image (`7.2.x`),
   showing how aliases track the highest patch per minor (`7.2` → the latest `7.2.z`) and
   `latest` → the highest overall. Larger image, slower to copy:
-  `uv run houba reconcile docs/examples/redis`.
+  `uv run houba reconcile docs/examples/redis`. Deployment:
+  [redis · copy (Mermaid)](../architecture/_export/structurizr-DeployRedis.mmd).
 - **[`hardened/redis.yml`](hardened/redis.yml)** — the **rebuild path**: inject internal
   CA certs + rewrite package sources to an internal mirror, then stamp the result. The
   transform engine is implemented; running it needs a BuildKit daemon (`buildctl`) plus the
   org's `HOUBA_TRANSFORM_CA_CERTS` / `HOUBA_TRANSFORM_PACKAGE_MIRRORS` config. Design:
   [the transform/hardening spec](../superpowers/specs/2026-06-11-image-transform-hardening-design.md).
+  Deployment: [hardened · rebuild + Harbor (Mermaid)](../architecture/_export/structurizr-DeployHardened.mmd).
 - **[`timezone/debian.yml`](timezone/debian.yml)** — the **rebuild path, runnable
   self-contained** (no Harbor, no org config): rebuild `debian:bookworm-slim` through
   `setTimezone` and fan it into **`-eu` / `-us` variants** via the per-variant
   `suffix` (the first worked example of `variants`). Run it end-to-end in kind with
   `make demo-transform` — see the [`local-transform` overlay](../../deploy/overlays/local-transform).
+  Deployment: [timezone · rebuild (Mermaid)](../architecture/_export/structurizr-DeployTimezone.mmd).
 - **[`pending-deletion/pending-deletion.yml`](pending-deletion/pending-deletion.yml)** —
   `deletionMode: mark`: when a tag drops out of the selection, houba attaches a
   `pending-deletion` OCI referrer instead of deleting it. See
-  [Pending-deletion (delegated deletion)](#pending-deletion-delegated-deletion) below.
+  [Pending-deletion (delegated deletion)](#pending-deletion-delegated-deletion) below. Deployment:
+  [pending-deletion · mark (Mermaid)](../architecture/_export/structurizr-DeployPendingDeletion.mmd).
 
 ### Pending-deletion (delegated deletion)
 
