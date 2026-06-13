@@ -36,37 +36,31 @@ houba is a hexagonal Python application. The layering is load-bearing: it is wha
 business logic pure and 100 % unit-testable with in-memory fakes, and the I/O
 integration-testable in isolation.
 
+```mermaid
+flowchart TD
+    cli["<b>cli/</b> — Typer, thin<br/>main · reconcile · render · _di (composition root)"]
+    uc["<b>use_cases/</b><br/>loader · reconcile_policies (orchestrator) · report (RunReport)<br/><i>receive ports by keyword injection — never import adapters</i>"]
+    domain["<b>domain/</b> — pure<br/>mirror_policy · selection · aliases · semver · expand<br/>policy_merge · variants · reconcile · collision · stamp · transforms/*"]
+    ports["<b>ports/</b> — typing.Protocol<br/>RegistryPort · ImageBuilderPort · Reporter · ClockPort"]
+    adapters["<b>adapters/</b><br/>RegctlAdapter · BuildkitAdapter · StructlogReporter · SystemClock"]
+
+    cli --> uc
+    uc --> domain
+    uc -->|depends on| ports
+    adapters -.->|implement| ports
+
+    classDef pure fill:#b6e3d4,stroke:#04342c,color:#04342c;
+    classDef port fill:#e9d8fd,stroke:#322659,color:#322659;
+    classDef adapter fill:#fed7aa,stroke:#4a1b0c,color:#4a1b0c;
+    class domain pure;
+    class ports port;
+    class adapters adapter;
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  cli/  (Typer, thin)                                               │
-│  main · reconcile · render · _di (composition root)                │
-└───────────────────────────────┬──────────────────────────────────┘
-                                 │
-                                 ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  use_cases/                                                        │
-│  loader · reconcile_policies (orchestrator) · report (RunReport)   │
-│  (receive ports by keyword injection; never import adapters)       │
-└──────┬─────────────────────────────────────────────────┬─────────┘
-       │                                                   │
-       ▼                                                   ▼
-┌────────────────────────────┐                  ┌──────────────────────┐
-│  domain/  (pure)           │                  │  ports/ (Protocols)  │
-│  mirror_policy · selection │                  │  RegistryPort        │
-│  aliases · semver · expand │                  │  ImageBuilderPort    │
-│  policy_merge · variants   │                  │  Reporter            │
-│  reconcile · collision     │                  │  ClockPort           │
-│  stamp · transforms/*      │                  └──────────┬───────────┘
-└────────────────────────────┘                             │
-                                                            ▼
-                                                 ┌──────────────────────┐
-                                                 │  adapters/           │
-                                                 │  RegctlAdapter       │
-                                                 │  BuildkitAdapter     │
-                                                 │  StructlogReporter   │
-                                                 │  SystemClock         │
-                                                 └──────────────────────┘
-```
+
+The dependency inversion is the load-bearing part: **`use_cases/` and `adapters/` both point at
+`ports/`** — the application orchestrates against the Protocol seams, the driven adapters implement
+them, and nothing flows the other way (no layer ever imports `adapters/` except the `_di`
+composition root).
 
 ### Golden rules
 
