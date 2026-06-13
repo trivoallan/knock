@@ -1,0 +1,68 @@
+"""Ingest an upstream scan report and attach it as a stamped OCI referrer.
+
+houba does not run a scanner: the report is produced upstream (CI / registry-native
+scanner / scan service) and handed in. This use case resolves the subject digest,
+normalizes the report to a summary, and attaches the raw report as a referrer.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+
+from houba.domain.scan.detect import resolve_format
+from houba.domain.scan.formats.registry import DEFAULT_REGISTRY, Registry
+from houba.domain.scan.refs import pin_to_digest
+from houba.domain.scan.summary import build_scan_annotations
+from houba.ports.clock import ClockPort
+from houba.ports.registry import RegistryPort
+
+SCAN_RESULT_ARTIFACT_TYPE = "application/vnd.houba.scan.result.v1"
+
+
+@dataclass(frozen=True)
+class ScanOutcome:
+    subject_digest: str
+    referrer_digest: str
+    tool: str
+    tool_version: str
+    format: str
+    facts: dict[str, str]
+    timestamp: datetime
+
+
+def attach_scan(
+    image_ref: str,
+    report_bytes: bytes,
+    *,
+    registry: RegistryPort,
+    clock: ClockPort,
+    label_prefix: str,
+    format_override: str | None = None,
+    formats: Registry = DEFAULT_REGISTRY,
+) -> ScanOutcome:
+    info = registry.inspect(image_ref)
+    subject = pin_to_digest(image_ref, info.digest)
+    fmt = resolve_format(report_bytes, format_override, formats)
+    mapper = formats.get(fmt)
+    summary = mapper.summarize(report_bytes)
+    now = clock.now()
+    annotations = build_scan_annotations(
+        summary, prefix=label_prefix, subject_digest=info.digest, fmt=fmt, timestamp=now
+    )
+    referrer = registry.put_artifact_referrer(
+        subject,
+        artifact_type=SCAN_RESULT_ARTIFACT_TYPE,
+        media_type=mapper.report_media_type,
+        blob=report_bytes,
+        annotations=annotations,
+    )
+    return ScanOutcome(
+        subject_digest=info.digest,
+        referrer_digest=referrer,
+        tool=summary.tool,
+        tool_version=summary.tool_version,
+        format=fmt,
+        facts=summary.facts,
+        timestamp=now,
+    )

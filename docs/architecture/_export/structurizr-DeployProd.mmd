@@ -4,65 +4,65 @@ graph LR
   subgraph diagram ["Deployment View: houba - Production blueprint (prod overlay)"]
     style diagram fill:#ffffff,stroke:#ffffff
 
-    subgraph 220 ["Org GitOps host"]
-      style 220 fill:#ffffff,stroke:#444444,color:#ffffff
-
-      221("<div style='font-weight: bold'>Policy repo (org)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git]</div><div style='font-size: 80%; margin-top:10px'>The front door: a merged PR.<br />POLICY_DIR=/policies/current<br />— reconciles the whole tree</div>")
-      style 221 fill:#8a94a0,stroke:#606770,color:#ffffff
-    end
-
-    subgraph 222 ["Production Kubernetes cluster"]
+    subgraph 222 ["Org GitOps host"]
       style 222 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      subgraph 223 ["namespace: houba"]
-        style 223 fill:#ffffff,stroke:#444444,color:#ffffff
+      223("<div style='font-weight: bold'>Policy repo (org)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git]</div><div style='font-size: 80%; margin-top:10px'>The front door: a merged PR.<br />POLICY_DIR=/policies/current<br />— reconciles the whole tree</div>")
+      style 223 fill:#8a94a0,stroke:#606770,color:#ffffff
+    end
 
-        subgraph 224 ["CronJob: houba-reconcile"]
-          style 224 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 224 ["Production Kubernetes cluster"]
+      style 224 fill:#ffffff,stroke:#444444,color:#ffffff
 
-          225("<div style='font-weight: bold'>houba CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
-          style 225 fill:#2563c9,stroke:#19458c,color:#ffffff
-          226("<div style='font-weight: bold'>git-sync sidecar</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git-sync]</div><div style='font-size: 80%; margin-top:10px'>Clones the org policy repo<br />into /policies</div>")
-          style 226 fill:#8a94a0,stroke:#606770,color:#ffffff
+      subgraph 225 ["namespace: houba"]
+        style 225 fill:#ffffff,stroke:#444444,color:#ffffff
+
+        subgraph 226 ["CronJob: houba-reconcile"]
+          style 226 fill:#ffffff,stroke:#444444,color:#ffffff
+
+          227("<div style='font-weight: bold'>houba CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
+          style 227 fill:#2563c9,stroke:#19458c,color:#ffffff
+          228("<div style='font-weight: bold'>git-sync sidecar</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git-sync]</div><div style='font-size: 80%; margin-top:10px'>Clones the org policy repo<br />into /policies</div>")
+          style 228 fill:#8a94a0,stroke:#606770,color:#ffffff
         end
 
-        subgraph 227 ["Deployment: buildkitd"]
-          style 227 fill:#ffffff,stroke:#444444,color:#ffffff
+        subgraph 229 ["Deployment: buildkitd"]
+          style 229 fill:#ffffff,stroke:#444444,color:#ffffff
 
-          228("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
-          style 228 fill:#69707a,stroke:#494e55,color:#ffffff
+          230("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
+          style 230 fill:#69707a,stroke:#494e55,color:#ffffff
         end
 
-        230("<div style='font-weight: bold'>ExternalSecret</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ExternalSecret]</div><div style='font-size: 80%; margin-top:10px'>Pulls registry credentials<br />from the org secret store</div>")
-        style 230 fill:#8a94a0,stroke:#606770,color:#ffffff
-        231("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>Walks the mirrored<br />namespaces; stand-in for the<br />org observability / CMDB<br />stack</div>")
-        style 231 fill:#8a94a0,stroke:#606770,color:#ffffff
+        232("<div style='font-weight: bold'>ExternalSecret</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ExternalSecret]</div><div style='font-size: 80%; margin-top:10px'>Pulls registry credentials<br />from the org secret store</div>")
+        style 232 fill:#8a94a0,stroke:#606770,color:#ffffff
+        233("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>Walks the mirrored<br />namespaces; stand-in for the<br />org observability / CMDB<br />stack</div>")
+        style 233 fill:#8a94a0,stroke:#606770,color:#ffffff
       end
 
     end
 
-    subgraph 232 ["Org private registry"]
-      style 232 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 234 ["Org private registry"]
+      style 234 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      233("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
-      style 233 fill:#69707a,stroke:#494e55,color:#ffffff
+      235("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
+      style 235 fill:#69707a,stroke:#494e55,color:#ffffff
     end
 
-    subgraph 235 ["Internet / org network"]
-      style 235 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 237 ["Internet / org network"]
+      style 237 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      236("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
-      style 236 fill:#69707a,stroke:#494e55,color:#ffffff
-      238("<div style='font-weight: bold'>Internal Package Mirror</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's internal<br />apt/apk mirror; the hardening<br />rebuild rewrites the image's<br />package sources to it.</div>")
+      238("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
       style 238 fill:#69707a,stroke:#494e55,color:#ffffff
+      240("<div style='font-weight: bold'>Internal Package Mirror</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's internal<br />apt/apk mirror; the hardening<br />rebuild rewrites the image's<br />package sources to it.</div>")
+      style 240 fill:#69707a,stroke:#494e55,color:#ffffff
     end
 
-    225-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->228
-    225-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->233
-    225-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->236
-    228-. "<div>Pulls packages during the<br />hardening rebuild</div><div style='font-size: 70%'>[apt / apk]</div>" .->238
-    226-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->221
-    231-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl / API]</div>" .->233
-    230-. "<div>Supplies registry credentials</div><div style='font-size: 70%'>[token]</div>" .->233
+    227-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->230
+    227-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->235
+    227-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->238
+    230-. "<div>Pulls packages during the<br />hardening rebuild</div><div style='font-size: 70%'>[apt / apk]</div>" .->240
+    228-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->223
+    233-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl / API]</div>" .->235
+    232-. "<div>Supplies registry credentials</div><div style='font-size: 70%'>[token]</div>" .->235
 
   end

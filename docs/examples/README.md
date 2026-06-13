@@ -155,6 +155,11 @@ docker rm -f houba-demo-registry
   [pending-deletion · mark](../architecture/_export/structurizr-DeployPendingDeletion.mmd).
 - **[`oracles/datadog.sh`](oracles/datadog.sh)** — reference usage oracle for `houba purge`.
   See [houba purge — the reference reaper](#houba-purge--the-reference-reaper) below.
+- **[`scan/README.md`](scan/README.md)** — the **`houba attach` path**: ingest an
+  upstream SARIF report and stamp it as a portable OCI referrer on the image's digest.
+  houba does not run a scanner — the scan is produced upstream (CI, registry-native
+  scanner, or scan service) and handed in. `scan/sample.sarif.json` is a runnable
+  example report (1 critical CVE, 1 medium).
 
 ### Pending-deletion (delegated deletion)
 

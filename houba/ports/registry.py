@@ -32,6 +32,18 @@ class RegistryPort(Protocol):
         """Apply annotations in place; return the resulting (post-annotate) manifest digest."""
         ...
 
+    def put_artifact_referrer(
+        self,
+        subject_ref: str,
+        *,
+        artifact_type: str,
+        media_type: str,
+        blob: bytes,
+        annotations: dict[str, str],
+    ) -> str:
+        """Attach `blob` as an OCI referrer of `subject_ref`; return the referrer digest."""
+        ...
+
     def delete_tag(self, image_ref: str) -> None: ...
     def login(self, host: str, *, username: str, password: str, tls_verify: bool) -> None: ...
     def list_referrers(self, image_ref: str, artifact_type: str) -> list[Referrer]: ...

@@ -54,6 +54,11 @@ specs — see the [maintenance contract](#maintenance-contract)). The Container,
 Component views document houba's internal structure **as built**; keep them in step with the code when the
 layering, ports, or adapters change.
 
+The **Upstream Scanner** system (CI pipeline, registry-native scanner, or scan service) is
+modelled as an external producer: it generates the scan report and hands it to houba via
+`houba attach`. The relationship is explicitly scanner → houba (ingest-only); houba never
+calls or discovers the scanner, keeping the coupling to a file hand-off at the boundary.
+
 The prose companion to this model — the problem framing, the hexagon, the policy schema, the
 reconcile loop, the provenance stamp — lives in [`design.md`](design.md).
 

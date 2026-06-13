@@ -73,7 +73,7 @@ case "$cmd" in
         ;;
     "registry login"|"registry set")
         : ;;
-    "image copy"|"image mod"|"tag rm"|"artifact put"|"manifest delete")
+    "image copy"|"image mod"|"tag rm"|"manifest delete")
         : ;;
     "artifact list")
         case "$scenario" in
@@ -83,6 +83,11 @@ case "$cmd" in
                 printf '{"descriptors":[]}\n' ;;
             *) printf '{"descriptors":[]}\n' ;;
         esac
+        ;;
+    "artifact put")
+        # Serves BOTH put_referrer (annotation-only marker; discards stdout) and
+        # put_artifact_referrer (carries a blob; returns the printed referrer ref).
+        printf 'harbor.corp/lib/redis@sha256:ref123\n'
         ;;
     *)
         echo "fake-regctl: unknown command '$cmd'" >&2

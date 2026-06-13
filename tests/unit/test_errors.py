@@ -9,6 +9,8 @@ from houba.errors import (
     InternalError,
     PolicyValidationError,
     RegctlError,
+    ScanReportError,
+    UnknownFormatError,
     exit_code_for,
 )
 
@@ -51,3 +53,13 @@ def test_cosign_error_is_adapter_exit_2() -> None:
     from houba.errors import CosignError, exit_code_for
 
     assert exit_code_for(CosignError("boom")) == 2
+
+
+def test_scan_report_error_is_domain_exit_1() -> None:
+    assert issubclass(ScanReportError, DomainError)
+    assert exit_code_for(ScanReportError("bad sarif")) == 1
+
+
+def test_unknown_format_error_is_domain_exit_1() -> None:
+    assert issubclass(UnknownFormatError, DomainError)
+    assert exit_code_for(UnknownFormatError("nope")) == 1

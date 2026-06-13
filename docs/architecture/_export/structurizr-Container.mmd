@@ -28,6 +28,7 @@ graph LR
       style 5 fill:#2563c9,stroke:#19458c,color:#ffffff
     end
 
+    5-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->39
     5-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->40
     5-. "<div>Queries prod usage<br />(HOUBA_USAGE_ORACLE_CMD)</div><div style='font-size: 70%'>[subprocess (stdin/stdout JSON)]</div>" .->44
     5-. "<div>Signs attestations (DSSE)</div><div style='font-size: 70%'>[cosign]</div>" .->45
@@ -36,6 +37,5 @@ graph LR
     1-. "<div>Configures policy + roster,<br />runs / schedules reconcile</div><div style='font-size: 70%'>[CLI]</div>" .->5
     2-. "<div>Provides MirrorPolicy files</div><div style='font-size: 70%'>[YAML]</div>" .->5
     5-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->38
-    5-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->39
 
   end

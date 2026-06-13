@@ -15,6 +15,8 @@ __all__ = [
     "InternalError",
     "PolicyValidationError",
     "RegctlError",
+    "ScanReportError",
+    "UnknownFormatError",
     "UsageOracleError",
     "exit_code_for",
 ]
@@ -30,6 +32,14 @@ class DomainError(HoubaError):
 
 class PolicyValidationError(DomainError):
     """`MirrorPolicy` YAML invalid (schema, unknown field, inconsistent spec)."""
+
+
+class ScanReportError(DomainError):
+    """Scan report is unparseable, has an unexpected schema, or its subject digest mismatches."""
+
+
+class UnknownFormatError(DomainError):
+    """The scan report format could not be detected and no valid --format was supplied."""
 
 
 class AdapterError(HoubaError):
