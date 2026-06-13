@@ -35,7 +35,8 @@ class PolicyValidationError(DomainError):
 
 
 class ScanReportError(DomainError):
-    """A scan report cannot be parsed, has an unexpected schema, or its subject digest mismatches."""
+    """A scan report cannot be parsed, has an unexpected schema, or its subject digest mismatches.
+    """
 
 
 class UnknownFormatError(DomainError):

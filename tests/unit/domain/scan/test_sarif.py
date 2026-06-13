@@ -67,7 +67,9 @@ def test_result_without_level_or_severity_is_unknown() -> None:
 
 def test_no_results_all_zero() -> None:
     s = SarifMapper().summarize(_sarif([]))
-    assert all(s.facts[f"vuln.{b}"] == "0" for b in ("critical", "high", "medium", "low", "unknown"))
+    assert all(
+        s.facts[f"vuln.{b}"] == "0" for b in ("critical", "high", "medium", "low", "unknown")
+    )
 
 
 def test_malformed_json_raises_scan_report_error() -> None:

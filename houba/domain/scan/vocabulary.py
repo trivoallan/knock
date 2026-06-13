@@ -13,7 +13,5 @@ COMMON_KEYS = ["scan.tool", "scan.tool.version", "scan.format", "scan.timestamp"
 
 def scan_annotation_vocabulary(registry: Registry = DEFAULT_REGISTRY) -> dict[str, object]:
     """The common envelope keys plus each format's fact keys (prefixed with `scan.`)."""
-    facts = {
-        mapper.name: [f"scan.{k}" for k in mapper.fact_keys] for mapper in registry.mappers()
-    }
+    facts = {mapper.name: [f"scan.{k}" for k in mapper.fact_keys] for mapper in registry.mappers()}
     return {"common": list(COMMON_KEYS), "facts": facts}

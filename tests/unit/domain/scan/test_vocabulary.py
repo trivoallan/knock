@@ -5,7 +5,13 @@ from houba.domain.scan.vocabulary import scan_annotation_vocabulary
 
 def test_vocabulary_lists_common_envelope_keys() -> None:
     vocab = scan_annotation_vocabulary()
-    assert vocab["common"] == ["scan.tool", "scan.tool.version", "scan.format", "scan.timestamp", "scan.subject"]
+    assert vocab["common"] == [
+        "scan.tool",
+        "scan.tool.version",
+        "scan.format",
+        "scan.timestamp",
+        "scan.subject",
+    ]
 
 
 def test_vocabulary_lists_per_format_fact_keys() -> None:

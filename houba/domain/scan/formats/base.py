@@ -21,4 +21,7 @@ class ScanFormatMapper(ABC):
 
     @abstractmethod
     def summarize(self, report_bytes: bytes) -> ScanSummary:
-        """Parse the raw report and return the normalized summary; raise ScanReportError on bad input."""
+        """Parse the raw report and return the normalized summary.
+
+        Raise ScanReportError on bad input.
+        """
