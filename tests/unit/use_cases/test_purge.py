@@ -55,9 +55,7 @@ def _registry(**kw: object) -> FakeRegistryPort:
 
 def test_apply_purges_only_the_unused_tag_and_clears_its_mark() -> None:
     reg = _registry()
-    oracle = FakeUsageOraclePort(
-        last_seen={"sha256:d72": datetime(2026, 6, 8, tzinfo=UTC)}
-    )
+    oracle = FakeUsageOraclePort(last_seen={"sha256:d72": datetime(2026, 6, 8, tzinfo=UTC)})
     report = purge_marks(
         registry=reg,
         oracle=oracle,
@@ -145,3 +143,22 @@ def test_unknown_only_registry_raises_config_error() -> None:
             now=NOW,
             apply=True,
         )
+
+
+def test_inspect_failure_is_recorded_and_does_not_block_siblings() -> None:
+    reg = _registry(fail_inspect={"harbor.example/lib/redis:7.1"})
+    oracle = FakeUsageOraclePort(last_seen={})  # 7.2 unseen => would purge
+    report = purge_marks(
+        registry=reg,
+        oracle=oracle,
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.houba",
+        min_idle_days=15,
+        now=NOW,
+        apply=True,
+    )
+    errs = [o for o in report.outcomes if o.error is not None]
+    assert [o.image_ref for o in errs] == ["harbor.example/lib/redis:7.1"]
+    assert "harbor.example/lib/redis:7.2" in reg.deleted  # sibling still purged
+    assert purge_exit_code(report) == 2  # RegctlError -> AdapterError -> 2

@@ -14,6 +14,7 @@ class FakeRegistryPort:
         fail_copy: set[str] | None = None,
         fail_put: set[str] | None = None,
         fail_delete: set[str] | None = None,
+        fail_inspect: set[str] | None = None,
         copy_barrier: object | None = None,  # threading.Barrier; typed loosely to avoid an import
         referrers: dict[str, list[Referrer]] | None = None,
         repositories: dict[str, list[str]] | None = None,
@@ -23,6 +24,7 @@ class FakeRegistryPort:
         self._fail_copy = fail_copy or set()
         self._fail_put = fail_put or set()
         self._fail_delete = fail_delete or set()
+        self._fail_inspect = fail_inspect or set()
         self._copy_barrier = copy_barrier
         self._referrers = referrers or {}
         self._repositories = repositories or {}
@@ -44,6 +46,8 @@ class FakeRegistryPort:
         return list(self._tags.get(repo_ref, []))
 
     def inspect(self, image_ref: str) -> ImageInfo:
+        if image_ref in self._fail_inspect:
+            raise RegctlError(f"fake inspect failure for {image_ref}")
         try:
             return self._infos[image_ref]
         except KeyError:

@@ -135,8 +135,13 @@ def _process(
     if not apply:
         return PurgeOutcome(image_ref=image_ref, digest=digest, decision="purge", reason=reason)
     try:
-        registry.delete_tag(image_ref)
+        # Clear the mark BEFORE removing the tag. Marks are discovered via the subject
+        # tag (list_referrers on repo:tag), so deleting the tag first and then failing on
+        # the referrer would strand an undiscoverable orphan mark until GC. Referrer-first
+        # is self-healing: a failed tag-delete leaves a still-undesired tag that reconcile
+        # re-marks next run.
         registry.delete_referrer(f"{repo_ref}@{referrer.digest}")
+        registry.delete_tag(image_ref)
     except HoubaError as exc:
         return PurgeOutcome(
             image_ref=image_ref, digest=digest, decision="purge", reason=reason, error=_err(exc)
