@@ -1,9 +1,9 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from houba.config import RegistryConfig
 from houba.domain.deletion_mode import DeletionMode
 from houba.domain.lifecycle import PENDING_DELETION_ARTIFACT_TYPE
-from houba.domain.mirror_policy import parse_mirror_policy
+from houba.domain.mirror_policy import Archive, parse_mirror_policy
 from houba.ports.registry import ImageInfo, Referrer
 from houba.use_cases.reconcile import reconcile_policies
 from houba.use_cases.report import RunReport
@@ -140,3 +140,161 @@ def test_mark_failure_is_reported() -> None:
     assert report.totals.failed == 1
     assert report.totals.marked == 0  # a failed mark is not counted as marked
     assert report.status == "partial"  # the 7.2.0 import succeeded; the mark failed
+
+
+_RETENTION_POLICY = """
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/redis
+  imports:
+    - name: stable
+      tags:
+        includeRegex: "^7\\\\."
+      archive:
+        keep: 2
+        olderThanDays: 30
+      destinations:
+        - registry: harbor
+          project: lib
+          repository: redis
+"""
+
+_PLAIN_POLICY = """
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/redis
+  imports:
+    - name: stable
+      tags:
+        includeRegex: "^7\\\\."
+      destinations:
+        - registry: harbor
+          project: lib
+          repository: redis
+"""
+
+
+def _stamped(days_ago: int) -> dict[str, str]:
+    return {
+        "org.opencontainers.image.base.digest": "sha256:s",
+        "org.opencontainers.image.created": (_NOW - timedelta(days=days_ago)).isoformat(),
+    }
+
+
+def _seed_retention(referrers: dict[str, list[Referrer]] | None = None) -> FakeRegistryPort:
+    tags = ["7.2.0", "7.2.1", "7.2.2", "7.2.3"]
+    ages = {"7.2.0": 60, "7.2.1": 50, "7.2.2": 2, "7.2.3": 1}
+    infos = {
+        f"docker.io/library/redis:{t}": ImageInfo(digest="sha256:s", created=_NOW, annotations={})
+        for t in tags
+    }
+    infos.update(
+        {
+            f"harbor.corp/lib/redis:{t}": ImageInfo(
+                digest="sha256:s", created=_NOW, annotations=_stamped(ages[t])
+            )
+            for t in tags
+        }
+    )
+    return FakeRegistryPort(
+        tags={"docker.io/library/redis": tags, "harbor.corp/lib/redis": tags},
+        infos=infos,
+        referrers=referrers,
+    )
+
+
+def _run_retention(
+    reg: FakeRegistryPort,
+    policy: str,
+    *,
+    dry_run_deletions: bool = False,
+    retention_global: Archive | None = None,
+) -> RunReport:
+    return reconcile_policies(
+        [parse_mirror_policy(policy)],
+        registry=reg,
+        builder=FakeImageBuilder(),
+        roster=_roster(),
+        ca_certs={},
+        package_mirrors={},
+        build_platform="linux/amd64",
+        now=_NOW,
+        label_prefix="io.houba",
+        dry_run_tags=False,
+        dry_run_deletions=dry_run_deletions,
+        reporter=FakeReporter(),
+        deletion_mode=DeletionMode.purge,
+        retention_global=retention_global,
+    )
+
+
+def test_retention_marks_old_excess_with_reason_and_never_deletes() -> None:
+    reg = _seed_retention()
+    _run_retention(reg, _RETENTION_POLICY)
+    marked = sorted(m[0] for m in reg.marked)
+    assert marked == ["harbor.corp/lib/redis:7.2.0", "harbor.corp/lib/redis:7.2.1"]
+    by_tag = {m[0]: m[2] for m in reg.marked}
+    assert by_tag["harbor.corp/lib/redis:7.2.0"]["io.houba.lifecycle.reason"] == "retention-excess"
+    assert reg.deleted == []
+
+
+def test_retention_is_suppressed_by_dry_run_deletions() -> None:
+    reg = _seed_retention()
+    _run_retention(reg, _RETENTION_POLICY, dry_run_deletions=True)
+    assert reg.marked == []
+
+
+def test_retention_global_cascade_applies_when_policy_has_no_archive() -> None:
+    reg = _seed_retention()
+    _run_retention(reg, _PLAIN_POLICY, retention_global=Archive(keep=2, older_than_days=30))
+    marked = sorted(m[0] for m in reg.marked)
+    assert marked == ["harbor.corp/lib/redis:7.2.0", "harbor.corp/lib/redis:7.2.1"]
+
+
+def test_retention_unmarks_a_tag_no_longer_excess() -> None:
+    existing = {
+        "harbor.corp/lib/redis:7.2.3": [
+            Referrer(
+                digest="sha256:refR",
+                artifact_type=PENDING_DELETION_ARTIFACT_TYPE,
+                annotations={"io.houba.lifecycle.reason": "retention-excess"},
+                subject_tag="harbor.corp/lib/redis:7.2.3",
+            )
+        ]
+    }
+    reg = _seed_retention(referrers=existing)
+    _run_retention(reg, _RETENTION_POLICY)
+    assert "harbor.corp/lib/redis@sha256:refR" in reg.unmarked
+
+
+def test_retention_keeps_existing_mark_when_still_excess() -> None:
+    existing = {
+        "harbor.corp/lib/redis:7.2.0": [
+            Referrer(
+                digest="sha256:ref0",
+                artifact_type=PENDING_DELETION_ARTIFACT_TYPE,
+                annotations={"io.houba.lifecycle.reason": "retention-excess"},
+                subject_tag="harbor.corp/lib/redis:7.2.0",
+            )
+        ]
+    }
+    reg = _seed_retention(referrers=existing)
+    _run_retention(reg, _RETENTION_POLICY)
+    marked = [m[0] for m in reg.marked]
+    # 7.2.0 is still excess and already retention-marked -> not re-marked, not unmarked
+    assert "harbor.corp/lib/redis:7.2.0" not in marked
+    assert "harbor.corp/lib/redis@sha256:ref0" not in reg.unmarked
+    # 7.2.1 (excess, not yet marked) still gets a fresh mark
+    assert "harbor.corp/lib/redis:7.2.1" in marked
