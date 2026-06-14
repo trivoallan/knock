@@ -233,6 +233,10 @@ registry with no signing config still gets the annotation stamp, and turning att
 signed layer without changing the stamp. See the SLSA attestation spec under
 `docs/superpowers/specs/`.
 
+Fulcio/Rekor are passed to cosign via a generated **signing-config** file (cosign v3 enables the
+signing-config by default and rejects the older `--fulcio-url`/`--rekor-url`/`--tlog-upload` flags);
+the empty config is the air-gapped path (`--key` signer, no transparency log).
+
 ## Tag selection & expansion
 
 The pure planning pipeline, all in `domain/`:
