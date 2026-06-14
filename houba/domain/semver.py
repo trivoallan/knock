@@ -1,7 +1,7 @@
-"""Tri sémantique des tags d'images.
+"""Semantic sorting of image tags.
 
-Port direct de sortBySemver / sortBySemverbyField (vars/importProduct.groovy:16-88).
-Fonction pure : aucun I/O.
+Direct port of sortBySemver / sortBySemverbyField (vars/importProduct.groovy:16-88).
+Pure function: no I/O.
 """
 
 from __future__ import annotations
@@ -22,11 +22,11 @@ _SEMVER_RE = re.compile(
 
 @dataclass(frozen=True, order=True)
 class _Key:
-    is_non_semver: int  # 1 → pousse en fin de tri
+    is_non_semver: int  # 1 → pushed to the end of the sort
     major: int = 0
     minor: int = 0
     patch: int = 0
-    prerelease_rank: int = 1  # 0 si pré-release (sorts avant final), 1 si final
+    prerelease_rank: int = 1  # 0 for pre-release (sorts before final), 1 for final
     prerelease: str = ""
 
 

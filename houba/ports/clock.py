@@ -1,4 +1,4 @@
-"""Port d'accès au temps. Permet de figer `now()` dans les tests."""
+"""Clock access port. Allows `now()` to be frozen in tests."""
 
 from __future__ import annotations
 

@@ -1,12 +1,12 @@
-"""Configuration de structlog pour le CLI houba.
+"""structlog configuration for the houba CLI.
 
-Voir spec §6.3 — logs structurés JSON/text.
+See spec §6.3 — structured JSON/text logs.
 
-Les enregistrements stdlib (httpx, urllib3, etc.) sont routés via
-`structlog.stdlib.ProcessorFormatter` afin que chaque ligne — qu'elle vienne
-de structlog ou d'une dépendance tierce — passe par la même chaîne de
-processeurs et le même renderer. Garantit l'invariant Splunk/Loki : 1 ligne
-== 1 événement structuré, sans regex.
+stdlib log records (httpx, urllib3, etc.) are routed through
+`structlog.stdlib.ProcessorFormatter` so that every line — whether it comes
+from structlog or from a third-party dependency — passes through the same
+processor chain and the same renderer. This enforces the Splunk/Loki
+invariant: 1 line == 1 structured event, no regex required.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import structlog
 
 
 def _level_to_int(level: str) -> int:
-    """Convertit un niveau (DEBUG/INFO/WARN/WARNING/ERROR) en entier stdlib."""
+    """Convert a level name (DEBUG/INFO/WARN/WARNING/ERROR) to a stdlib integer."""
     return logging.getLevelName(level)  # type: ignore[no-any-return]
 
 
@@ -29,9 +29,9 @@ def configure(
     level: str = "INFO",
     stream: TextIO | None = None,
 ) -> None:
-    """(Re)configure structlog et logging stdlib.
+    """(Re)configure structlog and the stdlib logging layer.
 
-    `stream` permet de rediriger vers un buffer dans les tests.
+    `stream` can be used to redirect output to a buffer in tests.
     """
     stream = stream if stream is not None else sys.stderr
     level_int = _level_to_int(level)

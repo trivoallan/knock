@@ -1,4 +1,4 @@
-"""Wrapper subprocess autour de regctl (lectures + écritures OCI)."""
+"""subprocess wrapper around regctl (OCI reads and writes)."""
 
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ from houba.ports.registry import ImageInfo, Referrer
 
 class RegctlAdapter:
     def __init__(self, binary: str | None = None) -> None:
-        # Résolution différée : on valide seulement si binary explicite est fourni.
-        # La résolution PATH se fait au premier appel (lazy) pour ne pas bloquer
-        # la construction du Container dans des environnements sans regctl.
+        # Lazy resolution: only validate if an explicit binary is provided.
+        # PATH resolution happens on the first call (lazy) so that constructing
+        # the Container is not blocked in environments without regctl.
         if binary is not None:
             if not Path(binary).is_file():
                 raise RegctlError(f"regctl binary not found: {binary}")

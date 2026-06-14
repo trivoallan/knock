@@ -1,6 +1,6 @@
-"""Composition root. Construit les adapters concrets à partir des Settings.
+"""Composition root. Builds concrete adapters from the Settings.
 
-Volontairement non couvert par les tests unitaires (cf. coverage omit).
+Intentionally excluded from unit-test coverage (see coverage omit).
 """
 
 from __future__ import annotations
