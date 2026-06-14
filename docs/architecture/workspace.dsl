@@ -343,12 +343,15 @@ workspace "houba" "Single front door / stamper for external container images." {
                         prHouba = containerInstance houbaCli
                         prGit = infrastructureNode "git-sync sidecar" "Clones the org policy repo into /policies" "git-sync"
                     }
-                    deploymentNode "Deployment: buildkitd" "Rebuild add-on (rootless build engine)" "Kubernetes Deployment" {
+                    deploymentNode "Deployment: buildkitd" "Rebuild add-on (rootless build engine); --debugaddr exposes :6060 metrics. Scaled 1→K by KEDA under build load" "Kubernetes Deployment" {
                         prBuild = softwareSystemInstance buildkit
                     }
                     prSecret = infrastructureNode "ExternalSecret" "Pulls registry credentials from the org secret store" "ExternalSecret"
                     prBlast = infrastructureNode "Job: blast-radius" "Walks the mirrored namespaces; stand-in for the org observability / CMDB stack" "regctl"
                 }
+                # Cluster prerequisites (documented, not embedded — like ESO): drive buildkitd autoscaling.
+                prProm = infrastructureNode "Prometheus" "Cluster prerequisite — scrapes buildkitd :6060 for the in-flight-build metric" "Prometheus"
+                prKeda = infrastructureNode "KEDA ScaledObject" "Scales the buildkitd Deployment 1→K on in-flight Solve RPCs (warm floor 1, no scale-to-zero)" "KEDA"
             }
             deploymentNode "Org private registry" "Any dist-spec registry (Harbor / Zot …) — TLS" "OCI registry" {
                 prDest = softwareSystemInstance destRegistries
@@ -360,6 +363,9 @@ workspace "houba" "Single front door / stamper for external container images." {
             prGit -> prRepo "Pulls policies" "git"
             prBlast -> prDest "Reads provenance stamps" "regctl / API" "DataCoupling"
             prSecret -> prDest "Supplies registry credentials" "token"
+            prProm -> prBuild "Scrapes the in-flight-build metric" "HTTP :6060" "DataCoupling"
+            prKeda -> prProm "Queries active builds (PromQL)" "PromQL" "DataCoupling"
+            prKeda -> prBuild "Scales the Deployment 1→K" "ScaledObject"
         }
     }
 

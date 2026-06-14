@@ -39,30 +39,37 @@ graph LR
         style 252 fill:#8a94a0,stroke:#606770,color:#ffffff
       end
 
+      253("<div style='font-weight: bold'>Prometheus</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Prometheus]</div><div style='font-size: 80%; margin-top:10px'>Cluster prerequisite —<br />scrapes buildkitd :6060 for<br />the in-flight-build metric</div>")
+      style 253 fill:#8a94a0,stroke:#606770,color:#ffffff
+      254("<div style='font-weight: bold'>KEDA ScaledObject</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: KEDA]</div><div style='font-size: 80%; margin-top:10px'>Scales the buildkitd<br />Deployment 1→K on in-flight<br />Solve RPCs (warm floor 1, no<br />scale-to-zero)</div>")
+      style 254 fill:#8a94a0,stroke:#606770,color:#ffffff
     end
 
-    subgraph 253 ["Org private registry"]
-      style 253 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 255 ["Org private registry"]
+      style 255 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      254("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
-      style 254 fill:#69707a,stroke:#494e55,color:#ffffff
+      256("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
+      style 256 fill:#69707a,stroke:#494e55,color:#ffffff
     end
 
-    subgraph 256 ["Internet / org network"]
-      style 256 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 258 ["Internet / org network"]
+      style 258 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      257("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
-      style 257 fill:#69707a,stroke:#494e55,color:#ffffff
-      259("<div style='font-weight: bold'>Internal Package Mirror</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's internal<br />apt/apk mirror; the hardening<br />rebuild rewrites the image's<br />package sources to it.</div>")
+      259("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
       style 259 fill:#69707a,stroke:#494e55,color:#ffffff
+      261("<div style='font-weight: bold'>Internal Package Mirror</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's internal<br />apt/apk mirror; the hardening<br />rebuild rewrites the image's<br />package sources to it.</div>")
+      style 261 fill:#69707a,stroke:#494e55,color:#ffffff
     end
 
     246-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->249
-    246-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->254
-    246-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->257
-    249-. "<div>Pulls packages during the<br />hardening rebuild</div><div style='font-size: 70%'>[apt / apk]</div>" .->259
+    246-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->256
+    246-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->259
+    249-. "<div>Pulls packages during the<br />hardening rebuild</div><div style='font-size: 70%'>[apt / apk]</div>" .->261
     247-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->242
-    252-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl / API]</div>" .->254
-    251-. "<div>Supplies registry credentials</div><div style='font-size: 70%'>[token]</div>" .->254
+    252-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl / API]</div>" .->256
+    251-. "<div>Supplies registry credentials</div><div style='font-size: 70%'>[token]</div>" .->256
+    253-. "<div>Scrapes the in-flight-build<br />metric</div><div style='font-size: 70%'>[HTTP :6060]</div>" .->249
+    254-. "<div>Queries active builds<br />(PromQL)</div><div style='font-size: 70%'>[PromQL]</div>" .->253
+    254-. "<div>Scales the Deployment 1→K</div><div style='font-size: 70%'>[ScaledObject]</div>" .->249
 
   end

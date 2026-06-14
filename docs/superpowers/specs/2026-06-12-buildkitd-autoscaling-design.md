@@ -137,8 +137,8 @@ there is no second source of truth to drift.
   — the **KEDA operator** and **Prometheus** — driving the `buildkitd` node. **System Context and
   System Landscape are unchanged**: these are deployment-infrastructure elements, not context-level
   actors/external systems (same treatment as `git-sync`, ESO, the blast-radius Job).
-- **ADR:** add `docs/architecture/decisions/0012-buildkitd-autoscaling.md` — a thin ADR linking to
-  this spec (house convention).
+- **ADR:** `docs/architecture/decisions/0016-buildkitd-autoscaling.md` — a thin ADR linking to
+  this spec (house convention; 0012 was taken by delegated-tag-deletion, so this lands at 0016).
 - **Examples (`docs/examples/`):** **no `MirrorPolicy` change** — scaling is a runtime/deploy concern,
   not policy schema (same status as sharding).
 - **Runbook (`docs/runbooks/reference-deployment.md`):** add a "buildkitd autoscaling" section — the
