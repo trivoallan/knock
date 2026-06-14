@@ -302,7 +302,7 @@ def _apply_plan(
         mirror,
         now,
         transform_versions=transform_versions,
-        marked=set(marked_referrers),
+        marked_selection=set(marked_referrers),
     )
     effective_mode = resolve_deletion_mode(
         plan.policy.spec.deletion_mode, plan.config.deletion_mode, deletion_mode
