@@ -115,6 +115,7 @@ _SIGNING_CONFIG_EPOCH = "1970-01-01T00:00:00Z"
 def _signing_service(url: str, operator: str) -> dict[str, Any]:
     return {
         "url": url,
+        # majorApiVersion 1 is the only version cosign v3 signing-config v0.2 defines.
         "majorApiVersion": 1,
         "validFor": {"start": _SIGNING_CONFIG_EPOCH},
         "operator": operator,

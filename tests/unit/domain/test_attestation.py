@@ -138,3 +138,14 @@ def test_signing_config_fulcio_adds_ca_service() -> None:
     ]
     assert "rekorTlogUrls" not in cfg
     assert cfg["rekorTlogConfig"] == {}
+
+
+def test_signing_config_both_services_present() -> None:
+    cfg = build_signing_config(
+        fulcio_url="https://fulcio.corp",
+        rekor_url="https://rekor.corp",
+        operator="houba",
+    )
+    assert "caUrls" in cfg
+    assert "rekorTlogUrls" in cfg
+    assert cfg["rekorTlogConfig"] == {"selector": "ANY"}
