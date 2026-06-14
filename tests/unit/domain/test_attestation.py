@@ -4,7 +4,9 @@ import json
 
 from houba.domain.attestation import (
     PREDICATE_TYPE,
+    SIGNING_CONFIG_MEDIA_TYPE,
     STATEMENT_TYPE,
+    build_signing_config,
     build_transform_statement,
     transform_predicate_json_schema,
 )
@@ -98,3 +100,52 @@ def test_published_schema_is_stable_and_documents_import_alias() -> None:
     json.dumps(schema)  # serializable
     assert "import" in schema["properties"]  # the public alias, not "import_"
     assert "import" in schema["required"]
+
+
+def test_signing_config_empty_is_air_gapped() -> None:
+    cfg = build_signing_config(fulcio_url="", rekor_url="", operator="houba")
+    assert cfg == {
+        "mediaType": SIGNING_CONFIG_MEDIA_TYPE,
+        "rekorTlogConfig": {},
+        "tsaConfig": {},
+    }
+    assert SIGNING_CONFIG_MEDIA_TYPE == "application/vnd.dev.sigstore.signingconfig.v0.2+json"
+
+
+def test_signing_config_rekor_adds_tlog_service() -> None:
+    cfg = build_signing_config(fulcio_url="", rekor_url="https://rekor.corp", operator="houba")
+    assert cfg["rekorTlogUrls"] == [
+        {
+            "url": "https://rekor.corp",
+            "majorApiVersion": 1,
+            "validFor": {"start": "1970-01-01T00:00:00Z"},
+            "operator": "houba",
+        }
+    ]
+    assert cfg["rekorTlogConfig"] == {"selector": "ANY"}
+    assert "caUrls" not in cfg
+
+
+def test_signing_config_fulcio_adds_ca_service() -> None:
+    cfg = build_signing_config(fulcio_url="https://fulcio.corp", rekor_url="", operator="acme")
+    assert cfg["caUrls"] == [
+        {
+            "url": "https://fulcio.corp",
+            "majorApiVersion": 1,
+            "validFor": {"start": "1970-01-01T00:00:00Z"},
+            "operator": "acme",
+        }
+    ]
+    assert "rekorTlogUrls" not in cfg
+    assert cfg["rekorTlogConfig"] == {}
+
+
+def test_signing_config_both_services_present() -> None:
+    cfg = build_signing_config(
+        fulcio_url="https://fulcio.corp",
+        rekor_url="https://rekor.corp",
+        operator="houba",
+    )
+    assert "caUrls" in cfg
+    assert "rekorTlogUrls" in cfg
+    assert cfg["rekorTlogConfig"] == {"selector": "ANY"}

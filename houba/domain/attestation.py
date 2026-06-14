@@ -102,3 +102,41 @@ def transform_predicate_json_schema() -> dict[str, Any]:
     Derived from the Pydantic model — never hand-written (CLAUDE.md).
     """
     return TransformPredicate.model_json_schema(by_alias=True)
+
+
+# cosign v3 signing-config (schema v0.2). cosign v3 enables the signing-config by
+# default and rejects the old --fulcio-url/--rekor-url/--tlog-upload flags, so
+# Fulcio/Rekor must be expressed here. Pure: validFor.start is a constant epoch
+# ("valid from the beginning") so no clock is needed.
+SIGNING_CONFIG_MEDIA_TYPE = "application/vnd.dev.sigstore.signingconfig.v0.2+json"
+_SIGNING_CONFIG_EPOCH = "1970-01-01T00:00:00Z"
+
+
+def _signing_service(url: str, operator: str) -> dict[str, Any]:
+    return {
+        "url": url,
+        # majorApiVersion 1 is the only version cosign v3 signing-config v0.2 defines.
+        "majorApiVersion": 1,
+        "validFor": {"start": _SIGNING_CONFIG_EPOCH},
+        "operator": operator,
+    }
+
+
+def build_signing_config(*, fulcio_url: str, rekor_url: str, operator: str) -> dict[str, Any]:
+    """Build a cosign v3 signing-config (schema v0.2) as a plain dict.
+
+    Empty (no fulcio, no rekor) is the air-gapped config that lets ``cosign attest
+    --key …`` sign without contacting any service. A non-empty fulcio/rekor URL adds
+    the corresponding service entry (keyless CA / transparency log).
+    """
+    config: dict[str, Any] = {
+        "mediaType": SIGNING_CONFIG_MEDIA_TYPE,
+        "rekorTlogConfig": {},
+        "tsaConfig": {},
+    }
+    if fulcio_url:
+        config["caUrls"] = [_signing_service(fulcio_url, operator)]
+    if rekor_url:
+        config["rekorTlogUrls"] = [_signing_service(rekor_url, operator)]
+        config["rekorTlogConfig"] = {"selector": "ANY"}
+    return config

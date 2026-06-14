@@ -5,6 +5,19 @@ set -e
 
 [ -n "${FAKE_COSIGN_LOG:-}" ] && echo "$@" >> "$FAKE_COSIGN_LOG"
 
+# When asked, capture the signing-config file's CONTENT (the file is a tempfile the
+# caller deletes after we return, so tests can't read it otherwise).
+if [ -n "${FAKE_COSIGN_SIGNING_CONFIG:-}" ]; then
+    prev=""
+    for arg in "$@"; do
+        if [ "$prev" = "--signing-config" ]; then
+            cp "$arg" "$FAKE_COSIGN_SIGNING_CONFIG"
+            break
+        fi
+        prev="$arg"
+    done
+fi
+
 case "${FAKE_COSIGN_SCENARIO:-success}" in
     success)
         echo "Using predicate from file"
