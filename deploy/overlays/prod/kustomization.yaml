@@ -13,6 +13,9 @@ resources:
 
 components:
   - ../../components/buildkitd
+  # Autoscale buildkitd 1→K under build load (needs KEDA + Prometheus in the cluster).
+  # Listed AFTER buildkitd: it targets that Deployment/Service. See ADR 0016.
+  - ../../components/keda-buildkitd
 
 # Pinned, published image (the demos use a kind-loaded houba:dev instead).
 images:

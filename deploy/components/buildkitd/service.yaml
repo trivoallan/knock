@@ -11,3 +11,8 @@ spec:
     - name: grpc
       port: 1234
       targetPort: 1234
+    # Scrape target for the autoscaling metric (keda-buildkitd ServiceMonitor); harmless
+    # where no Prometheus scrapes it (e.g. the local-full demo).
+    - name: metrics
+      port: 6060
+      targetPort: 6060
