@@ -106,9 +106,10 @@ def test_transform_step_rejects_empty() -> None:
 
 
 def test_archive_defaults() -> None:
+    # Fields are optional (None); constant defaults live in domain.retention.
     a = Archive.model_validate({})
-    assert a.keep == 2
-    assert a.older_than_days == 30
+    assert a.keep is None
+    assert a.older_than_days is None
 
 
 def test_archive_camel_input() -> None:

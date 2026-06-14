@@ -74,8 +74,8 @@ class TransformStep(_CamelModel):
 
 
 class Archive(_CamelModel):
-    keep: int = 2
-    older_than_days: int = 30
+    keep: int | None = None
+    older_than_days: int | None = None
 
 
 class Variant(_CamelModel):
