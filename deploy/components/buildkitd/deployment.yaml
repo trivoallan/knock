@@ -9,7 +9,9 @@ metadata:
   labels:
     app.kubernetes.io/name: buildkitd
 spec:
-  replicas: 1
+  # No static `replicas`: when the keda-buildkitd component is applied, the KEDA
+  # ScaledObject owns the replica count (a fixed `replicas` would fight it). Absent
+  # KEDA, the controller default of 1 == today's behaviour (goal 4 of the autoscaling spec).
   selector:
     matchLabels:
       app.kubernetes.io/name: buildkitd
@@ -29,8 +31,14 @@ spec:
             - --addr
             - tcp://0.0.0.0:1234
             - --oci-worker-no-process-sandbox
+            # Prometheus metrics (OpenTelemetry) for KEDA autoscaling (keda-buildkitd component).
+            - --debugaddr
+            - 0.0.0.0:6060
           ports:
-            - containerPort: 1234
+            - name: grpc
+              containerPort: 1234
+            - name: metrics
+              containerPort: 6060
           readinessProbe:
             exec:
               command: ["buildctl", "debug", "workers"]

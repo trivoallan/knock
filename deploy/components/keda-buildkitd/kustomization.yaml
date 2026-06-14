@@ -1,0 +1,11 @@
+# Opt-in autoscaling for buildkitd (prod-only). Scales the buildkitd Deployment between a
+# warm floor of 1 and K replicas under build load. Requires KEDA + Prometheus as cluster
+# prerequisites (documented, never embedded — same posture as the External Secrets Operator).
+# Design: ADR 0016 / docs/superpowers/specs/2026-06-12-buildkitd-autoscaling-design.md.
+# Must be listed AFTER components/buildkitd (it targets that Deployment + Service).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - scaledobject.yaml
+  - servicemonitor.yaml

@@ -1,0 +1,29 @@
+# KEDA drives the buildkitd Deployment from a warm floor of 1 up to K under build load.
+# minReplicaCount: 1 — NEVER scale to zero: the floor keeps buildkitd's local cache warm and
+# guarantees the Service always has an endpoint, so houba's first (no-retry) buildctl connection
+# always lands. See ADR 0016 (decision D1).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: buildkitd
+  labels:
+    app.kubernetes.io/name: buildkitd
+spec:
+  scaleTargetRef:
+    name: buildkitd
+  minReplicaCount: 1
+  maxReplicaCount: 4          # K — the build-path ceiling; tune to your node budget.
+  cooldownPeriod: 300         # hold replicas 5 min after load drops (builds are bursty/hourly).
+  triggers:
+    - type: prometheus
+      metadata:
+        # Adjust to your Prometheus service. KEDA queries it; it scrapes buildkitd:6060.
+        serverAddress: http://prometheus-operated.monitoring.svc:9090
+        # Solve completion RATE. buildkit v0.30 exposes OpenTelemetry rpc metrics, NOT the
+        # legacy grpc_server_started/handled counters — there is no in-flight gauge, so we
+        # scale on throughput: during the hourly rebuild burst many Solves complete → the rate
+        # rises → KEDA scales 1→K; between ticks the rate is 0 → back to the warm floor.
+        # (Verified against moby/buildkit:v0.30.0; see the spec's D4.)
+        query: sum(rate(rpc_server_call_duration_seconds_count{rpc_method=~".+/Solve"}[2m]))
+        # Target Solves/sec per replica — THE main tunable. Lower = scales out sooner.
+        threshold: "0.2"

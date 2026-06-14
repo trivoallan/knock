@@ -1,7 +1,7 @@
 # buildkitd autoscaling — KEDA-driven scale-up
 
 - **Date:** 2026-06-12
-- **Status:** approved (design), not yet implemented
+- **Status:** implemented (2026-06-14) — manifests landed; D4 metric amended after empirical validation
 - **Scope:** a KEDA `ScaledObject` driving the `buildkitd` Deployment between a warm floor of 1
   replica and `K` replicas under build load, plus the `buildkitd` change needed to expose the
   driving metric. Pure deploy/runtime: **no houba application code changes**. Implements the
@@ -56,7 +56,7 @@ fall back when idle — without introducing state, a queue, or a coordinator (ro
 | D1 | **Warm floor of 1, no scale-to-zero** (`minReplicaCount: 1`). | *Scale-to-zero* (the original instinct): the build cache lives on an `emptyDir` (`/home/user/.local/share/buildkit`), so 0 replicas wipes it every hour → cold rebuilds; and a 0→1 wake-up races houba's first `buildctl` connection, which **cannot retry** (house rule). The floor removes both problems for the price of one idle daemon — which the org already runs today. |
 | D2 | **Single Prometheus trigger** on the `ScaledObject`. | *KEDA Cron pre-warm trigger*: justified only when waking from 0; with a warm floor it would merely pre-scale `1→K` to anticipate the tick burst, at the cost of a recurring window that **must not drift** from houba's `schedule` (a second source of truth to keep in sync, cf. `SHARD_COUNT == completions`). Not worth it — we accept a short start-up lag at the tick instead. *CPU/memory scaler*: cannot be the sole trigger for a 0-floor and is coarse; moot here anyway since the floor handles activation. |
 | D3 | **KEDA `ScaledObject`** on the existing `Deployment`. | *Raw HPA*: no clean way to read an in-flight-build metric without KEDA's Prometheus scaler; KEDA wraps HPA and adds the external trigger. *StatefulSet*: `buildkitd` replicas are interchangeable workers behind a Service — no stable identity needed. |
-| D4 | **Metric = in-flight `Solve` RPCs**, derived in PromQL from `buildkitd`'s gRPC counters. | *Native "active builds" gauge*: `buildkitd` exposes no such gauge — only gRPC + Go-runtime metrics via `--debugaddr`. A `Solve` control RPC lasts the lifetime of a build, so `started_total − handled_total{method="Solve"}` **is** the active-build count. *CPU as a proxy*: coarse, conflates cache I/O with build work. |
+| D4 | **Metric = `Solve` completion *rate*** (`rate(rpc_server_call_duration_seconds_count{rpc_method=~".+/Solve"})`), via `buildkitd`'s OpenTelemetry rpc metrics. *(Amended 2026-06-14 — see "The driving metric"; the original in-flight `started−handled` count was disproven against v0.30.0.)* | *In-flight `Solve` count* (`started_total − handled_total{method="Solve"}`): the legacy grpc-go series **do not exist** on `moby/buildkit:v0.30.0` (OTel-based; no in-flight gauge) — empirically disproven, so completion-rate replaces it. *CPU as a proxy*: coarse, conflates cache I/O with build work. |
 | D5 | **Opt-in component, `prod`-only**; KEDA + Prometheus as documented prerequisites. | *Bundling KEDA/Prometheus*: against the reference-deployment rule that external operators are referenced, never embedded (cf. ESO). *Enabling it in the kind overlays*: KEDA/Prometheus are usually absent in kind and the demo gains nothing from scaling — local overlays keep `buildkitd` static at 1. |
 | D6 | **Registry-backed cache deferred**, not in scope. | *In-scope now*: only the burst replicas (2..K) start cold; the floor replica keeps its cache, so we never regress vs today. Defer the `--export-cache/--import-cache type=registry` change to a later `buildkit_cli` work item. |
 
@@ -87,20 +87,29 @@ fall back when idle — without introducing state, a queue, or a coordinator (ro
 
 ### The driving metric
 
-`buildkitd` is started with `--debugaddr 0.0.0.0:6060`, exposing Prometheus metrics. A `Solve`
-control RPC spans the whole build, so active builds are the in-flight `Solve` count:
+`buildkitd` is started with `--debugaddr 0.0.0.0:6060`, exposing Prometheus metrics.
+
+> **D4 validated empirically against `moby/buildkit:v0.30.0` (2026-06-14).** The original plan was
+> an *in-flight* `Solve` count via `grpc_server_started_total − grpc_server_handled_total`. Those
+> legacy grpc-go series **do not exist** on this binary: buildkit emits **OpenTelemetry** rpc metrics,
+> and `--debugaddr /metrics` exposes only Go-runtime metrics plus, after the first build,
+> `rpc_server_call_duration_seconds` (a histogram recorded on *completion*) labelled
+> `rpc_method="moby.buildkit.v1.Control/Solve"`. **There is no in-flight/active gauge.** So the metric
+> is amended from in-flight to **Solve completion rate** — the only available Solve signal, and a good
+> proxy for the same goal (absorb the burst, fall back when idle).
+
+The KEDA Prometheus trigger `query` is therefore:
 
 ```promql
-sum(grpc_server_started_total{grpc_method="Solve"})
-  - sum(grpc_server_handled_total{grpc_method="Solve"})
+sum(rate(rpc_server_call_duration_seconds_count{rpc_method=~".+/Solve"}[2m]))
 ```
 
-This is the KEDA Prometheus trigger `query`; the `threshold` is the per-replica target of concurrent
-builds (e.g. `2`), so K tracks `ceil(active_builds / threshold)` capped at `maxReplicaCount`.
-
-> **Risk to validate in the plan:** confirm `moby/buildkit:v0.30.0-rootless` exposes the
-> `grpc_server_*{grpc_method="Solve"}` series under `--debugaddr`. If the label/series differs by
-> version, the PromQL query is adjusted; the scaling model is unaffected.
+During the hourly rebuild burst many `Solve` RPCs complete → the rate rises → KEDA scales `1→K`;
+between ticks the rate is `0` → back to the warm floor (1). The `threshold` is the per-replica target
+**Solve rate** (Solves/sec, e.g. `0.2`), so K tracks `ceil(solve_rate / threshold)` capped at
+`maxReplicaCount`. Trade-off: a *single long* build only increments the counter on completion, so
+mid-build the rate can read low — acceptable because scaling targets the large multi-build bursts, not
+sub-build granularity (the warm floor covers the lone-build case).
 
 ### Manifests
 
@@ -156,7 +165,9 @@ at the manifest and runtime level:
 3. **Runtime smoke (runbook, documented not CI):** on a KEDA + Prometheus cluster, drive a burst of
    rebuilds and observe `buildkitd` scale `1→K` then settle back to 1, with the Service spreading
    builds across replicas.
-4. **Metric query** validated against the bundled `buildkitd` image (risk D4) during the plan.
+4. **Metric query** validated against the bundled `buildkitd` image (risk D4) — **done** (2026-06-14):
+   v0.30.0 exposes OTel `rpc_server_call_duration_seconds_count{rpc_method=".../Solve"}`, not the
+   legacy grpc-go series; the metric was amended to Solve completion rate accordingly.
 
 ## Out of scope / future work
 

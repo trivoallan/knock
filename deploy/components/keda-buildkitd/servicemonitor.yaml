@@ -1,0 +1,18 @@
+# Lets Prometheus scrape buildkitd's :6060 metrics (the autoscaling signal).
+# Assumes the Prometheus Operator (kube-prometheus-stack). Clusters using annotation-based
+# scraping instead should drop this and add `prometheus.io/scrape: "true"` +
+# `prometheus.io/port: "6060"` annotations to the buildkitd pod template.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: buildkitd
+  labels:
+    app.kubernetes.io/name: buildkitd
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: buildkitd
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
