@@ -9,6 +9,7 @@ many of. No I/O, no ports — the reconcile use case bridges registry state in.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 from houba.domain.mirror_policy import Archive
 
@@ -47,3 +48,24 @@ def resolve_archive(policy: Archive | None, global_: Archive | None) -> Resolved
             break
 
     return ResolvedRetention(keep=keep, older_than_days=older_than_days)
+
+
+def select_retention_excess(
+    kept: dict[str, datetime],
+    *,
+    keep: int,
+    older_than: timedelta,
+    now: datetime,
+    protected: frozenset[str] = frozenset(),
+) -> list[str]:
+    """Tags eligible for a retention mark.
+
+    Ranked by import time descending, a tag is eligible iff
+    ``(rank >= keep) AND (now - imported_at > older_than) AND tag not in protected``.
+    Protected tags are excluded before ranking (always kept; `keep` applies to the
+    rest). Returns the eligible tags sorted by name (deterministic).
+    """
+    candidates = [t for t in kept if t not in protected]
+    ranked = sorted(candidates, key=lambda t: (kept[t], t), reverse=True)
+    excess = [t for rank, t in enumerate(ranked) if rank >= keep and (now - kept[t]) > older_than]
+    return sorted(excess)
