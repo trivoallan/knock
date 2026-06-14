@@ -71,6 +71,14 @@ def render_scan_outcome(outcome: ScanOutcome, *, fmt: str, stream: TextIO) -> No
                     "format": outcome.format,
                     "facts": outcome.facts,
                     "timestamp": outcome.timestamp.isoformat(),
+                    "attestation": (
+                        {
+                            "predicateType": outcome.attestation.predicate_type,
+                            "referrerDigest": outcome.attestation.referrer_digest,
+                        }
+                        if outcome.attestation is not None
+                        else None
+                    ),
                 }
             )
             + "\n"
@@ -81,3 +89,8 @@ def render_scan_outcome(outcome: ScanOutcome, *, fmt: str, stream: TextIO) -> No
         f"attached {outcome.format} scan ({outcome.tool} {outcome.tool_version}) "
         f"→ {outcome.referrer_digest}\n  subject={outcome.subject_digest}  {facts}\n"
     )
+    if outcome.attestation is not None:
+        stream.write(
+            f"  signed: {outcome.attestation.predicate_type} "
+            f"→ {outcome.attestation.referrer_digest}\n"
+        )

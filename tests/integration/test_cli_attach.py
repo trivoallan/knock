@@ -49,6 +49,7 @@ def test_attach_json_output_is_parseable(
     payload = json.loads(last)
     assert payload["format"] == "sarif"
     assert payload["subjectDigest"] == "sha256:abc123"
+    assert payload["attestation"] is None  # no signer configured → unsigned
 
 
 def test_attach_unrecognized_report_errors(
@@ -87,3 +88,34 @@ def test_attach_format_override(
     )
     assert result.exit_code == 0, result.stdout
     assert "attached sarif scan" in result.stdout
+
+
+def test_attach_signs_when_signer_configured(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "default")
+    monkeypatch.setenv("FAKE_COSIGN_SCENARIO", "success")
+    monkeypatch.setenv("HOUBA_ATTEST_SIGNER", "keyless")
+    monkeypatch.setenv("HOUBA_ATTEST_BUILDER_ID", "houba://ci")
+    report = tmp_path / "scan.sarif.json"
+    report.write_text(SARIF)
+    result = CliRunner().invoke(
+        app, ["attach", "harbor.corp/lib/redis:7.2.0", "--report", str(report)]
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "signed:" in result.stdout
+    assert "https://houba.dev/predicate/scan/v1" in result.stdout
+
+
+def test_attach_unsigned_when_no_signer(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "default")
+    monkeypatch.delenv("HOUBA_ATTEST_SIGNER", raising=False)
+    report = tmp_path / "scan.sarif.json"
+    report.write_text(SARIF)
+    result = CliRunner().invoke(
+        app, ["attach", "harbor.corp/lib/redis:7.2.0", "--report", str(report)]
+    )
+    assert result.exit_code == 0, result.stdout
+    assert "signed:" not in result.stdout
