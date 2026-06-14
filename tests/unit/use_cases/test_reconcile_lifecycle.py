@@ -298,3 +298,29 @@ def test_retention_keeps_existing_mark_when_still_excess() -> None:
     assert "harbor.corp/lib/redis@sha256:ref0" not in reg.unmarked
     # 7.2.1 (excess, not yet marked) still gets a fresh mark
     assert "harbor.corp/lib/redis:7.2.1" in marked
+
+
+def test_unmark_is_axis_scoped() -> None:
+    # 7.2.0 (oldest, still retention-excess) carries BOTH a stale selection mark and a
+    # retention mark. Selection re-entry must clear ONLY the selection referrer; the
+    # still-excess retention referrer must survive.
+    both = {
+        "harbor.corp/lib/redis:7.2.0": [
+            Referrer(
+                digest="sha256:refS",
+                artifact_type=PENDING_DELETION_ARTIFACT_TYPE,
+                annotations={"io.houba.lifecycle.reason": "dropped-from-selection"},
+                subject_tag="harbor.corp/lib/redis:7.2.0",
+            ),
+            Referrer(
+                digest="sha256:refR",
+                artifact_type=PENDING_DELETION_ARTIFACT_TYPE,
+                annotations={"io.houba.lifecycle.reason": "retention-excess"},
+                subject_tag="harbor.corp/lib/redis:7.2.0",
+            ),
+        ]
+    }
+    reg = _seed_retention(referrers=both)
+    _run_retention(reg, _RETENTION_POLICY)
+    assert "harbor.corp/lib/redis@sha256:refS" in reg.unmarked  # selection mark cleared
+    assert "harbor.corp/lib/redis@sha256:refR" not in reg.unmarked  # retention mark survives
