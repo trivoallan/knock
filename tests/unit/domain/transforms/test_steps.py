@@ -47,8 +47,19 @@ def test_rewrite_fragment_apt_and_apk() -> None:
     assert run.startswith("RUN set -eux; ")
     assert "/etc/apt/sources.list" in run
     assert "/etc/apt/sources.list.d/*.list" in run
+    assert "/etc/apt/sources.list.d/*.sources" in run  # deb822 (Debian 12 / Ubuntu 24.04+)
     assert "/etc/apk/repositories" in run
     assert "s#https?://[^/]+#https://m#g" in run
+
+
+def test_rewrite_fragment_deb822_uses_same_host_swap() -> None:
+    # deb822 .sources carries the host in a plain `URIs:` URL, so the SAME host-swap sed
+    # applies; it must be guarded like the *.list rewrite and reuse the apt mirror value.
+    p = RewritePackageSources.params_model(mirror="corp")
+    frag = RewritePackageSources().fragment(p, (_mirror(apt="https://m"),))
+    (run,) = frag.instructions
+    assert "ls /etc/apt/sources.list.d/*.sources" in run
+    assert "sed -ri 's#https?://[^/]+#https://m#g' /etc/apt/sources.list.d/*.sources" in run
 
 
 def test_rewrite_fragment_apt_only_omits_apk() -> None:
