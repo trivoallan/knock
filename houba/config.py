@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from houba.domain.deletion_mode import DeletionMode
+from houba.domain.mirror_policy import Archive
 from houba.errors import ConfigError
 
 
@@ -102,6 +103,7 @@ class Settings(BaseSettings):
     dry_run_tags: bool = False
     dry_run_deletions: bool = False
     deletion_mode: DeletionMode = DeletionMode.purge  # global cascade baseline
+    retention: Archive | None = None  # global tier of the retention cascade (HOUBA_RETENTION)
     work_dir: Path = Path("/tmp/houba-work")  # noqa: S108
 
     transform_ca_certs: dict[str, CACertSource] = Field(default_factory=dict)
