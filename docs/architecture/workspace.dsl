@@ -42,7 +42,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                 }
                 group "Domain (pure)" {
                     domSchema = component "policy schema" "MirrorPolicy model + published JSON Schema." "Pydantic" "Domain"
-                    domPlanning = component "planning pipeline" "Tag selection, aliases, semver, variants, expand, reconcile plan, collision, sharding." "Pure Python" "Domain"
+                    domPlanning = component "planning pipeline" "Tag selection, aliases, semver, variants, expand, reconcile plan, collision, sharding, retention." "Pure Python" "Domain"
                     domTransform = component "transform engine" "Pluggable transform-step vocabulary: base, steps, registry, render, version." "Pure Python" "Domain"
                     domStamp = component "provenance stamp" "Builds the OCI-standard + io.houba.* provenance annotations." "Pure Python" "Domain"
                     domCoverage = component "coverage" "Pure stamp-presence predicate: is the image houba-stamped?" "Pure Python" "Domain"

@@ -163,7 +163,8 @@ def test_archive_import_only_when_no_default() -> None:
     )
     [resolved] = resolve_imports(spec)
     assert resolved.archive.keep == 7
-    assert resolved.archive.older_than_days == 30  # model default, no defaults block
+    # Archive fields are optional (None); constant defaults live in domain.retention.
+    assert resolved.archive.older_than_days is None
 
 
 def test_variants_pass_through_to_resolved() -> None:

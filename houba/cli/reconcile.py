@@ -68,6 +68,7 @@ def reconcile(
         dry_run_tags=dry_run or container.settings.dry_run_tags,
         dry_run_deletions=dry_run or container.settings.dry_run_deletions,
         deletion_mode=container.settings.deletion_mode,
+        retention_global=container.settings.retention,
         reporter=container.reporter,
         work_dir=container.settings.work_dir,
         max_concurrency=(

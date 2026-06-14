@@ -348,3 +348,21 @@ def test_attest_schema_is_serializable_and_lists_fields() -> None:
         "rekor_url",
         "builder_id",
     }
+
+
+# ---------------------------------------------------------------------------
+# Task 4 — HOUBA_RETENTION global retention tier
+# ---------------------------------------------------------------------------
+
+
+def test_settings_retention_defaults_to_none(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.delenv("HOUBA_RETENTION", raising=False)
+    assert Settings().retention is None
+
+
+def test_settings_retention_parses_json(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("HOUBA_RETENTION", '{"keep": 5, "olderThanDays": 14}')
+    s = Settings()
+    assert s.retention is not None
+    assert s.retention.keep == 5
+    assert s.retention.older_than_days == 14

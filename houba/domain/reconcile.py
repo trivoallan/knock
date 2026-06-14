@@ -10,11 +10,12 @@ defers updates while a moving source digest settles.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Literal
 
 from houba.domain.expand import ExpandedImport, VariantPlan
+from houba.domain.retention import ResolvedRetention, select_retention_excess
 
 DEFAULT_GRACE = timedelta(days=7)
 
@@ -29,6 +30,7 @@ class SourceArtifact:
 class MirrorArtifact:
     base_digest: str  # recorded org.opencontainers.image.base.digest
     transform_version: str | None = None  # recorded {prefix}.transform.version
+    imported_at: datetime | None = None  # parsed org.opencontainers.image.created (stamp time)
 
 
 def _classify(
@@ -112,6 +114,8 @@ class ImportReconcile:
     variants: list[VariantReconcile]
     to_delete: list[str]
     to_unmark: list[str]
+    to_mark_retention: list[str] = field(default_factory=list)
+    to_unmark_retention: list[str] = field(default_factory=list)
 
 
 def reconcile_import(
@@ -121,30 +125,26 @@ def reconcile_import(
     now: datetime,
     grace: timedelta = DEFAULT_GRACE,
     *,
-    marked: set[str] | None = None,
+    marked_selection: set[str] | None = None,
+    marked_retention: set[str] | None = None,
+    retention: ResolvedRetention | None = None,
     transform_versions: dict[str, str | None] | None = None,
 ) -> ImportReconcile:
     """Reconcile all variants of an expanded import; delegates to reconcile_variant.
 
-    The same source pre-condition applies: every tag selected by expand_import
-    must be present in ``source`` (selection and source-state fetch must be consistent).
-
-    ``marked`` are mirror output-tags currently carrying a houba pending-deletion
-    referrer; tags that re-entered the desired set are returned in ``to_unmark``
-    (the use case clears their marks). Mode-agnostic: purge vs mark is applied
-    by the use case.
+    Two soft-delete sources, kept disjoint: ``to_delete`` (selection — mirror tags no
+    longer desired) and ``to_mark_retention`` (retention — valid, in-selection tags
+    beyond ``keep`` newest and older than the window). ``marked_selection`` /
+    ``marked_retention`` are the mirror tags already carrying a pending-deletion
+    referrer, partitioned by ``reason`` by the use case; tags that re-entered the
+    desired set (``to_unmark``) or are no longer excess (``to_unmark_retention``) have
+    their marks cleared. Mode-agnostic: purge vs mark is applied by the use case.
     """
-    marked = marked or set()
+    marked_selection = marked_selection or set()
+    marked_retention = marked_retention or set()
     tv = transform_versions or {}
     variants = [
-        reconcile_variant(
-            v,
-            source,
-            mirror,
-            now,
-            grace,
-            desired_transform_version=tv.get(v.name),
-        )
+        reconcile_variant(v, source, mirror, now, grace, desired_transform_version=tv.get(v.name))
         for v in expanded.variants
     ]
 
@@ -155,7 +155,37 @@ def reconcile_import(
         desired.update(alias + v.suffix for alias in v.aliases)
 
     to_delete = sorted(t for t in mirror if t not in desired)
-    to_unmark = sorted(t for t in marked if t in desired)
+    to_unmark = sorted(t for t in marked_selection if t in desired)
+
+    retention_excess: set[str] = set()
+    if retention is not None:
+        older_than = timedelta(days=retention.older_than_days)
+        for v in expanded.variants:
+            alias_targets = frozenset(target + v.suffix for target in v.aliases.values())
+            kept: dict[str, datetime] = {}
+            for src_tag in v.tags:
+                out_tag = src_tag + v.suffix
+                ma = mirror.get(out_tag)
+                if ma is not None and ma.imported_at is not None:
+                    kept[out_tag] = ma.imported_at
+            retention_excess.update(
+                select_retention_excess(
+                    kept,
+                    keep=retention.keep,
+                    older_than=older_than,
+                    now=now,
+                    protected=alias_targets,
+                )
+            )
+
+    to_mark_retention = sorted(retention_excess - marked_retention)
+    to_unmark_retention = sorted(marked_retention - retention_excess)
+
     return ImportReconcile(
-        name=expanded.name, variants=variants, to_delete=to_delete, to_unmark=to_unmark
+        name=expanded.name,
+        variants=variants,
+        to_delete=to_delete,
+        to_unmark=to_unmark,
+        to_mark_retention=to_mark_retention,
+        to_unmark_retention=to_unmark_retention,
     )

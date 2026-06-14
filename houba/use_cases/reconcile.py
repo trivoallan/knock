@@ -35,14 +35,16 @@ from houba.domain.expand import ExpandedImport, VariantPlan, expand_import
 from houba.domain.lifecycle import (
     PENDING_DELETION_ARTIFACT_TYPE,
     build_pending_deletion_annotations,
+    parse_pending_mark,
 )
-from houba.domain.mirror_policy import MirrorPolicy, TransformStep
+from houba.domain.mirror_policy import Archive, MirrorPolicy, TransformStep
 from houba.domain.policy_merge import resolve_imports
 from houba.domain.reconcile import (
     MirrorArtifact,
     SourceArtifact,
     reconcile_import,
 )
+from houba.domain.retention import resolve_archive
 from houba.domain.sharding import owns
 from houba.domain.stamp import build_stamp_annotations
 from houba.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
@@ -64,6 +66,16 @@ from houba.use_cases.report import (
 )
 
 BASE_DIGEST_KEY = "org.opencontainers.image.base.digest"
+CREATED_KEY = "org.opencontainers.image.created"
+
+
+def _parse_created(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def to_source_artifact(info: ImageInfo, *, now: datetime) -> SourceArtifact:
@@ -79,7 +91,11 @@ def to_mirror_artifact(
     if base is None:
         return None
     tv = info.annotations.get(transform_version_key) if transform_version_key else None
-    return MirrorArtifact(base_digest=base, transform_version=tv)
+    return MirrorArtifact(
+        base_digest=base,
+        transform_version=tv,
+        imported_at=_parse_created(info.annotations.get(CREATED_KEY)),
+    )
 
 
 def _read_cert_file(path: str) -> str:
@@ -224,6 +240,7 @@ class _AliasWork:
 @dataclass(frozen=True)
 class _DeleteWork:
     out_tag: str
+    reason: str = "dropped-from-selection"
 
 
 def _counts_of(operations: list[Operation]) -> Counts:
@@ -270,6 +287,7 @@ def _apply_plan(
     executor: ThreadPoolExecutor | None,
     attestor: AttestorPort | None,
     attest_builder_id: str,
+    retention_global: Archive | None = None,
 ) -> TargetReport:
     src_repo = _source_repo(plan.policy)
     selected = sorted({tag for v in plan.expanded.variants for tag in v.tags})
@@ -296,13 +314,23 @@ def _apply_plan(
         if refs:
             marked_referrers[out_tag] = refs
 
+    marked_selection: set[str] = set()
+    marked_retention: set[str] = set()
+    for out_tag, refs in marked_referrers.items():
+        for ref in refs:
+            reason = parse_pending_mark(label_prefix, out_tag, ref.annotations).reason
+            (marked_retention if reason == "retention-excess" else marked_selection).add(out_tag)
+
+    effective_retention = resolve_archive(plan.expanded.archive, retention_global)
     result = reconcile_import(
         plan.expanded,
         source,
         mirror,
         now,
         transform_versions=transform_versions,
-        marked=set(marked_referrers),
+        marked_selection=marked_selection,
+        marked_retention=marked_retention,
+        retention=effective_retention,
     )
     effective_mode = resolve_deletion_mode(
         plan.policy.spec.deletion_mode, plan.config.deletion_mode, deletion_mode
@@ -486,7 +514,7 @@ def _apply_plan(
                     build_pending_deletion_annotations(
                         prefix=label_prefix,
                         marked_at=now,
-                        reason="dropped-from-selection",
+                        reason=w.reason,
                         policy=plan.policy.metadata.name,
                         import_name=plan.expanded.name,
                     ),
@@ -539,19 +567,28 @@ def _apply_plan(
             alias_items.append(_AliasWork(variant=vr.variant, alias=alias_name, target=target))
     alias_ops = _run_stage(alias_items, _do_alias, executor=executor)
 
-    # Barrier. Stage 3: lifecycle (target-level) — purge OR mark.
+    # Barrier. Stage 3: lifecycle (target-level) — selection (purge OR mark) + retention.
     if effective_mode == DeletionMode.mark:
         mark_items = [_DeleteWork(out_tag=t) for t in result.to_delete if t not in marked_referrers]
-        lifecycle_ops = _run_stage(mark_items, _do_mark, executor=executor)
+        selection_ops = _run_stage(mark_items, _do_mark, executor=executor)
     else:
         delete_items = [_DeleteWork(out_tag=t) for t in result.to_delete]
-        lifecycle_ops = _run_stage(delete_items, _do_delete, executor=executor)
+        selection_ops = _run_stage(delete_items, _do_delete, executor=executor)
+    # Retention ALWAYS marks (never hard-deletes), regardless of deletion_mode; skip
+    # already-marked (idempotent). The usage-gated reaper (`houba purge`) owns removal.
+    retention_items = [
+        _DeleteWork(out_tag=t, reason="retention-excess")
+        for t in result.to_mark_retention
+        if t not in marked_retention
+    ]
+    retention_ops = _run_stage(retention_items, _do_mark, executor=executor)
+    lifecycle_ops = selection_ops + retention_ops
 
     # Auto-unmark (mode-independent): tags that re-entered the desired set lose any
     # stale houba pending-deletion mark — runs in purge mode too. Quiet cleanup (no
     # event); best-effort so a transient failure doesn't fail the target (retried next run).
     if not dry_run_deletions:
-        for out_tag in result.to_unmark:
+        for out_tag in [*result.to_unmark, *result.to_unmark_retention]:
             for ref in marked_referrers.get(out_tag, []):
                 try:
                     registry.delete_referrer(f"{plan.dest_repo}@{ref.digest}")
@@ -625,6 +662,7 @@ def reconcile_policies(
     shard_count: int = 1,
     attestor: AttestorPort | None = None,
     attest_builder_id: str = "",
+    retention_global: Archive | None = None,
 ) -> RunReport:
     mode: RunMode = "dry-run" if (dry_run_tags or dry_run_deletions) else "apply"
 
@@ -730,6 +768,7 @@ def reconcile_policies(
                             executor=executor,
                             attestor=attestor,
                             attest_builder_id=attest_builder_id,
+                            retention_global=retention_global,
                         )
                     )
                 all_ops = [op for t in targets for v in t.variants for op in v.operations] + [

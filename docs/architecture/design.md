@@ -40,7 +40,7 @@ integration-testable in isolation.
 flowchart TD
     cli["<b>cli/</b> — Typer, thin<br/>reconcile · purge · attach · audit · version · render · _di (composition root)"]
     uc["<b>use_cases/</b><br/>loader · reconcile (orchestrator) · purge · attach · audit · report (RunReport)<br/><i>receive ports by keyword injection — never import adapters</i>"]
-    domain["<b>domain/</b> — pure<br/>mirror_policy · selection · aliases · semver · expand · policy_merge · variants<br/>reconcile · collision · sharding · stamp · attestation · coverage · lifecycle · purge · transforms/*"]
+    domain["<b>domain/</b> — pure<br/>mirror_policy · selection · aliases · semver · expand · policy_merge · variants<br/>reconcile · collision · sharding · stamp · attestation · coverage · lifecycle · retention · purge · transforms/*"]
     ports["<b>ports/</b> — typing.Protocol<br/>RegistryPort · ImageBuilderPort · AttestorPort · UsageOraclePort · Reporter · ClockPort"]
     adapters["<b>adapters/</b><br/>RegctlAdapter · BuildkitAdapter · CosignAdapter · CommandUsageAdapter · StructlogReporter · SystemClock"]
 
