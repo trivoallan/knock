@@ -1,4 +1,4 @@
-"""Port d'accès à un builder d'images OCI (BuildKit en prod)."""
+"""OCI image builder port (BuildKit in production)."""
 
 from __future__ import annotations
 

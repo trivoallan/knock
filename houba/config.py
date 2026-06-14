@@ -1,7 +1,7 @@
-"""Lecture de la configuration depuis les variables d'environnement.
+"""Read configuration from environment variables.
 
-Aucun autre module ne doit lire directement os.environ.
-Voir spec §6.1.
+No other module should read os.environ directly.
+See spec §6.1.
 """
 
 from __future__ import annotations

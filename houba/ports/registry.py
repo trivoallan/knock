@@ -1,4 +1,4 @@
-"""Port d'accès unifié aux registres OCI (via regctl) : lectures + écritures."""
+"""Unified OCI registry access port (via regctl): reads and writes."""
 
 from __future__ import annotations
 

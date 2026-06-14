@@ -1,4 +1,4 @@
-"""Wrapper subprocess autour de buildctl (BuildKit) pour build + push d'images OCI."""
+"""subprocess wrapper around buildctl (BuildKit) for OCI image build and push."""
 
 from __future__ import annotations
 
@@ -12,9 +12,9 @@ from houba.ports.image_builder import BuildRequest
 
 class BuildkitAdapter:
     def __init__(self, binary: str | None = None) -> None:
-        # Résolution différée : on valide seulement si binary explicite est fourni.
-        # La résolution PATH se fait au premier appel (lazy) pour ne pas bloquer
-        # la construction du Container dans des environnements sans buildctl.
+        # Lazy resolution: only validate if an explicit binary is provided.
+        # PATH resolution happens on the first call (lazy) so that constructing
+        # the Container is not blocked in environments without buildctl.
         if binary is not None:
             if not Path(binary).is_file():
                 raise BuildkitError(f"buildctl binary not found: {binary}")

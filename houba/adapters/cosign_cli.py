@@ -1,9 +1,9 @@
-"""Wrapper subprocess autour de cosign : signe une attestation in-toto (DSSE) et
-l'attache comme referrer OCI au digest sujet.
+"""subprocess wrapper around cosign: signs an in-toto attestation (DSSE) and
+attaches it as an OCI referrer to the subject digest.
 
-Fail-fast comme regctl/buildctl (CLAUDE.md : aucune logique de retry dans les
-adapters — cosign gère ses propres retries réseau en interne). Le modèle de
-confiance (keyless | kms | key) est une *configuration* du même port.
+Fail-fast like regctl/buildctl (CLAUDE.md: no retry logic in adapters —
+cosign handles its own network retries internally). The trust model
+(keyless | kms | key) is a *configuration* of the same port.
 """
 
 from __future__ import annotations
@@ -27,8 +27,8 @@ _DIGEST_RE = re.compile(r"sha256:[0-9a-f]{64}(?![0-9a-f])")
 class CosignAdapter:
     def __init__(self, config: AttestSettings, binary: str | None = None) -> None:
         self._config = config
-        # Résolution différée (cf. buildkit/regctl) : ne bloque pas la construction
-        # du Container dans un environnement sans cosign.
+        # Lazy resolution (cf. buildkit/regctl): does not block Container construction
+        # in environments where cosign is not installed.
         if binary is not None:
             if not Path(binary).is_file():
                 raise CosignError(f"cosign binary not found: {binary}")

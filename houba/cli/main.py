@@ -1,6 +1,6 @@
-"""Point d'entrée Typer de la CLI houba.
+"""Typer entry point for the houba CLI.
 
-Voir spec §3 et §6.3 (mapping exception → exit code).
+See spec §3 and §6.3 (exception → exit-code mapping).
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ app.command(name="audit")(audit_cmd)
 
 @app.command()
 def version() -> None:
-    """Affiche la version du CLI."""
+    """Print the CLI version."""
     try:
         v = importlib.metadata.version("houba")
     except importlib.metadata.PackageNotFoundError:
@@ -38,17 +38,16 @@ def version() -> None:
 
 
 def _run() -> None:
-    """Wrapper d'entrée qui mappe les exceptions Houba sur des exit codes.
+    """Entry-point wrapper that maps Houba exceptions to exit codes.
 
-    Voir spec §6.3 :
+    See spec §6.3:
       1 = DomainError, 2 = AdapterError, 3 = ConfigError, 4 = InternalError.
-    Les ValidationError de Pydantic (config invalide / manquante) sont
-    également mappées sur exit 3.
+    Pydantic ValidationError (invalid / missing config) is also mapped to exit 3.
     """
     try:
         app()
     except (ValidationError, SettingsError) as e:
-        typer.echo(f"Configuration invalide : {e}", err=True)
+        typer.echo(f"Invalid configuration: {e}", err=True)
         sys.exit(3)
     except HoubaError as e:
         typer.echo(f"{type(e).__name__}: {e}", err=True)
