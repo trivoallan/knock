@@ -351,9 +351,9 @@ Five commands (`houba …`):
   ingestion, and the coverage-gap audit); concurrent + horizontally-shardable reconcile; a `regctl`
   + `buildctl` + `cosign` runtime image; and a kind-based [reference deployment](README.md) that
   doubles as the production blueprint.
-- **Deferred** — deb822 (`*.sources`) package sources in `rewritePackageSources`; multi-platform
-  rebuild (the copy path is multi-arch, the rebuild path is single-platform); the remaining roadmap
-  verbs (`archive_restore`, `product_init` / `product_delete`).
+- **Deferred** — multi-platform rebuild (the copy path is multi-arch, the rebuild path is
+  single-platform); the remaining roadmap verbs (`archive_restore`, `product_init` /
+  `product_delete`).
 - **Out of scope** — runtime presence / fleet inventory (the org's observability stack assembles
   the blast-radius query by reading the stamp); end-of-life awareness (carried by the sibling tool
   `regis`).

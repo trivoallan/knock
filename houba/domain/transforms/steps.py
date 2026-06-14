@@ -71,6 +71,12 @@ class RewritePackageSources(TransformStepCompiler[_RewritePackageSourcesParams])
                 f"if ls /etc/apt/sources.list.d/*.list >/dev/null 2>&1; then "
                 f"sed -ri 's#https?://[^/]+#{m.apt}#g' /etc/apt/sources.list.d/*.list; fi"
             )
+            # deb822 (Debian 12 / Ubuntu 24.04+): the host lives in the `URIs:` field as a
+            # plain URL, so the same host-swap sed applies; `Signed-By:` is a path, not http(s).
+            rewrites.append(
+                f"if ls /etc/apt/sources.list.d/*.sources >/dev/null 2>&1; then "
+                f"sed -ri 's#https?://[^/]+#{m.apt}#g' /etc/apt/sources.list.d/*.sources; fi"
+            )
         if m.apk:
             rewrites.append(
                 f"if [ -f /etc/apk/repositories ]; then "

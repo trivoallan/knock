@@ -186,7 +186,8 @@ today (all `ConfigError`s before any mutation).
 | `setTimezone` **(new, proof)** | `{zone: str}` | none | `RUN ln -snf /usr/share/zoneinfo/<zone> /etc/localtime && echo <zone> > /etc/timezone` + `ENV TZ=<zone>`; no context files, no resolution |
 
 `injectCA` and `rewritePackageSources` reproduce #24's exact emitted Dockerfile lines (behaviour
-preserved). The Debian-family assumption and the deb822 limitation from #24 are unchanged.
+preserved). The Debian-family assumption is unchanged; the deb822 limitation from #24 was addressed
+2026-06-14 (see `2026-06-14-deb822-package-sources-design.md`).
 
 ## 8. JSON Schema (discriminated union)
 
