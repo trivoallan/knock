@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.4.0](https://github.com/trivoallan/houba/compare/v0.3.0...v0.4.0) (2026-06-13)
+
+
+### Features
+
+* concurrent reconcile (scale-up) + horizontal sharding (scale-out) ([#37](https://github.com/trivoallan/houba/issues/37)) ([6cb2d29](https://github.com/trivoallan/houba/commit/6cb2d297996548a3b346739e2e36782d2552e1d2))
+* coverage audit — houba audit (roadmap ④) ([#53](https://github.com/trivoallan/houba/issues/53)) ([248dd1a](https://github.com/trivoallan/houba/commit/248dd1a1cb567b4953489a07ceed4f667b6e0ba4))
+* delegated tag deletion (soft-delete via OCI referrer, mode cascade) ([#41](https://github.com/trivoallan/houba/issues/41)) ([d8a0e43](https://github.com/trivoallan/houba/commit/d8a0e43ed3bef77faa5a506f06dc738e94257c9f))
+* **deploy:** local-transform demo tier — self-contained rebuild path (no Harbor) ([#32](https://github.com/trivoallan/houba/issues/32)) ([a8954f5](https://github.com/trivoallan/houba/commit/a8954f57d47846d1759e5d3509cb98d8f13be68d))
+* **deploy:** opt-in source-registry credentials to dodge Docker Hub rate limits ([#34](https://github.com/trivoallan/houba/issues/34)) ([a271fa1](https://github.com/trivoallan/houba/commit/a271fa15c9e337a0636554f3f8fa5bf58a6b832c))
+* houba attach — ingest + stamp scan results as OCI referrers ([#42](https://github.com/trivoallan/houba/issues/42)) ([b2afcb6](https://github.com/trivoallan/houba/commit/b2afcb6c7e718a9336496efc9009b8c34c8f558d))
+* houba purge — the reference reaper (usage-gated tag deletion) ([#45](https://github.com/trivoallan/houba/issues/45)) ([f52eaee](https://github.com/trivoallan/houba/commit/f52eaee3d65d18c449afb1db967b094a00714b06))
+* **reconcile:** surface applied transform steps + produced digest per operation ([#38](https://github.com/trivoallan/houba/issues/38)) ([602247a](https://github.com/trivoallan/houba/commit/602247a31dacc8a4a97f268d51f194b6db8a8fce))
+* SLSA / in-toto attestation — sign the rebuild path (roadmap ①) ([#49](https://github.com/trivoallan/houba/issues/49)) ([2c1b6e4](https://github.com/trivoallan/houba/commit/2c1b6e4d8e3feb3ac6666052b10080bd5a3b4f5c))
+
+
+### Documentation
+
+* align CLAUDE.md with the delivered hexagon + embed design/specs in the C4 workspace ([#35](https://github.com/trivoallan/houba/issues/35)) ([42c10af](https://github.com/trivoallan/houba/commit/42c10afa4234257a647b111f473fe5afe4a6b53e))
+* **architecture:** add `attach` to the C4 model + finish the CLAUDE.md inventory ([#55](https://github.com/trivoallan/houba/issues/55)) ([0d3a634](https://github.com/trivoallan/houba/commit/0d3a6344b12cf0cd7be81229d45397e6f04eefd3))
+* **architecture:** add ADRs for the 3 remaining specs (scale-up/-out, source creds) ([#40](https://github.com/trivoallan/houba/issues/40)) ([c06bde0](https://github.com/trivoallan/houba/commit/c06bde0db5fb9e30110540d1edabbba7f468864c))
+* **architecture:** add C4 container/component/hexagon views, refresh stale docs ([#39](https://github.com/trivoallan/houba/issues/39)) ([9525fa6](https://github.com/trivoallan/houba/commit/9525fa6346bd7845d43ddde3e189ee1883a7a7b9))
+* **architecture:** link each view / example name to its Mermaid export ([#46](https://github.com/trivoallan/houba/issues/46)) ([769c86f](https://github.com/trivoallan/houba/commit/769c86fb56e67550d694bab9051a7245d88cfb90))
+* **architecture:** redraw the error hierarchy as Mermaid in design.md ([#48](https://github.com/trivoallan/houba/issues/48)) ([41ed446](https://github.com/trivoallan/houba/commit/41ed44652b524b5b83ecac40276e3fd7505648b2))
+* **architecture:** redraw the hexagon schema as Mermaid in design.md ([#47](https://github.com/trivoallan/houba/issues/47)) ([d26648c](https://github.com/trivoallan/houba/commit/d26648c1812467bb13800b1566e10082c47d0d1b))
+* **architecture:** split the deployment view into one per example + commit Mermaid exports ([#44](https://github.com/trivoallan/houba/issues/44)) ([91c4f8d](https://github.com/trivoallan/houba/commit/91c4f8d2f008d2cc413948d8ac8209a1fdc91343))
+* sync design.md + roadmap with delivered work (CLI verbs, SLSA, new ports/adapters) ([#54](https://github.com/trivoallan/houba/issues/54)) ([4153b9e](https://github.com/trivoallan/houba/commit/4153b9e349477d2033efbe755c1ef8d51656f3c6))
+
 ## [0.3.0](https://github.com/trivoallan/houba/compare/v0.2.0...v0.3.0) (2026-06-12)
 
 
