@@ -37,7 +37,8 @@ host-swap rewrites `/etc/apt/sources.list` + `/etc/apt/sources.list.d/*.list` (o
 and `/etc/apk/repositories`. It does **not** yet touch the deb822 `/etc/apt/sources.list.d/*.sources`
 format that ships by default on Ubuntu 24.04+ / Debian 12 — hardening a base image that uses
 deb822 will leave its package sources pointing upstream. Extending the rewrite to deb822
-(`URIs:` lines) is a follow-up.
+(`URIs:` lines) is a follow-up. *(Done 2026-06-14 — see
+[the deb822 spec](2026-06-14-deb822-package-sources-design.md).)*
 
 ## 3. The transform vocabulary
 
