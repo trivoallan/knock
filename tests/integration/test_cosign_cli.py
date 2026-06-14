@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -102,3 +103,27 @@ def test_failure_raises_cosign_error(fake_bin_path: Path, monkeypatch: pytest.Mo
 def test_explicit_missing_binary_raises_cosign_error() -> None:
     with pytest.raises(CosignError, match="not found"):
         CosignAdapter(AttestSettings(signer="keyless"), binary="/nonexistent/cosign")
+
+
+def test_signing_config_file_content_carries_operator_and_media_type(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # Capture the actual signing-config file the adapter writes (deleted post-run otherwise),
+    # and verify its content — operator flows from builder_id, media type is v0.2.
+    captured = tmp_path / "captured-signing-config.json"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(tmp_path / "cosign.log"))
+    monkeypatch.setenv("FAKE_COSIGN_SIGNING_CONFIG", str(captured))
+    monkeypatch.setenv("FAKE_COSIGN_SCENARIO", "success")
+    cfg = AttestSettings(
+        signer="kms",
+        key_ref="awskms://alias/houba",
+        rekor_url="https://rekor.corp",
+        builder_id="https://houba.example/builders/main",
+    )
+    CosignAdapter(cfg).attest(SUBJECT, STATEMENT)
+
+    written = json.loads(captured.read_text())
+    assert written["mediaType"] == "application/vnd.dev.sigstore.signingconfig.v0.2+json"
+    assert written["rekorTlogUrls"][0]["url"] == "https://rekor.corp"
+    assert written["rekorTlogUrls"][0]["operator"] == "https://houba.example/builders/main"
+    assert written["rekorTlogConfig"] == {"selector": "ANY"}
