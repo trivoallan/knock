@@ -14,6 +14,7 @@ from houba.domain.reconcile import (
     reconcile_import,
     reconcile_variant,
 )
+from houba.domain.retention import ResolvedRetention
 
 NOW = datetime(2026, 6, 11, tzinfo=UTC)
 GRACE = timedelta(days=7)
@@ -208,7 +209,7 @@ def test_to_unmark_is_marked_intersect_desired() -> None:
         "6.0.0": MirrorArtifact(base_digest="sha256:old"),
     }
     # "7.2.0" carries a stale mark and is desired again → to_unmark; "6.0.0" is undesired
-    result = reconcile_import(expanded, src, mirror, _NOW_T3, marked={"7.2.0"})
+    result = reconcile_import(expanded, src, mirror, _NOW_T3, marked_selection={"7.2.0"})
     assert result.to_unmark == ["7.2.0"]
     assert result.to_delete == ["6.0.0"]
 
@@ -220,3 +221,123 @@ def test_marked_defaults_to_empty_and_to_unmark_empty() -> None:
     result = reconcile_import(expanded, src, mirror, _NOW_T3)
     assert result.to_unmark == []
     assert result.to_delete == []
+
+
+# ---------------------------------------------------------------------------
+# Retention marks (Task 3)
+# ---------------------------------------------------------------------------
+
+
+def _src_same() -> SourceArtifact:
+    # source digest matches the mirror's recorded base.digest below -> _classify == skip
+    return SourceArtifact(digest="sha256:s", pushed_at=NOW)
+
+
+def test_reconcile_import_retention_marks_old_excess() -> None:
+    plan = _plan("", "", tags=["1.0", "1.1", "1.2", "1.3"], aliases={})
+    source = {t: _src_same() for t in ["1.0", "1.1", "1.2", "1.3"]}
+    mirror = {
+        "1.0": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=60)),
+        "1.1": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=50)),
+        "1.2": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=2)),
+        "1.3": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=1)),
+    }
+    got = reconcile_import(
+        _expanded([plan]),
+        source,
+        mirror,
+        NOW,
+        retention=ResolvedRetention(keep=2, older_than_days=30),
+    )
+    assert got.to_mark_retention == ["1.0", "1.1"]
+    assert got.to_unmark_retention == []
+    assert got.to_delete == []
+
+
+def test_reconcile_import_retention_none_marks_nothing() -> None:
+    plan = _plan("", "", tags=["1.0", "1.1"], aliases={})
+    source = {t: _src_same() for t in ["1.0", "1.1"]}
+    mirror = {
+        "1.0": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=99)),
+        "1.1": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=99)),
+    }
+    got = reconcile_import(_expanded([plan]), source, mirror, NOW, retention=None)
+    assert got.to_mark_retention == []
+
+
+def test_reconcile_import_retention_protects_alias_target() -> None:
+    plan = _plan("", "", tags=["1.0", "1.1", "1.2"], aliases={"stable": "1.0"})
+    source = {t: _src_same() for t in ["1.0", "1.1", "1.2"]}
+    mirror = {
+        "1.0": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=60)),
+        "1.1": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=50)),
+        "1.2": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=1)),
+        "stable": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=1)),
+    }
+    got = reconcile_import(
+        _expanded([plan]),
+        source,
+        mirror,
+        NOW,
+        retention=ResolvedRetention(keep=1, older_than_days=30),
+    )
+    # 1.0 is the alias target -> protected; 1.2 is the newest and kept
+    assert got.to_mark_retention == ["1.1"]
+
+
+def test_reconcile_import_retention_unmarks_when_no_longer_excess() -> None:
+    plan = _plan("", "", tags=["1.0", "1.1"], aliases={})
+    source = {t: _src_same() for t in ["1.0", "1.1"]}
+    mirror = {
+        "1.0": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=1)),
+        "1.1": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=2)),
+    }
+    got = reconcile_import(
+        _expanded([plan]),
+        source,
+        mirror,
+        NOW,
+        marked_retention={"1.1"},
+        retention=ResolvedRetention(keep=1, older_than_days=30),
+    )
+    assert got.to_mark_retention == []
+    assert got.to_unmark_retention == ["1.1"]
+
+
+def test_reconcile_import_retention_idempotent_keeps_existing_mark() -> None:
+    plan = _plan("", "", tags=["1.0", "1.1", "1.2"], aliases={})
+    source = {t: _src_same() for t in ["1.0", "1.1", "1.2"]}
+    mirror = {
+        "1.0": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=60)),
+        "1.1": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=2)),
+        "1.2": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=1)),
+    }
+    got = reconcile_import(
+        _expanded([plan]),
+        source,
+        mirror,
+        NOW,
+        marked_retention={"1.0"},
+        retention=ResolvedRetention(keep=2, older_than_days=30),
+    )
+    assert got.to_mark_retention == []
+    assert got.to_unmark_retention == []
+
+
+def test_reconcile_import_retention_skips_tags_without_imported_at() -> None:
+    plan = _plan("", "", tags=["1.0", "1.1", "1.2"], aliases={})
+    source = {t: _src_same() for t in ["1.0", "1.1", "1.2"]}
+    mirror = {
+        "1.0": MirrorArtifact(base_digest="sha256:s", imported_at=None),  # undateable -> skipped
+        "1.1": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=60)),
+        "1.2": MirrorArtifact(base_digest="sha256:s", imported_at=NOW - timedelta(days=1)),
+    }
+    got = reconcile_import(
+        _expanded([plan]),
+        source,
+        mirror,
+        NOW,
+        retention=ResolvedRetention(keep=1, older_than_days=30),
+    )
+    # dateable = {1.1, 1.2}; keep=1 protects 1.2 (newest); 1.1 old -> excess; 1.0 never considered
+    assert got.to_mark_retention == ["1.1"]
