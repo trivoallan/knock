@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from houba.config import AttestSettings
+from houba.domain.attestation import build_signing_config
 from houba.errors import CosignError
 from houba.ports.attestor import AttestationRef
 
@@ -44,26 +45,28 @@ class CosignAdapter:
         self._bin = resolved
         return self._bin
 
-    def _signing_args(self) -> list[str]:
+    def _key_args(self) -> list[str]:
+        # A key reference is NOT a "service URL", so it stays a flag (kms/key).
+        # keyless emits no --key: the identity comes from the signing-config / ambient OIDC.
         cfg = self._config
-        args: list[str] = []
         if cfg.signer in ("kms", "key"):
-            args += ["--key", cfg.key_ref]
-        elif cfg.fulcio_url:  # keyless
-            args += ["--fulcio-url", cfg.fulcio_url]
-        # Transparency log: a URL => upload there; blank => no log entry (air-gapped).
-        if cfg.rekor_url:
-            args += ["--rekor-url", cfg.rekor_url]
-        else:
-            args += ["--tlog-upload=false"]
-        return args
+            return ["--key", cfg.key_ref]
+        return []
 
     def attest(self, subject_ref: str, statement: dict[str, Any]) -> AttestationRef:
+        cfg = self._config
         predicate_type = str(statement.get("predicateType", ""))
         predicate = statement.get("predicate", {})
+        signing_config = build_signing_config(
+            fulcio_url=cfg.fulcio_url,
+            rekor_url=cfg.rekor_url,
+            operator=cfg.builder_id or "houba",
+        )
         with tempfile.TemporaryDirectory(prefix="houba-attest-") as tmp:
             pred_path = Path(tmp) / "predicate.json"
             pred_path.write_text(json.dumps(predicate, sort_keys=True))
+            scfg_path = Path(tmp) / "signing-config.json"
+            scfg_path.write_text(json.dumps(signing_config, sort_keys=True))
             args = [
                 "attest",
                 "--yes",
@@ -71,7 +74,9 @@ class CosignAdapter:
                 predicate_type,
                 "--predicate",
                 str(pred_path),
-                *self._signing_args(),
+                *self._key_args(),
+                "--signing-config",
+                str(scfg_path),
                 subject_ref,
             ]
             try:
@@ -86,7 +91,6 @@ class CosignAdapter:
                 raise CosignError(str(e)) from e
         if r.returncode != 0:
             raise CosignError(f"cosign attest failed: {r.stderr.strip()}")
-        # Best-effort: surface the pushed attestation digest if cosign printed one.
         m = _DIGEST_RE.search(r.stderr) or _DIGEST_RE.search(r.stdout)
         return AttestationRef(
             predicate_type=predicate_type,
