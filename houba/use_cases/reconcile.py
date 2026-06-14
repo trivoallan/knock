@@ -588,8 +588,14 @@ def _apply_plan(
     # stale houba pending-deletion mark — runs in purge mode too. Quiet cleanup (no
     # event); best-effort so a transient failure doesn't fail the target (retried next run).
     if not dry_run_deletions:
-        for out_tag in [*result.to_unmark, *result.to_unmark_retention]:
+        for out_tag, want_retention in (
+            *((t, False) for t in result.to_unmark),
+            *((t, True) for t in result.to_unmark_retention),
+        ):
             for ref in marked_referrers.get(out_tag, []):
+                reason = parse_pending_mark(label_prefix, out_tag, ref.annotations).reason
+                if (reason == "retention-excess") != want_retention:
+                    continue  # clear only the referrer for the axis being unmarked
                 try:
                     registry.delete_referrer(f"{plan.dest_repo}@{ref.digest}")
                 except Exception:  # noqa: S110 — best-effort cleanup, retried next run
