@@ -81,15 +81,28 @@ See [docs/runbooks/reference-deployment.md](docs/runbooks/reference-deployment.m
 itself:
 
 ```bash
-docker pull ghcr.io/<your-org>/houba:0.4
+docker pull ghcr.io/trivoallan/houba:0.4
 ```
 
 (The runtime image also bundles `cosign` for the optional signed attestations.)
 
+The published image is multi-arch (`amd64` + `arm64`), carries a buildx SBOM and SLSA provenance, and
+is signed keyless with `cosign`. Verify it before running:
+
+```bash
+cosign verify ghcr.io/trivoallan/houba:0.4 \
+  --certificate-identity-regexp 'https://github.com/trivoallan/houba/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+cosign verify-attestation --type spdxjson ghcr.io/trivoallan/houba:0.4 \
+  --certificate-identity-regexp 'https://github.com/trivoallan/houba/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
 Or from source with [uv](https://github.com/astral-sh/uv):
 
 ```bash
-git clone https://github.com/<your-org>/houba.git
+git clone https://github.com/trivoallan/houba.git
 cd houba
 uv sync
 uv run houba --help
