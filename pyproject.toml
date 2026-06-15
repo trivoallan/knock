@@ -1,6 +1,6 @@
 [project]
 name = "houba"
-version = "0.5.0"
+version = "0.6.0"
 description = "Stamp external OCI images with portable provenance through a hardening policy"
 requires-python = ">=3.12,<3.13"
 dependencies = [
