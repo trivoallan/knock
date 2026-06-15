@@ -384,6 +384,28 @@ def _apply_plan(
             error,
         )
 
+    def _attest(
+        out_digest: str, *, variant: str, vplan: VariantPlan, out_tag: str, src_tag: str
+    ) -> None:
+        assert attestor is not None  # callers guard on attestor before calling
+        attestor.attest(
+            f"{plan.dest_repo}@{out_digest}",
+            build_transform_statement(
+                subject_name=f"{plan.dest_repo}:{out_tag}",
+                subject_digest=out_digest,
+                policy=plan.policy.metadata.name,
+                import_name=plan.expanded.name,
+                variant=variant,
+                source=src_repo,
+                source_digest=source[src_tag].digest,
+                builder_id=attest_builder_id,
+                created=now.isoformat(),
+                transform_version=transform_versions.get(vplan.name) or "",
+                steps=[(s.name, s.params) for s in vplan.transform],
+                transformed=bool(vplan.transform),
+            ),
+        )
+
     def _do_import(w: _ImportWork) -> Operation:
         steps = [s.name for s in w.vplan.transform] or None  # applied steps; None on a copy
         try:
@@ -423,22 +445,12 @@ def _apply_plan(
                 # (the label is the product: every placed image is signed). Inside the try =>
                 # a signing failure fails the operation rather than leaving a silent gap.
                 if attestor is not None and out_digest is not None:
-                    attestor.attest(
-                        f"{plan.dest_repo}@{out_digest}",
-                        build_transform_statement(
-                            subject_name=f"{plan.dest_repo}:{w.out_tag}",
-                            subject_digest=out_digest,
-                            policy=plan.policy.metadata.name,
-                            import_name=plan.expanded.name,
-                            variant=w.variant,
-                            source=src_repo,
-                            source_digest=source[w.src_tag].digest,
-                            builder_id=attest_builder_id,
-                            created=now.isoformat(),
-                            transform_version=transform_versions.get(w.vplan.name) or "",
-                            steps=[(s.name, s.params) for s in w.vplan.transform],
-                            transformed=bool(w.vplan.transform),
-                        ),
+                    _attest(
+                        out_digest,
+                        variant=w.variant,
+                        vplan=w.vplan,
+                        out_tag=w.out_tag,
+                        src_tag=w.src_tag,
                     )
             op = Operation(
                 kind=w.kind,
@@ -473,23 +485,13 @@ def _apply_plan(
             out_digest: str | None = None
             if not dry_run_tags:
                 out_digest = mirror_digests[w.out_tag]
-                assert attestor is not None  # to_sign is empty unless an attestor is configured
-                attestor.attest(
-                    f"{plan.dest_repo}@{out_digest}",
-                    build_transform_statement(
-                        subject_name=f"{plan.dest_repo}:{w.out_tag}",
-                        subject_digest=out_digest,
-                        policy=plan.policy.metadata.name,
-                        import_name=plan.expanded.name,
-                        variant=w.variant,
-                        source=src_repo,
-                        source_digest=src_digest,
-                        builder_id=attest_builder_id,
-                        created=now.isoformat(),
-                        transform_version=transform_versions.get(w.vplan.name) or "",
-                        steps=[(s.name, s.params) for s in w.vplan.transform],
-                        transformed=bool(w.vplan.transform),
-                    ),
+                # to_sign is empty unless an attestor is configured
+                _attest(
+                    out_digest,
+                    variant=w.variant,
+                    vplan=w.vplan,
+                    out_tag=w.out_tag,
+                    src_tag=w.src_tag,
                 )
             op = Operation(
                 kind="attested",

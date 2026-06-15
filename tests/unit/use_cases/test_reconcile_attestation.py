@@ -189,3 +189,28 @@ def test_attestation_failure_fails_the_operation() -> None:
     assert op.error is not None
     assert op.error.type == "CosignError"
     assert op.error.exit_code == 2
+
+
+def test_backfill_attestation_failure_is_visible() -> None:
+    # Tag already mirrored (source unchanged), NO existing attestation referrer seeded,
+    # but the attestor is configured to fail => the backfill attempt must surface a
+    # FAILED "attested" operation (no silent gap).
+    src = "docker.io/library/busybox"
+    dest_repo = "reg.local/demo/busybox"
+    mirror_digest = "sha256:mirrordigest"
+    registry = FakeRegistryPort(
+        tags={src: ["1.36.0"], dest_repo: ["1.36.0"]},
+        infos={
+            f"{src}:1.36.0": ImageInfo(digest="sha256:s", created=NOW, annotations={}),
+            f"{dest_repo}:1.36.0": ImageInfo(
+                digest=mirror_digest,
+                created=NOW,
+                annotations={"org.opencontainers.image.base.digest": "sha256:s"},
+            ),
+        },
+    )
+    report = _run(_copy_policy(), registry, attestor=FakeAttestor(fail=True))
+    ops = [op for v in report.policies[0].targets[0].variants for op in v.operations]
+    attested_ops = [op for op in ops if op.kind == "attested"]
+    assert len(attested_ops) == 1
+    assert attested_ops[0].error is not None
