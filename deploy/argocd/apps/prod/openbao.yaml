@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: openbao
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://openbao.github.io/openbao-helm
+    chart: openbao
+    targetRevision: 0.9.0
+    helm:
+      releaseName: openbao
+      values: |
+        # DEV MODE — kind-demoable only (in-memory, auto-unseal, known root token).
+        # NOT production-grade: real prod hardens this (seal/unseal, k8s auth) or
+        # repoints the ClusterSecretStore at the org's existing OpenBao/Vault.
+        server:
+          dev:
+            enabled: true
+            devRootToken: "root"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openbao
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
