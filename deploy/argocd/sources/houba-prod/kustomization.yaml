@@ -29,8 +29,10 @@ configMapGenerator:
       # Point houba's buildctl client at the buildkitd sibling app (the wiring the
       # buildkitd kustomize component used to inject via a CronJob patch).
       - BUILDKIT_HOST=tcp://buildkitd.houba.svc.cluster.local:1234
-      # Org policy repo (the front door). Replace with YOURS when adopting.
-      - POLICY_REPO_URL=https://gitlab.example.com/platform/houba-policies
+      # Policy repo (the front door). Defaults to the bundled busybox example so
+      # `make argocd-prod` git-syncs a real policy on kind out of the box; when
+      # adopting, repoint POLICY_REPO_URL + POLICY_DIR at YOUR org policy repo.
+      - POLICY_REPO_URL=https://github.com/trivoallan/houba
       - POLICY_REPO_REF=main
-      - POLICY_DIR=/policies/current
-      - BLAST_REPOS=mirror/busybox mirror/redis
+      - POLICY_DIR=/policies/current/docs/examples/busybox
+      - BLAST_REPOS=demo/busybox
