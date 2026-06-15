@@ -18,6 +18,7 @@ def build_stamp_annotations(
     source_repository: str,
     source_tag: str,
     source_digest: str,
+    source_revision: str | None,
     created: datetime,
     team: str | None,
     artifact_type: str,
@@ -30,13 +31,15 @@ def build_stamp_annotations(
     source = f"{source_registry}/{source_repository}"
     annotations: dict[str, str] = {
         "org.opencontainers.image.source": source,
-        # revision = the immutable source digest (what was actually packaged),
-        # not the mutable upstream tag. The tag survives in base.name.
-        "org.opencontainers.image.revision": source_digest,
         "org.opencontainers.image.base.name": f"{source}:{source_tag}",
         "org.opencontainers.image.base.digest": source_digest,
         "org.opencontainers.image.created": created.isoformat(),
     }
+    # revision = the SCM revision of the *packaged software*, as the SOURCE image declares it
+    # (OCI semantics). houba does not know the upstream commit, so it propagates the source's
+    # own .revision when present and omits the key otherwise — never a fabricated digest/tag.
+    if source_revision is not None:
+        annotations["org.opencontainers.image.revision"] = source_revision
     if prefix:
         annotations[f"{prefix}.artifact.type"] = artifact_type
         annotations[f"{prefix}.policy"] = policy
