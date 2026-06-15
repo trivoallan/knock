@@ -1,8 +1,9 @@
 # houba reference deployment — runtime-neutral core.
 #
-# This base is identical across the lite demo, the full demo, and the prod
-# blueprint; overlays change ONLY the registry target, the secret source, the
-# image, the schedule, and whether the rebuild (buildkitd) add-on is present.
+# This base is identical across the Argo reference (make demo) and the local
+# escape hatch (make local); they change ONLY the registry target, the secret
+# source (ESO->OpenBao vs a plain Secret), the image, and whether the CronJob is
+# suspended (the buildkitd rebuild add-on is present in both).
 # That identity is what guarantees "the demo IS the blueprint" (no drift).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
