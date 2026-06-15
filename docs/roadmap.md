@@ -1,7 +1,8 @@
 # houba — Roadmap
 
 *Format: Now / Next / Later. Status as of **0.5.0** (2026-06). The core loop is delivered; what
-remains is completing coverage, firming the public contract, and the enforcement bet.*
+remains is completing coverage, firming the public contract, and turning the now-confirmed
+single-front-door mandate into enforced coverage.*
 
 ## Product thesis
 
@@ -18,7 +19,15 @@ Two consequences drive everything below:
    trustworthy before anything else.
 2. **Coverage gates value.** A stamp on 40 % of the fleet yields a blast-radius query with blind
    spots — useless in an incident. houba's value is proportional to it being the *mandatory* path
-   for external images. This is the riskiest assumption (see **Now → validate the bet**).
+   for external images. This *was* the riskiest assumption — now **validated** (see below).
+
+## Validated — the core bet holds (2026-06)
+
+A platform / security team has **confirmed they would mandate houba as the single front door** for
+external images. The riskiest assumption is answered *yes*: enforcement investment is now justified,
+and *coverage gates value* moves from theory to a live requirement — the mandate is only worth as
+much as houba covering 100 % of what enters. This reprioritizes **Now** around making that mandate
+real, and retires the standalone "assumption to validate" gate.
 
 ## Delivered — the core loop (Phases A/B + Phase C ①–⑤)
 
@@ -40,16 +49,13 @@ Beyond the original 7 phases, also delivered: **signed SLSA / in-toto attestatio
 concurrency**, **cross-pod sharding**, **KEDA-driven buildkit autoscaling**, deb822 package sources,
 cosign v3 signing-config. CLI verbs today: `reconcile · purge · attach · audit · version`.
 
-## Now — finish what the core loop started
+## Now — make the mandate real
 
-> Theme: **firm the contract** (the label is the product) and **close coverage holes** (coverage
-> gates value). These are known, scoped gaps in what just shipped.
+> Theme: with the single-front-door bet **confirmed** (see *Validated* above), the priority is a
+> front door that is **complete** (coverage gates value) and **trustworthy** (the label is the
+> product) — so the mandating team can actually rely on it. These are known, scoped gaps in what
+> just shipped.
 
-- **Validate the bet *(discovery, not eng — do this first)*.** The riskiest assumption is that a
-  platform/security org will actually *mandate* a single front door for external images. Cheapest
-  test: ask one such team whether they *would impose* it. If yes, there is a product; if "we'll
-  never get it enforced," the stamp covers a fraction of the fleet and houba is a feature, not a
-  tool. Run this before investing further in enforcement.
 - **Complete attestation coverage.** Today only the *rebuild* path is signed; copied and
   already-mirrored (skipped) images carry the stamp but no signed attestation — a hole the coverage
   audit itself surfaces. Close it so every image houba fronts carries signed provenance.
