@@ -12,7 +12,7 @@ spec:
       port: 1234
       targetPort: 1234
     # Scrape target for the autoscaling metric (keda-buildkitd ServiceMonitor); harmless
-    # where no Prometheus scrapes it (e.g. the local-full demo).
+    # where no Prometheus scrapes it (the default path — KEDA/Prometheus are an optional add-on).
     - name: metrics
       port: 6060
       targetPort: 6060

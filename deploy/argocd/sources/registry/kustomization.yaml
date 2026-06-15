@@ -1,10 +1,10 @@
-# Throwaway registry:2 as its own ArgoCD app — the demo App-of-Apps manages it
-# separately from the houba install (genuine 2-child mechanics). Reuses the same
-# manifest the local-lite overlay ships, so there is one source of truth.
+# Throwaway registry:2 — the push destination the Argo reference omits. `make demo`
+# applies this out-of-band; ArgoCD does not manage it. Reuses the same manifest the
+# overlays/local overlay ships, so there is one source of truth.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 namespace: houba
 
 resources:
-  - ../../../overlays/local-lite/registry.yaml
+  - ../../../overlays/local/registry.yaml
