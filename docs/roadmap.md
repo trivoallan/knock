@@ -47,7 +47,10 @@ inverts, schema-first. ①–⑤ are now all delivered:
 Beyond the original 7 phases, also delivered: **signed SLSA / in-toto attestations** (rebuild path),
 **`houba attach`** (scan ingestion → signed OCI referrers), and operational maturity — **in-pod
 concurrency**, **cross-pod sharding**, **KEDA-driven buildkit autoscaling**, deb822 package sources,
-cosign v3 signing-config. CLI verbs today: `reconcile · purge · attach · audit · version`.
+cosign v3 signing-config, and a **single Argo reference deployment that is the demo** — one
+App-of-Apps replaces the prior multi-overlay demo sprawl, so the demo *is* the adoptable blueprint
+(six entry points → two; thesis-minimum operators, autoscaling an optional add-on). CLI verbs today:
+`reconcile · purge · attach · audit · version`.
 
 ## Now — make the mandate real
 
