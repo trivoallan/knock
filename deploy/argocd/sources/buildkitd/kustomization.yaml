@@ -1,8 +1,9 @@
-# buildkitd as its own additive ArgoCD app: the rootless build engine plus houba's
-# autoscaling config (ScaledObject + ServiceMonitor). It references the SAME workload
-# manifests the components/buildkitd Component ships (one source of truth), but NOT the
-# Component's CronJob patch — the buildkitd host is wired via BUILDKIT_HOST in the
-# houba-prod config instead, so no two apps write the houba CronJob.
+# buildkitd as its own additive ArgoCD app: the rootless build engine. References the
+# SAME workload manifests the components/buildkitd Component ships (one source of truth),
+# but NOT the Component's CronJob patch — the buildkitd host is wired via BUILDKIT_HOST in
+# the houba source config instead, so no two apps write the houba CronJob.
+# Autoscaling (KEDA ScaledObject + Prometheus ServiceMonitor) is an optional add-on; see
+# components/keda-buildkitd and the runbook. It is intentionally NOT wired here.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -12,5 +13,3 @@ resources:
   - ../../../components/buildkitd/deployment.yaml
   - ../../../components/buildkitd/service.yaml
   - ../../../components/buildkitd/networkpolicy.yaml
-  - ../../../components/keda-buildkitd/scaledobject.yaml
-  - ../../../components/keda-buildkitd/servicemonitor.yaml
