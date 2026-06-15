@@ -199,8 +199,10 @@ runbook, not wired into the default `demo-argocd` target.
 
 - **Render-check** (lightweight, added to `.github/workflows/ci.yml`):
   `kustomize build --load-restrictor LoadRestrictionsNone` over `deploy/argocd/sources/{houba-demo,
-  houba-prod,registry,buildkitd}` and `deploy/argocd/apps/{demo,prod}`; then
-  `kubectl apply --dry-run=client` (or `kubeconform`) over the rendered `Application` manifests. The
+  houba-prod,registry,buildkitd}`. The `deploy/argocd/apps/{demo,prod}` dirs have **no
+  `kustomization.yaml`** (ArgoCD reads them via a `directory` source), so they are not
+  `kustomize build`'t — instead each `Application` YAML is parsed and asserted to be `kind:
+  Application` with a pinned Helm `targetRevision` where it sources a chart. The
   `eso`/`keda`/`prometheus`/`openbao` children are Helm-source `Application`s (rendered in-cluster by
   ArgoCD, not by `kustomize build`) — the check validates the `Application` manifests are well-formed
   and their pinned chart `targetRevision` is set, not the charts' output.
