@@ -2,11 +2,13 @@
 
 **The single front door for the external container images your organization runs.**
 
-> **Status — young but functional (`v0.4`).** Delivered: the full hexagon, both the copy and the
+> **Status — young but functional (`v0.5`).** Delivered: the full hexagon, both the copy and the
 > rebuild / derive-and-stamp paths, the pluggable transform engine, the OCI provenance stamp **plus
-> signed SLSA / in-toto attestations**, the `reconcile` / `purge` / `attach` / `audit` commands,
-> concurrent + shardable reconcile, and optional KEDA autoscaling of the build path. Next: lifecycle
-> restore and scaffolding commands ([roadmap](docs/roadmap.md)). Not yet battle-hardened for production.
+> signed SLSA / in-toto attestations** (rebuild *and* ingested scan results), the
+> `reconcile` / `purge` / `attach` / `audit` commands, retention-driven soft-delete, concurrent +
+> shardable reconcile, and optional KEDA autoscaling of the build path. Next: product scaffolding
+> commands and the remaining lifecycle / proxy decisions ([roadmap](docs/roadmap.md)). Not yet
+> battle-hardened for production.
 
 Every public image that enters your registry passes through houba: it is mirrored — or, when you
 declare a hardening policy, rebuilt with internal CA certificates and internal package mirrors —
@@ -46,15 +48,24 @@ optional hardening steps). `houba reconcile` then, per policy:
 Change detection is provenance-based and idempotent: re-running `reconcile` is a no-op unless the
 source digest moved (past the stability window) or you changed the hardening.
 
+`reconcile` also enforces **retention**: when a policy (or the fleet-wide `HOUBA_RETENTION`) sets
+`archive: {keep, olderThanDays}`, houba keeps the N most-recently-imported tags of each stream and
+attaches a `pending-deletion` mark (reason `retention-excess`) to the older surplus — reaching the
+*valid, in-selection* tags that selection filtering structurally never would. Retention only ever
+**marks** (it never hard-deletes, even under `deletionMode: purge`), so removal always passes through
+the usage-gated reaper below.
+
 Beyond `reconcile`, the CLI offers:
 
 - **`houba audit`** — a coverage-gap report: walk the registry and list images that do **not** carry
   houba's stamp (`--fail-on-uncovered` makes it a CI gate). This is what makes the front door
   *verifiable*.
-- **`houba purge`** — the reference reaper: hard-delete tags marked `pending-deletion` that a usage
-  oracle confirms are unused (gated by `HOUBA_PURGE_MIN_IDLE_DAYS`; dry-run unless `--apply`).
+- **`houba purge`** — the reference reaper: hard-delete tags marked `pending-deletion` (by either
+  the selection axis or retention) that a usage oracle confirms are unused (gated by
+  `HOUBA_PURGE_MIN_IDLE_DAYS`; dry-run unless `--apply`).
 - **`houba attach <ref> --report <file>`** — ingest an upstream scan report (e.g. SARIF) and attach
-  it as a stamped OCI referrer on the image.
+  it as a stamped OCI referrer on the image — additionally **signed** as an in-toto scan attestation
+  when `HOUBA_ATTEST_SIGNER` is set, turning "this image was scanned" into a verifiable fact.
 
 See the [roadmap](docs/roadmap.md) for what is built versus planned, and the
 [design overview](docs/architecture/design.md) for the architecture.
@@ -81,7 +92,7 @@ See [docs/runbooks/reference-deployment.md](docs/runbooks/reference-deployment.m
 itself:
 
 ```bash
-docker pull ghcr.io/<your-org>/houba:0.4
+docker pull ghcr.io/<your-org>/houba:0.5
 ```
 
 (The runtime image also bundles `cosign` for the optional signed attestations.)
@@ -113,6 +124,7 @@ namespaced `HOUBA_*`.
 | `HOUBA_TRANSFORM_PACKAGE_MIRRORS` | no | `{}` | JSON map of name → package mirror, resolved by `rewritePackageSources`. |
 | `HOUBA_ATTEST_SIGNER` | no | `""` | `""` (off) / `keyless` / `kms` / `key` — enables signed SLSA attestations on the rebuild path. `kms`/`key` also need `HOUBA_ATTEST_KEY_REF`; keyless uses `HOUBA_ATTEST_FULCIO_URL` / `_REKOR_URL`. |
 | `HOUBA_PURGE_MIN_IDLE_DAYS` | no | _unset_ | Idle window `houba purge` requires before reaping a marked tag (required to run `purge`). |
+| `HOUBA_RETENTION` | no | _unset_ | JSON `Archive` object (`{keep, olderThanDays}`) enabling fleet-wide retention marking during `reconcile`; a policy's `archive:` overrides it per field. Unset ⇒ retention off everywhere. |
 | `HOUBA_LOG_FORMAT` | no | `text` | `text` or `json`. |
 | `HOUBA_LOG_LEVEL` | no | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
 | `HOUBA_DRY_RUN_TAGS` | no | `false` | Skip image copies / pushes. |
@@ -152,7 +164,7 @@ rebuild Debian into per-region timezone variants. Every `reconcile` is **plan-th
 houba/
 ├── domain/      pure logic — mirror_policy, selection, aliases, semver, expand, policy_merge,
 │                variants, reconcile, collision, sharding, stamp, attestation, coverage,
-│                lifecycle, purge, scan/, transforms/
+│                lifecycle, retention, purge, scan/, transforms/
 ├── ports/       typing.Protocol interfaces — registry, image_builder, attestor,
 │                usage_oracle, reporter, clock
 ├── adapters/    concrete I/O — regctl_cli, buildkit_cli, cosign_cli, command_usage,
