@@ -1,6 +1,7 @@
-# TRANSFORM demo — the rebuild (transform) path, runnable self-contained: buildkitd
-# + the same throwaway registry:2 as lite, but NO Harbor and NO org config.
-# Demonstrates setTimezone fanned into -eu / -us variants via the per-variant suffix.
+# LOCAL overlay — the inner-loop escape hatch (kubectl apply -k), self-contained:
+# buildkitd + a throwaway registry:2, the plain-secret registry roster, NO operators.
+# Reconciles the reference policy (busybox copy + debian rebuild). Renders local,
+# uncommitted manifests; the CronJob is suspended and fired on demand by `make local`.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -22,12 +23,12 @@ configMapGenerator:
   - name: buildkitd-config
     files:
       - buildkitd.toml
-  # Point the reconcile + blast-radius at the timezone example.
+  # Point the reconcile + blast-radius at the reference policy.
   - name: houba-config
     behavior: merge
     literals:
-      - POLICY_DIR=/policies/current/docs/examples/timezone
-      - BLAST_REPOS=demo/debian
+      - POLICY_DIR=/policies/current/docs/examples/reference
+      - BLAST_REPOS=demo/busybox demo/debian
 
 patches:
   - path: patch-suspend.yaml
