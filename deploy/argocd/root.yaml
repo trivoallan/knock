@@ -1,9 +1,9 @@
-# The App-of-Apps root. `make demo-argocd` (or kubectl) applies THIS only; ArgoCD then
-# pulls the child Applications from git and syncs them. Parameterized via envsubst:
+# The App-of-Apps root. `make demo` (or kubectl) applies THIS only; ArgoCD then pulls
+# the child Applications from git and syncs them: ESO + OpenBao (wave 0), houba +
+# buildkitd (wave 1). Parameterized via envsubst only for the source repo/ref:
 #   ARGOCD_REPO_URL  (default https://github.com/trivoallan/houba)
 #   ARGOCD_REPO_REF  (default main)
-#   ARGOCD_ENV       (demo | prod)
-# To adopt: copy this file, hardcode your repoURL/targetRevision/env, kubectl apply.
+# To adopt: copy this file, hardcode your repoURL/targetRevision, kubectl apply.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -14,7 +14,7 @@ spec:
   source:
     repoURL: ${ARGOCD_REPO_URL}
     targetRevision: ${ARGOCD_REPO_REF}
-    path: deploy/argocd/apps/${ARGOCD_ENV}
+    path: deploy/argocd/apps
     directory:
       recurse: false
   destination:

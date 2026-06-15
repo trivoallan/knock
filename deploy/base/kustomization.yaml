@@ -1,8 +1,9 @@
 # houba reference deployment — runtime-neutral core.
 #
-# This base is identical across the lite demo, the full demo, and the prod
-# blueprint; overlays change ONLY the registry target, the secret source, the
-# image, the schedule, and whether the rebuild (buildkitd) add-on is present.
+# This base is identical across the Argo reference (make demo) and the local
+# escape hatch (make local); they change ONLY the registry target, the secret
+# source (ESO->OpenBao vs a plain Secret), the image, and whether the CronJob is
+# suspended (the buildkitd rebuild add-on is present in both).
 # That identity is what guarantees "the demo IS the blueprint" (no drift).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -31,9 +32,9 @@ configMapGenerator:
       # Overlays repoint these at the org's policy repo.
       - POLICY_REPO_URL=https://github.com/trivoallan/houba
       - POLICY_REPO_REF=main
-      - POLICY_DIR=/policies/current/docs/examples/busybox
-      # Repos the blast-radius consumer walks (matches the busybox example).
-      - BLAST_REPOS=demo/busybox
+      - POLICY_DIR=/policies/current/docs/examples/reference
+      # Repos the blast-radius consumer walks (the reference policy: copy + rebuild).
+      - BLAST_REPOS=demo/busybox demo/debian
       # Number of shards for the Indexed reconcile Job (= completions). Both
       # this value and jobTemplate.spec.completions must be bumped together per
       # overlay; base is 1 (identical to the former non-indexed behaviour).

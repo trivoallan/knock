@@ -22,35 +22,24 @@ deployment view per worked example (and the production blueprint):
   orchestrator + the `RunReport` contract), the pure **domain** (policy schema, planning pipeline,
   transform engine, provenance stamp), each **port** (`typing.Protocol` seam), and each **adapter**
   wired to its external system.
-- **Deployment — one view per worked example, plus the production blueprint.** The
-  [reference deployment](../superpowers/specs/2026-06-11-reference-deployment-design.md) — a kind
-  cluster running houba as a Kubernetes CronJob (git-sync'd policies, rootless `buildkitd` for the
-  rebuild path, a blast-radius consumer Job) — is rendered **once per example**, each scoped to the
-  kind overlay that runs it, so each diagram reads cleanly and carries its own overlay facts (rather
-  than one cramped view merging every overlay):
-  - **[busybox · copy](_export/structurizr-DeployBusybox.mmd)** and
-    **[redis · copy](_export/structurizr-DeployRedis.mmd)** — `local-lite`: the copy path into a
-    throwaway `registry:2` (plain HTTP), no `buildkitd`.
-  - **[pending-deletion · mark](_export/structurizr-DeployPendingDeletion.mmd)** — `local-lite` +
-    reaper: copy path with `deletionMode: mark`; an external reaper discovers the `pending-deletion`
-    referrers and owns the purge.
-  - **[timezone · rebuild](_export/structurizr-DeployTimezone.mmd)** — `local-transform`: the
-    rebuild path, self-contained: `buildkitd` + `registry:2`, no Harbor, no org config
-    (`setTimezone` fanned into `-eu`/`-us` variants).
-  - **[hardened · rebuild + Harbor](_export/structurizr-DeployHardened.mmd)** — `local-full`: the
-    rebuild path with org config: `buildkitd` runs `injectCA` + `rewritePackageSources`, the CA
-    bundle is mounted, and an `ExternalSecret` supplies the Harbor (TLS) push token.
-  - **[Production blueprint](_export/structurizr-DeployProd.mmd)** — `prod` overlay: the *same*
-    kustomize base on a real cluster (anti-drift: the demo IS the blueprint), with
-    `ExternalSecret`-sourced creds, the org policy repo, a pinned published image, the hourly
-    schedule, and the rebuild add-on present.
-  - **[ArgoCD App-of-Apps](_export/structurizr-DeployArgoCD.mmd)** — optional GitOps variant: the
-    prod root bootstraps the whole stack from git (ESO + KEDA + kube-prometheus-stack + OpenBao
-    operators, then houba + buildkitd). Not the blessed path — `kubectl apply -k` stays the default.
+- **Deployment — the reference (which is the demo), plus the local inner-loop overlay.** The
+  [reference deployment](../superpowers/specs/2026-06-15-single-argo-reference-deployment-design.md)
+  collapses to two views — the same kustomize base underlies both, so the demo IS the blueprint:
+  - **[Reference · Argo App-of-Apps](_export/structurizr-DeployReference.mmd)** — the single
+    reference, which on kind is the demo (`make demo`) and adopts unchanged to a real cluster: an
+    Argo App-of-Apps brings up ESO + OpenBao (wave 0) then houba + `buildkitd` (wave 1), reconciles
+    the reference policy (busybox copy + debian rebuild) git-sync'd from the policy repo, and pushes
+    to a `registry:2` applied out-of-band. KEDA + Prometheus autoscaling is an optional add-on
+    (`components/keda-buildkitd`), deliberately off this path.
+  - **[Local · inner-loop overlay](_export/structurizr-DeployLocal.mmd)** — the escape hatch
+    (`make local`, `kubectl apply -k overlays/local`): `buildkitd` + a throwaway `registry:2`, a
+    plain-secret roster, no operators. Reconciles the same reference policy and renders local,
+    uncommitted manifests.
 
   (Optionally a sharded Indexed Job swaps in for the CronJob for horizontal scale-out.) These views
-  track the [`deploy/` overlays](../../deploy/overlays) and the [`docs/examples/`](../examples)
-  policies — keep them in step when an overlay or example changes.
+  track the [`deploy/`](../../deploy) manifests and the
+  [`docs/examples/reference/`](../examples/reference) policy — keep them in step when a manifest or
+  the reference policy changes.
 
 This model is the **source of truth** for the context and landscape levels (kept in sync with the
 specs — see the [maintenance contract](#maintenance-contract)). The Container, Hexagon, and

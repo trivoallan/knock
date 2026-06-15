@@ -1,8 +1,8 @@
 # Smallest end-to-end example: mirror a few busybox tags into a local registry,
 # with derived moving-tag aliases. busybox is tiny, so the copy is fast.
 #
-#   uv run houba reconcile docs/examples --dry-run
-#   uv run houba reconcile docs/examples
+#   uv run houba reconcile docs/examples/reference/busybox --dry-run
+#   uv run houba reconcile docs/examples/reference/busybox
 #
 apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy

@@ -47,13 +47,13 @@ is anonymous, so we leave them out.)
 Plan first (no copies, no deletes):
 
 ```bash
-uv run houba reconcile docs/examples/busybox --dry-run
+uv run houba reconcile docs/examples/reference/busybox --dry-run
 ```
 
 Then for real:
 
 ```bash
-uv run houba reconcile docs/examples/busybox
+uv run houba reconcile docs/examples/reference/busybox
 # ✓ busybox  imported=12 updated=0 deleted=0 aliased=3 skipped=0
 # reconcile [apply] status=ok  imported=12 updated=0 deleted=0 aliased=3 skipped=0 failed_policies=0
 ```
@@ -61,8 +61,10 @@ uv run houba reconcile docs/examples/busybox
 also unfold it in the stdout recap. `HOUBA_LOG_FORMAT=json` switches both streams to JSON.)
 
 (`reconcile` takes a **directory** and discovers policies recursively — so
-`uv run houba reconcile docs/examples` would reconcile *both* busybox and redis.
-We point at the `busybox/` subdir here to keep the quick walkthrough fast and predictable.)
+`uv run houba reconcile docs/examples/reference` reconciles *both* the busybox copy **and**
+the debian-tz rebuild (the latter needs a BuildKit daemon). We point at the
+`reference/busybox` subdirectory here to keep the quick walkthrough fast, copy-only, and
+BuildKit-free.)
 
 ## 4. Look at what landed
 
@@ -107,7 +109,7 @@ Run `reconcile` again — nothing is re-copied, because each mirror artifact's r
 `base.digest` already matches the current source digest:
 
 ```bash
-uv run houba reconcile docs/examples/busybox
+uv run houba reconcile docs/examples/reference/busybox
 # ✓ busybox  imported=0 updated=0 deleted=0 aliased=3 skipped=12
 # reconcile [apply] status=ok  imported=0 updated=0 deleted=0 aliased=3 skipped=12 failed_policies=0
 #                                                                          (aliases are re-pointed every run)
@@ -123,27 +125,33 @@ docker rm -f houba-demo-registry
 
 ## The examples
 
-- **[`busybox/busybox.yml`](busybox/busybox.yml)** — the smallest, fastest case: select
-  `1.36.x`/`1.37.x`, alias `{major}.{minor}` + `latest`, mirror into `demo/busybox`. This
-  is the one the walkthrough above runs. Deployment:
-  [busybox · copy](../architecture/_export/structurizr-DeployBusybox.mmd).
+**[`reference/`](reference/)** is **the** policy the reference deployment reconciles — both
+`make demo` (the Argo App-of-Apps) and `make local` (the inner-loop overlay) run it — see the
+[Reference](../architecture/_export/structurizr-DeployReference.mmd) and
+[Local](../architecture/_export/structurizr-DeployLocal.mmd) deployment views. One reconcile
+demonstrates **copy *and* rebuild** in a single, self-contained pass (no Harbor, no org config):
+
+- **[`reference/busybox/`](reference/busybox/busybox.yml)** — the **copy path**: select
+  `1.36.x`/`1.37.x`, alias `{major}.{minor}` + `latest`, mirror into `demo/busybox`. The smallest,
+  fastest case, and the one the walkthrough above runs.
+- **[`reference/debian-tz/`](reference/debian-tz/debian-tz.yml)** — the **rebuild path, runnable
+  self-contained**: rebuild `debian:bookworm-slim` through `setTimezone` (the one built-in step that
+  needs no org config) and fan it into **`-eu` / `-us` variants** via the per-variant `suffix` (the
+  worked example of `variants`), stamped into `demo/debian`.
+
+The remaining examples are **standalone feature docs** — each is a `MirrorPolicy` demonstrating one
+capability, runnable on its own with `uv run houba …` (not part of the bundled demo):
+
 - **[`redis/redis.yml`](redis/redis.yml)** — semver selection over a real image (`7.2.x`),
   showing how aliases track the highest patch per minor (`7.2` → the latest `7.2.z`) and
   `latest` → the highest overall. Larger image, slower to copy:
-  `uv run houba reconcile docs/examples/redis`. Deployment:
-  [redis · copy](../architecture/_export/structurizr-DeployRedis.mmd).
-- **[`hardened/redis.yml`](hardened/redis.yml)** — the **rebuild path**: inject internal
-  CA certs + rewrite package sources to an internal mirror, then stamp the result. The
-  transform engine is implemented; running it needs a BuildKit daemon (`buildctl`) plus the
-  org's `HOUBA_TRANSFORM_CA_CERTS` / `HOUBA_TRANSFORM_PACKAGE_MIRRORS` config. Design:
+  `uv run houba reconcile docs/examples/redis`.
+- **[`hardened/redis.yml`](hardened/redis.yml)** — the **rebuild path with org hardening**: inject
+  internal CA certs (`injectCA`) + rewrite package sources to an internal mirror, then stamp the
+  result. The transform engine is implemented; running it needs a BuildKit daemon (`buildctl`) plus
+  the org's `HOUBA_TRANSFORM_CA_CERTS` / `HOUBA_TRANSFORM_PACKAGE_MIRRORS` config (which is why the
+  self-contained demo uses the simpler `setTimezone` rebuild instead). Design:
   [the transform/hardening spec](../superpowers/specs/2026-06-11-image-transform-hardening-design.md).
-  Deployment: [hardened · rebuild + Harbor](../architecture/_export/structurizr-DeployHardened.mmd).
-- **[`timezone/debian.yml`](timezone/debian.yml)** — the **rebuild path, runnable
-  self-contained** (no Harbor, no org config): rebuild `debian:bookworm-slim` through
-  `setTimezone` and fan it into **`-eu` / `-us` variants** via the per-variant
-  `suffix` (the first worked example of `variants`). Run it end-to-end in kind with
-  `make demo-transform` — see the [`local-transform` overlay](../../deploy/overlays/local-transform).
-  Deployment: [timezone · rebuild](../architecture/_export/structurizr-DeployTimezone.mmd).
 - **[`attested/redis.yml`](attested/redis.yml)** — the **rebuild path, signed**: the same
   hardening rebuild as `hardened/`, but with attestation enabled so the output carries two
   in-toto attestations — BuildKit's `slsa.dev/provenance/v1` and houba's
@@ -156,8 +164,7 @@ docker rm -f houba-demo-registry
 - **[`pending-deletion/pending-deletion.yml`](pending-deletion/pending-deletion.yml)** —
   `deletionMode: mark`: when a tag drops out of the selection, houba attaches a
   `pending-deletion` OCI referrer instead of deleting it. See
-  [Pending-deletion (delegated deletion)](#pending-deletion-delegated-deletion) below. Deployment:
-  [pending-deletion · mark](../architecture/_export/structurizr-DeployPendingDeletion.mmd).
+  [Pending-deletion (delegated deletion)](#pending-deletion-delegated-deletion) below.
 - **[`retention/redis.yml`](retention/redis.yml)** — **retention-driven soft-delete**: cap
   *valid, in-selection* tags with `archive: {keep, olderThanDays}`. houba keeps the N most-recently
   imported tags of each stream and marks the older surplus `pending-deletion`

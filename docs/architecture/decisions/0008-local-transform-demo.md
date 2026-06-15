@@ -4,9 +4,10 @@ Date: 2026-06-12
 
 ## Status
 
-Accepted
+Superseded by [23. Single Argo reference deployment that is the demo](0023-single-argo-reference-deployment.md)
+— the three local demo tiers collapse to one `overlays/local`.
 
-Builds on [2. Image transform / hardening — the rebuild path](0002-image-transform-hardening.md)
+Originally accepted; builds on [2. Image transform / hardening — the rebuild path](0002-image-transform-hardening.md)
 Extends [4. Reference deployment (kind)](0004-reference-deployment.md)
 
 ## Context

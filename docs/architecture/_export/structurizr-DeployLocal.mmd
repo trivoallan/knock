@@ -1,0 +1,64 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Deployment View: houba - Local — inner-loop overlay (make local)"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 182 ["Operator host"]
+      style 182 fill:#ffffff,stroke:#444444,color:#ffffff
+
+      183("<div style='font-weight: bold'>Policy repo</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git / GitOps]</div><div style='font-size: 80%; margin-top:10px'>docs/examples/reference —<br />busybox copy + debian rebuild<br />(git-sync'd)</div>")
+      style 183 fill:#8a94a0,stroke:#606770,color:#ffffff
+      subgraph 184 ["kind cluster"]
+        style 184 fill:#ffffff,stroke:#444444,color:#ffffff
+
+        subgraph 185 ["namespace: houba"]
+          style 185 fill:#ffffff,stroke:#444444,color:#ffffff
+
+          subgraph 186 ["CronJob: houba-reconcile"]
+            style 186 fill:#ffffff,stroke:#444444,color:#ffffff
+
+            187("<div style='font-weight: bold'>houba CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
+            style 187 fill:#2563c9,stroke:#19458c,color:#ffffff
+            188("<div style='font-weight: bold'>git-sync sidecar</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git-sync]</div><div style='font-size: 80%; margin-top:10px'>Clones the policy repo into<br />/policies</div>")
+            style 188 fill:#8a94a0,stroke:#606770,color:#ffffff
+          end
+
+          subgraph 189 ["Deployment: buildkitd"]
+            style 189 fill:#ffffff,stroke:#444444,color:#ffffff
+
+            190("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
+            style 190 fill:#69707a,stroke:#494e55,color:#ffffff
+          end
+
+          192("<div style='font-weight: bold'>Secret: houba-registries</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Secret]</div><div style='font-size: 80%; margin-top:10px'>Plain secret roster (no<br />operators) — the inner-loop<br />escape hatch</div>")
+          style 192 fill:#8a94a0,stroke:#606770,color:#ffffff
+          193("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>BLAST_REPOS=demo/busybox<br />demo/debian</div>")
+          style 193 fill:#8a94a0,stroke:#606770,color:#ffffff
+        end
+
+        subgraph 194 ["namespace: registry"]
+          style 194 fill:#ffffff,stroke:#444444,color:#ffffff
+
+          195("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
+          style 195 fill:#69707a,stroke:#494e55,color:#ffffff
+        end
+
+      end
+
+    end
+
+    subgraph 197 ["Internet"]
+      style 197 fill:#ffffff,stroke:#444444,color:#ffffff
+
+      198("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
+      style 198 fill:#69707a,stroke:#494e55,color:#ffffff
+    end
+
+    187-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->190
+    187-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->195
+    187-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->198
+    188-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->183
+    193-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl]</div>" .->195
+
+  end

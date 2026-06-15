@@ -24,7 +24,7 @@ graph LR
     style 52 fill:#0f766e,stroke:#0a524d,color:#ffffff
     53("<div style='font-weight: bold'>Upstream Scanner</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces vulnerability / EOL<br />scan reports (CI pipeline,<br />registry-native scanner, or<br />scan service). houba ingests<br />the report; it never calls<br />the scanner.</div>")
     style 53 fill:#69707a,stroke:#494e55,color:#ffffff
-    54("<div style='font-weight: bold'>ArgoCD</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Optional GitOps controller<br />(App-of-Apps variant): syncs<br />the houba install manifests<br />from git into the cluster.<br />Not the blessed path —<br />kubectl apply -k stays the<br />default.</div>")
+    54("<div style='font-weight: bold'>ArgoCD</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>GitOps controller: the<br />App-of-Apps that syncs the<br />houba install from git. This<br />IS the reference deployment —<br />and the demo on kind. The<br />kubectl apply -k<br />overlays/local path is the<br />inner-loop escape hatch, not<br />a separate blueprint.</div>")
     style 54 fill:#69707a,stroke:#494e55,color:#ffffff
 
     1-. "<div>Configures the hardening<br />policy + registry roster,<br />runs / schedules reconcile</div><div style='font-size: 70%'>[CLI]</div>" .->4
@@ -37,6 +37,6 @@ graph LR
     4-. "<div>Signs in-toto attestations<br />(DSSE)</div><div style='font-size: 70%'>[cosign]</div>" .->51
     4-. "<div>Records the signature<br />(optional; blank => skipped)</div><div style='font-size: 70%'>[cosign / rekor]</div>" .->52
     53-. "<div>Produces scan reports<br />ingested by</div><div style='font-size: 70%'>[SARIF / file]</div>" .->4
-    54-. "<div>Syncs the install manifests<br />into the cluster (App-of-Apps<br />variant)</div><div style='font-size: 70%'>[GitOps]</div>" .->4
+    54-. "<div>Syncs the install manifests<br />from git into the cluster<br />(App-of-Apps reference)</div><div style='font-size: 70%'>[GitOps]</div>" .->4
 
   end

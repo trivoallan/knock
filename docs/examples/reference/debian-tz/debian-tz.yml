@@ -2,9 +2,9 @@
 # through the transform engine and fan ONE source tag into two regional variants via
 # the per-variant `suffix`. setTimezone is the only built-in step needing no org config.
 #
-# In-cluster:  make demo-transform
+# In-cluster:  make demo / make local (the debian-tz half of the reference policy)
 # Locally (needs a BuildKit daemon on PATH):
-#   uv run houba reconcile docs/examples/timezone
+#   uv run houba reconcile docs/examples/reference/debian-tz
 #
 apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy

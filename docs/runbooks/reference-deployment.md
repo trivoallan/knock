@@ -1,8 +1,16 @@
 # Runbook — the reference deployment
 
 The blessed way to run houba: a Kubernetes **CronJob** that `houba reconcile`s a
-git-sync'd policy repo, on a kind cluster locally and in a real cluster in prod — the
-*same* manifests (`deploy/`), so the demo **is** the blueprint. Design rationale:
+git-sync'd policy repo. There are **two** entry points, and they share the same `deploy/base`:
+
+- **`deploy/argocd/`** — the single **reference**. An Argo **App-of-Apps** that is *both* the
+  production blueprint *and* the kind demo (no demo/prod split). Run it on kind with `make demo`.
+- **`deploy/overlays/local`** — the **inner-loop escape hatch**: a plain `kubectl apply -k`
+  overlay (no Argo, no operators) that renders your **local, uncommitted** manifests. Run it with
+  `make local`.
+
+The Argo reference reads its children **from git**, so it reflects what is *pushed*; `make local`
+is what you reach for to iterate on a local branch. Design rationale:
 [the spec](../superpowers/specs/2026-06-11-reference-deployment-design.md) and the C4
 [Deployment view](../architecture/workspace.dsl).
 
@@ -10,9 +18,10 @@ git-sync'd policy repo, on a kind cluster locally and in a real cluster in prod 
 deploy/
   base/                       CronJob(houba) + git-sync + blast-radius Job + config
   components/buildkitd/       rebuild-path add-on (rootless buildkitd + NetworkPolicy)
-  overlays/local-lite/        kind: registry:2, copy path        ← fast demo
-  overlays/local-full/        kind: Harbor + rebuild path        ← realistic demo
-  overlays/prod/              real registry, ExternalSecret      ← copy into your cluster
+  components/keda-buildkitd/  OPTIONAL buildkitd autoscaling (KEDA + Prometheus)
+  argocd/                     App-of-Apps reference: ESO + OpenBao (wave 0),     ← make demo
+                              houba + buildkitd (wave 1); registry:2 out-of-band
+  overlays/local/             kind: base + buildkitd + registry:2, no operators  ← make local
 ```
 
 ## Prerequisites
@@ -20,155 +29,105 @@ deploy/
 - `docker`, `kind`, `kubectl` on PATH.
 - The houba image must bundle `regctl` + `buildctl` (the runtime `Dockerfile` does).
 
-## Lite demo (copy path) — the 5-minute loop
+## The reference — `make demo` (Argo App-of-Apps)
 
 ```sh
-make demo-lite        # create kind cluster, build+load houba:dev, apply, reconcile, report
-```
-
-What it does: stands up an in-cluster `registry:2`, fires a one-shot reconcile of
-[`docs/examples/busybox`](../examples/busybox) (git-sync'd from this repo), then runs the
-blast-radius consumer. Re-run pieces individually:
-
-```sh
-make demo-lite-run    # another reconcile (idempotent — unchanged tags are skipped)
+make demo             # kind up → install argo-cd → apply root → sync from git → seed OpenBao
+                      #   → registry:2 out-of-band → reconcile → report
+make demo-run         # another one-shot reconcile from the synced CronJob
 make blast-radius     # re-read the stamp and print blast radius
 make logs             # tail the reconcile logs
 make down             # tear down the cluster
 ```
 
-Expect the blast-radius report to list the mirrored busybox artifacts grouped by
-`base.digest` and by `owner.team`, and to flag any artifact carrying no stamp as a
-**coverage gap** (run `make blast-radius` *before* the first reconcile to see the gap,
-then again after to see it close — coverage gates the value).
+`make demo` brings up the **whole reference stack on kind and reconciles the reference policy
+end-to-end**:
 
-## Full demo (rebuild path + Harbor)
-
-Heavier — see [`overlays/local-full/README.md`](../../deploy/overlays/local-full/README.md)
-for the Harbor install, the `hardened` project + `robot$houba` token, and the (demo) CA.
-Then:
-
-```sh
-make up-full
-make demo-full-run    # rebuild redis through injectCA + rewritePackageSources, push, stamp
-make blast-radius
-```
-
-## Production — copy the `prod` overlay
-
-`overlays/prod` is the blueprint. To adopt:
-
-1. Repoint `POLICY_REPO_URL` at **your** policy repo. A merged PR there is the front
-   door; git-sync brings it into the pod each run.
-2. Wire secrets: the [`ExternalSecret`](../../deploy/overlays/prod/externalsecret.yaml)
-   pulls `HOUBA_REGISTRIES` (host + robot token) from your backend via the External
-   Secrets Operator. Sealed Secrets is a drop-in alternative. **Never commit the roster
-   with credentials.**
-3. Set the published image tag (`images:` in the overlay kustomization).
-4. The CronJob runs hourly (no `suspend`); adjust `schedule` as needed.
-
-```sh
-kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/overlays/prod | kubectl apply -f -
-```
-
-> The `--load-restrictor` flag is needed because the blast-radius `configMapGenerator`
-> references the canonical `scripts/blast-radius.sh` (kept outside `deploy/` so it is also
-> runnable standalone against the examples). `kubectl apply -k` cannot pass the flag, so
-> render-then-apply.
-
-## ArgoCD variant (App-of-Apps) — optional
-
-A GitOps **variant** for teams already running ArgoCD. It is **not** the blessed path —
-`kubectl apply -k` above stays the default. Manifests live in `deploy/argocd/`:
-
-```
-deploy/argocd/
-  root.yaml            the app-of-apps (parameterized: ARGOCD_REPO_URL / _REF / _ENV)
-  apps/demo/           registry + houba (copy path)            ← the kind demo
-  apps/prod/           eso + keda + prometheus + openbao (operators, wave 0)
-                       + houba + buildkitd (consumers, wave 1) ← bootstraps the whole stack
-  sources/             à-la-carte kustomize (base + components/*, no copies)
-```
-
-The prod root bootstraps the **entire** stack from git: the External Secrets Operator,
-KEDA, kube-prometheus-stack, and OpenBao (the secret backend) as sync-wave-0 Helm children,
-then houba + buildkitd as wave-1 consumers. The only thing not in git is the real credential
-*values* (seeded into OpenBao out-of-band).
-
-### Kind demo (copy path)
-
-```sh
-make demo-argocd      # kind up → install argo-cd → apply root → sync from git → reconcile → report
-make demo-argocd-run  # another one-shot reconcile from the synced CronJob
-make down             # tear down
-```
-
-`make` applies **only** `root.yaml`; ArgoCD pulls the `registry` + `houba` children from
-git and syncs them. The demo installs argo-cd and patches `argocd-cm` with
-`kustomize.buildOptions: --load-restrictor LoadRestrictionsNone` (a global build option,
-required because `base` references `scripts/blast-radius.sh` outside `deploy/`; ArgoCD has no
-per-Application equivalent).
-
-> **Branch ceiling.** ArgoCD reads the child Applications **from git**, so the demo reflects
-> what is *pushed*, not local edits. To demo your branch, push it to your fork and run
-> `ARGOCD_REPO_URL=https://github.com/you/houba ARGOCD_REPO_REF=your-branch make demo-argocd`.
-
-### Kind: bring up the full prod stack
-
-```sh
-make argocd-prod      # kind + argo-cd, then sync the `prod` apps set and seed dev OpenBao
-make argocd-seed      # (re)seed OpenBao on its own, once the pod is Running
-```
-
-`argocd-prod` brings up the **whole prod stack on kind and mirrors busybox end-to-end**:
-
-1. applies the prod App-of-Apps (ESO + KEDA + kube-prometheus-stack + OpenBao operators, then
-   houba + buildkitd);
-2. seeds the dev OpenBao so ESO materializes `houba-registries`;
-3. deploys `registry:2` out-of-band (the push destination the `prod` apps set omits — it matches
+1. applies the App-of-Apps root (`deploy/argocd/root.yaml`); ArgoCD then pulls the four child
+   Applications from git and syncs them — **ESO + OpenBao** in sync wave 0, then **houba +
+   buildkitd** in wave 1;
+2. seeds the dev OpenBao so ESO materializes the `houba-registries` Secret;
+3. deploys `registry:2` **out-of-band** (the push destination the Argo apps set omits — it matches
    the seeded roster host `registry.houba.svc.cluster.local:5000`);
 4. waits for the secret + CronJob, fires a one-shot reconcile, and runs blast-radius.
 
-The policy front door defaults to the bundled **busybox example**
-(`POLICY_DIR=…/docs/examples/busybox`, git-sync'd from this repo) and the image defaults to the
-locally-built `houba:dev`, so it runs the current code against a real policy with no edits.
+The policy front door defaults to the bundled **reference example**
+(`docs/examples/reference`, git-sync'd from this repo), which carries **both** a copy entry
+(busybox → `demo/busybox`) **and** a rebuild entry (debian-tz → `demo/debian`), so one reconcile
+exercises the copy path *and* the rebuild/stamp path. The image defaults to the locally-built
+`houba:dev`, so it runs the current code against a real policy with no edits.
 
-> **Demo vs. real prod.** Three things are kind-demo defaults you replace when adopting: the
-> image (`houba:dev` → your pinned published image), the policy repo (`sources/houba-prod`'s
-> `POLICY_REPO_URL` → your org repo), and the registry (this throwaway `registry:2` → your
-> registry, seeded into OpenBao). OpenBao itself runs in **dev mode** — harden it or repoint the
-> `ClusterSecretStore`. The bootstrap mechanics (App-of-Apps, sync waves, the ESO→OpenBao secret
-> path) are identical to real prod.
+`make` applies **only** `root.yaml`; ArgoCD pulls the children from git and syncs them. It also
+installs argo-cd and patches `argocd-cm` with
+`kustomize.buildOptions: --load-restrictor LoadRestrictionsNone` (a global build option, required
+because `base` references `scripts/blast-radius.sh` outside `deploy/`; ArgoCD has no per-Application
+equivalent).
 
-### Production
+Expect the blast-radius report to list the mirrored `demo/busybox` + `demo/debian` artifacts grouped
+by `base.digest` and by `owner.team`, and to flag any artifact carrying no stamp as a
+**coverage gap** (run `make blast-radius` *before* the first reconcile to see the gap, then again
+after to see it close — coverage gates the value).
 
-`apps/prod/` is the blueprint. To adopt:
+> **Branch ceiling.** ArgoCD reads the child Applications **from git**, so the demo reflects what is
+> *pushed*, not local edits. To demo your branch, push it to your fork and run
+> `ARGOCD_REPO_URL=https://github.com/you/houba ARGOCD_REPO_REF=your-branch make demo`. To iterate on
+> **uncommitted** changes, use `make local` instead.
 
-1. Copy `root.yaml`, hardcode your `repoURL` / `targetRevision`, set `ARGOCD_ENV=prod`,
-   `kubectl apply` it. ArgoCD brings up the four platform operators then houba + buildkitd.
-2. Point `sources/houba-prod` at **your** policy repo (the `POLICY_REPO_URL` config) and
-   pinned image.
-3. **Secrets:** the prod root bootstraps OpenBao in **dev mode** (kind-demoable only). The two
+## The inner-loop escape hatch — `make local` (`kubectl apply -k`)
+
+```sh
+make local            # kind up → build+load houba:dev → apply overlays/local → reconcile → report
+make local-run        # another one-shot reconcile (idempotent — unchanged tags are skipped)
+```
+
+`make local` renders **`deploy/overlays/local`** — `base` + the buildkitd component + a
+plain-secret registry roster + a throwaway `registry:2`, with the CronJob suspended and fired on
+demand. It uses **no operators** (no ESO, no OpenBao) and renders your **local, uncommitted**
+manifests, so it is the fast path for iterating on a branch. It reconciles the same reference
+policy (copy + rebuild) as `make demo`.
+
+> `make local` renders with `kubectl kustomize --load-restrictor LoadRestrictionsNone` (then
+> `apply -f -`) because the blast-radius `configMapGenerator` references the canonical
+> `scripts/blast-radius.sh`, kept outside `deploy/` so it is also runnable standalone against the
+> examples. `kubectl apply -k` cannot pass the flag, so render-then-apply.
+
+## Adopting it in real prod
+
+`deploy/argocd/` is the blueprint as well as the demo. To adopt:
+
+1. Copy `root.yaml`, hardcode your `repoURL` / `targetRevision`, `kubectl apply` it. ArgoCD brings
+   up ESO + OpenBao, then houba + buildkitd.
+2. Point `sources/houba` at **your** policy repo (the `POLICY_REPO_URL` config) and your pinned,
+   published image (`houba:dev` → your tag). A merged PR in that repo is the front door; git-sync
+   brings it into the pod each run.
+3. **Secrets:** the reference bootstraps OpenBao in **dev mode** (kind-demoable only). The two
    demo-only glue steps below wire ESO to it (never committed — credential *values* stay out of
-   git); `make argocd-seed` runs exactly these:
+   git); `make openbao-seed` runs exactly these:
    ```sh
    # (a) the token ESO authenticates with — dev root token is "root"
    kubectl -n openbao create secret generic openbao-token --from-literal=token=root
    # (b) seed the registry roster ESO will materialize (placeholder for the demo).
-   #     Select the pod by label (the chart's server is a StatefulSet, not a Deployment).
+   #     Select the OpenBao server pod by name (the chart's server is a StatefulSet, openbao-0).
    kubectl -n openbao exec -i \
-     "$(kubectl -n openbao get pod -l app.kubernetes.io/name=openbao -o jsonpath='{.items[0].metadata.name}')" -- \
+     "$(kubectl -n openbao get pod -o name | grep -E 'openbao-[0-9]+$' | head -1)" -- \
      sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/houba/registries HOUBA_REGISTRIES='"'"'{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'"'"''
    ```
    For real prod, harden OpenBao (seal/unseal + Kubernetes auth, dropping the static token) or
-   repoint the `ClusterSecretStore` (`sources/houba-prod/clustersecretstore.yaml`) at your
-   existing OpenBao / Vault / cloud SM, and write the real registry token the same way.
-4. **Prometheus** is bootstrapped (kube-prometheus-stack), so KEDA autoscaling is
-   self-contained — no external monitoring stack required.
+   repoint the `ClusterSecretStore` (`sources/houba/clustersecretstore.yaml`) at your existing
+   OpenBao / Vault / cloud SM, and write the real registry token the same way. Sealed Secrets is a
+   drop-in alternative. **Never commit the roster with credentials.**
+4. Use **your** registry, not the throwaway `registry:2` the demo deploys out-of-band.
 
-> Each operator ships large CRDs; the children use `ServerSideApply=true`. Sync waves order
-> the install (operators' CRDs before the `ExternalSecret` / `ScaledObject` / `ServiceMonitor`
-> that need them).
+> Each operator ships large CRDs; the children use `ServerSideApply=true`. Sync waves order the
+> install (the operators' CRDs before the `ExternalSecret` that needs them).
+
+## Optional: autoscaling
+
+The operator set above is the **thesis minimum** (ESO + OpenBao + buildkitd). Autoscaling
+`buildkitd` under build load is an **opt-in add-on**, off the default path: layer in the
+[`keda-buildkitd`](../../deploy/components/keda-buildkitd) component (KEDA + a Prometheus
+`ServiceMonitor`). See [buildkitd autoscaling](#buildkitd-autoscaling-optional) below for the
+prerequisites and tunables.
 
 ## Horizontal sharding (optional)
 
@@ -184,11 +143,12 @@ every policy in one pod, exactly as before.
 > Build throughput is capped by `buildkitd`. Scaling the build path means scaling buildkitd — the
 > opt-in autoscaling below does exactly that.
 
-## buildkitd autoscaling (optional, prod)
+## buildkitd autoscaling (optional)
 
-The `prod` overlay can autoscale `buildkitd` from a **warm floor of 1** to `K` replicas under build
-load, via the [`keda-buildkitd`](../../deploy/components/keda-buildkitd) component (already referenced
-by `overlays/prod`). Design: [ADR 0016](../architecture/decisions/0016-buildkitd-autoscaling.md) /
+The [`keda-buildkitd`](../../deploy/components/keda-buildkitd) component autoscales `buildkitd` from a
+**warm floor of 1** to `K` replicas under build load. It is an **opt-in add-on** — layer it into a
+deployment (it is **not** on the default path of either `make demo` or `make local`). Design:
+[ADR 0016](../architecture/decisions/0016-buildkitd-autoscaling.md) /
 [the autoscaling spec](../superpowers/specs/2026-06-12-buildkitd-autoscaling-design.md).
 
 **Cluster prerequisites** (documented, not installed by houba — same posture as the External Secrets
@@ -227,8 +187,8 @@ houba's no-retry first connection always lands).
   (buildkitd client certs) on top.
 - **houba needs no Kubernetes API access** — its ServiceAccount has token automounting
   off. It talks to registries, not the cluster.
-- **Secrets are referenced, never embedded.** The demo overlays carry placeholder/no-cred
-  rosters; prod uses ExternalSecret.
+- **Secrets are referenced, never embedded.** The `overlays/local` escape hatch carries a
+  placeholder/no-cred roster; the Argo reference uses an ExternalSecret (ESO → OpenBao).
 
 ## The consumption hook — plugging in a real scanner
 

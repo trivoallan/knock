@@ -1,12 +1,13 @@
-# 19. ArgoCD reference deployment (App-of-Apps variant)
+# 22. ArgoCD reference deployment (App-of-Apps variant)
 
 Date: 2026-06-15
 
 ## Status
 
-Accepted
+Superseded by [23. Single Argo reference deployment that is the demo](0023-single-argo-reference-deployment.md)
+— the App-of-Apps is now the single reference (no demo/prod split; thesis-minimum operators).
 
-Builds on [4. Reference deployment](0004-reference-deployment.md) and
+Originally accepted; builds on [4. Reference deployment](0004-reference-deployment.md) and
 [16. buildkitd autoscaling](0016-buildkitd-autoscaling.md).
 
 ## Context
