@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: houba
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    # ArgoCD auto-detects kustomize from kustomization.yaml. base references
+    # scripts/blast-radius.sh outside deploy/, so argocd-cm must carry
+    # `kustomize.buildOptions: --load-restrictor LoadRestrictionsNone` (the demo
+    # patches it; a documented prereq for prod). No per-Application equivalent exists.
+    repoURL: https://github.com/trivoallan/houba
+    targetRevision: main
+    path: deploy/argocd/sources/houba-demo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: houba
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
