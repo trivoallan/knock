@@ -433,6 +433,7 @@ def _apply_plan(
                         source_repository=plan.policy.spec.source.repository,
                         source_tag=w.src_tag,
                         source_digest=source[w.src_tag].digest,
+                        source_revision=source[w.src_tag].revision,
                         created=now,
                         team=(plan.policy.metadata.labels or {}).get("team"),
                         artifact_type=plan.policy.spec.artifact_type.value,

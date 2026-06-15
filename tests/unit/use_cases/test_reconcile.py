@@ -782,3 +782,50 @@ spec:
 def test_shard_count_one_processes_all() -> None:
     report = _run([POLICY, SECOND_POLICY], registry=_two_policy_registry())
     assert {p.name for p in report.policies} == {"redis", "nginx"}
+
+
+# --- Revision propagation tests --------------------------------------------------
+
+_OCI_REVISION = "org.opencontainers.image.revision"
+
+
+def test_stamp_propagates_upstream_revision() -> None:
+    # Source image declares .revision as a manifest annotation; the mirrored stamp carries it.
+    fake = FakeRegistryPort(
+        tags={
+            "docker.io/library/redis": ["7.2.0"],
+            "harbor.corp/lib/redis": [],
+        },
+        infos={
+            "docker.io/library/redis:7.2.0": ImageInfo(
+                digest="sha256:a",
+                created=CREATED,
+                annotations={_OCI_REVISION: "upstreamcommit"},
+            ),
+        },
+    )
+    _run([POLICY], registry=fake)
+    dest_anns = [ann for ref, ann in fake.annotated]
+    assert dest_anns
+    assert dest_anns[0][_OCI_REVISION] == "upstreamcommit"
+
+
+def test_stamp_omits_revision_when_source_has_none() -> None:
+    # Source declares no .revision (annotations={}, config_labels default {}).
+    fake = FakeRegistryPort(
+        tags={
+            "docker.io/library/redis": ["7.2.0"],
+            "harbor.corp/lib/redis": [],
+        },
+        infos={
+            "docker.io/library/redis:7.2.0": ImageInfo(
+                digest="sha256:a",
+                created=CREATED,
+                annotations={},
+            ),
+        },
+    )
+    _run([POLICY], registry=fake)
+    dest_anns = [ann for ref, ann in fake.annotated]
+    assert dest_anns
+    assert _OCI_REVISION not in dest_anns[0]

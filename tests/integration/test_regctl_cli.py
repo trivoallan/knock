@@ -344,9 +344,7 @@ def test_get_annotations_failure_raises_regctl_error(
         RegctlAdapter().get_annotations("harbor.example/lib/redis:7.2")
 
 
-def test_inspect_reads_config_labels(
-    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_inspect_reads_config_labels(fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "config-labels")
     info = RegctlAdapter().inspect("docker.io/library/redis:7.2.0")
     assert info.config_labels["org.opencontainers.image.revision"] == "9fceb02commit"
