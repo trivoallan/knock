@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: houba-buildkitd
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/trivoallan/houba
+    targetRevision: main
+    path: deploy/argocd/sources/buildkitd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: houba
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # ScaledObject/ServiceMonitor CRDs come from the wave-0 keda/prometheus apps.
+      - ServerSideApply=true

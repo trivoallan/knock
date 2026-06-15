@@ -88,6 +88,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         signingService = softwareSystem "Signing / Key service" "KMS or Fulcio (keyless CA) that houba's attestor uses to sign in-toto attestations (DSSE). Trust is org configuration, not baked in." "External"
         transparencyLog = softwareSystem "Transparency log (Rekor)" "Optional append-only signature log; blank in air-gapped orgs. houba can point at one but never deploys it." "External,Downstream"
         upstreamScanner = softwareSystem "Upstream Scanner" "Produces vulnerability / EOL scan reports (CI pipeline, registry-native scanner, or scan service). houba ingests the report; it never calls the scanner." "External"
+        argocd = softwareSystem "ArgoCD" "Optional GitOps controller (App-of-Apps variant): syncs the houba install manifests from git into the cluster. Not the blessed path — kubectl apply -k stays the default." "External"
 
         platformEng -> houba "Configures the hardening policy + registry roster, runs / schedules reconcile" "CLI"
         productTeam -> houba "Declares its imports as MirrorPolicy files" "YAML"
@@ -103,6 +104,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         houba -> signingService "Signs in-toto attestations (DSSE)" "cosign"
         houba -> transparencyLog "Records the signature (optional; blank => skipped)" "cosign / rekor"
         upstreamScanner -> houba "Produces scan reports ingested by" "SARIF / file"
+        argocd -> houba "Syncs the install manifests into the cluster (App-of-Apps variant)" "GitOps"
 
         # Component-level relationships — the source of truth for the Component view.
         # Structurizr implies the container/system-level edges for the views above
@@ -367,6 +369,57 @@ workspace "houba" "Single front door / stamper for external container images." {
             prKeda -> prProm "Queries active builds (PromQL)" "PromQL" "DataCoupling"
             prKeda -> prBuild "Scales the Deployment 1→K" "ScaledObject"
         }
+
+        # ── ArgoCD App-of-Apps variant — the prod root bootstraps the WHOLE stack from git:
+        #    ESO + KEDA + kube-prometheus-stack + OpenBao (wave 0), then houba + buildkitd
+        #    (wave 1). Same base manifests as every other deployment (anti-drift).
+        argoEnv = deploymentEnvironment "ArgoCD App-of-Apps (prod variant)" {
+            deploymentNode "Git host" "github.com/trivoallan/houba (or a fork) — deploy/argocd/" "Git server" {
+                agRepo = infrastructureNode "Manifests repo" "root.yaml + apps/prod + sources/* — a merged PR is the front door" "git / GitOps"
+                agPolicyRepo = infrastructureNode "Policy repo (org)" "POLICY_REPO_URL — the front door for MirrorPolicy files; git-sync clones it. ArgoCD never touches policies." "git / GitOps"
+            }
+            deploymentNode "Kubernetes cluster" "kind (demo) or a real cluster — same base manifests (anti-drift)" "Kubernetes" {
+                deploymentNode "namespace: argocd" "ArgoCD controller" "Namespace" {
+                    agRoot = infrastructureNode "Application: houba-root" "App-of-Apps; syncs the apps/prod children from git" "ArgoCD"
+                    agArgo = softwareSystemInstance argocd
+                }
+                deploymentNode "namespace: houba" "houba workloads (wave 1)" "Namespace" {
+                    deploymentNode "CronJob: houba-reconcile" "BUILDKIT_HOST wired via config (no CronJob patch). Image ghcr.io/trivoallan/houba" "Kubernetes CronJob" {
+                        agHouba = containerInstance houbaCli
+                        agGit = infrastructureNode "git-sync sidecar" "Clones the org policy repo into /policies" "git-sync"
+                    }
+                    deploymentNode "Deployment: buildkitd (own app)" "Rebuild add-on + ScaledObject + ServiceMonitor — its own ArgoCD Application" "Kubernetes Deployment" {
+                        agBuild = softwareSystemInstance buildkit
+                    }
+                    agEsObj = infrastructureNode "ExternalSecret + ClusterSecretStore" "houba-secret-store → OpenBao (ESO vault provider)" "ExternalSecret"
+                }
+                deploymentNode "namespace: external-secrets" "ESO operator (wave 0)" "Namespace" {
+                    agEso = infrastructureNode "External Secrets Operator" "Helm child; materializes the registry roster Secret" "ESO"
+                }
+                deploymentNode "namespace: openbao" "Secret backend (wave 0)" "Namespace" {
+                    agBao = infrastructureNode "OpenBao" "Helm child (dev mode on kind); holds houba/registries" "OpenBao"
+                }
+                deploymentNode "namespace: keda" "KEDA operator (wave 0)" "Namespace" {
+                    agKeda = infrastructureNode "KEDA" "Helm child; scales buildkitd 1→K" "KEDA"
+                }
+                deploymentNode "namespace: monitoring" "Prometheus (wave 0)" "Namespace" {
+                    agProm = infrastructureNode "kube-prometheus-stack" "Helm child; scrapes buildkitd :6060, feeds KEDA" "Prometheus"
+                }
+            }
+            deploymentNode "Internet / org network" "External to the cluster" "Network" {
+                agSrc = softwareSystemInstance sourceRegistries
+                agDest = softwareSystemInstance destRegistries
+            }
+            agArgo -> agRepo "Pulls manifests (App-of-Apps)" "git" "DataCoupling"
+            agRoot -> agHouba "Syncs the houba install" "ArgoCD"
+            agRoot -> agBuild "Syncs the buildkitd app" "ArgoCD"
+            agEso -> agBao "Reads houba/registries" "vault API" "DataCoupling"
+            agEsObj -> agEso "Requests the roster Secret" "ESO"
+            agGit -> agPolicyRepo "Pulls policies" "git"
+            agProm -> agBuild "Scrapes the build metric" "HTTP :6060" "DataCoupling"
+            agKeda -> agProm "Queries active builds (PromQL)" "PromQL" "DataCoupling"
+            agKeda -> agBuild "Scales the Deployment 1→K" "ScaledObject"
+        }
     }
 
     views {
@@ -419,6 +472,10 @@ workspace "houba" "Single front door / stamper for external container images." {
             autolayout lr
         }
         deployment houba "Production blueprint (prod overlay)" "DeployProd" "The production blueprint: a real cluster running the same kustomize base, with ExternalSecret-sourced creds, the org policy repo, a pinned published image, hourly schedule, and the rebuild add-on." {
+            include *
+            autolayout lr
+        }
+        deployment houba "ArgoCD App-of-Apps (prod variant)" "DeployArgoCD" "Optional GitOps variant: an ArgoCD App-of-Apps root bootstraps the whole stack from git — ESO + KEDA + kube-prometheus-stack + OpenBao operators (wave 0), then houba + buildkitd (wave 1). Same base manifests as the overlays (anti-drift)." {
             include *
             autolayout lr
         }

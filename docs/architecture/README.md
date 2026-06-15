@@ -44,6 +44,9 @@ deployment view per worked example (and the production blueprint):
     kustomize base on a real cluster (anti-drift: the demo IS the blueprint), with
     `ExternalSecret`-sourced creds, the org policy repo, a pinned published image, the hourly
     schedule, and the rebuild add-on present.
+  - **[ArgoCD App-of-Apps](_export/structurizr-DeployArgoCD.mmd)** — optional GitOps variant: the
+    prod root bootstraps the whole stack from git (ESO + KEDA + kube-prometheus-stack + OpenBao
+    operators, then houba + buildkitd). Not the blessed path — `kubectl apply -k` stays the default.
 
   (Optionally a sharded Indexed Job swaps in for the CronJob for horizontal scale-out.) These views
   track the [`deploy/` overlays](../../deploy/overlays) and the [`docs/examples/`](../examples)

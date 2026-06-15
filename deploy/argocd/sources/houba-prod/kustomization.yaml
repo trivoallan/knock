@@ -1,0 +1,36 @@
+# Prod houba install for the ArgoCD variant. Composed à la carte from base (NOT from
+# overlays/prod, which bundles the buildkitd/keda components — here those are sibling
+# apps). Carries the prod image, the ESO ExternalSecret (reused from overlays/prod),
+# the ClusterSecretStore that points it at OpenBao, and BUILDKIT_HOST in config so the
+# buildkitd sibling app needs no CronJob patch.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: houba
+
+resources:
+  - ../../../base
+  - ../../../overlays/prod/externalsecret.yaml
+  - clustersecretstore.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+# Pinned, published image (same as overlays/prod).
+images:
+  - name: houba
+    newName: ghcr.io/trivoallan/houba
+    newTag: v0.2.0
+
+configMapGenerator:
+  - name: houba-config
+    behavior: merge
+    literals:
+      # Point houba's buildctl client at the buildkitd sibling app (the wiring the
+      # buildkitd kustomize component used to inject via a CronJob patch).
+      - BUILDKIT_HOST=tcp://buildkitd.houba.svc.cluster.local:1234
+      # Org policy repo (the front door). Replace with YOURS when adopting.
+      - POLICY_REPO_URL=https://gitlab.example.com/platform/houba-policies
+      - POLICY_REPO_REF=main
+      - POLICY_DIR=/policies/current
+      - BLAST_REPOS=mirror/busybox mirror/redis

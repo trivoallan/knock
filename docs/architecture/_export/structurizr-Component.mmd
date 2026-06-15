@@ -71,7 +71,7 @@ graph LR
 
           19("<div style='font-weight: bold'>policy schema</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pydantic]</div><div style='font-size: 80%; margin-top:10px'>MirrorPolicy model +<br />published JSON Schema.</div>")
           style 19 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
-          20("<div style='font-weight: bold'>planning pipeline</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Tag selection, aliases,<br />semver, variants, expand,<br />reconcile plan, collision,<br />sharding.</div>")
+          20("<div style='font-weight: bold'>planning pipeline</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Tag selection, aliases,<br />semver, variants, expand,<br />reconcile plan, collision,<br />sharding, retention.</div>")
           style 20 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
           21("<div style='font-weight: bold'>transform engine</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Pluggable transform-step<br />vocabulary: base, steps,<br />registry, render, version.</div>")
           style 21 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
@@ -125,6 +125,8 @@ graph LR
 
     end
 
+    12-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->34
+    12-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->35
     12-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->36
     13-. "<div>Parses MirrorPolicy</div><div style='font-size: 70%'>[Pydantic]</div>" .->19
     14-. "<div>Builds the RunReport</div><div style='font-size: 70%'>[Python]</div>" .->18
@@ -180,7 +182,5 @@ graph LR
     12-. "<div>Reads HOUBA_* settings</div><div style='font-size: 70%'>[Pydantic Settings]</div>" .->38
     12-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->32
     12-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->33
-    12-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->34
-    12-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->35
 
   end

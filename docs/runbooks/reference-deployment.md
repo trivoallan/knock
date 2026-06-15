@@ -76,6 +76,71 @@ kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/overlays/prod | 
 > runnable standalone against the examples). `kubectl apply -k` cannot pass the flag, so
 > render-then-apply.
 
+## ArgoCD variant (App-of-Apps) — optional
+
+A GitOps **variant** for teams already running ArgoCD. It is **not** the blessed path —
+`kubectl apply -k` above stays the default. Manifests live in `deploy/argocd/`:
+
+```
+deploy/argocd/
+  root.yaml            the app-of-apps (parameterized: ARGOCD_REPO_URL / _REF / _ENV)
+  apps/demo/           registry + houba (copy path)            ← the kind demo
+  apps/prod/           eso + keda + prometheus + openbao (operators, wave 0)
+                       + houba + buildkitd (consumers, wave 1) ← bootstraps the whole stack
+  sources/             à-la-carte kustomize (base + components/*, no copies)
+```
+
+The prod root bootstraps the **entire** stack from git: the External Secrets Operator,
+KEDA, kube-prometheus-stack, and OpenBao (the secret backend) as sync-wave-0 Helm children,
+then houba + buildkitd as wave-1 consumers. The only thing not in git is the real credential
+*values* (seeded into OpenBao out-of-band).
+
+### Kind demo (copy path)
+
+```sh
+make demo-argocd      # kind up → install argo-cd → apply root → sync from git → reconcile → report
+make demo-argocd-run  # another one-shot reconcile from the synced CronJob
+make down             # tear down
+```
+
+`make` applies **only** `root.yaml`; ArgoCD pulls the `registry` + `houba` children from
+git and syncs them. The demo installs argo-cd and patches `argocd-cm` with
+`kustomize.buildOptions: --load-restrictor LoadRestrictionsNone` (a global build option,
+required because `base` references `scripts/blast-radius.sh` outside `deploy/`; ArgoCD has no
+per-Application equivalent).
+
+> **Branch ceiling.** ArgoCD reads the child Applications **from git**, so the demo reflects
+> what is *pushed*, not local edits. To demo your branch, push it to your fork and run
+> `ARGOCD_REPO_URL=https://github.com/you/houba ARGOCD_REPO_REF=your-branch make demo-argocd`.
+
+### Production
+
+`apps/prod/` is the blueprint. To adopt:
+
+1. Copy `root.yaml`, hardcode your `repoURL` / `targetRevision`, set `ARGOCD_ENV=prod`,
+   `kubectl apply` it. ArgoCD brings up the four platform operators then houba + buildkitd.
+2. Point `sources/houba-prod` at **your** policy repo (the `POLICY_REPO_URL` config) and
+   pinned image.
+3. **Secrets:** the prod root bootstraps OpenBao in **dev mode** (kind-demoable only). Two
+   demo-only glue steps wire ESO to it (never committed — credential *values* stay out of git):
+   ```sh
+   # (a) the token ESO authenticates with — dev root token is "root"
+   kubectl -n openbao create secret generic openbao-token --from-literal=token=root
+   # (b) seed the registry roster ESO will materialize (placeholder for the demo)
+   kubectl -n openbao exec -i deploy/openbao -- \
+     bao kv put secret/houba/registries \
+     HOUBA_REGISTRIES='{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'
+   ```
+   For real prod, harden OpenBao (seal/unseal + Kubernetes auth, dropping the static token) or
+   repoint the `ClusterSecretStore` (`sources/houba-prod/clustersecretstore.yaml`) at your
+   existing OpenBao / Vault / cloud SM, and write the real registry token the same way.
+4. **Prometheus** is bootstrapped (kube-prometheus-stack), so KEDA autoscaling is
+   self-contained — no external monitoring stack required.
+
+> Each operator ships large CRDs; the children use `ServerSideApply=true`. Sync waves order
+> the install (operators' CRDs before the `ExternalSecret` / `ScaledObject` / `ServiceMonitor`
+> that need them).
+
 ## Horizontal sharding (optional)
 
 houba scales out by **policy ownership**: each pod reconciles a disjoint subset of policies, so no two
