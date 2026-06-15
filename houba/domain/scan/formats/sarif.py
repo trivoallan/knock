@@ -6,10 +6,9 @@ import json
 from typing import Any
 
 from houba.domain.scan.formats.base import ScanFormatMapper
+from houba.domain.scan.summary import SEVERITY_VALUES as _BUCKETS
 from houba.domain.scan.summary import ScanSummary
 from houba.errors import ScanReportError
-
-_BUCKETS = ("critical", "high", "medium", "low", "unknown")
 
 
 def _to_float(value: Any) -> float | None:
