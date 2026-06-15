@@ -122,14 +122,16 @@ make argocd-seed      # (re)seed OpenBao on its own, once the pod is Running
 
 `argocd-prod` applies the **prod** App-of-Apps and brings up all four platform operators
 (ESO + KEDA + kube-prometheus-stack + OpenBao) then houba + buildkitd, and seeds the dev
-OpenBao so ESO can resolve `houba-registries`.
+OpenBao so ESO can resolve `houba-registries`. The policy front door defaults to the bundled
+**busybox example** (`POLICY_DIR=…/docs/examples/busybox`, git-sync'd from this repo), so houba
+reconciles a real policy out of the box.
 
-> **What this shows — and doesn't.** It demonstrates the GitOps **bootstrap** (the whole
-> stack, secret path included, coming up from git). It is **not** a live mirror on kind: the
-> `prod` source targets org placeholders — `POLICY_REPO_URL=gitlab.example.com`, the published
-> `ghcr.io/trivoallan/houba` image, and a seeded roster pointing at an in-cluster registry the
-> `prod` apps set does not deploy. Point `sources/houba-prod` at your policy repo + registry
-> (next section) for a working reconcile.
+> **What this shows — and doesn't.** It demonstrates the GitOps **bootstrap** (the whole stack,
+> secret path and a real git-sync'd policy included, coming up from git). It is **not** a
+> completed mirror on kind: the seeded roster points at an in-cluster registry the `prod` apps
+> set does not deploy (and the image is the published `ghcr.io/trivoallan/houba`), so the push
+> step has nowhere to land. Point the roster at your registry — or sync the demo `registry` app
+> alongside — for a working reconcile.
 
 ### Production
 

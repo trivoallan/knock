@@ -118,11 +118,12 @@ argocd-prod: cluster image argocd ## Bring up the FULL prod App-of-Apps on kind 
 	done
 	-$(MAKE) argocd-seed
 	@echo ">> Done. Watch the rollout with:  kubectl get applications -n argocd"
-	@echo ">> NOTE: the prod source targets org placeholders (POLICY_REPO_URL=gitlab.example.com, image"
-	@echo ">>       ghcr.io/trivoallan/houba, and the seeded roster points at an in-cluster registry the prod"
-	@echo ">>       apps set does NOT deploy). This target demonstrates the GitOps BOOTSTRAP (operators +"
-	@echo ">>       ESO->OpenBao secret path), not a live mirror. Point sources/houba-prod at your policy repo"
-	@echo ">>       + registry for a working reconcile. See docs/runbooks/reference-deployment.md."
+	@echo ">> NOTE: the policy front door defaults to the bundled busybox example (git-sync'd from this repo),"
+	@echo ">>       so houba reconciles a REAL policy. The remaining gap for a live mirror is a destination"
+	@echo ">>       registry: the prod apps set deploys none, and the seeded roster points at an in-cluster"
+	@echo ">>       registry that isn't there. So this target demonstrates the GitOps BOOTSTRAP (operators +"
+	@echo ">>       ESO->OpenBao secret path + a real policy), not a completed push. Point the roster at your"
+	@echo ">>       registry (or sync the demo 'registry' app) for a working reconcile. See the runbook."
 
 argocd-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (placeholder roster; demo only)
 	$(KUBECTL) -n openbao create secret generic openbao-token --from-literal=token=root --dry-run=client -o yaml | $(KUBECTL) apply -f -
