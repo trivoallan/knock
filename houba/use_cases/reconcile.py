@@ -385,7 +385,7 @@ def _apply_plan(
         )
 
     def _attest(
-        out_digest: str, *, variant: str, vplan: VariantPlan, out_tag: str, src_tag: str
+        out_digest: str, *, variant: str, vplan: VariantPlan, out_tag: str, source_digest: str
     ) -> None:
         assert attestor is not None  # callers guard on attestor before calling
         attestor.attest(
@@ -397,7 +397,7 @@ def _apply_plan(
                 import_name=plan.expanded.name,
                 variant=variant,
                 source=src_repo,
-                source_digest=source[src_tag].digest,
+                source_digest=source_digest,
                 builder_id=attest_builder_id,
                 created=now.isoformat(),
                 transform_version=transform_versions.get(vplan.name) or "",
@@ -450,7 +450,7 @@ def _apply_plan(
                         variant=w.variant,
                         vplan=w.vplan,
                         out_tag=w.out_tag,
-                        src_tag=w.src_tag,
+                        source_digest=source[w.src_tag].digest,
                     )
             op = Operation(
                 kind=w.kind,
@@ -491,7 +491,7 @@ def _apply_plan(
                     variant=w.variant,
                     vplan=w.vplan,
                     out_tag=w.out_tag,
-                    src_tag=w.src_tag,
+                    source_digest=mirror[w.out_tag].base_digest,
                 )
             op = Operation(
                 kind="attested",

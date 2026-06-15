@@ -191,6 +191,44 @@ def test_attestation_failure_fails_the_operation() -> None:
     assert op.error.exit_code == 2
 
 
+def test_backfill_records_mirror_base_digest_not_current_source() -> None:
+    # The mirror tag exists (base_digest = "sha256:old"), the source has since moved
+    # to "sha256:new", but the push was RECENT (within the 7-day grace window) so the
+    # tag is classified for signing (to_sign), NOT for update.
+    # The backfill predicate must record source_digest == "sha256:old" (what the mirror
+    # was actually derived from), NOT "sha256:new" (the current source).
+    from datetime import timedelta
+
+    from houba.domain.reconcile import DEFAULT_GRACE
+
+    src = "docker.io/library/busybox"
+    dest_repo = "reg.local/demo/busybox"
+    mirror_digest = "sha256:mirrordigest"
+    # Source moved very recently (well within the grace window) — classifies as "sign".
+    recent_push = NOW - DEFAULT_GRACE + timedelta(hours=1)
+    registry = FakeRegistryPort(
+        tags={src: ["1.36.0"], dest_repo: ["1.36.0"]},
+        infos={
+            # Current source has a NEW digest
+            f"{src}:1.36.0": ImageInfo(digest="sha256:new", created=recent_push, annotations={}),
+            # Mirror was derived from the OLD digest
+            f"{dest_repo}:1.36.0": ImageInfo(
+                digest=mirror_digest,
+                created=NOW,
+                annotations={"org.opencontainers.image.base.digest": "sha256:old"},
+            ),
+        },
+    )
+    attestor = FakeAttestor()
+    _run(_copy_policy(), registry, attestor=attestor)
+    assert len(attestor.attested) == 1
+    _subject, statement = attestor.attested[0]
+    # Must record the OLD digest (what the mirror was derived from), not "sha256:new"
+    assert statement["predicate"]["source_digest"] == "sha256:old", (
+        f"expected sha256:old but got {statement['predicate']['source_digest']!r}"
+    )
+
+
 def test_backfill_attestation_failure_is_visible() -> None:
     # Tag already mirrored (source unchanged), NO existing attestation referrer seeded,
     # but the attestor is configured to fail => the backfill attempt must surface a
