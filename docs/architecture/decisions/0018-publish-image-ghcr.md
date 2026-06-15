@@ -29,8 +29,9 @@ labels that link the package to the repo.
 
 ## Consequences
 
-- The README's `docker pull` becomes real; users can `cosign verify` / `verify-attestation` before
-  running houba. No new application code, port, adapter, or config — CI/release infrastructure only.
+- The README's `docker pull` becomes real; users can `cosign verify` the signature and inspect the
+  buildx SBOM / provenance (`docker buildx imagetools inspect`) before running houba. No new
+  application code, port, adapter, or config — CI/release infrastructure only.
 - The publish job needs `packages: write` + `id-token: write`; the `RELEASE_PLEASE_TOKEN` PAT remains
   useful for the release PR's CI but is **not** required for publishing (same-run wiring).
 - One-time bootstrap: set the GHCR package visibility to Public after the first release.

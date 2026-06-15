@@ -47,8 +47,10 @@ mechanism. The four locked choices:
    `sbom: true` and `provenance: mode=max`, attaching an SPDX **SBOM** and a SLSA **provenance**
    statement as OCI referrers. Then `cosign sign` signs the pushed digest **keyless** (OIDC via the
    workflow `id-token`, Fulcio + Rekor — **no signing secrets**). Coherent with the cosign tooling
-   already in the repo and the bundled `cosign` binary; fully verifiable with `cosign verify` /
-   `cosign verify-attestation`. *(Alternatives considered: B — GitHub `attest-build-provenance` /
+   already in the repo and the bundled `cosign` binary. The image **signature** is verifiable with
+   `cosign verify`; the SBOM and provenance are **unsigned** buildx attestations (OCI referrers),
+   inspected with `docker buildx imagetools inspect` — *not* `cosign verify-attestation`, which only
+   checks cosign-signed attestations. *(Alternatives considered: B — GitHub `attest-build-provenance` /
    `attest-sbom` for Sigstore-signed attestations, stronger but two ecosystems and more steps; C —
    houba dogfooding its own image, rejected as circular and outside the attestor's third-party-image
    use case. Both recorded in Out of scope.)*
@@ -144,9 +146,8 @@ Notes:
   cosign verify ghcr.io/trivoallan/houba:0.4 \
     --certificate-identity-regexp 'https://github.com/trivoallan/houba/.*' \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com
-  cosign verify-attestation --type spdxjson ghcr.io/trivoallan/houba:0.4 \
-    --certificate-identity-regexp 'https://github.com/trivoallan/houba/.*' \
-    --certificate-oidc-issuer https://token.actions.githubusercontent.com
+  # SBOM / provenance are unsigned buildx attestations — inspect, don't cosign-verify:
+  docker buildx imagetools inspect ghcr.io/trivoallan/houba:0.4 --format '{{ json .SBOM }}'
   ```
 - **Bootstrap (one-time, manual):** after the first release, set the GHCR package visibility to
   **Public** (UI or `gh`). The repo↔package link is established automatically by the
@@ -156,7 +157,7 @@ Notes:
 
 - **Modify** `.github/workflows/release-please.yml` — add the `publish` job + job outputs.
 - **Modify** `README.md` — Install section: resolve `<your-org>` → `ghcr.io/trivoallan/houba`; add the
-  `cosign verify` / `verify-attestation` block.
+  `cosign verify` signature check + `docker buildx imagetools inspect` for the SBOM/provenance.
 - **Add** `docs/architecture/decisions/0018-publish-image-ghcr.md` — thin ADR pointing to this spec.
 - **No change** to `ci.yml` (the PR/main `docker-build` smoke job stays `push: false`), to
   `.github/settings.yml` (the publish job is not a PR status check), or to `pyproject.toml`.
@@ -172,7 +173,8 @@ No unit tests (the change is workflow YAML + docs). Verification is:
    - `docker buildx imagetools inspect ghcr.io/trivoallan/houba:<v>` shows a multi-arch index **and**
      the SBOM + provenance referrers.
    - `cosign verify …` (identity regexp + OIDC issuer) succeeds.
-   - `cosign verify-attestation --type spdxjson …` succeeds.
+   - `docker buildx imagetools inspect … --format '{{ json .SBOM }}'` / `.Provenance` return the
+     attached SBOM and provenance (buildx attestations are unsigned — inspected, not cosign-verified).
    - `X.Y.Z`, `X.Y`, and `latest` all resolve to the **same** digest.
    - The GHCR package page links to the repo and renders the README.
 

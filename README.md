@@ -86,17 +86,22 @@ docker pull ghcr.io/trivoallan/houba:0.4
 
 (The runtime image also bundles `cosign` for the optional signed attestations.)
 
-The published image is multi-arch (`amd64` + `arm64`), carries a buildx SBOM and SLSA provenance, and
-is signed keyless with `cosign`. Verify it before running:
+The published image is multi-arch (`amd64` + `arm64`) and is signed keyless with `cosign`; it also
+carries an SBOM and SLSA provenance attached as buildx attestations. Verify the signature before
+running:
 
 ```bash
 cosign verify ghcr.io/trivoallan/houba:0.4 \
   --certificate-identity-regexp 'https://github.com/trivoallan/houba/.*' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
 
-cosign verify-attestation --type spdxjson ghcr.io/trivoallan/houba:0.4 \
-  --certificate-identity-regexp 'https://github.com/trivoallan/houba/.*' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+The SBOM and provenance are buildx attestations (OCI referrers, not cosign-signed) — inspect them
+with `docker buildx imagetools inspect`:
+
+```bash
+docker buildx imagetools inspect ghcr.io/trivoallan/houba:0.4 --format '{{ json .SBOM }}'
+docker buildx imagetools inspect ghcr.io/trivoallan/houba:0.4 --format '{{ json .Provenance }}'
 ```
 
 Or from source with [uv](https://github.com/astral-sh/uv):
