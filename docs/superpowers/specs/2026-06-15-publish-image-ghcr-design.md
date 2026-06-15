@@ -81,14 +81,14 @@ permissions:
 
 jobs:
   release-please:
-    # ... unchanged; must expose outputs: release_created, version, major, minor, tag_name
+    # ... unchanged; must expose outputs: release_created, version, major, minor
     permissions:
       contents: write
       pull-requests: write
 
   publish:
     needs: [release-please]
-    if: ${{ needs.release-please.outputs.release_created }}
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -101,7 +101,7 @@ jobs:
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
         uses: docker/metadata-action@v5
