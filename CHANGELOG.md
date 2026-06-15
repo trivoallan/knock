@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.0](https://github.com/trivoallan/houba/compare/v0.5.0...v0.6.0) (2026-06-15)
+
+
+### Features
+
+* complete attestation coverage — sign copy path + idempotent skip-backfill ([#77](https://github.com/trivoallan/houba/issues/77)) ([9a3515a](https://github.com/trivoallan/houba/commit/9a3515aaf0ac645577d85af95cfbf53d7b874144))
+* **deploy:** ArgoCD App-of-Apps reference deployment (variant) ([#79](https://github.com/trivoallan/houba/issues/79)) ([98f2669](https://github.com/trivoallan/houba/commit/98f26698b8498c5f6f3a745dbf98c3bcb5ea7257))
+* freeze org.opencontainers.image.revision semantics ([#80](https://github.com/trivoallan/houba/issues/80)) ([dad2ffc](https://github.com/trivoallan/houba/commit/dad2ffc22642fa1500f779aee9eafa70ec9ff0f3))
+
+
+### Documentation
+
+* **roadmap:** mark single-front-door mandate validated ([#76](https://github.com/trivoallan/houba/issues/76)) ([5d27d17](https://github.com/trivoallan/houba/commit/5d27d17254d942a92f2699e466856baeffc50c70))
+* **roadmap:** restructure to Now/Next/Later ([#74](https://github.com/trivoallan/houba/issues/74)) ([bb7c172](https://github.com/trivoallan/houba/commit/bb7c172a5338c6d3e89c118bd46a2cb8ee4f5a23))
+
 ## [0.5.0](https://github.com/trivoallan/houba/compare/v0.4.0...v0.5.0) (2026-06-15)
 
 
