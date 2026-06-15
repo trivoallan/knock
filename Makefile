@@ -13,9 +13,21 @@ KUBECTL   = kubectl
 # Overlay used by `blast-radius` (overridden by demo-transform). Default keeps demo-lite as-is.
 OVERLAY  ?= deploy/overlays/local-lite
 
+# ---- ArgoCD variant (App-of-Apps) ----------------------------------------
+# The demo syncs the `demo` apps set from git; children are pulled by ArgoCD, not
+# applied locally. To demo YOUR branch, push it to your fork and override these:
+#   ARGOCD_REPO_URL=https://github.com/me/houba ARGOCD_REPO_REF=my-branch make demo-argocd
+# ponytail: children are read from git (intrinsic App-of-Apps coupling) — uncommitted
+# local changes are invisible until pushed; that is the documented ceiling, not a bug.
+ARGOCD_REPO_URL ?= https://github.com/trivoallan/houba
+ARGOCD_REPO_REF ?= main
+ARGOCD_ENV      ?= demo
+ARGOCD_VERSION  ?= v2.12.4
+
 .PHONY: help cluster image up-lite demo-lite demo-lite-run \
         up-full demo-full demo-full-run \
         up-transform demo-transform demo-transform-run \
+        argocd demo-argocd demo-argocd-run \
         blast-radius docker-auth logs down
 
 help: ## List targets
@@ -64,6 +76,36 @@ demo-transform-run: ## Fire a one-shot rebuild reconcile (setTimezone variants)
 	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
 	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=600s
+
+# ---- ARGOCD (App-of-Apps variant) ----------------------------------------
+argocd: ## Install argo-cd into the kind cluster + relax the kustomize load restrictor
+	$(KUBECTL) create namespace argocd --dry-run=client -o yaml | $(KUBECTL) apply -f -
+	$(KUBECTL) apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/$(ARGOCD_VERSION)/manifests/install.yaml
+	# base references scripts/blast-radius.sh outside deploy/ — ArgoCD's kustomize build
+	# needs the relaxed restrictor (global build option; not settable per-Application).
+	$(KUBECTL) -n argocd patch configmap argocd-cm --type merge \
+	  -p '{"data":{"kustomize.buildOptions":"--load-restrictor LoadRestrictionsNone"}}'
+	$(KUBECTL) -n argocd rollout restart deploy/argocd-repo-server
+	$(KUBECTL) -n argocd rollout status deploy/argocd-repo-server --timeout=180s
+	$(KUBECTL) -n argocd rollout status deploy/argocd-server --timeout=180s
+
+demo-argocd: cluster image argocd ## App-of-Apps demo: sync the `demo` apps set from git, then reconcile + report
+	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) ARGOCD_ENV=$(ARGOCD_ENV) \
+	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
+	@echo ">> Waiting for ArgoCD to sync the demo children from $(ARGOCD_REPO_URL)@$(ARGOCD_REPO_REF) ..."
+	@until $(KUBECTL) -n $(NS) get deploy/registry >/dev/null 2>&1; do sleep 5; done
+	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=300s
+	@until $(KUBECTL) -n $(NS) get cronjob/houba-reconcile >/dev/null 2>&1; do sleep 5; done
+	$(MAKE) demo-argocd-run
+	@sleep 3
+	# Re-run blast-radius from the SAME manifests ArgoCD syncs (not the default
+	# local-lite overlay) so it doesn't fight selfHeal on the cronjob suspend field.
+	$(MAKE) blast-radius OVERLAY=deploy/argocd/sources/houba-demo
+
+demo-argocd-run: ## Fire a one-shot reconcile from the ArgoCD-synced CronJob
+	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
+	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=300s
 
 # ---- consumer / ops ------------------------------------------------------
 blast-radius: ## (Re)run the blast-radius consumer and print its report
