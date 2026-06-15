@@ -25,7 +25,7 @@ reconcile:
     HOUBA_LOG_LEVEL: INFO
     # HOUBA_REGISTRIES is injected as a masked CI/CD variable (do NOT commit it).
   script:
-    - houba reconcile docs/examples/busybox
+    - houba reconcile docs/examples/reference
   # Plan-only on merge requests: surface what WOULD change without mutating anything.
   # Duplicate this job with `HOUBA_DRY_RUN_TAGS=true HOUBA_DRY_RUN_DELETIONS=true`
   # under `if: $CI_PIPELINE_SOURCE == "merge_request_event"` to gate policy PRs.

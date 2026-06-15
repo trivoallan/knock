@@ -31,9 +31,9 @@ configMapGenerator:
       # Overlays repoint these at the org's policy repo.
       - POLICY_REPO_URL=https://github.com/trivoallan/houba
       - POLICY_REPO_REF=main
-      - POLICY_DIR=/policies/current/docs/examples/busybox
-      # Repos the blast-radius consumer walks (matches the busybox example).
-      - BLAST_REPOS=demo/busybox
+      - POLICY_DIR=/policies/current/docs/examples/reference
+      # Repos the blast-radius consumer walks (the reference policy: copy + rebuild).
+      - BLAST_REPOS=demo/busybox demo/debian
       # Number of shards for the Indexed reconcile Job (= completions). Both
       # this value and jobTemplate.spec.completions must be bumped together per
       # overlay; base is 1 (identical to the former non-indexed behaviour).
