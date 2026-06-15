@@ -341,3 +341,41 @@ def test_reconcile_import_retention_skips_tags_without_imported_at() -> None:
     )
     # dateable = {1.1, 1.2}; keep=1 protects 1.2 (newest); 1.1 old -> excess; 1.0 never considered
     assert got.to_mark_retention == ["1.1"]
+
+
+# ---------------------------------------------------------------------------
+# Backfill-sign plan (Task 1 — attested field)
+# ---------------------------------------------------------------------------
+
+
+def _now() -> datetime:
+    return datetime(2026, 6, 15, tzinfo=UTC)
+
+
+def test_skipped_unattested_tag_routes_to_sign() -> None:
+    # source unchanged + already mirrored => normally "skip"; unattested => "sign".
+    plan = VariantPlan(name="default", tags=["7.2.5"], suffix="", transform=[], aliases={})
+    source = {"7.2.5": SourceArtifact(digest="sha256:s", pushed_at=_now() - timedelta(days=30))}
+    mirror = {"7.2.5": MirrorArtifact(base_digest="sha256:s", attested=False)}
+    result = reconcile_variant(plan, source, mirror, _now())
+    assert result.to_sign == ["7.2.5"]
+    assert result.to_import == []
+    assert result.to_update == []
+
+
+def test_skipped_attested_tag_does_not_sign() -> None:
+    plan = VariantPlan(name="default", tags=["7.2.5"], suffix="", transform=[], aliases={})
+    source = {"7.2.5": SourceArtifact(digest="sha256:s", pushed_at=_now() - timedelta(days=30))}
+    mirror = {"7.2.5": MirrorArtifact(base_digest="sha256:s", attested=True)}
+    result = reconcile_variant(plan, source, mirror, _now())
+    assert result.to_sign == []
+
+
+def test_within_grace_unattested_still_backfills_signature() -> None:
+    # source moved within grace => no update, but the current mirror digest must get signed.
+    plan = VariantPlan(name="default", tags=["7.2.5"], suffix="", transform=[], aliases={})
+    source = {"7.2.5": SourceArtifact(digest="sha256:new", pushed_at=_now())}
+    mirror = {"7.2.5": MirrorArtifact(base_digest="sha256:old", attested=False)}
+    result = reconcile_variant(plan, source, mirror, _now())
+    assert result.to_update == []  # within grace
+    assert result.to_sign == ["7.2.5"]
