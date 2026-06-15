@@ -23,6 +23,10 @@ ARGOCD_REPO_URL ?= https://github.com/trivoallan/houba
 ARGOCD_REPO_REF ?= main
 ARGOCD_ENV      ?= demo
 ARGOCD_VERSION  ?= v2.12.4
+# The OpenBao server pod (StatefulSet → openbao-0). Selected by name pattern, NOT a
+# chart label (which varies): the `-[0-9]+$` anchor matches openbao-0 while excluding
+# the agent-injector / csi-provider pods the chart also creates.
+OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+$$' | head -1)
 
 .PHONY: help cluster image up-lite demo-lite demo-lite-run \
         up-full demo-full demo-full-run \
@@ -111,9 +115,10 @@ argocd-prod: cluster image argocd ## Full prod App-of-Apps on kind, mirrored end
 	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) ARGOCD_ENV=prod \
 	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
 	@echo ">> Prod App-of-Apps applied. ArgoCD is syncing 6 children: operators (wave 0) then houba+buildkitd (wave 1)."
-	@echo ">> Waiting for OpenBao (wave 0) to come up so it can be seeded ..."
+	@echo ">> Waiting for the OpenBao server pod (wave 0) to be Running so it can be seeded ..."
 	@for i in $$(seq 1 60); do \
-	  $(KUBECTL) -n openbao get pod -l app.kubernetes.io/name=openbao 2>/dev/null | grep -q Running && break; \
+	  P=$(OPENBAO_POD); \
+	  [ -n "$$P" ] && $(KUBECTL) -n openbao get $$P -o jsonpath='{.status.phase}' 2>/dev/null | grep -q Running && break; \
 	  sleep 10; \
 	done
 	-$(MAKE) argocd-seed
@@ -135,7 +140,7 @@ argocd-prod: cluster image argocd ## Full prod App-of-Apps on kind, mirrored end
 
 argocd-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (placeholder roster; demo only)
 	$(KUBECTL) -n openbao create secret generic openbao-token --from-literal=token=root --dry-run=client -o yaml | $(KUBECTL) apply -f -
-	$(KUBECTL) -n openbao exec -i $$($(KUBECTL) -n openbao get pod -l app.kubernetes.io/name=openbao -o jsonpath='{.items[0].metadata.name}') -- sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/houba/registries HOUBA_REGISTRIES='\''{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'\'''
+	$(KUBECTL) -n openbao exec -i $(OPENBAO_POD) -- sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/houba/registries HOUBA_REGISTRIES='\''{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'\'''
 
 # ---- consumer / ops ------------------------------------------------------
 blast-radius: ## (Re)run the blast-radius consumer and print its report
