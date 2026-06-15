@@ -99,6 +99,21 @@ this feature.
   exactly once; a skipped-and-attested tag does not sign — assert via `FakeAttestor` journal and
   `FakeRegistry.list_referrers` seeded state.
 
+## Implementation notes (post-planning)
+
+Two refinements confirmed during implementation:
+
+1. **`"attested"` operation kind.** The sign-only backfill pass is reported as a new `attested`
+   operation kind (distinct from `import` / `update` / `skip` / `delete`), with a matching
+   `Counts.attested` total field in `houba/ports/reporter.py`. This makes the backfill visible in
+   structured logs and summary output without conflating it with copy operations.
+
+2. **`COSIGN_ATTESTATION_ARTIFACT_TYPE` placement.** The constant lives in
+   `houba/domain/attestation.py` (alongside the existing `SIGNING_CONFIG_MEDIA_TYPE`), value
+   `application/vnd.dev.sigstore.bundle.v0.3+json`. This keeps all attestation-related constants
+   in one domain module. Note: the exact media type string is still pending confirmation against a
+   real cosign v3 run — treat as a verification task before declaring this frozen.
+
 ## Docs to sync (same change)
 
 - ADR mirror under `docs/architecture/decisions/` linking this spec.
