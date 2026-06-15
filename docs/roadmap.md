@@ -74,6 +74,11 @@ cosign v3 signing-config. CLI verbs today: `reconcile · purge · attach · audi
   **CycloneDX** mappers.
 - **`attach` registry-config parity.** Wire the `HOUBA_REGISTRIES` roster into `attach` as in
   `reconcile`, instead of relying on ambient regctl config.
+- **Signed-coverage audit tier.** Extend `houba audit` to report *signed* vs merely *stamped*. Today
+  it counts the annotation stamp; once *complete attestation coverage* (Now) lands, the audit can
+  distinguish signed from unsigned provenance — turning the verifiable front door (④) into a
+  *trustworthy* one. Gated on Now: until every path is signed, a signed-coverage number would
+  mislead.
 
 ## Later — scaffolding, scale hygiene, directional
 
