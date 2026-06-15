@@ -1,5 +1,9 @@
-# houba reference deployment — local demo driver (kind).
+# houba reference deployment — local driver (kind).
 # See docs/runbooks/reference-deployment.md for the full walkthrough.
+#
+#   make demo    the single Argo reference on kind (operators + ESO->OpenBao +
+#                buildkitd + the reference policy + registry + reconcile + report)
+#   make local   the inner-loop escape hatch (kubectl apply -k, no Argo/operators)
 
 CLUSTER ?= houba-demo
 IMAGE   ?= houba:dev
@@ -10,28 +14,26 @@ NS      ?= houba
 # it, so we render then apply.
 KUSTOMIZE = kubectl kustomize --load-restrictor LoadRestrictionsNone
 KUBECTL   = kubectl
-# Overlay used by `blast-radius` (overridden by demo-transform). Default keeps demo-lite as-is.
-OVERLAY  ?= deploy/overlays/local-lite
+# Overlay used by `blast-radius` (overridden by `demo` to the Argo source). Defaults to
+# the local overlay so a bare `make blast-radius` matches `make local`.
+OVERLAY  ?= deploy/overlays/local
 
-# ---- ArgoCD variant (App-of-Apps) ----------------------------------------
-# The demo syncs the `demo` apps set from git; children are pulled by ArgoCD, not
-# applied locally. To demo YOUR branch, push it to your fork and override these:
-#   ARGOCD_REPO_URL=https://github.com/me/houba ARGOCD_REPO_REF=my-branch make demo-argocd
+# ---- Argo reference (App-of-Apps) ----------------------------------------
+# `make demo` applies root.yaml; ArgoCD pulls the children from git. To demo YOUR branch,
+# push it to your fork and override:
+#   ARGOCD_REPO_URL=https://github.com/me/houba ARGOCD_REPO_REF=my-branch make demo
 # ponytail: children are read from git (intrinsic App-of-Apps coupling) — uncommitted
-# local changes are invisible until pushed; that is the documented ceiling, not a bug.
+# local changes are invisible until pushed. `make local` is the escape hatch for that.
 ARGOCD_REPO_URL ?= https://github.com/trivoallan/houba
 ARGOCD_REPO_REF ?= main
-ARGOCD_ENV      ?= demo
 ARGOCD_VERSION  ?= v2.12.4
-# The OpenBao server pod (StatefulSet → openbao-0). Selected by name pattern, NOT a
-# chart label (which varies): the `-[0-9]+$` anchor matches openbao-0 while excluding
+# The OpenBao server pod (StatefulSet -> openbao-0). Selected by name pattern, NOT a
+# chart label (which varies): the `-[0-9]+$$` anchor matches openbao-0 while excluding
 # the agent-injector / csi-provider pods the chart also creates.
 OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+$$' | head -1)
 
-.PHONY: help cluster image up-lite demo-lite demo-lite-run \
-        up-full demo-full demo-full-run \
-        up-transform demo-transform demo-transform-run \
-        argocd demo-argocd demo-argocd-run argocd-prod argocd-seed \
+.PHONY: help cluster image up-local local local-run \
+        argocd demo demo-run openbao-seed \
         blast-radius docker-auth logs down
 
 help: ## List targets
@@ -45,43 +47,21 @@ image: ## Build the houba runtime image and load it into kind
 	docker build -t $(IMAGE) .
 	kind load docker-image $(IMAGE) --name $(CLUSTER)
 
-# ---- LITE (copy path, registry:2) ----------------------------------------
-up-lite: cluster image ## Bring up the lite stack (no run yet)
-	$(KUSTOMIZE) deploy/overlays/local-lite | $(KUBECTL) apply -f -
+# ---- LOCAL (inner-loop escape hatch: copy + rebuild, no Argo) -------------
+up-local: cluster image ## Bring up the local stack (buildkitd + throwaway registry)
+	$(KUSTOMIZE) deploy/overlays/local | $(KUBECTL) apply -f -
+	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
 
-demo-lite: up-lite demo-lite-run ## Lite stack + one reconcile + report
+local: up-local local-run ## Local stack + one reconcile (copy + rebuild) + report
 	@sleep 3
 	$(MAKE) blast-radius
 
-demo-lite-run: ## Fire a one-shot reconcile from the suspended CronJob
-	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
-	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=300s
-
-# ---- FULL (rebuild path, Harbor) -----------------------------------------
-up-full: cluster image ## Bring up the full stack (Harbor installed separately — see overlay README)
-	$(KUSTOMIZE) deploy/overlays/local-full | $(KUBECTL) apply -f -
-
-demo-full-run: ## Fire a one-shot hardening reconcile
+local-run: ## Fire a one-shot reconcile from the suspended CronJob
 	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
 	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=600s
 
-# ---- TRANSFORM (rebuild path, no Harbor) ----------------------------------
-up-transform: cluster image ## Bring up the transform stack (buildkitd, throwaway registry, no Harbor)
-	$(KUSTOMIZE) deploy/overlays/local-transform | $(KUBECTL) apply -f -
-	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
-
-demo-transform: up-transform demo-transform-run ## Transform stack + one rebuild reconcile + report
-	@sleep 3
-	$(MAKE) blast-radius OVERLAY=deploy/overlays/local-transform
-
-demo-transform-run: ## Fire a one-shot rebuild reconcile (setTimezone variants)
-	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
-	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=600s
-
-# ---- ARGOCD (App-of-Apps variant) ----------------------------------------
+# ---- DEMO (the single Argo reference on kind) ----------------------------
 argocd: ## Install argo-cd into the kind cluster + relax the kustomize load restrictor
 	$(KUBECTL) create namespace argocd --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	$(KUBECTL) apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/$(ARGOCD_VERSION)/manifests/install.yaml
@@ -93,52 +73,40 @@ argocd: ## Install argo-cd into the kind cluster + relax the kustomize load rest
 	$(KUBECTL) -n argocd rollout status deploy/argocd-repo-server --timeout=180s
 	$(KUBECTL) -n argocd rollout status deploy/argocd-server --timeout=180s
 
-demo-argocd: cluster image argocd ## App-of-Apps demo: sync the `demo` apps set from git, then reconcile + report
-	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) ARGOCD_ENV=$(ARGOCD_ENV) \
+demo: cluster image argocd ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
+	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) \
 	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
-	@echo ">> Waiting for ArgoCD to sync the demo children from $(ARGOCD_REPO_URL)@$(ARGOCD_REPO_REF) ..."
-	@until $(KUBECTL) -n $(NS) get deploy/registry >/dev/null 2>&1; do sleep 5; done
-	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=300s
-	@until $(KUBECTL) -n $(NS) get cronjob/houba-reconcile >/dev/null 2>&1; do sleep 5; done
-	$(MAKE) demo-argocd-run
-	@sleep 3
-	# Re-run blast-radius from the SAME manifests ArgoCD syncs (not the default
-	# local-lite overlay) so it doesn't fight selfHeal on the cronjob suspend field.
-	$(MAKE) blast-radius OVERLAY=deploy/argocd/sources/houba-demo
-
-demo-argocd-run: ## Fire a one-shot reconcile from the ArgoCD-synced CronJob
-	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
-	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=300s
-
-argocd-prod: cluster image argocd ## Full prod App-of-Apps on kind, mirrored end-to-end (operators + ESO->OpenBao + busybox policy + registry + reconcile)
-	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) ARGOCD_ENV=prod \
-	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
-	@echo ">> Prod App-of-Apps applied. ArgoCD is syncing 6 children: operators (wave 0) then houba+buildkitd (wave 1)."
+	@echo ">> App-of-Apps applied. ArgoCD is syncing 4 children: ESO+OpenBao (wave 0) then houba+buildkitd (wave 1)."
 	@echo ">> Waiting for the OpenBao server pod (wave 0) to be Running so it can be seeded ..."
 	@for i in $$(seq 1 60); do \
 	  P=$(OPENBAO_POD); \
 	  [ -n "$$P" ] && $(KUBECTL) -n openbao get $$P -o jsonpath='{.status.phase}' 2>/dev/null | grep -q Running && break; \
 	  sleep 10; \
 	done
-	-$(MAKE) argocd-seed
-	@echo ">> Deploying registry:2 — the push destination the prod apps set omits (matches the seeded roster"
-	@echo ">>       host registry.houba.svc.cluster.local:5000). Applied out-of-band; ArgoCD does not manage it."
+	-$(MAKE) openbao-seed
+	@echo ">> Deploying registry:2 — the push destination (host registry.houba.svc.cluster.local:5000)."
+	@echo ">>       Applied out-of-band; ArgoCD does not manage it."
 	$(KUSTOMIZE) deploy/argocd/sources/registry | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=180s
 	@echo ">> Waiting for ESO to materialize the houba-registries Secret from OpenBao ..."
 	@for i in $$(seq 1 30); do $(KUBECTL) -n $(NS) get secret houba-registries >/dev/null 2>&1 && break; sleep 10; done
 	@echo ">> Waiting for the houba CronJob (wave 1) to sync ..."
 	@for i in $$(seq 1 60); do $(KUBECTL) -n $(NS) get cronjob/houba-reconcile >/dev/null 2>&1 && break; sleep 10; done
-	$(MAKE) demo-argocd-run
+	$(MAKE) demo-run
 	@sleep 3
-	$(MAKE) blast-radius OVERLAY=deploy/argocd/sources/houba-prod
-	@echo ">> Full prod App-of-Apps is up and mirrored busybox end-to-end: operators (ESO+KEDA+Prometheus+"
-	@echo ">>       OpenBao) + houba/buildkitd, the ESO->OpenBao secret path, a real git-sync'd policy, and the"
-	@echo ">>       registry destination. For a REAL cluster: pin your published image, point sources/houba-prod"
-	@echo ">>       at your policy repo, and use your registry (not this demo registry:2). See the runbook."
+	$(MAKE) blast-radius OVERLAY=deploy/argocd/sources/houba
+	@echo ">> The Argo reference is up and mirrored the reference policy end-to-end: operators"
+	@echo ">>       (ESO+OpenBao) + houba/buildkitd, the ESO->OpenBao secret path, a git-sync'd"
+	@echo ">>       policy (busybox copy + debian rebuild), and the registry destination."
+	@echo ">>       For a REAL cluster: pin your published image, point sources/houba at your"
+	@echo ">>       policy repo and vault, and use your registry (not this demo registry:2)."
 
-argocd-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (placeholder roster; demo only)
+demo-run: ## Fire a one-shot reconcile from the ArgoCD-synced CronJob
+	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
+	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=600s
+
+openbao-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (placeholder roster; demo only)
 	$(KUBECTL) -n openbao create secret generic openbao-token --from-literal=token=root --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	$(KUBECTL) -n openbao exec -i $(OPENBAO_POD) -- sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/houba/registries HOUBA_REGISTRIES='\''{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'\'''
 
