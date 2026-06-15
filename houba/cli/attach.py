@@ -10,8 +10,9 @@ import typer
 
 from houba.cli._di import build_container
 from houba.cli.render import render_scan_outcome
+from houba.domain.scan.summary import Severity, gate_breached
 from houba.logging import configure
-from houba.use_cases.attach import attach_scan
+from houba.use_cases.attach import attach_exit_code, attach_scan
 
 
 def attach(
@@ -26,6 +27,13 @@ def attach(
     output: Annotated[
         str, typer.Option("--output", help="Output format: 'text' (default) or 'json'.")
     ] = "text",
+    fail_on: Annotated[
+        Severity | None,
+        typer.Option(
+            "--fail-on",
+            help="Exit non-zero if the scan has a finding at or above this severity (CI gate).",
+        ),
+    ] = None,
 ) -> None:
     """Ingest a scan report produced upstream and attach it as a stamped OCI referrer."""
     container = build_container()
@@ -43,3 +51,6 @@ def attach(
         builder_id=container.settings.attest_builder_id,
     )
     render_scan_outcome(outcome, fmt=output, stream=sys.stdout)
+    if fail_on is not None and gate_breached(outcome.facts, fail_on):
+        sys.stderr.write(f"gating: scan has a finding at or above {fail_on.value} (--fail-on)\n")
+    raise typer.Exit(attach_exit_code(outcome, fail_on=fail_on))

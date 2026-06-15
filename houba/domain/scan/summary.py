@@ -7,8 +7,44 @@ native report travels as the referrer blob, untouched. No I/O, no config.
 
 from __future__ import annotations
 
+import enum
 from dataclasses import dataclass
 from datetime import datetime
+
+
+class Severity(enum.StrEnum):
+    """Vuln severity, declared highest → lowest (definition order IS the rank)."""
+
+    critical = "critical"
+    high = "high"
+    medium = "medium"
+    low = "low"
+    unknown = "unknown"
+
+
+SEVERITY_VALUES: tuple[str, ...] = tuple(s.value for s in Severity)  # rank order, highest first
+
+
+def _count(raw: str | None) -> int:
+    try:
+        return int(raw) if raw is not None else 0
+    except ValueError:
+        return 0
+
+
+def gate_breached(facts: dict[str, str], fail_on: Severity) -> bool:
+    """True when any ``vuln.<bucket>`` count is > 0 at ``fail_on`` severity or above.
+
+    ``unknown`` is treated as a lowest-rank catch-all: it is included in the gate
+    whenever ``fail_on`` is ``low`` or ``unknown`` (i.e. the caller accepts uncertain findings).
+    """
+    members = list(Severity)
+    at_or_above = set(members[: members.index(fail_on) + 1])
+    # `unknown` ranks below `low`, so the at-or-above slice misses it. Fold it in only at the
+    # two most permissive thresholds — `low` ("anything ranked") and `unknown` ("any finding").
+    if fail_on in (Severity.low, Severity.unknown):
+        at_or_above.add(Severity.unknown)
+    return any(_count(facts.get(f"vuln.{s.value}")) > 0 for s in at_or_above)
 
 
 @dataclass(frozen=True)
