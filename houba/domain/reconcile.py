@@ -31,6 +31,7 @@ class MirrorArtifact:
     base_digest: str  # recorded org.opencontainers.image.base.digest
     transform_version: str | None = None  # recorded {prefix}.transform.version
     imported_at: datetime | None = None  # parsed org.opencontainers.image.created (stamp time)
+    attested: bool = True  # does this mirror digest already carry a signed houba attestation?
 
 
 def _classify(
@@ -40,18 +41,17 @@ def _classify(
     grace: timedelta,
     *,
     desired_transform_version: str | None = None,
-) -> Literal["import", "update", "skip"]:
+) -> Literal["import", "update", "skip", "sign"]:
     if mirror is None:
         return "import"
     transform_unchanged = mirror.transform_version == desired_transform_version
     source_unchanged = mirror.base_digest == source.digest
-    if source_unchanged and transform_unchanged:
-        return "skip"
     if not transform_unchanged:
         return "update"  # operator changed the hardening → rebuild now, no grace
-    if now - source.pushed_at < grace:
-        return "skip"  # source moved too recently — let it settle
-    return "update"
+    if not source_unchanged and now - source.pushed_at >= grace:
+        return "update"  # source moved and settled
+    # Keeping the current mirror digest (skip) — backfill its signature if unsigned.
+    return "skip" if mirror.attested else "sign"
 
 
 @dataclass(frozen=True)
@@ -60,6 +60,7 @@ class VariantReconcile:
     to_import: list[str]
     to_update: list[str]
     aliases: dict[str, str]
+    to_sign: list[str] = field(default_factory=list)
 
 
 def reconcile_variant(
@@ -79,6 +80,7 @@ def reconcile_variant(
     """
     to_import: list[str] = []
     to_update: list[str] = []
+    to_sign: list[str] = []
     for src_tag in plan.tags:
         out_tag = src_tag + plan.suffix
         try:
@@ -99,12 +101,15 @@ def reconcile_variant(
             to_import.append(out_tag)
         elif decision == "update":
             to_update.append(out_tag)
+        elif decision == "sign":
+            to_sign.append(out_tag)
     aliases = {alias + plan.suffix: target + plan.suffix for alias, target in plan.aliases.items()}
     return VariantReconcile(
         variant=plan.name,
         to_import=to_import,
         to_update=to_update,
         aliases=aliases,
+        to_sign=to_sign,
     )
 
 

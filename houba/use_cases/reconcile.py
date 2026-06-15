@@ -24,7 +24,7 @@ from houba.config import (
     resolve_mirror,
     resolve_registry,
 )
-from houba.domain.attestation import build_transform_statement
+from houba.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE, build_transform_statement
 from houba.domain.collision import (
     AliasTarget,
     detect_alias_collisions,
@@ -85,7 +85,7 @@ def to_source_artifact(info: ImageInfo, *, now: datetime) -> SourceArtifact:
 
 
 def to_mirror_artifact(
-    info: ImageInfo, *, transform_version_key: str | None = None
+    info: ImageInfo, *, transform_version_key: str | None = None, attested: bool = True
 ) -> MirrorArtifact | None:
     base = info.annotations.get(BASE_DIGEST_KEY)
     if base is None:
@@ -95,6 +95,7 @@ def to_mirror_artifact(
         base_digest=base,
         transform_version=tv,
         imported_at=_parse_created(info.annotations.get(CREATED_KEY)),
+        attested=attested,
     )
 
 
@@ -231,6 +232,14 @@ class _ImportWork:
 
 
 @dataclass(frozen=True)
+class _SignWork:
+    variant: str
+    vplan: VariantPlan
+    out_tag: str
+    src_tag: str
+
+
+@dataclass(frozen=True)
 class _AliasWork:
     variant: str
     alias: str
@@ -254,6 +263,7 @@ def _counts_of(operations: list[Operation]) -> Counts:
         aliased=n("aliased"),
         skipped=n("skipped"),
         marked=n("marked"),
+        attested=n("attested"),
         failed=sum(1 for op in operations if op.error is not None),
     )
 
@@ -266,6 +276,7 @@ def _merge_counts(parts: list[Counts]) -> Counts:
         aliased=sum(c.aliased for c in parts),
         skipped=sum(c.skipped for c in parts),
         marked=sum(c.marked for c in parts),
+        attested=sum(c.attested for c in parts),
         failed=sum(c.failed for c in parts),
     )
 
@@ -299,12 +310,18 @@ def _apply_plan(
         name: rt.version for name, rt in plan.transforms.items()
     }
     mirror: dict[str, MirrorArtifact] = {}
+    mirror_digests: dict[str, str] = {}
     for out_tag in registry.list_tags(plan.dest_repo):
-        ma = to_mirror_artifact(
-            registry.inspect(f"{plan.dest_repo}:{out_tag}"), transform_version_key=tv_key
+        info = registry.inspect(f"{plan.dest_repo}:{out_tag}")
+        # Only probe referrers when signing is configured — else attested stays True and
+        # nothing routes to the backfill stage (one fewer registry read per tag).
+        attested = attestor is None or bool(
+            registry.list_referrers(f"{plan.dest_repo}:{out_tag}", COSIGN_ATTESTATION_ARTIFACT_TYPE)
         )
+        ma = to_mirror_artifact(info, transform_version_key=tv_key, attested=attested)
         if ma is not None:
             mirror[out_tag] = ma
+            mirror_digests[out_tag] = info.digest
 
     marked_referrers: dict[str, list[Referrer]] = {}
     for out_tag in mirror:
@@ -367,6 +384,28 @@ def _apply_plan(
             error,
         )
 
+    def _attest(
+        out_digest: str, *, variant: str, vplan: VariantPlan, out_tag: str, source_digest: str
+    ) -> None:
+        assert attestor is not None  # callers guard on attestor before calling
+        attestor.attest(
+            f"{plan.dest_repo}@{out_digest}",
+            build_transform_statement(
+                subject_name=f"{plan.dest_repo}:{out_tag}",
+                subject_digest=out_digest,
+                policy=plan.policy.metadata.name,
+                import_name=plan.expanded.name,
+                variant=variant,
+                source=src_repo,
+                source_digest=source_digest,
+                builder_id=attest_builder_id,
+                created=now.isoformat(),
+                transform_version=transform_versions.get(vplan.name) or "",
+                steps=[(s.name, s.params) for s in vplan.transform],
+                transformed=bool(vplan.transform),
+            ),
+        )
+
     def _do_import(w: _ImportWork) -> Operation:
         steps = [s.name for s in w.vplan.transform] or None  # applied steps; None on a copy
         try:
@@ -402,25 +441,16 @@ def _apply_plan(
                         transform_version_value=transform_versions.get(w.vplan.name),
                     ),
                 )
-                # Heavy provenance (rebuild only): sign houba's transform predicate over
-                # the stamped output digest. Inside the try => a signing failure fails the
-                # operation (visible in the report) rather than leaving a silent gap.
-                if attestor is not None and w.vplan.transform and out_digest is not None:
-                    attestor.attest(
-                        f"{plan.dest_repo}@{out_digest}",
-                        build_transform_statement(
-                            subject_name=f"{plan.dest_repo}:{w.out_tag}",
-                            subject_digest=out_digest,
-                            policy=plan.policy.metadata.name,
-                            import_name=plan.expanded.name,
-                            variant=w.variant,
-                            source=src_repo,
-                            source_digest=source[w.src_tag].digest,
-                            builder_id=attest_builder_id,
-                            created=now.isoformat(),
-                            transform_version=transform_versions.get(w.vplan.name) or "",
-                            steps=[(s.name, s.params) for s in w.vplan.transform],
-                        ),
+                # Sign houba's predicate over the stamped output digest — rebuild AND copy
+                # (the label is the product: every placed image is signed). Inside the try =>
+                # a signing failure fails the operation rather than leaving a silent gap.
+                if attestor is not None and out_digest is not None:
+                    _attest(
+                        out_digest,
+                        variant=w.variant,
+                        vplan=w.vplan,
+                        out_tag=w.out_tag,
+                        source_digest=source[w.src_tag].digest,
                     )
             op = Operation(
                 kind=w.kind,
@@ -445,6 +475,45 @@ def _apply_plan(
                 applied=False,
                 error=info,
                 transform_steps=steps,
+            )
+            emit_failed(op, w.variant, info)
+            return op
+
+    def _do_sign(w: _SignWork) -> Operation:
+        src_digest = source[w.src_tag].digest
+        try:
+            out_digest: str | None = None
+            if not dry_run_tags:
+                out_digest = mirror_digests[w.out_tag]
+                # to_sign is empty unless an attestor is configured
+                _attest(
+                    out_digest,
+                    variant=w.variant,
+                    vplan=w.vplan,
+                    out_tag=w.out_tag,
+                    source_digest=mirror[w.out_tag].base_digest,
+                )
+            op = Operation(
+                kind="attested",
+                out_tag=w.out_tag,
+                src_tag=w.src_tag,
+                digest=src_digest,
+                applied=not dry_run_tags,
+                out_digest=out_digest,
+            )
+            emit_applied(op, w.variant)
+            return op
+        except Exception as exc:
+            info = ErrorInfo(
+                type=type(exc).__name__, message=str(exc), exit_code=exit_code_for(exc)
+            )
+            op = Operation(
+                kind="attested",
+                out_tag=w.out_tag,
+                src_tag=w.src_tag,
+                digest=src_digest,
+                applied=False,
+                error=info,
             )
             emit_failed(op, w.variant, info)
             return op
@@ -545,6 +614,7 @@ def _apply_plan(
 
     # Stage 1: imports/updates, all variants flattened, input order preserved.
     import_items: list[_ImportWork] = []
+    sign_items: list[_SignWork] = []
     for vr, vplan in zip(result.variants, plan.expanded.variants, strict=True):
         out_to_src = {t + vplan.suffix: t for t in vplan.tags}
         for out_tag in [*vr.to_import, *vr.to_update]:
@@ -558,7 +628,18 @@ def _apply_plan(
                     kind=kind,
                 )
             )
+        for out_tag in vr.to_sign:
+            sign_items.append(
+                _SignWork(
+                    variant=vr.variant,
+                    vplan=vplan,
+                    out_tag=out_tag,
+                    src_tag=out_to_src[out_tag],
+                )
+            )
     import_ops = _run_stage(import_items, _do_import, executor=executor)
+    # Barrier. Backfill stage: sign skipped-but-unsigned mirror tags (already up-to-date).
+    sign_ops = _run_stage(sign_items, _do_sign, executor=executor)
 
     # Barrier. Stage 2: aliases (depend on the imported targets).
     alias_items: list[_AliasWork] = []
@@ -608,11 +689,15 @@ def _apply_plan(
     aliases_by_variant: dict[str, list[Operation]] = defaultdict(list)
     for ait, op in zip(alias_items, alias_ops, strict=True):
         aliases_by_variant[ait.variant].append(op)
+    attested_by_variant: dict[str, list[Operation]] = defaultdict(list)
+    for sit, op in zip(sign_items, sign_ops, strict=True):
+        attested_by_variant[sit.variant].append(op)
 
     variant_reports: list[VariantReport] = []
     for vr, vplan in zip(result.variants, plan.expanded.variants, strict=True):
-        changed = set(vr.to_import) | set(vr.to_update)
+        changed = set(vr.to_import) | set(vr.to_update) | set(vr.to_sign)
         ops: list[Operation] = list(imports_by_variant[vr.variant])
+        ops.extend(attested_by_variant[vr.variant])
         for tag in vplan.tags:
             out_tag = tag + vplan.suffix
             if out_tag not in changed:

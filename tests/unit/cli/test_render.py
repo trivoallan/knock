@@ -120,6 +120,25 @@ def test_render_text_verbose_marks_failed_operation() -> None:
     assert "RegctlError" in out
 
 
+def test_render_text_includes_marked_count() -> None:
+    # `marked` is a fully-plumbed Counts field; it must appear in the text recap
+    # (both the per-policy line and the grand-total line), not silently vanish.
+    totals = Counts(imported=1, marked=2)
+    policy = PolicyReport(
+        name="redis",
+        source="docker.io/library/redis",
+        status="ok",
+        error=None,
+        totals=totals,
+        targets=[],
+    )
+    report = RunReport(mode="apply", status="ok", totals=totals, policies=[policy])  # type: ignore[arg-type]
+    buf = io.StringIO()
+    render_report(report, fmt="text", verbose=False, stream=buf)
+    out = buf.getvalue()
+    assert out.count("marked=2") == 2  # per-policy line + grand-total line
+
+
 def test_render_text_marks_failed_policy() -> None:
     failed = PolicyReport(
         name="nginx",

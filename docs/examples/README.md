@@ -148,6 +148,9 @@ docker rm -f houba-demo-registry
   `https://houba.dev/predicate/transform/v1`. **Requires the attestation path**: set
   `HOUBA_ATTEST_SIGNER` (`keyless` | `kms` | `key`) and a `cosign` on `PATH`; off by default.
   Design: [the SLSA/in-toto attestation spec](../superpowers/specs/2026-06-11-slsa-attestation-design.md).
+  Note: with complete attestation coverage, attestation is not limited to the rebuild path.
+  The **copy path** (no transform) and **already-mirrored images** (backfill) are also signed when
+  an attestor is configured — every image houba fronts carries a signed houba attestation.
 - **[`pending-deletion/pending-deletion.yml`](pending-deletion/pending-deletion.yml)** —
   `deletionMode: mark`: when a tag drops out of the selection, houba attaches a
   `pending-deletion` OCI referrer instead of deleting it. See

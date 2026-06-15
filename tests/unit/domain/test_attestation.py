@@ -25,6 +25,7 @@ def _statement() -> dict:
         created="2026-06-11T00:00:00+00:00",
         transform_version="sha256:tv",
         steps=[("injectCA", {"certs": ["corp"]}), ("rewritePackageSources", {"mirror": "corp"})],
+        transformed=True,
     )
 
 
@@ -70,6 +71,7 @@ def test_no_steps_yields_empty_list() -> None:
         created="2026-06-11T00:00:00+00:00",
         transform_version="sha256:tv",
         steps=[],
+        transformed=False,
     )
     assert s["predicate"]["steps"] == []
 
@@ -87,6 +89,7 @@ def test_bare_digest_without_algo_prefix_assumed_sha256() -> None:
         created="2026-06-11T00:00:00+00:00",
         transform_version="sha256:tv",
         steps=[],
+        transformed=False,
     )
     assert s["subject"][0]["digest"] == {"sha256": "barehex"}
 
@@ -95,11 +98,37 @@ def test_statement_is_json_serializable() -> None:
     json.dumps(_statement())  # must not raise
 
 
+def test_rebuild_statement_marks_transformed_true() -> None:
+    pred = _statement()["predicate"]  # _statement() passes real steps
+    assert pred["transformed"] is True
+
+
+def test_copy_statement_marks_transformed_false_with_no_steps() -> None:
+    s = build_transform_statement(
+        subject_name="reg.local/mirror/redis:7.2.5",
+        subject_digest="sha256:out",
+        policy="redis-mirror",
+        import_name="v7",
+        variant="default",
+        source="docker.io/library/redis",
+        source_digest="sha256:src",
+        builder_id="https://houba.example/builders/main",
+        created="2026-06-15T00:00:00+00:00",
+        transform_version="",
+        steps=[],
+        transformed=False,
+    )
+    assert s["predicate"]["transformed"] is False
+    assert s["predicate"]["steps"] == []
+
+
 def test_published_schema_is_stable_and_documents_import_alias() -> None:
     schema = transform_predicate_json_schema()
     json.dumps(schema)  # serializable
     assert "import" in schema["properties"]  # the public alias, not "import_"
     assert "import" in schema["required"]
+    assert "transformed" in schema["properties"]
+    assert "transformed" in schema["required"]
 
 
 def test_signing_config_empty_is_air_gapped() -> None:
