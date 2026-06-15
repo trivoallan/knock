@@ -1,4 +1,4 @@
-# 19. ArgoCD reference deployment (App-of-Apps variant)
+# 22. ArgoCD reference deployment (App-of-Apps variant)
 
 Date: 2026-06-15
 

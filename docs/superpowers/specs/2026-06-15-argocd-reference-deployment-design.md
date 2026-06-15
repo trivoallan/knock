@@ -185,7 +185,7 @@ runbook, not wired into the default `demo-argocd` target.
 
 - **Runbook:** new `## ArgoCD variant (App-of-Apps)` section in
   `docs/runbooks/reference-deployment.md` — explicitly the variant, not the blessed path.
-- **ADR:** `docs/architecture/decisions/0019-argocd-reference-deployment.md` (thin, links this spec).
+- **ADR:** `docs/architecture/decisions/0022-argocd-reference-deployment.md` (thin, links this spec).
 - **C4:** ArgoCD is a new external system + deployment node. Add to `workspace.dsl`: an `ArgoCD`
   software system and a **Deployment view `DeployArgoCD`** (root Application + children — eso, keda,
   prometheus, openbao, houba, buildkitd — syncing the stack into the cluster, with the External Secrets
