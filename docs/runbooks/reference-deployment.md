@@ -113,6 +113,24 @@ per-Application equivalent).
 > what is *pushed*, not local edits. To demo your branch, push it to your fork and run
 > `ARGOCD_REPO_URL=https://github.com/you/houba ARGOCD_REPO_REF=your-branch make demo-argocd`.
 
+### Kind: bring up the full prod stack
+
+```sh
+make argocd-prod      # kind + argo-cd, then sync the `prod` apps set and seed dev OpenBao
+make argocd-seed      # (re)seed OpenBao on its own, once the pod is Running
+```
+
+`argocd-prod` applies the **prod** App-of-Apps and brings up all four platform operators
+(ESO + KEDA + kube-prometheus-stack + OpenBao) then houba + buildkitd, and seeds the dev
+OpenBao so ESO can resolve `houba-registries`.
+
+> **What this shows — and doesn't.** It demonstrates the GitOps **bootstrap** (the whole
+> stack, secret path included, coming up from git). It is **not** a live mirror on kind: the
+> `prod` source targets org placeholders — `POLICY_REPO_URL=gitlab.example.com`, the published
+> `ghcr.io/trivoallan/houba` image, and a seeded roster pointing at an in-cluster registry the
+> `prod` apps set does not deploy. Point `sources/houba-prod` at your policy repo + registry
+> (next section) for a working reconcile.
+
 ### Production
 
 `apps/prod/` is the blueprint. To adopt:
@@ -121,15 +139,17 @@ per-Application equivalent).
    `kubectl apply` it. ArgoCD brings up the four platform operators then houba + buildkitd.
 2. Point `sources/houba-prod` at **your** policy repo (the `POLICY_REPO_URL` config) and
    pinned image.
-3. **Secrets:** the prod root bootstraps OpenBao in **dev mode** (kind-demoable only). Two
-   demo-only glue steps wire ESO to it (never committed — credential *values* stay out of git):
+3. **Secrets:** the prod root bootstraps OpenBao in **dev mode** (kind-demoable only). The two
+   demo-only glue steps below wire ESO to it (never committed — credential *values* stay out of
+   git); `make argocd-seed` runs exactly these:
    ```sh
    # (a) the token ESO authenticates with — dev root token is "root"
    kubectl -n openbao create secret generic openbao-token --from-literal=token=root
-   # (b) seed the registry roster ESO will materialize (placeholder for the demo)
-   kubectl -n openbao exec -i deploy/openbao -- \
-     bao kv put secret/houba/registries \
-     HOUBA_REGISTRIES='{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'
+   # (b) seed the registry roster ESO will materialize (placeholder for the demo).
+   #     Select the pod by label (the chart's server is a StatefulSet, not a Deployment).
+   kubectl -n openbao exec -i \
+     "$(kubectl -n openbao get pod -l app.kubernetes.io/name=openbao -o jsonpath='{.items[0].metadata.name}')" -- \
+     sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/houba/registries HOUBA_REGISTRIES='"'"'{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'"'"''
    ```
    For real prod, harden OpenBao (seal/unseal + Kubernetes auth, dropping the static token) or
    repoint the `ClusterSecretStore` (`sources/houba-prod/clustersecretstore.yaml`) at your

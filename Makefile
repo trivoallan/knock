@@ -27,7 +27,7 @@ ARGOCD_VERSION  ?= v2.12.4
 .PHONY: help cluster image up-lite demo-lite demo-lite-run \
         up-full demo-full demo-full-run \
         up-transform demo-transform demo-transform-run \
-        argocd demo-argocd demo-argocd-run \
+        argocd demo-argocd demo-argocd-run argocd-prod argocd-seed \
         blast-radius docker-auth logs down
 
 help: ## List targets
@@ -106,6 +106,27 @@ demo-argocd-run: ## Fire a one-shot reconcile from the ArgoCD-synced CronJob
 	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
 	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=300s
+
+argocd-prod: cluster image argocd ## Bring up the FULL prod App-of-Apps on kind (ESO+KEDA+Prometheus+OpenBao operators, then houba+buildkitd) + seed dev OpenBao
+	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) ARGOCD_ENV=prod \
+	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
+	@echo ">> Prod App-of-Apps applied. ArgoCD is syncing 6 children: operators (wave 0) then houba+buildkitd (wave 1)."
+	@echo ">> Waiting for OpenBao (wave 0) to come up so it can be seeded ..."
+	@for i in $$(seq 1 60); do \
+	  $(KUBECTL) -n openbao get pod -l app.kubernetes.io/name=openbao 2>/dev/null | grep -q Running && break; \
+	  sleep 10; \
+	done
+	-$(MAKE) argocd-seed
+	@echo ">> Done. Watch the rollout with:  kubectl get applications -n argocd"
+	@echo ">> NOTE: the prod source targets org placeholders (POLICY_REPO_URL=gitlab.example.com, image"
+	@echo ">>       ghcr.io/trivoallan/houba, and the seeded roster points at an in-cluster registry the prod"
+	@echo ">>       apps set does NOT deploy). This target demonstrates the GitOps BOOTSTRAP (operators +"
+	@echo ">>       ESO->OpenBao secret path), not a live mirror. Point sources/houba-prod at your policy repo"
+	@echo ">>       + registry for a working reconcile. See docs/runbooks/reference-deployment.md."
+
+argocd-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (placeholder roster; demo only)
+	$(KUBECTL) -n openbao create secret generic openbao-token --from-literal=token=root --dry-run=client -o yaml | $(KUBECTL) apply -f -
+	$(KUBECTL) -n openbao exec -i $$($(KUBECTL) -n openbao get pod -l app.kubernetes.io/name=openbao -o jsonpath='{.items[0].metadata.name}') -- sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/houba/registries HOUBA_REGISTRIES='\''{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'\'''
 
 # ---- consumer / ops ------------------------------------------------------
 blast-radius: ## (Re)run the blast-radius consumer and print its report
