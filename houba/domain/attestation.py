@@ -40,6 +40,7 @@ class TransformPredicate(BaseModel):
     policy: str
     import_: str = Field(alias="import")
     variant: str
+    transformed: bool  # True = rebuilt through a transform; False = copied/passed through as-is
     source: str  # source repo, e.g. "docker.io/library/redis" — never a destination
     source_digest: str  # the immutable digest the rebuild derived from
     builder_id: str
@@ -69,6 +70,7 @@ def build_transform_statement(
     created: str,
     transform_version: str,
     steps: list[tuple[str, dict[str, Any]]],
+    transformed: bool,
 ) -> dict[str, Any]:
     """Assemble the in-toto Statement whose subject is the rebuilt output digest.
 
@@ -80,6 +82,7 @@ def build_transform_statement(
             "import": import_name,
             "policy": policy,
             "variant": variant,
+            "transformed": transformed,
             "source": source,
             "source_digest": source_digest,
             "builder_id": builder_id,
@@ -103,6 +106,14 @@ def transform_predicate_json_schema() -> dict[str, Any]:
     """
     return TransformPredicate.model_json_schema(by_alias=True)
 
+
+# The OCI referrer artifactType cosign v3 attaches an attestation under. The use case
+# lists referrers of this type to decide whether a mirror digest is already signed
+# (idempotent backfill). ponytail: a present cosign bundle ⇒ "houba already signed
+# this digest"; sufficient for idempotence — we do not pull + verify each referrer.
+# Upgrade path if another tool attaches attestations to the same digests: attach a
+# houba-owned marker referrer instead and match that.
+COSIGN_ATTESTATION_ARTIFACT_TYPE = "application/vnd.dev.sigstore.bundle.v0.3+json"
 
 # cosign v3 signing-config (schema v0.2). cosign v3 enables the signing-config by
 # default and rejects the old --fulcio-url/--rekor-url/--tlog-upload flags, so
