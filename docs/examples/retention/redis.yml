@@ -1,4 +1,4 @@
-# DESIGN-STAGE (not yet implemented) — demonstrates the `archive` retention knobs.
+# Demonstrates the `archive` retention knobs (shipped in v0.5).
 # Spec: docs/superpowers/specs/2026-06-14-retention-marking-design.md
 #
 # Retention is a SECOND source of pending-deletion marks, computed during reconcile:
