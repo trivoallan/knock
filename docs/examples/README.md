@@ -86,7 +86,9 @@ regctl manifest get localhost:5001/demo/busybox:1.37.0 --format '{{json .}}' \
   "org.opencontainers.image.source": "docker.io/library/busybox",
   "org.opencontainers.image.base.name": "docker.io/library/busybox:1.37.0",
   "org.opencontainers.image.base.digest": "sha256:9532…",   // the source digest = idempotency key
-  "org.opencontainers.image.revision": "sha256:9532…",
+  // org.opencontainers.image.revision is omitted here because the busybox upstream image
+  // declares no revision annotation or label.  When the source *does* declare one,
+  // houba propagates it verbatim (manifest annotation wins over config label).
   "org.opencontainers.image.created": "2026-…",
   "io.houba.policy": "busybox",
   "io.houba.import": "stable",
