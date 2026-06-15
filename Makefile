@@ -107,7 +107,7 @@ demo-argocd-run: ## Fire a one-shot reconcile from the ArgoCD-synced CronJob
 	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=300s
 
-argocd-prod: cluster image argocd ## Bring up the FULL prod App-of-Apps on kind (ESO+KEDA+Prometheus+OpenBao operators, then houba+buildkitd) + seed dev OpenBao
+argocd-prod: cluster image argocd ## Full prod App-of-Apps on kind, mirrored end-to-end (operators + ESO->OpenBao + busybox policy + registry + reconcile)
 	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) ARGOCD_ENV=prod \
 	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
 	@echo ">> Prod App-of-Apps applied. ArgoCD is syncing 6 children: operators (wave 0) then houba+buildkitd (wave 1)."
@@ -117,13 +117,21 @@ argocd-prod: cluster image argocd ## Bring up the FULL prod App-of-Apps on kind 
 	  sleep 10; \
 	done
 	-$(MAKE) argocd-seed
-	@echo ">> Done. Watch the rollout with:  kubectl get applications -n argocd"
-	@echo ">> NOTE: the policy front door defaults to the bundled busybox example (git-sync'd from this repo),"
-	@echo ">>       so houba reconciles a REAL policy. The remaining gap for a live mirror is a destination"
-	@echo ">>       registry: the prod apps set deploys none, and the seeded roster points at an in-cluster"
-	@echo ">>       registry that isn't there. So this target demonstrates the GitOps BOOTSTRAP (operators +"
-	@echo ">>       ESO->OpenBao secret path + a real policy), not a completed push. Point the roster at your"
-	@echo ">>       registry (or sync the demo 'registry' app) for a working reconcile. See the runbook."
+	@echo ">> Deploying registry:2 — the push destination the prod apps set omits (matches the seeded roster"
+	@echo ">>       host registry.houba.svc.cluster.local:5000). Applied out-of-band; ArgoCD does not manage it."
+	$(KUSTOMIZE) deploy/argocd/sources/registry | $(KUBECTL) apply -f -
+	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=180s
+	@echo ">> Waiting for ESO to materialize the houba-registries Secret from OpenBao ..."
+	@for i in $$(seq 1 30); do $(KUBECTL) -n $(NS) get secret houba-registries >/dev/null 2>&1 && break; sleep 10; done
+	@echo ">> Waiting for the houba CronJob (wave 1) to sync ..."
+	@for i in $$(seq 1 60); do $(KUBECTL) -n $(NS) get cronjob/houba-reconcile >/dev/null 2>&1 && break; sleep 10; done
+	$(MAKE) demo-argocd-run
+	@sleep 3
+	$(MAKE) blast-radius OVERLAY=deploy/argocd/sources/houba-prod
+	@echo ">> Full prod App-of-Apps is up and mirrored busybox end-to-end: operators (ESO+KEDA+Prometheus+"
+	@echo ">>       OpenBao) + houba/buildkitd, the ESO->OpenBao secret path, a real git-sync'd policy, and the"
+	@echo ">>       registry destination. For a REAL cluster: pin your published image, point sources/houba-prod"
+	@echo ">>       at your policy repo, and use your registry (not this demo registry:2). See the runbook."
 
 argocd-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (placeholder roster; demo only)
 	$(KUBECTL) -n openbao create secret generic openbao-token --from-literal=token=root --dry-run=client -o yaml | $(KUBECTL) apply -f -
