@@ -30,12 +30,15 @@ configMapGenerator:
   - name: houba-config
     behavior: merge
     literals:
-      # Point at YOUR policy repo (the front door). Reconcile the whole tree.
-      - POLICY_REPO_URL=https://gitlab.example.com/platform/houba-policies
+      # Policy repo (the front door). Defaults to the bundled busybox example so the
+      # overlay reconciles a real policy out of the box (parity with the ArgoCD
+      # sources/houba-prod default); repoint POLICY_REPO_URL + POLICY_DIR at YOUR org
+      # policy repo when adopting.
+      - POLICY_REPO_URL=https://github.com/trivoallan/houba
       - POLICY_REPO_REF=main
-      - POLICY_DIR=/policies/current
+      - POLICY_DIR=/policies/current/docs/examples/busybox
       # Repos the blast-radius consumer walks — set to your mirrored namespaces.
-      - BLAST_REPOS=mirror/busybox mirror/redis
+      - BLAST_REPOS=demo/busybox
       # Org-specific transform data lives here (policies only NAME these):
       #   HOUBA_TRANSFORM_CA_CERTS={"corp":{"path":"/etc/houba/certs/corp-root.pem"}}
       #   HOUBA_TRANSFORM_PACKAGE_MIRRORS={"corp":{"apt":"https://mirror.corp/debian"}}
