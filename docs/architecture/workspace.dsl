@@ -376,6 +376,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         argoEnv = deploymentEnvironment "ArgoCD App-of-Apps (prod variant)" {
             deploymentNode "Git host" "github.com/trivoallan/houba (or a fork) — deploy/argocd/" "Git server" {
                 agRepo = infrastructureNode "Manifests repo" "root.yaml + apps/prod + sources/* — a merged PR is the front door" "git / GitOps"
+                agPolicyRepo = infrastructureNode "Policy repo (org)" "POLICY_REPO_URL — the front door for MirrorPolicy files; git-sync clones it. ArgoCD never touches policies." "git / GitOps"
             }
             deploymentNode "Kubernetes cluster" "kind (demo) or a real cluster — same base manifests (anti-drift)" "Kubernetes" {
                 deploymentNode "namespace: argocd" "ArgoCD controller" "Namespace" {
@@ -414,7 +415,7 @@ workspace "houba" "Single front door / stamper for external container images." {
             agRoot -> agBuild "Syncs the buildkitd app" "ArgoCD"
             agEso -> agBao "Reads houba/registries" "vault API" "DataCoupling"
             agEsObj -> agEso "Requests the roster Secret" "ESO"
-            agGit -> agRepo "Pulls policies" "git"
+            agGit -> agPolicyRepo "Pulls policies" "git"
             agProm -> agBuild "Scrapes the build metric" "HTTP :6060" "DataCoupling"
             agKeda -> agProm "Queries active builds (PromQL)" "PromQL" "DataCoupling"
             agKeda -> agBuild "Scales the Deployment 1→K" "ScaledObject"
