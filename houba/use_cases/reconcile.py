@@ -67,6 +67,7 @@ from houba.use_cases.report import (
 
 BASE_DIGEST_KEY = "org.opencontainers.image.base.digest"
 CREATED_KEY = "org.opencontainers.image.created"
+_REVISION_KEY = "org.opencontainers.image.revision"
 
 
 def _parse_created(value: str | None) -> datetime | None:
@@ -81,7 +82,8 @@ def _parse_created(value: str | None) -> datetime | None:
 def to_source_artifact(info: ImageInfo, *, now: datetime) -> SourceArtifact:
     # Unknown created time → use `now` (conservative: treated as just-pushed, so the
     # 7-day stability window skips an update rather than churning on unknown freshness).
-    return SourceArtifact(digest=info.digest, pushed_at=info.created or now)
+    revision = info.annotations.get(_REVISION_KEY) or info.config_labels.get(_REVISION_KEY)
+    return SourceArtifact(digest=info.digest, pushed_at=info.created or now, revision=revision)
 
 
 def to_mirror_artifact(

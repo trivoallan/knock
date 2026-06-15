@@ -24,6 +24,7 @@ DEFAULT_GRACE = timedelta(days=7)
 class SourceArtifact:
     digest: str  # current source digest (index digest for multi-arch)
     pushed_at: datetime
+    revision: str | None = None  # upstream-declared org.opencontainers.image.revision, if any
 
 
 @dataclass(frozen=True)
