@@ -120,18 +120,25 @@ make argocd-prod      # kind + argo-cd, then sync the `prod` apps set and seed d
 make argocd-seed      # (re)seed OpenBao on its own, once the pod is Running
 ```
 
-`argocd-prod` applies the **prod** App-of-Apps and brings up all four platform operators
-(ESO + KEDA + kube-prometheus-stack + OpenBao) then houba + buildkitd, and seeds the dev
-OpenBao so ESO can resolve `houba-registries`. The policy front door defaults to the bundled
-**busybox example** (`POLICY_DIR=…/docs/examples/busybox`, git-sync'd from this repo), so houba
-reconciles a real policy out of the box.
+`argocd-prod` brings up the **whole prod stack on kind and mirrors busybox end-to-end**:
 
-> **What this shows — and doesn't.** It demonstrates the GitOps **bootstrap** (the whole stack,
-> secret path and a real git-sync'd policy included, coming up from git). It is **not** a
-> completed mirror on kind: the seeded roster points at an in-cluster registry the `prod` apps
-> set does not deploy (and the image is the published `ghcr.io/trivoallan/houba`), so the push
-> step has nowhere to land. Point the roster at your registry — or sync the demo `registry` app
-> alongside — for a working reconcile.
+1. applies the prod App-of-Apps (ESO + KEDA + kube-prometheus-stack + OpenBao operators, then
+   houba + buildkitd);
+2. seeds the dev OpenBao so ESO materializes `houba-registries`;
+3. deploys `registry:2` out-of-band (the push destination the `prod` apps set omits — it matches
+   the seeded roster host `registry.houba.svc.cluster.local:5000`);
+4. waits for the secret + CronJob, fires a one-shot reconcile, and runs blast-radius.
+
+The policy front door defaults to the bundled **busybox example**
+(`POLICY_DIR=…/docs/examples/busybox`, git-sync'd from this repo) and the image defaults to the
+locally-built `houba:dev`, so it runs the current code against a real policy with no edits.
+
+> **Demo vs. real prod.** Three things are kind-demo defaults you replace when adopting: the
+> image (`houba:dev` → your pinned published image), the policy repo (`sources/houba-prod`'s
+> `POLICY_REPO_URL` → your org repo), and the registry (this throwaway `registry:2` → your
+> registry, seeded into OpenBao). OpenBao itself runs in **dev mode** — harden it or repoint the
+> `ClusterSecretStore`. The bootstrap mechanics (App-of-Apps, sync waves, the ESO→OpenBao secret
+> path) are identical to real prod.
 
 ### Production
 

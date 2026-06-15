@@ -16,11 +16,13 @@ resources:
 generatorOptions:
   disableNameSuffixHash: true
 
-# Pinned, published image (same as overlays/prod).
-images:
-  - name: houba
-    newName: ghcr.io/trivoallan/houba
-    newTag: v0.2.0
+# Image: inherited from base (houba:dev — the locally-built image `make argocd-prod`
+# loads into kind), so the prod App-of-Apps runs the current code on kind out of the
+# box. When adopting, pin YOUR published image here, e.g.:
+#   images:
+#     - name: houba
+#       newName: ghcr.io/<you>/houba
+#       newTag: X.Y.Z
 
 configMapGenerator:
   - name: houba-config
