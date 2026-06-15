@@ -6,7 +6,9 @@ from houba.domain.mirror_policy import parse_mirror_policy
 
 
 def test_timezone_example_declares_two_regional_variants() -> None:
-    policy = parse_mirror_policy(Path("docs/examples/timezone/debian.yml").read_text())
+    policy = parse_mirror_policy(
+        Path("docs/examples/reference/debian-tz/debian-tz.yml").read_text()
+    )
 
     assert policy.metadata.name == "debian-tz"
     [imp] = policy.spec.imports
