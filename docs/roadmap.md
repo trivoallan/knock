@@ -25,8 +25,8 @@ Two consequences drive everything below:
   composition root, runtime image bundling skopeo + buildctl + git.
 - **Phase C (largely delivered)** — the derive-and-stamp engine. ①–④ are shipped (provenance
   schema + signed SLSA/in-toto attestations, derive-and-stamp, composable transforms, coverage
-  audit), plus delegated deletion and the reference reaper (part of ⑤) and `houba attach` (scan
-  ingestion). Remaining: `archive_restore` (rest of ⑤), scaffolding ⑥, and the decision on ⑦.
+  audit), plus delegated deletion, the reference reaper, and retention-driven soft-delete (⑤
+  complete), and `houba attach` (scan ingestion). Remaining: scaffolding ⑥ and the decision on ⑦.
   Per-item status is marked inline below.
 
 ## Phase C — ordered by the thesis, not by the inherited Groovy use-case list
@@ -66,9 +66,17 @@ a *configuration*, not hardcoded behavior. This is the essentialization step.
 This is what makes the front door *verifiable*, and therefore enforceable. Without it, "mandatory
 front door" is a wish.
 
-### ⑤ Lifecycle — `archive_purge` / `archive_restore` — ◑ partial (delegated deletion + `houba purge` shipped; `archive_restore` remaining)
+### ⑤ Lifecycle — `archive_purge` / ~~`archive_restore`~~ — ✅ delivered (delegated deletion + `houba purge` + retention-driven soft-delete; `archive_restore` rejected)
 
-Retention. Real, but after the core loop.
+Retention — real, but after the core loop — shipped as **retention-driven soft-delete**
+([#63](https://github.com/trivoallan/houba/pull/63), ADR 0017): the dormant
+`Archive{keep, olderThanDays}` knobs now drive a *second* `pending-deletion` mark source inside
+`reconcile` (reason `retention-excess`), feeding the same usage-gated reaper as delegated deletion.
+
+`archive_restore` — and any pin/undelete or cold-storage "attic" — was **deliberately rejected**: in
+the same-registry model the soft-delete mark already delivers reversible removal (the tag stays
+pullable while marked, and selection re-entry auto-unmarks), so a copy-back buys nothing. Revisitable
+later only if a durable per-artifact hold proves necessary.
 
 ### ⑥ Scaffolding — `product_init` / `product_delete` — ⬜ not started
 
