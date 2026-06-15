@@ -254,6 +254,7 @@ def _counts_of(operations: list[Operation]) -> Counts:
         aliased=n("aliased"),
         skipped=n("skipped"),
         marked=n("marked"),
+        attested=n("attested"),
         failed=sum(1 for op in operations if op.error is not None),
     )
 
@@ -266,6 +267,7 @@ def _merge_counts(parts: list[Counts]) -> Counts:
         aliased=sum(c.aliased for c in parts),
         skipped=sum(c.skipped for c in parts),
         marked=sum(c.marked for c in parts),
+        attested=sum(c.attested for c in parts),
         failed=sum(c.failed for c in parts),
     )
 

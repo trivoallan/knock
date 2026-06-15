@@ -12,7 +12,9 @@ from typing import TYPE_CHECKING, Literal, Protocol
 if TYPE_CHECKING:
     from houba.use_cases.report import RunReport
 
-OperationKind = Literal["imported", "updated", "deleted", "aliased", "skipped", "marked"]
+OperationKind = Literal[
+    "imported", "updated", "deleted", "aliased", "skipped", "marked", "attested"
+]
 
 
 @dataclass(frozen=True)
@@ -23,6 +25,7 @@ class Counts:
     aliased: int = 0
     skipped: int = 0
     marked: int = 0
+    attested: int = 0
     failed: int = 0
 
 

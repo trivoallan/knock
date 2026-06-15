@@ -38,7 +38,8 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
             label = "" if p.status == "ok" else "  PARTIAL"
             stream.write(
                 f"{mark} {p.name}{label}  imported={t.imported} updated={t.updated} "
-                f"deleted={t.deleted} aliased={t.aliased} skipped={t.skipped} failed={t.failed}\n"
+                f"deleted={t.deleted} aliased={t.aliased} skipped={t.skipped} "
+                f"attested={t.attested} failed={t.failed}\n"
             )
         if verbose:
             for tgt in p.targets:
@@ -54,7 +55,7 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
     stream.write(
         f"reconcile [{report.mode}] status={report.status}  "
         f"imported={t.imported} updated={t.updated} deleted={t.deleted} "
-        f"aliased={t.aliased} skipped={t.skipped} failed={t.failed} "
+        f"aliased={t.aliased} skipped={t.skipped} attested={t.attested} failed={t.failed} "
         f"failed_policies={failed_policies}\n"
     )
 
