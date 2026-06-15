@@ -88,7 +88,7 @@ A product declares its imports as a `MirrorPolicy` YAML document. This declarati
 contract — prefer extending it over adding imperative branching. It is a Pydantic model published
 as a **JSON Schema** (`mirror_policy_json_schema()`) so policy files get editor and CI validation.
 
-Copy example (`docs/examples/busybox`):
+Copy example (`docs/examples/reference/busybox`):
 
 ```yaml
 apiVersion: houba.io/v1alpha1
@@ -114,7 +114,7 @@ spec:
           repository: busybox
 ```
 
-Rebuild example with regional variants (`docs/examples/timezone`):
+Rebuild example with regional variants (`docs/examples/reference/debian-tz`):
 
 ```yaml
 spec:

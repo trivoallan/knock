@@ -88,7 +88,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         signingService = softwareSystem "Signing / Key service" "KMS or Fulcio (keyless CA) that houba's attestor uses to sign in-toto attestations (DSSE). Trust is org configuration, not baked in." "External"
         transparencyLog = softwareSystem "Transparency log (Rekor)" "Optional append-only signature log; blank in air-gapped orgs. houba can point at one but never deploys it." "External,Downstream"
         upstreamScanner = softwareSystem "Upstream Scanner" "Produces vulnerability / EOL scan reports (CI pipeline, registry-native scanner, or scan service). houba ingests the report; it never calls the scanner." "External"
-        argocd = softwareSystem "ArgoCD" "Optional GitOps controller (App-of-Apps variant): syncs the houba install manifests from git into the cluster. Not the blessed path — kubectl apply -k stays the default." "External"
+        argocd = softwareSystem "ArgoCD" "GitOps controller: the App-of-Apps that syncs the houba install from git. This IS the reference deployment — and the demo on kind. The kubectl apply -k overlays/local path is the inner-loop escape hatch, not a separate blueprint." "External"
 
         platformEng -> houba "Configures the hardening policy + registry roster, runs / schedules reconcile" "CLI"
         productTeam -> houba "Declares its imports as MirrorPolicy files" "YAML"
@@ -104,7 +104,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         houba -> signingService "Signs in-toto attestations (DSSE)" "cosign"
         houba -> transparencyLog "Records the signature (optional; blank => skipped)" "cosign / rekor"
         upstreamScanner -> houba "Produces scan reports ingested by" "SARIF / file"
-        argocd -> houba "Syncs the install manifests into the cluster (App-of-Apps variant)" "GitOps"
+        argocd -> houba "Syncs the install manifests from git into the cluster (App-of-Apps reference)" "GitOps"
 
         # Component-level relationships — the source of truth for the Component view.
         # Structurizr implies the container/system-level edges for the views above
@@ -197,228 +197,83 @@ workspace "houba" "Single front door / stamper for external container images." {
         # buildkit→packageMirror) are auto-replicated from the model; only the infrastructure-node
         # edges are declared per environment.
 
-        # ── busybox — copy path, overlay local-lite (the smallest end-to-end case).
-        exBusybox = deploymentEnvironment "busybox · copy (local-lite)" {
-            deploymentNode "Operator host" "Laptop / CI runner: runs kind, holds the policy clone" "macOS / Linux" {
-                bbRepo = infrastructureNode "Policy repo" "docs/examples/busybox/busybox.yml — a merged PR is the front door" "git / GitOps"
-                deploymentNode "kind cluster" "Single-node Kubernetes — overlay local-lite (copy path, no buildkit)" "kind" {
-                    deploymentNode "namespace: houba" "houba workloads" "Namespace" {
-                        deploymentNode "CronJob: houba-reconcile" "Suspended; one-shot via make demo-lite-run. Image houba:dev · team=platform · POLICY_DIR=docs/examples/busybox" "Kubernetes CronJob" {
-                            bbHouba = containerInstance houbaCli
-                            bbGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
-                        }
-                        bbBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/busybox — reads stamps, answers the CVE-time query" "regctl"
-                    }
-                    deploymentNode "namespace: registry" "Throwaway registry:2 — plain HTTP (tls_verify:false)" "Namespace" {
-                        bbDest = softwareSystemInstance destRegistries
-                    }
-                }
-            }
-            deploymentNode "Internet" "Public registries, external to the cluster" "Network" {
-                bbSrc = softwareSystemInstance sourceRegistries
-            }
-            bbGit -> bbRepo "Pulls policies" "git"
-            bbBlast -> bbDest "Reads provenance stamps" "regctl" "DataCoupling"
-        }
-
-        # ── redis — same copy-path topology as busybox (shares local-lite); run in-cluster by
-        #    repointing POLICY_DIR, or locally via `uv run houba reconcile docs/examples/redis`.
-        exRedis = deploymentEnvironment "redis · copy (local-lite)" {
-            deploymentNode "Operator host" "Laptop / CI runner: runs kind, holds the policy clone" "macOS / Linux" {
-                rdRepo = infrastructureNode "Policy repo" "docs/examples/redis/redis.yml — semver 7.2.x, aliases track highest patch" "git / GitOps"
-                deploymentNode "kind cluster" "Single-node Kubernetes — overlay local-lite (copy path, no buildkit)" "kind" {
-                    deploymentNode "namespace: houba" "houba workloads" "Namespace" {
-                        deploymentNode "CronJob: houba-reconcile" "Suspended; one-shot via make demo-lite-run. Image houba:dev · team=data-platform · POLICY_DIR=docs/examples/redis" "Kubernetes CronJob" {
-                            rdHouba = containerInstance houbaCli
-                            rdGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
-                        }
-                        rdBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/redis — reads stamps, answers the CVE-time query" "regctl"
-                    }
-                    deploymentNode "namespace: registry" "Throwaway registry:2 — plain HTTP (tls_verify:false)" "Namespace" {
-                        rdDest = softwareSystemInstance destRegistries
-                    }
-                }
-            }
-            deploymentNode "Internet" "Public registries, external to the cluster" "Network" {
-                rdSrc = softwareSystemInstance sourceRegistries
-            }
-            rdGit -> rdRepo "Pulls policies" "git"
-            rdBlast -> rdDest "Reads provenance stamps" "regctl" "DataCoupling"
-        }
-
-        # ── pending-deletion — copy path with deletionMode:mark; an external reaper owns the purge.
-        exPendingDeletion = deploymentEnvironment "pending-deletion · mark (local-lite + reaper)" {
-            deploymentNode "Operator host" "Laptop / CI runner: runs kind, holds the policy clone" "macOS / Linux" {
-                pdRepo = infrastructureNode "Policy repo" "docs/examples/pending-deletion/pending-deletion.yml — deletionMode: mark" "git / GitOps"
-                deploymentNode "kind cluster" "Single-node Kubernetes — overlay local-lite (copy path, no buildkit)" "kind" {
-                    deploymentNode "namespace: houba" "houba workloads" "Namespace" {
-                        deploymentNode "CronJob: houba-reconcile" "On a dropped tag, attaches a pending-deletion OCI referrer instead of deleting. team=data-platform" "Kubernetes CronJob" {
-                            pdHouba = containerInstance houbaCli
-                            pdGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
-                        }
-                        pdBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/redis-delegated" "regctl"
-                    }
-                    deploymentNode "namespace: registry" "Throwaway registry:2 — marked tags stay pullable (digest unchanged)" "Namespace" {
-                        pdDest = softwareSystemInstance destRegistries
-                    }
-                }
-            }
-            deploymentNode "Internet / org network" "External to the cluster" "Network" {
-                pdSrc = softwareSystemInstance sourceRegistries
-                pdReaper = softwareSystemInstance reaper
-            }
-            pdGit -> pdRepo "Pulls policies" "git"
-            pdBlast -> pdDest "Reads provenance stamps" "regctl" "DataCoupling"
-        }
-
-        # ── timezone — rebuild path, runnable self-contained: buildkitd + registry:2, no Harbor,
-        #    no org config. setTimezone fanned into -eu / -us variants. overlay local-transform.
-        exTimezone = deploymentEnvironment "timezone · rebuild (local-transform)" {
-            deploymentNode "Operator host" "Laptop / CI runner: runs kind, holds the policy clone" "macOS / Linux" {
-                tzRepo = infrastructureNode "Policy repo" "docs/examples/timezone/debian.yml — fans bookworm-slim into -eu / -us variants" "git / GitOps"
-                deploymentNode "kind cluster" "Single-node Kubernetes — overlay local-transform (rebuild path, self-contained: no Harbor, no org config)" "kind" {
-                    deploymentNode "namespace: houba" "houba workloads" "Namespace" {
-                        deploymentNode "CronJob: houba-reconcile" "Suspended; make demo-transform. team=platform · POLICY_DIR=docs/examples/timezone" "Kubernetes CronJob" {
-                            tzHouba = containerInstance houbaCli
-                            tzGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
-                        }
-                        deploymentNode "Deployment: buildkitd" "Rootless build engine; --config marks registry:2 as plain-HTTP for the push" "Kubernetes Deployment" {
-                            tzBuild = softwareSystemInstance buildkit
-                        }
-                        tzBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/debian" "regctl"
-                    }
-                    deploymentNode "namespace: registry" "Throwaway registry:2 — plain HTTP; buildkit pushes the rebuilt images here" "Namespace" {
-                        tzDest = softwareSystemInstance destRegistries
-                    }
-                }
-            }
-            deploymentNode "Internet" "Public registries, external to the cluster" "Network" {
-                tzSrc = softwareSystemInstance sourceRegistries
-            }
-            tzGit -> tzRepo "Pulls policies" "git"
-            tzBlast -> tzDest "Reads provenance stamps" "regctl" "DataCoupling"
-        }
-
-        # ── hardened — rebuild path into Harbor with org config (injectCA + rewritePackageSources).
-        #    overlay local-full: buildkitd, CA bundle mounted, ExternalSecret for Harbor push, mirror.
-        exHardened = deploymentEnvironment "hardened · rebuild + Harbor (local-full)" {
-            deploymentNode "Operator host" "Laptop / CI runner: runs kind, holds the policy clone" "macOS / Linux" {
-                hdRepo = infrastructureNode "Policy repo" "docs/examples/hardened/redis.yml — injectCA + rewritePackageSources (names only; data in config)" "git / GitOps"
-                deploymentNode "kind cluster" "Single-node Kubernetes — overlay local-full (rebuild + Harbor + org config)" "kind" {
-                    deploymentNode "namespace: houba" "houba workloads" "Namespace" {
-                        deploymentNode "CronJob: houba-reconcile" "Suspended; make demo-full-run. HOUBA_TRANSFORM_CA_CERTS + _PACKAGE_MIRRORS set · team=data-platform" "Kubernetes CronJob" {
-                            hdHouba = containerInstance houbaCli
-                            hdGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
-                            hdCA = infrastructureNode "CA bundle (corp-root.pem)" "ConfigMap mounted at /etc/houba/certs into the container trust path" "ConfigMap"
-                        }
-                        deploymentNode "Deployment: buildkitd" "Rootless build engine; runs injectCA + rewritePackageSources" "Kubernetes Deployment" {
-                            hdBuild = softwareSystemInstance buildkit
-                        }
-                        hdSecret = infrastructureNode "ExternalSecret → robot$houba" "Harbor push token (secret-registries.yaml)" "ExternalSecret"
-                        hdBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=hardened/redis" "regctl"
-                    }
-                    deploymentNode "Harbor (Helm release)" "Installed separately via Helm — TLS; project: hardened" "Harbor" {
-                        hdDest = softwareSystemInstance destRegistries
-                    }
-                }
-            }
-            deploymentNode "Internet / org network" "External to the cluster" "Network" {
-                hdSrc = softwareSystemInstance sourceRegistries
-                hdPkg = softwareSystemInstance packageMirror
-            }
-            hdGit -> hdRepo "Pulls policies" "git"
-            hdHouba -> hdCA "Mounts the CA bundle as the injectCA trust input" "volume"
-            hdBlast -> hdDest "Reads provenance stamps" "regctl / API" "DataCoupling"
-            hdSecret -> hdDest "Supplies push credentials" "token"
-        }
-
-        # ── Production blueprint — the prod overlay: real cluster, ExternalSecret-sourced creds,
-        #    org policy repo, pinned published image, hourly schedule, rebuild add-on present.
-        #    Same base manifests as the demos above (anti-drift): the demo IS the blueprint.
-        prod = deploymentEnvironment "Production blueprint (prod overlay)" {
-            deploymentNode "Org GitOps host" "e.g. gitlab.example.com/platform/houba-policies" "Git server" {
-                prRepo = infrastructureNode "Policy repo (org)" "The front door: a merged PR. POLICY_DIR=/policies/current — reconciles the whole tree" "git"
-            }
-            deploymentNode "Production Kubernetes cluster" "Real cluster (not kind) — same kustomize base as the demos (anti-drift)" "Kubernetes" {
-                deploymentNode "namespace: houba" "houba workloads" "Namespace" {
-                    deploymentNode "CronJob: houba-reconcile" "Hourly (not suspended). Image ghcr.io/trivoallan/houba:v0.2.0" "Kubernetes CronJob" {
-                        prHouba = containerInstance houbaCli
-                        prGit = infrastructureNode "git-sync sidecar" "Clones the org policy repo into /policies" "git-sync"
-                    }
-                    deploymentNode "Deployment: buildkitd" "Rebuild add-on (rootless build engine); --debugaddr exposes :6060 metrics. Scaled 1→K by KEDA under build load" "Kubernetes Deployment" {
-                        prBuild = softwareSystemInstance buildkit
-                    }
-                    prSecret = infrastructureNode "ExternalSecret" "Pulls registry credentials from the org secret store" "ExternalSecret"
-                    prBlast = infrastructureNode "Job: blast-radius" "Walks the mirrored namespaces; stand-in for the org observability / CMDB stack" "regctl"
-                }
-                # Cluster prerequisites (documented, not embedded — like ESO): drive buildkitd autoscaling.
-                prProm = infrastructureNode "Prometheus" "Cluster prerequisite — scrapes buildkitd :6060 for the in-flight-build metric" "Prometheus"
-                prKeda = infrastructureNode "KEDA ScaledObject" "Scales the buildkitd Deployment 1→K on in-flight Solve RPCs (warm floor 1, no scale-to-zero)" "KEDA"
-            }
-            deploymentNode "Org private registry" "Any dist-spec registry (Harbor / Zot …) — TLS" "OCI registry" {
-                prDest = softwareSystemInstance destRegistries
-            }
-            deploymentNode "Internet / org network" "External to the cluster" "Network" {
-                prSrc = softwareSystemInstance sourceRegistries
-                prPkg = softwareSystemInstance packageMirror
-            }
-            prGit -> prRepo "Pulls policies" "git"
-            prBlast -> prDest "Reads provenance stamps" "regctl / API" "DataCoupling"
-            prSecret -> prDest "Supplies registry credentials" "token"
-            prProm -> prBuild "Scrapes the in-flight-build metric" "HTTP :6060" "DataCoupling"
-            prKeda -> prProm "Queries active builds (PromQL)" "PromQL" "DataCoupling"
-            prKeda -> prBuild "Scales the Deployment 1→K" "ScaledObject"
-        }
-
-        # ── ArgoCD App-of-Apps variant — the prod root bootstraps the WHOLE stack from git:
-        #    ESO + KEDA + kube-prometheus-stack + OpenBao (wave 0), then houba + buildkitd
-        #    (wave 1). Same base manifests as every other deployment (anti-drift).
-        argoEnv = deploymentEnvironment "ArgoCD App-of-Apps (prod variant)" {
+        # ── The reference deployment — the Argo App-of-Apps that IS the demo. On kind it is
+        #    the demo (`make demo`); the same App-of-Apps adopts to a real cluster (swap repo,
+        #    vault, registry, image). Thesis-minimum operators: ESO + OpenBao (wave 0), houba +
+        #    buildkitd (wave 1). KEDA + Prometheus autoscaling is an optional add-on
+        #    (components/keda-buildkitd), deliberately NOT on this path.
+        refEnv = deploymentEnvironment "Reference — Argo App-of-Apps (the demo)" {
             deploymentNode "Git host" "github.com/trivoallan/houba (or a fork) — deploy/argocd/" "Git server" {
-                agRepo = infrastructureNode "Manifests repo" "root.yaml + apps/prod + sources/* — a merged PR is the front door" "git / GitOps"
-                agPolicyRepo = infrastructureNode "Policy repo (org)" "POLICY_REPO_URL — the front door for MirrorPolicy files; git-sync clones it. ArgoCD never touches policies." "git / GitOps"
+                rfRepo = infrastructureNode "Manifests repo" "root.yaml + apps/ + sources/* — a merged PR is the front door" "git / GitOps"
+                rfPolicyRepo = infrastructureNode "Policy repo (org)" "POLICY_REPO_URL — git-sync clones it; POLICY_DIR=docs/examples/reference (busybox copy + debian rebuild). ArgoCD never touches policies." "git / GitOps"
             }
-            deploymentNode "Kubernetes cluster" "kind (demo) or a real cluster — same base manifests (anti-drift)" "Kubernetes" {
+            deploymentNode "Kubernetes cluster" "kind (the demo) or a real cluster — same manifests (anti-drift)" "Kubernetes" {
                 deploymentNode "namespace: argocd" "ArgoCD controller" "Namespace" {
-                    agRoot = infrastructureNode "Application: houba-root" "App-of-Apps; syncs the apps/prod children from git" "ArgoCD"
-                    agArgo = softwareSystemInstance argocd
+                    rfRoot = infrastructureNode "Application: houba-root" "App-of-Apps; syncs the apps/ children from git (no demo/prod split)" "ArgoCD"
+                    rfArgo = softwareSystemInstance argocd
                 }
                 deploymentNode "namespace: houba" "houba workloads (wave 1)" "Namespace" {
-                    deploymentNode "CronJob: houba-reconcile" "BUILDKIT_HOST wired via config (no CronJob patch). Image ghcr.io/trivoallan/houba" "Kubernetes CronJob" {
-                        agHouba = containerInstance houbaCli
-                        agGit = infrastructureNode "git-sync sidecar" "Clones the org policy repo into /policies" "git-sync"
+                    deploymentNode "CronJob: houba-reconcile" "BUILDKIT_HOST wired via config (no CronJob patch). On kind: image houba:dev; reconciles the reference policy (copy + rebuild)" "Kubernetes CronJob" {
+                        rfHouba = containerInstance houbaCli
+                        rfGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
                     }
-                    deploymentNode "Deployment: buildkitd (own app)" "Rebuild add-on + ScaledObject + ServiceMonitor — its own ArgoCD Application" "Kubernetes Deployment" {
-                        agBuild = softwareSystemInstance buildkit
+                    deploymentNode "Deployment: buildkitd (own app)" "Rebuild add-on (rootless build engine) — its own ArgoCD Application" "Kubernetes Deployment" {
+                        rfBuild = softwareSystemInstance buildkit
                     }
-                    agEsObj = infrastructureNode "ExternalSecret + ClusterSecretStore" "houba-secret-store → OpenBao (ESO vault provider)" "ExternalSecret"
+                    rfEsObj = infrastructureNode "ExternalSecret + ClusterSecretStore" "houba-secret-store → OpenBao (ESO vault provider)" "ExternalSecret"
+                    rfBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/busybox demo/debian — reads stamps, answers the CVE-time query" "regctl"
                 }
                 deploymentNode "namespace: external-secrets" "ESO operator (wave 0)" "Namespace" {
-                    agEso = infrastructureNode "External Secrets Operator" "Helm child; materializes the registry roster Secret" "ESO"
+                    rfEso = infrastructureNode "External Secrets Operator" "Helm child; materializes the registry roster Secret" "ESO"
                 }
                 deploymentNode "namespace: openbao" "Secret backend (wave 0)" "Namespace" {
-                    agBao = infrastructureNode "OpenBao" "Helm child (dev mode on kind); holds houba/registries" "OpenBao"
+                    rfBao = infrastructureNode "OpenBao" "Helm child (dev mode on kind); holds houba/registries" "OpenBao"
                 }
-                deploymentNode "namespace: keda" "KEDA operator (wave 0)" "Namespace" {
-                    agKeda = infrastructureNode "KEDA" "Helm child; scales buildkitd 1→K" "KEDA"
-                }
-                deploymentNode "namespace: monitoring" "Prometheus (wave 0)" "Namespace" {
-                    agProm = infrastructureNode "kube-prometheus-stack" "Helm child; scrapes buildkitd :6060, feeds KEDA" "Prometheus"
+                deploymentNode "namespace: registry" "Throwaway registry:2 — applied out-of-band by make demo; ArgoCD does not manage it" "Namespace" {
+                    rfDest = softwareSystemInstance destRegistries
                 }
             }
             deploymentNode "Internet / org network" "External to the cluster" "Network" {
-                agSrc = softwareSystemInstance sourceRegistries
-                agDest = softwareSystemInstance destRegistries
+                rfSrc = softwareSystemInstance sourceRegistries
             }
-            agArgo -> agRepo "Pulls manifests (App-of-Apps)" "git" "DataCoupling"
-            agRoot -> agHouba "Syncs the houba install" "ArgoCD"
-            agRoot -> agBuild "Syncs the buildkitd app" "ArgoCD"
-            agEso -> agBao "Reads houba/registries" "vault API" "DataCoupling"
-            agEsObj -> agEso "Requests the roster Secret" "ESO"
-            agGit -> agPolicyRepo "Pulls policies" "git"
-            agProm -> agBuild "Scrapes the build metric" "HTTP :6060" "DataCoupling"
-            agKeda -> agProm "Queries active builds (PromQL)" "PromQL" "DataCoupling"
-            agKeda -> agBuild "Scales the Deployment 1→K" "ScaledObject"
+            rfArgo -> rfRepo "Pulls manifests (App-of-Apps)" "git" "DataCoupling"
+            rfRoot -> rfHouba "Syncs the houba install" "ArgoCD"
+            rfRoot -> rfBuild "Syncs the buildkitd app" "ArgoCD"
+            rfEso -> rfBao "Reads houba/registries" "vault API" "DataCoupling"
+            rfEsObj -> rfEso "Requests the roster Secret" "ESO"
+            rfGit -> rfPolicyRepo "Pulls policies" "git"
+            rfBlast -> rfDest "Reads provenance stamps" "regctl" "DataCoupling"
+        }
+
+        # ── The local inner-loop overlay — the escape hatch (`make local`, kubectl apply -k).
+        #    Self-contained: buildkitd + a throwaway registry:2, a plain-secret roster, NO
+        #    operators. Reconciles the SAME reference policy (busybox copy + debian rebuild) and
+        #    renders local, uncommitted manifests (the App-of-Apps reads children from git).
+        localEnv = deploymentEnvironment "Local — inner-loop overlay (make local)" {
+            deploymentNode "Operator host" "Laptop / CI runner: runs kind, holds the policy clone" "macOS / Linux" {
+                loRepo = infrastructureNode "Policy repo" "docs/examples/reference — busybox copy + debian rebuild (git-sync'd)" "git / GitOps"
+                deploymentNode "kind cluster" "Single-node Kubernetes — overlay local (self-contained: buildkitd, no operators)" "kind" {
+                    deploymentNode "namespace: houba" "houba workloads" "Namespace" {
+                        deploymentNode "CronJob: houba-reconcile" "Suspended; one-shot via make local. Image houba:dev · team=platform · POLICY_DIR=docs/examples/reference" "Kubernetes CronJob" {
+                            loHouba = containerInstance houbaCli
+                            loGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
+                        }
+                        deploymentNode "Deployment: buildkitd" "Rootless build engine; --config marks registry:2 as plain-HTTP for the push" "Kubernetes Deployment" {
+                            loBuild = softwareSystemInstance buildkit
+                        }
+                        loSecret = infrastructureNode "Secret: houba-registries" "Plain secret roster (no operators) — the inner-loop escape hatch" "Secret"
+                        loBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/busybox demo/debian" "regctl"
+                    }
+                    deploymentNode "namespace: registry" "Throwaway registry:2 — plain HTTP; copied + rebuilt images pushed here" "Namespace" {
+                        loDest = softwareSystemInstance destRegistries
+                    }
+                }
+            }
+            deploymentNode "Internet" "Public registries, external to the cluster" "Network" {
+                loSrc = softwareSystemInstance sourceRegistries
+            }
+            loGit -> loRepo "Pulls policies" "git"
+            loBlast -> loDest "Reads provenance stamps" "regctl" "DataCoupling"
         }
     }
 
@@ -449,33 +304,13 @@ workspace "houba" "Single front door / stamper for external container images." {
             autolayout lr
         }
 
-        # One deployment view per worked example (each = its kind overlay), plus the prod
-        # blueprint. The same kustomize base underlies them all — the demo IS the blueprint.
-        deployment houba "busybox · copy (local-lite)" "DeployBusybox" "Copy path, smallest case: houba mirrors + stamps busybox into a throwaway registry:2 (HTTP), no buildkit. Overlay local-lite." {
+        # Two deployment views: the Argo reference (which is the demo) and the local
+        # inner-loop overlay. The same kustomize base underlies both — the demo IS the blueprint.
+        deployment houba "Reference — Argo App-of-Apps (the demo)" "DeployReference" "The single reference: an Argo App-of-Apps that is both the production blueprint and the kind demo. ESO + OpenBao (wave 0), houba + buildkitd (wave 1); the reference policy (busybox copy + debian rebuild); registry:2 applied out-of-band. KEDA/Prometheus autoscaling is an optional add-on, not on this path." {
             include *
             autolayout lr
         }
-        deployment houba "redis · copy (local-lite)" "DeployRedis" "Copy path over a real image (redis 7.2.x): same local-lite topology as busybox, semver aliases. Run in-cluster or locally." {
-            include *
-            autolayout lr
-        }
-        deployment houba "pending-deletion · mark (local-lite + reaper)" "DeployPendingDeletion" "Copy path with deletionMode:mark — dropped tags get a pending-deletion OCI referrer; an external reaper owns the purge." {
-            include *
-            autolayout lr
-        }
-        deployment houba "timezone · rebuild (local-transform)" "DeployTimezone" "Rebuild path, self-contained: buildkitd rebuilds debian through setTimezone into -eu/-us variants, pushes to registry:2 (HTTP). No Harbor, no org config. Overlay local-transform." {
-            include *
-            autolayout lr
-        }
-        deployment houba "hardened · rebuild + Harbor (local-full)" "DeployHardened" "Rebuild path with org config: buildkitd injects CA + rewrites package sources, pushes the hardened redis to Harbor (TLS) via an ExternalSecret-sourced robot token. Overlay local-full." {
-            include *
-            autolayout lr
-        }
-        deployment houba "Production blueprint (prod overlay)" "DeployProd" "The production blueprint: a real cluster running the same kustomize base, with ExternalSecret-sourced creds, the org policy repo, a pinned published image, hourly schedule, and the rebuild add-on." {
-            include *
-            autolayout lr
-        }
-        deployment houba "ArgoCD App-of-Apps (prod variant)" "DeployArgoCD" "Optional GitOps variant: an ArgoCD App-of-Apps root bootstraps the whole stack from git — ESO + KEDA + kube-prometheus-stack + OpenBao operators (wave 0), then houba + buildkitd (wave 1). Same base manifests as the overlays (anti-drift)." {
+        deployment houba "Local — inner-loop overlay (make local)" "DeployLocal" "The inner-loop escape hatch: kubectl apply -k overlays/local — buildkitd + a throwaway registry:2, a plain-secret roster, no operators. Reconciles the same reference policy (copy + rebuild) and renders local, uncommitted manifests." {
             include *
             autolayout lr
         }
