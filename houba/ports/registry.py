@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Protocol
 
@@ -12,6 +12,8 @@ class ImageInfo:
     digest: str  # manifest/index digest of the ref
     created: datetime | None  # image build time (proxy for source freshness)
     annotations: dict[str, str]  # OCI annotations (incl. recorded base.digest on mirror)
+    # image-config Labels (e.g. upstream org.opencontainers.image.revision)
+    config_labels: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

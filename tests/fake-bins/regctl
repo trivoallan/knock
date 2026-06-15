@@ -71,6 +71,7 @@ case "$cmd" in
             garbage) printf 'not json\n' ;;
             created-invalid) printf '{"created":"not-a-date","architecture":"amd64"}\n' ;;
             no-created) printf '{"architecture":"amd64","os":"linux"}\n' ;;
+            config-labels) printf '{"created":"2026-01-02T03:04:05Z","architecture":"amd64","config":{"Labels":{"org.opencontainers.image.revision":"9fceb02commit"}}}\n' ;;
             *) printf '{"created":"2026-01-02T03:04:05Z","architecture":"amd64","os":"linux"}\n' ;;
         esac
         ;;

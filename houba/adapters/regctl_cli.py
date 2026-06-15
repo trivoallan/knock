@@ -62,9 +62,16 @@ class RegctlAdapter:
         config = self._json(["image", "config", image_ref, "--format", "{{json .}}"])
         raw_annotations = manifest.get("annotations")
         annotations = dict(raw_annotations) if isinstance(raw_annotations, dict) else {}
+        cfg = config.get("config")
+        raw_labels = cfg.get("Labels") if isinstance(cfg, dict) else None
+        config_labels = (
+            {str(k): str(v) for k, v in raw_labels.items()} if isinstance(raw_labels, dict) else {}
+        )
         created_raw = config.get("created")
         created = self._parse_time(created_raw) if isinstance(created_raw, str) else None
-        return ImageInfo(digest=digest, created=created, annotations=annotations)
+        return ImageInfo(
+            digest=digest, created=created, annotations=annotations, config_labels=config_labels
+        )
 
     def get_annotations(self, image_ref: str) -> dict[str, str]:
         manifest = self._json(["manifest", "get", image_ref, "--format", "{{json .}}"])
