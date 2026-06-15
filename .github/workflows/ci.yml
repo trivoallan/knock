@@ -65,6 +65,43 @@ jobs:
       - name: pytest domain (coverage ≥ 90%)
         run: uv run pytest tests/unit/domain -v --cov=houba.domain --cov-report=term-missing --cov-fail-under=90
 
+  manifests:
+    name: manifests (kustomize render + dry-run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Install tools (envsubst + PyYAML)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gettext-base python3-yaml
+
+      - name: Render the ArgoCD kustomize sources
+        run: |
+          set -euo pipefail
+          for src in houba-demo houba-prod registry buildkitd; do
+            echo "== rendering deploy/argocd/sources/$src =="
+            kubectl kustomize --load-restrictor LoadRestrictionsNone "deploy/argocd/sources/$src" >/dev/null
+          done
+
+      - name: Validate the ArgoCD Application manifests (parse + pinned Helm revision)
+        run: |
+          set -euo pipefail
+          # Helm-source children (eso/keda/prometheus/openbao) are rendered in-cluster by
+          # ArgoCD, not by kustomize — here we only check the Application manifests parse
+          # and carry a pinned chart targetRevision.
+          for f in deploy/argocd/apps/demo/*.yaml deploy/argocd/apps/prod/*.yaml; do
+            echo "== $f =="
+            python3 -c "import yaml; d=yaml.safe_load(open('$f')); assert d['kind']=='Application', '$f not an Application'; s=d['spec']['source']; assert 'chart' not in s or s.get('targetRevision'), '$f Helm chart missing targetRevision'"
+          done
+
+      - name: Verify root.yaml renders for both envs
+        run: |
+          set -euo pipefail
+          for env in demo prod; do
+            ARGOCD_REPO_URL=https://github.com/trivoallan/houba ARGOCD_REPO_REF=main ARGOCD_ENV=$env \
+              envsubst < deploy/argocd/root.yaml \
+              | python3 -c "import yaml,sys; d=yaml.safe_load(sys.stdin); assert d['spec']['source']['path']=='deploy/argocd/apps/'+'$env'"
+          done
+
   docker-build:
     name: docker build (runtime image)
     runs-on: ubuntu-latest
