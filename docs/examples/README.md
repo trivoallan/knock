@@ -153,10 +153,16 @@ docker rm -f houba-demo-registry
   `pending-deletion` OCI referrer instead of deleting it. See
   [Pending-deletion (delegated deletion)](#pending-deletion-delegated-deletion) below. Deployment:
   [pending-deletion · mark](../architecture/_export/structurizr-DeployPendingDeletion.mmd).
+- **[`retention/redis.yml`](retention/redis.yml)** — **retention-driven soft-delete**: cap
+  *valid, in-selection* tags with `archive: {keep, olderThanDays}`. houba keeps the N most-recently
+  imported tags of each stream and marks the older surplus `pending-deletion`
+  (reason `retention-excess`) for the reaper — the one axis selection filtering can't reach. See
+  [Retention (capping valid tags)](#retention-capping-valid-tags) below.
 - **[`oracles/datadog.sh`](oracles/datadog.sh)** — reference usage oracle for `houba purge`.
   See [houba purge — the reference reaper](#houba-purge--the-reference-reaper) below.
 - **[`scan/README.md`](scan/README.md)** — the **`houba attach` path**: ingest an
-  upstream SARIF report and stamp it as a portable OCI referrer on the image's digest.
+  upstream SARIF report and stamp it as a portable OCI referrer on the image's digest —
+  also signed as an in-toto scan attestation when `HOUBA_ATTEST_SIGNER` is set.
   houba does not run a scanner — the scan is produced upstream (CI, registry-native
   scanner, or scan service) and handed in. `scan/sample.sarif.json` is a runnable
   example report (1 critical CVE, 1 medium).
@@ -237,6 +243,40 @@ export HOUBA_USAGE_ORACLE_CMD=docs/examples/oracles/datadog.sh
 Both variables are required; missing either raises a `ConfigError` (exit code 3) before
 touching the registry.
 
+### Retention (capping valid tags)
+
+`pending-deletion` (above) and the reaper handle tags that *fall out of selection*. **Retention**
+handles the opposite problem: tags that stay perfectly *valid* but pile up forever — a policy that
+mirrors every patch (`includeRegex: "^7\\.2\\."`) keeps accumulating `7.2.z` tags, each still in
+selection, so the selection axis never touches them.
+
+[`retention/redis.yml`](retention/redis.yml) activates the `archive` knobs to cap them:
+
+```yaml
+archive:
+  keep: 3            # always retain the 3 most-recently-imported 7.2.* tags
+  olderThanDays: 30  # of the rest, mark only those older than 30 days
+```
+
+During `reconcile`, houba ranks each stream's in-selection tags by **import time** (houba's own
+stamp, `org.opencontainers.image.created`), keeps the `keep` newest, and attaches a
+`pending-deletion` referrer (reason `retention-excess`) to any older tag beyond that count — both
+conditions must hold (`keep` **and** `olderThanDays`). Alias targets (e.g. whatever `latest` points
+at) are never marked, and a mark clears automatically if the tag stops being excess on a later run.
+
+Retention **only ever marks** — it never hard-deletes, even under `deletionMode: purge`: removing a
+*valid* tag must always pass the usage gate. So retention presupposes a scheduled **`houba purge`**
+(above); without one, marks accumulate harmlessly and the tags stay fully pullable.
+
+Thresholds cascade **global ← policy**, per field: a fleet-wide default in `HOUBA_RETENTION`
+(a JSON `Archive` object) is refined by a policy's `archive:`. With neither set, retention is off
+and behaviour is unchanged.
+
+```bash
+# fleet-wide default (optional); a policy's `archive:` overrides it per field
+export HOUBA_RETENTION='{"keep": 5, "olderThanDays": 90}'
+```
+
 ### Transform vocabulary
 
 Hardening steps are pluggable primitives: `injectCA`, `rewritePackageSources`, and
@@ -259,8 +299,13 @@ Two attestations are produced, attached to the image digest as OCI referrers:
 Trust is org configuration, never baked in: `keyless` uses Fulcio + an OIDC identity
 (point `HOUBA_ATTEST_FULCIO_URL` at an internal CA if you run one); `kms`/`key` sign with
 `HOUBA_ATTEST_KEY_REF` (a KMS URI or a key path). A blank `HOUBA_ATTEST_REKOR_URL` writes
-**no transparency-log entry** — the air-gapped path. v1 attests **rebuilds only**; pure
-copies stay at the annotation layer. See [`attested/redis.yml`](attested/redis.yml).
+**no transparency-log entry** — the air-gapped path. See [`attested/redis.yml`](attested/redis.yml).
+
+The **same signer** also covers the **`houba attach` path**: with `HOUBA_ATTEST_SIGNER` set, each
+ingested scan result is attached *both* as the raw SARIF referrer *and* as a signed in-toto
+attestation (`https://houba.dev/predicate/scan/v1`) over the image digest — so a downstream
+admission controller can *require* a signed scan, not merely read an annotation. Pure copies (no
+rebuild, no scan) stay at the annotation layer.
 
 ### Coverage audit (houba audit)
 

@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.5.0](https://github.com/trivoallan/houba/compare/v0.4.0...v0.5.0) (2026-06-15)
+
+
+### Features
+
+* **deploy:** buildkitd autoscaling — KEDA scale-up 1→K (impl of ADR 0016) ([#59](https://github.com/trivoallan/houba/issues/59)) ([baaca35](https://github.com/trivoallan/houba/commit/baaca354ee6d573be9caca0ef3c56f5c3e53aa0e))
+* **domain:** deb822 support in rewritePackageSources ([#61](https://github.com/trivoallan/houba/issues/61)) ([b8efe9f](https://github.com/trivoallan/houba/commit/b8efe9faf98c64e1fdc886508bb468c2f46debee))
+* **reconcile:** retention-driven soft-delete (roadmap item 5) ([#63](https://github.com/trivoallan/houba/issues/63)) ([3fdbf95](https://github.com/trivoallan/houba/commit/3fdbf95860d68add79ca8c11bb4e74db1cbb9a2e))
+* scan attestation — sign the houba attach referrer ([#56](https://github.com/trivoallan/houba/issues/56)) ([388e970](https://github.com/trivoallan/houba/commit/388e9701bd003e97db5b847856d1598b72871f7d))
+
+
+### Bug Fixes
+
+* **adapters:** cosign v3 signing-config migration (signing was broken on bundled cosign) ([#58](https://github.com/trivoallan/houba/issues/58)) ([4af77b4](https://github.com/trivoallan/houba/commit/4af77b45bb9c5fab93a0a166b335f5572cdea114))
+* **use-case:** scope reconcile unmark cleanup to the axis being unmarked ([#64](https://github.com/trivoallan/houba/issues/64)) ([ff3a957](https://github.com/trivoallan/houba/commit/ff3a957db13f411b3705341250b766b973a11e22))
+
+
+### Documentation
+
+* **readme:** bring README + examples current with v0.5 ([#65](https://github.com/trivoallan/houba/issues/65)) ([4808315](https://github.com/trivoallan/houba/commit/4808315487f3397fd008c296740f6abaee0c2c24))
+* **readme:** bring README current with v0.4 (commands, SLSA, autoscaling, arch) ([#60](https://github.com/trivoallan/houba/issues/60)) ([00d8946](https://github.com/trivoallan/houba/commit/00d89462b1b82d81e49cb764f6db7a9895336e11))
+* **roadmap:** mark lifecycle ⑤ delivered and archive_restore rejected ([#66](https://github.com/trivoallan/houba/issues/66)) ([8bfd778](https://github.com/trivoallan/houba/commit/8bfd7786e17a88fbbea5f0fab48096986cdb194c))
+* **specs:** buildkitd autoscaling design — KEDA-driven scale-up ([#43](https://github.com/trivoallan/houba/issues/43)) ([3046148](https://github.com/trivoallan/houba/commit/3046148b175f5ded87086082aad08a1bb1e0c529))
+
 ## [0.4.0](https://github.com/trivoallan/houba/compare/v0.3.0...v0.4.0) (2026-06-13)
 
 
