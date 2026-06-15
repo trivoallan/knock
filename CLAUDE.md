@@ -8,7 +8,7 @@ houba is **not an image mirror** (that miscategorization is what `skopeo sync` /
 
 houba and `regis` (which carries the removed EOL feature) are sibling tools sharing the same engineering conventions.
 
-Current maturity: the full hexagon is delivered (released 0.3.0, plus merged PRs #24–#32). The use-case layer (`houba/use_cases/` — `loader`, the `reconcile_policies` orchestrator, `report`, and the `audit` coverage walk), **both** the copy path and the rebuild / derive-and-stamp path, the pluggable transform engine (`houba/domain/transforms/`), and the OCI-standard + `io.houba.*` provenance stamp (`houba/domain/stamp.py`) are all built. The roadmap's remaining items are refinements (e.g. freezing the provenance schema, a coverage audit), not missing foundations.
+Current maturity: the full hexagon is delivered (released 0.3.0, plus merged PRs #24–#32). The use-case layer (`houba/use_cases/` — `loader`, the `reconcile_policies` orchestrator, `report`, and the `audit` coverage walk), **both** the copy path and the rebuild / derive-and-stamp path, the pluggable transform engine (`houba/domain/transforms/`), and the OCI-standard + `io.houba.*` provenance stamp (`houba/domain/stamp.py`) are all built. `houba attach` ingests upstream scan reports as signed OCI referrers and, with `--fail-on <severity>`, doubles as a CI gate (the first enforcement lever): it exits 1 when the scan has any finding at or above the threshold (`critical > high > medium > low > unknown`), else 0 — observational by default. The roadmap's remaining items are refinements (e.g. freezing the provenance schema, a coverage audit), not missing foundations.
 
 ## Commands
 
