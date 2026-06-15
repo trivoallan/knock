@@ -47,23 +47,24 @@ is anonymous, so we leave them out.)
 Plan first (no copies, no deletes):
 
 ```bash
-uv run houba reconcile docs/examples/reference/busybox.yml --dry-run
+uv run houba reconcile docs/examples/reference/busybox --dry-run
 ```
 
 Then for real:
 
 ```bash
-uv run houba reconcile docs/examples/reference/busybox.yml
+uv run houba reconcile docs/examples/reference/busybox
 # ✓ busybox  imported=12 updated=0 deleted=0 aliased=3 skipped=0
 # reconcile [apply] status=ok  imported=12 updated=0 deleted=0 aliased=3 skipped=0 failed_policies=0
 ```
 (Per-operation detail goes to **stderr** as a structlog event journal; pass `--verbose` to
 also unfold it in the stdout recap. `HOUBA_LOG_FORMAT=json` switches both streams to JSON.)
 
-(`reconcile` takes a **directory** *or* a single policy file, and discovers policies
-recursively — so `uv run houba reconcile docs/examples/reference` reconciles *both* the
-busybox copy **and** the debian-tz rebuild. We point at the single `reference/busybox.yml`
-file here to keep the quick walkthrough fast, copy-only, and predictable.)
+(`reconcile` takes a **directory** and discovers policies recursively — so
+`uv run houba reconcile docs/examples/reference` reconciles *both* the busybox copy **and**
+the debian-tz rebuild (the latter needs a BuildKit daemon). We point at the
+`reference/busybox` subdirectory here to keep the quick walkthrough fast, copy-only, and
+BuildKit-free.)
 
 ## 4. Look at what landed
 
@@ -108,7 +109,7 @@ Run `reconcile` again — nothing is re-copied, because each mirror artifact's r
 `base.digest` already matches the current source digest:
 
 ```bash
-uv run houba reconcile docs/examples/reference/busybox.yml
+uv run houba reconcile docs/examples/reference/busybox
 # ✓ busybox  imported=0 updated=0 deleted=0 aliased=3 skipped=12
 # reconcile [apply] status=ok  imported=0 updated=0 deleted=0 aliased=3 skipped=12 failed_policies=0
 #                                                                          (aliases are re-pointed every run)
@@ -128,11 +129,11 @@ docker rm -f houba-demo-registry
 `make demo` (the Argo App-of-Apps) and `make local` (the inner-loop overlay) run it. One reconcile
 demonstrates **copy *and* rebuild** in a single, self-contained pass (no Harbor, no org config):
 
-- **[`reference/busybox.yml`](reference/busybox.yml)** — the **copy path**: select
+- **[`reference/busybox/`](reference/busybox/busybox.yml)** — the **copy path**: select
   `1.36.x`/`1.37.x`, alias `{major}.{minor}` + `latest`, mirror into `demo/busybox`. The smallest,
   fastest case, and the one the walkthrough above runs. Deployment:
   [busybox · copy](../architecture/_export/structurizr-DeployBusybox.mmd).
-- **[`reference/debian-tz.yml`](reference/debian-tz.yml)** — the **rebuild path, runnable
+- **[`reference/debian-tz/`](reference/debian-tz/debian-tz.yml)** — the **rebuild path, runnable
   self-contained**: rebuild `debian:bookworm-slim` through `setTimezone` (the one built-in step that
   needs no org config) and fan it into **`-eu` / `-us` variants** via the per-variant `suffix` (the
   worked example of `variants`), stamped into `demo/debian`. Deployment:
