@@ -7,13 +7,18 @@ from houba.domain.stamp import build_stamp_annotations
 CREATED = datetime(2026, 6, 11, 12, 0, tzinfo=UTC)
 
 
-def _ann(prefix: str = "io.houba", team: str | None = "platform-data") -> dict[str, str]:
+def _ann(
+    prefix: str = "io.houba",
+    team: str | None = "platform-data",
+    source_revision: str | None = None,
+) -> dict[str, str]:
     return build_stamp_annotations(
         prefix=prefix,
         source_registry="docker.io",
         source_repository="library/redis",
         source_tag="7.2.1",
         source_digest="sha256:abc",
+        source_revision=source_revision,
         created=CREATED,
         team=team,
         artifact_type="image",
@@ -26,10 +31,20 @@ def _ann(prefix: str = "io.houba", team: str | None = "platform-data") -> dict[s
 def test_oci_standard_annotations_always_present() -> None:
     a = _ann()
     assert a["org.opencontainers.image.source"] == "docker.io/library/redis"
-    assert a["org.opencontainers.image.revision"] == "sha256:abc"  # source digest, not the tag
     assert a["org.opencontainers.image.base.name"] == "docker.io/library/redis:7.2.1"
     assert a["org.opencontainers.image.base.digest"] == "sha256:abc"
     assert a["org.opencontainers.image.created"] == "2026-06-11T12:00:00+00:00"
+
+
+def test_revision_omitted_when_source_declares_none() -> None:
+    a = _ann(source_revision=None)
+    assert "org.opencontainers.image.revision" not in a
+
+
+def test_revision_is_the_propagated_source_revision() -> None:
+    a = _ann(source_revision="9fceb02")  # an upstream SCM commit, NOT the source digest
+    assert a["org.opencontainers.image.revision"] == "9fceb02"
+    assert a["org.opencontainers.image.revision"] != a["org.opencontainers.image.base.digest"]
 
 
 def test_houba_facts_under_prefix() -> None:
@@ -69,6 +84,7 @@ def _base_kwargs() -> dict:
         source_repository="library/redis",
         source_tag="7.2.0",
         source_digest="sha256:src",
+        source_revision=None,
         created=datetime(2026, 6, 11, tzinfo=UTC),
         team="data",
         artifact_type="image",

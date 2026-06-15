@@ -205,10 +205,13 @@ or derived image. Standard facts use **OCI-standard keys** (any scanner reads th
 the genuinely novel transformation lineage uses the `io.houba.*` namespace (prefix configurable
 via `HOUBA_LABEL_PREFIX`, default `io.houba`; an empty prefix ⇒ no houba labels at all).
 
-Always emitted (OCI standard):
+Emitted (OCI standard; all but `.revision` are always present):
 
 - `org.opencontainers.image.source` — `{registry}/{repository}`
-- `org.opencontainers.image.revision` — source digest (the immutable thing packaged)
+- `org.opencontainers.image.revision` — the source-declared revision, **propagated** from the source
+  image's own `.revision` (manifest annotation, else config label; annotation wins) and **omitted**
+  when the source declares none. It is the SCM revision of the packaged software (OCI semantics), never
+  a fabricated digest.
 - `org.opencontainers.image.base.name` — `{source}:{tag}`
 - `org.opencontainers.image.base.digest` — source digest (the **idempotency key** reconcile reads
   back)
