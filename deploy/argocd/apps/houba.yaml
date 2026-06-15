@@ -8,13 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    # ArgoCD auto-detects kustomize from kustomization.yaml. base references
-    # scripts/blast-radius.sh outside deploy/, so argocd-cm must carry
-    # `kustomize.buildOptions: --load-restrictor LoadRestrictionsNone` (the demo
-    # patches it; a documented prereq for prod). No per-Application equivalent exists.
     repoURL: https://github.com/trivoallan/houba
     targetRevision: main
-    path: deploy/argocd/sources/houba-demo
+    path: deploy/argocd/sources/houba
   destination:
     server: https://kubernetes.default.svc
     namespace: houba
