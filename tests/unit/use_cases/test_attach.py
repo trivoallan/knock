@@ -5,9 +5,15 @@ from datetime import UTC, datetime
 
 import pytest
 
+from houba.domain.scan.summary import Severity
 from houba.errors import CosignError, UnknownFormatError
 from houba.ports.registry import ImageInfo
-from houba.use_cases.attach import SCAN_RESULT_ARTIFACT_TYPE, attach_scan
+from houba.use_cases.attach import (
+    SCAN_RESULT_ARTIFACT_TYPE,
+    ScanOutcome,
+    attach_exit_code,
+    attach_scan,
+)
 from tests.fakes.attestor import FakeAttestor
 from tests.fakes.clock import FakeClock
 from tests.fakes.registry import FakeRegistryPort
@@ -105,3 +111,26 @@ def test_attach_signing_failure_propagates_after_referrer_attached() -> None:
             attestor=att,
         )
     assert reg.artifact_referrers  # raw referrer attached before the signing attempt
+
+
+def _outcome(**counts: int) -> ScanOutcome:
+    facts = {f"vuln.{s.value}": "0" for s in Severity}
+    facts.update({f"vuln.{k}": str(v) for k, v in counts.items()})
+    return ScanOutcome(
+        subject_digest="sha256:s",
+        referrer_digest="sha256:r",
+        tool="trivy",
+        tool_version="1",
+        format="sarif",
+        facts=facts,
+        timestamp=datetime(2026, 6, 15, tzinfo=UTC),
+    )
+
+
+def test_attach_exit_code_gates_on_breach() -> None:
+    assert attach_exit_code(_outcome(critical=1), fail_on=Severity.high) == 1
+    assert attach_exit_code(_outcome(medium=1), fail_on=Severity.high) == 0
+
+
+def test_attach_exit_code_none_never_gates() -> None:
+    assert attach_exit_code(_outcome(critical=99), fail_on=None) == 0

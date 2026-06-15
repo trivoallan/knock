@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from houba.domain.scan.summary import Severity, ScanSummary, build_scan_annotations, gate_breached
+from houba.domain.scan.summary import ScanSummary, Severity, build_scan_annotations, gate_breached
 
 TS = datetime(2026, 6, 12, 9, 30, tzinfo=UTC)
 

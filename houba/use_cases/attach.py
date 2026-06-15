@@ -14,7 +14,7 @@ from houba.domain.scan.attestation import build_scan_statement
 from houba.domain.scan.detect import resolve_format
 from houba.domain.scan.formats.registry import DEFAULT_REGISTRY, Registry
 from houba.domain.scan.refs import pin_to_digest
-from houba.domain.scan.summary import build_scan_annotations
+from houba.domain.scan.summary import Severity, build_scan_annotations, gate_breached
 from houba.ports.attestor import AttestationRef, AttestorPort
 from houba.ports.clock import ClockPort
 from houba.ports.registry import RegistryPort
@@ -32,6 +32,13 @@ class ScanOutcome:
     facts: dict[str, str]
     timestamp: datetime
     attestation: AttestationRef | None = None
+
+
+def attach_exit_code(outcome: ScanOutcome, *, fail_on: Severity | None) -> int:
+    """1 when a severity gate is set and the scan breaches it, else 0."""
+    if fail_on is not None and gate_breached(outcome.facts, fail_on):
+        return 1
+    return 0
 
 
 def attach_scan(
