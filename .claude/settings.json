@@ -12,10 +12,16 @@
         "source": "github",
         "repo": "DietrichGebert/ponytail"
       }
+    },
+    "superpowers-dev": {
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers"
+      }
     }
   },
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true,
+    "superpowers@superpowers-dev": true,
     "product-management@knowledge-work-plugins": true,
     "ponytail@ponytail": true
   }
