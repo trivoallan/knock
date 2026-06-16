@@ -2,13 +2,14 @@
 
 **The single front door for the external container images your organization runs.**
 
-> **Status — young but functional (`v0.6`).** Delivered: the full hexagon, both the copy and the
-> rebuild / derive-and-stamp paths, the pluggable transform engine, the OCI provenance stamp **plus
-> signed SLSA / in-toto attestations** (rebuild *and* ingested scan results), the
-> `reconcile` / `purge` / `attach` / `audit` commands, retention-driven soft-delete, concurrent +
-> shardable reconcile, and optional KEDA autoscaling of the build path. Next: product scaffolding
-> commands and the remaining lifecycle / proxy decisions ([roadmap](docs/roadmap.md)). Not yet
-> battle-hardened for production.
+> **Status — young but functional (`v0.6`).** Delivered: the full hexagon; both the copy and the
+> rebuild / derive-and-stamp paths; the pluggable transform engine; the OCI provenance stamp **plus
+> signed SLSA / in-toto attestations** (rebuild *and* ingested scan results); the
+> `reconcile` / `purge` / `attach` / `audit` / `gc` commands; retention-driven soft-delete; concurrent +
+> shardable reconcile; and optional KEDA autoscaling of the build path. The single-front-door mandate
+> is **enforceable** (`attach --fail-on`, `audit --fail-on-uncovered`) and **trustworthy**
+> (`audit --signed`), and the provenance contract is frozen. Next: publishing the user docs site
+> ([roadmap](docs/roadmap.md)). Not yet battle-hardened for production.
 
 Every public image that enters your registry passes through houba: it is mirrored — or, when you
 declare a hardening policy, rebuilt with internal CA certificates and internal package mirrors —
@@ -22,6 +23,9 @@ stamp; your tools (Datadog, PowerBI, Wiz…) read it.
 
 houba is **not** an image mirror. `skopeo sync` and Harbor replication copy images byte-for-byte.
 houba *stamps* every image with portable provenance — and *hardens* the ones you choose to rebuild.
+
+**New here?** Read [Why houba](docs/why-houba.md) for the case, then [Getting started](docs/getting-started.md)
+to mirror your first image and inspect its stamp in ten minutes.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
@@ -58,14 +62,18 @@ the usage-gated reaper below.
 Beyond `reconcile`, the CLI offers:
 
 - **`houba audit`** — a coverage-gap report: walk the registry and list images that do **not** carry
-  houba's stamp (`--fail-on-uncovered` makes it a CI gate). This is what makes the front door
-  *verifiable*.
+  houba's stamp (`--fail-on-uncovered` makes it a CI gate); `--signed` adds a *signed*-vs-merely-stamped
+  tier (`--fail-on-unsigned`). This is what makes the front door *verifiable* and *trustworthy*.
 - **`houba purge`** — the reference reaper: hard-delete tags marked `pending-deletion` (by either
   the selection axis or retention) that a usage oracle confirms are unused (gated by
   `HOUBA_PURGE_MIN_IDLE_DAYS`; dry-run unless `--apply`).
 - **`houba attach <ref> --report <file>`** — ingest an upstream scan report (e.g. SARIF) and attach
   it as a stamped OCI referrer on the image — additionally **signed** as an in-toto scan attestation
   when `HOUBA_ATTEST_SIGNER` is set, turning "this image was scanned" into a verifiable fact.
+  `--fail-on <severity>` doubles it as a CI gate.
+- **`houba gc`** — garbage-collect superseded scan-result referrers: keep the newest per
+  `(tool, format)` and collect the rest (`--keep` / `--older-than-days`; dry-run unless `--apply`),
+  so `attach` volume doesn't pile up over time.
 
 See the [roadmap](docs/roadmap.md) for what is built versus planned, and the
 [design overview](docs/architecture/design.md) for the architecture.
@@ -191,8 +199,8 @@ houba/
 │                usage_oracle, reporter, clock
 ├── adapters/    concrete I/O — regctl_cli, buildkit_cli, cosign_cli, command_usage,
 │                structlog_reporter, system_clock
-├── use_cases/   orchestration — loader, reconcile, purge, attach, audit, report
-└── cli/         Typer entry points — reconcile, purge, attach, audit, version
+├── use_cases/   orchestration — loader, reconcile, purge, attach, audit, gc, report
+└── cli/         Typer entry points — reconcile, purge, attach, audit, gc, version
 ```
 
 **Golden rules**
