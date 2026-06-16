@@ -8,16 +8,16 @@ provenance stamp in about ten minutes. The examples below build on that same loc
 
 ## The examples
 
-**[`reference/`](reference/)** is **the** policy the reference deployment reconciles — both
+**[`reference/`](https://github.com/trivoallan/houba/tree/main/docs/examples/reference)** is **the** policy the reference deployment reconciles — both
 `make demo` (the Argo App-of-Apps) and `make local` (the inner-loop overlay) run it — see the
-[Reference](../architecture/_export/structurizr-DeployReference.mmd) and
-[Local](../architecture/_export/structurizr-DeployLocal.mmd) deployment views. One reconcile
+[Reference](https://github.com/trivoallan/houba/blob/main/docs/architecture/_export/structurizr-DeployReference.mmd) and
+[Local](https://github.com/trivoallan/houba/blob/main/docs/architecture/_export/structurizr-DeployLocal.mmd) deployment views. One reconcile
 demonstrates **copy *and* rebuild** in a single, self-contained pass (no Harbor, no org config):
 
-- **[`reference/busybox/`](reference/busybox/busybox.yml)** — the **copy path**: select
+- **[`reference/busybox/`](https://github.com/trivoallan/houba/blob/main/docs/examples/reference/busybox/busybox.yml)** — the **copy path**: select
   `1.36.x`/`1.37.x`, alias `{major}.{minor}` + `latest`, mirror into `demo/busybox`. The smallest,
   fastest case, and the one [Getting started](../tutorials/getting-started.md) runs.
-- **[`reference/debian-tz/`](reference/debian-tz/debian-tz.yml)** — the **rebuild path, runnable
+- **[`reference/debian-tz/`](https://github.com/trivoallan/houba/blob/main/docs/examples/reference/debian-tz/debian-tz.yml)** — the **rebuild path, runnable
   self-contained**: rebuild `debian:bookworm-slim` through `setTimezone` (the one built-in step that
   needs no org config) and fan it into **`-eu` / `-us` variants** via the per-variant `suffix` (the
   worked example of `variants`), stamped into `demo/debian`.
@@ -25,32 +25,32 @@ demonstrates **copy *and* rebuild** in a single, self-contained pass (no Harbor,
 The remaining examples are **standalone feature docs** — each is a `MirrorPolicy` demonstrating one
 capability, runnable on its own with `uv run houba …` (not part of the bundled demo):
 
-- **[`redis/redis.yml`](redis/redis.yml)** — semver selection over a real image (`7.2.x`),
+- **[`redis/redis.yml`](https://github.com/trivoallan/houba/blob/main/docs/examples/redis/redis.yml)** — semver selection over a real image (`7.2.x`),
   showing how aliases track the highest patch per minor (`7.2` → the latest `7.2.z`) and
   `latest` → the highest overall. Larger image, slower to copy:
   `uv run houba reconcile docs/examples/redis`.
-- **[`hardened/redis.yml`](hardened/redis.yml)** — the **rebuild path with org hardening**: inject
+- **[`hardened/redis.yml`](https://github.com/trivoallan/houba/blob/main/docs/examples/hardened/redis.yml)** — the **rebuild path with org hardening**: inject
   internal CA certs (`injectCA`) + rewrite package sources to an internal mirror, then stamp the
   result. The transform engine is implemented; running it needs a BuildKit daemon (`buildctl`) plus
   the org's `HOUBA_TRANSFORM_CA_CERTS` / `HOUBA_TRANSFORM_PACKAGE_MIRRORS` config (which is why the
   self-contained demo uses the simpler `setTimezone` rebuild instead). See
   [Transforms & signed attestations](../explanation/attestations.md).
-- **[`attested/redis.yml`](attested/redis.yml)** — the **rebuild path, signed**: the same
+- **[`attested/redis.yml`](https://github.com/trivoallan/houba/blob/main/docs/examples/attested/redis.yml)** — the **rebuild path, signed**: the same
   hardening rebuild as `hardened/`, but with attestation enabled so the output carries two
   in-toto attestations — BuildKit's `slsa.dev/provenance/v1` and houba's
   `https://houba.dev/predicate/transform/v1`. **Requires the attestation path**: set
   `HOUBA_ATTEST_SIGNER` (`keyless` | `kms` | `key`) and a `cosign` on `PATH`; off by default.
   See [Transforms & signed attestations](../explanation/attestations.md).
-- **[`pending-deletion/pending-deletion.yml`](pending-deletion/pending-deletion.yml)** —
+- **[`pending-deletion/pending-deletion.yml`](https://github.com/trivoallan/houba/blob/main/docs/examples/pending-deletion/pending-deletion.yml)** —
   `deletionMode: mark`: when a tag drops out of the selection, houba attaches a
   `pending-deletion` OCI referrer instead of deleting it. See
   [Deletion & retention](../explanation/deletion-and-retention.md).
-- **[`retention/redis.yml`](retention/redis.yml)** — **retention-driven soft-delete**: cap
+- **[`retention/redis.yml`](https://github.com/trivoallan/houba/blob/main/docs/examples/retention/redis.yml)** — **retention-driven soft-delete**: cap
   *valid, in-selection* tags with `archive: {keep, olderThanDays}`. houba keeps the N most-recently
   imported tags of each stream and marks the older surplus `pending-deletion`
   (reason `retention-excess`) for the reaper — the one axis selection filtering can't reach. See
   [Deletion & retention](../explanation/deletion-and-retention.md#retention-capping-valid-tags).
-- **[`oracles/datadog.sh`](oracles/datadog.sh)** — reference usage oracle for `houba purge`.
+- **[`oracles/datadog.sh`](https://github.com/trivoallan/houba/blob/main/docs/examples/oracles/datadog.sh)** — reference usage oracle for `houba purge`.
   See [Purge unused tags](../how-to/purge-unused-tags.md).
 - **[`scan/README.md`](scan/README.md)** — the **`houba attach` path**: ingest an
   upstream SARIF report and stamp it as a portable OCI referrer on the image's digest —
@@ -60,7 +60,7 @@ capability, runnable on its own with `uv run houba …` (not part of the bundled
   example report (1 critical CVE, 1 medium).
 - **[`scan-gc/README.md`](scan-gc/README.md)** — the **`houba gc` path**: garbage-collect
   superseded scan referrers across the roster, keeping the N newest per `(tool, format)` older
-  than a grace window. Dry-run by default; `--apply` to delete. See [ADR 0028](../architecture/decisions/0028-scan-referrer-gc.md).
+  than a grace window. Dry-run by default; `--apply` to delete. See [ADR 0028](https://github.com/trivoallan/houba/blob/main/docs/architecture/decisions/0028-scan-referrer-gc.md).
 
 ## Going deeper
 
@@ -86,5 +86,5 @@ any registry roster.
 
 > A policy is just data. The full field reference is generated from the Pydantic models:
 > **[policy reference](../reference/mirror-policy.md)** (human) and
-> [`mirror-policy.schema.json`](../reference/mirror-policy.schema.json) (for editor/CI validation).
+> [`mirror-policy.schema.json`](https://github.com/trivoallan/houba/blob/main/docs/reference/mirror-policy.schema.json) (for editor/CI validation).
 > Every `HOUBA_*` variable is likewise documented in the **[config reference](../reference/config.md)**.
