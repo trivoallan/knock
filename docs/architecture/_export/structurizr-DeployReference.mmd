@@ -4,94 +4,98 @@ graph LR
   subgraph diagram ["Deployment View: houba - Reference — Argo App-of-Apps (the demo)"]
     style diagram fill:#ffffff,stroke:#ffffff
 
-    subgraph 149 ["Git host"]
-      style 149 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 162 ["Git host"]
+      style 162 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      150("<div style='font-weight: bold'>Manifests repo</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git / GitOps]</div><div style='font-size: 80%; margin-top:10px'>root.yaml + apps/ + sources/*<br />— a merged PR is the front<br />door</div>")
-      style 150 fill:#8a94a0,stroke:#606770,color:#ffffff
-      151("<div style='font-weight: bold'>Policy repo (org)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git / GitOps]</div><div style='font-size: 80%; margin-top:10px'>POLICY_REPO_URL — git-sync<br />clones it;<br />POLICY_DIR=docs/examples/reference<br />(busybox copy + debian<br />rebuild). ArgoCD never<br />touches policies.</div>")
-      style 151 fill:#8a94a0,stroke:#606770,color:#ffffff
+      163("<div style='font-weight: bold'>Manifests repo</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git / GitOps]</div><div style='font-size: 80%; margin-top:10px'>root.yaml + apps/ + sources/*<br />— a merged PR is the front<br />door</div>")
+      style 163 fill:#8a94a0,stroke:#606770,color:#ffffff
+      164("<div style='font-weight: bold'>Policy repo (org)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git / GitOps]</div><div style='font-size: 80%; margin-top:10px'>POLICY_REPO_URL — git-sync<br />clones it;<br />POLICY_DIR=docs/examples/reference<br />(busybox copy + debian<br />rebuild). ArgoCD never<br />touches policies.</div>")
+      style 164 fill:#8a94a0,stroke:#606770,color:#ffffff
     end
 
-    subgraph 152 ["Kubernetes cluster"]
-      style 152 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 165 ["Kubernetes cluster"]
+      style 165 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      subgraph 153 ["namespace: argocd"]
-        style 153 fill:#ffffff,stroke:#444444,color:#ffffff
+      subgraph 166 ["namespace: argocd"]
+        style 166 fill:#ffffff,stroke:#444444,color:#ffffff
 
-        154("<div style='font-weight: bold'>Application: houba-root</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ArgoCD]</div><div style='font-size: 80%; margin-top:10px'>App-of-Apps; syncs the apps/<br />children from git (no<br />demo/prod split)</div>")
-        style 154 fill:#8a94a0,stroke:#606770,color:#ffffff
-        155("<div style='font-weight: bold'>ArgoCD</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>GitOps controller: the<br />App-of-Apps that syncs the<br />houba install from git. This<br />IS the reference deployment —<br />and the demo on kind. The<br />kubectl apply -k<br />overlays/local path is the<br />inner-loop escape hatch, not<br />a separate blueprint.</div>")
-        style 155 fill:#69707a,stroke:#494e55,color:#ffffff
+        167("<div style='font-weight: bold'>Application: houba-root</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ArgoCD]</div><div style='font-size: 80%; margin-top:10px'>App-of-Apps; syncs the apps/<br />children from git (no<br />demo/prod split)</div>")
+        style 167 fill:#8a94a0,stroke:#606770,color:#ffffff
+        168("<div style='font-weight: bold'>ArgoCD</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>GitOps controller: the<br />App-of-Apps that syncs the<br />houba install from git. This<br />IS the reference deployment —<br />and the demo on kind. The<br />kubectl apply -k<br />overlays/local path is the<br />inner-loop escape hatch, not<br />a separate blueprint.</div>")
+        style 168 fill:#69707a,stroke:#494e55,color:#ffffff
       end
 
-      subgraph 156 ["namespace: houba"]
-        style 156 fill:#ffffff,stroke:#444444,color:#ffffff
-
-        subgraph 157 ["CronJob: houba-reconcile"]
-          style 157 fill:#ffffff,stroke:#444444,color:#ffffff
-
-          158("<div style='font-weight: bold'>houba CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
-          style 158 fill:#2563c9,stroke:#19458c,color:#ffffff
-          159("<div style='font-weight: bold'>git-sync sidecar</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git-sync]</div><div style='font-size: 80%; margin-top:10px'>Clones the policy repo into<br />/policies</div>")
-          style 159 fill:#8a94a0,stroke:#606770,color:#ffffff
-        end
-
-        subgraph 160 ["Deployment: buildkitd (own app)"]
-          style 160 fill:#ffffff,stroke:#444444,color:#ffffff
-
-          161("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
-          style 161 fill:#69707a,stroke:#494e55,color:#ffffff
-        end
-
-        163("<div style='font-weight: bold'>ExternalSecret + ClusterSecretStore</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ExternalSecret]</div><div style='font-size: 80%; margin-top:10px'>houba-secret-store → OpenBao<br />(ESO vault provider)</div>")
-        style 163 fill:#8a94a0,stroke:#606770,color:#ffffff
-        164("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>BLAST_REPOS=demo/busybox<br />demo/debian — reads stamps,<br />answers the CVE-time query</div>")
-        style 164 fill:#8a94a0,stroke:#606770,color:#ffffff
-        171("<div style='font-weight: bold'>CronJob: houba-gc</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes CronJob]</div><div style='font-size: 80%; margin-top:10px'>Weekly houba gc --apply —<br />collects superseded scan<br />referrers (keep=2/older-than=30d).<br />No git-sync/policies; walks<br />the roster only.</div>")
-        style 171 fill:#8a94a0,stroke:#606770,color:#ffffff
-      end
-
-      subgraph 165 ["namespace: external-secrets"]
-        style 165 fill:#ffffff,stroke:#444444,color:#ffffff
-
-        166("<div style='font-weight: bold'>External Secrets Operator</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ESO]</div><div style='font-size: 80%; margin-top:10px'>Helm child; materializes the<br />registry roster Secret</div>")
-        style 166 fill:#8a94a0,stroke:#606770,color:#ffffff
-      end
-
-      subgraph 167 ["namespace: openbao"]
-        style 167 fill:#ffffff,stroke:#444444,color:#ffffff
-
-        168("<div style='font-weight: bold'>OpenBao</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: OpenBao]</div><div style='font-size: 80%; margin-top:10px'>Helm child (dev mode on<br />kind); holds houba/registries</div>")
-        style 168 fill:#8a94a0,stroke:#606770,color:#ffffff
-      end
-
-      subgraph 169 ["namespace: registry"]
+      subgraph 169 ["namespace: houba"]
         style 169 fill:#ffffff,stroke:#444444,color:#ffffff
 
-        170("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
-        style 170 fill:#69707a,stroke:#494e55,color:#ffffff
+        subgraph 170 ["CronJob: houba-reconcile"]
+          style 170 fill:#ffffff,stroke:#444444,color:#ffffff
+
+          171("<div style='font-weight: bold'>houba CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
+          style 171 fill:#2563c9,stroke:#19458c,color:#ffffff
+          172("<div style='font-weight: bold'>git-sync sidecar</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git-sync]</div><div style='font-size: 80%; margin-top:10px'>Clones the policy repo into<br />/policies</div>")
+          style 172 fill:#8a94a0,stroke:#606770,color:#ffffff
+        end
+
+        subgraph 173 ["Deployment: buildkitd (own app)"]
+          style 173 fill:#ffffff,stroke:#444444,color:#ffffff
+
+          174("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
+          style 174 fill:#69707a,stroke:#494e55,color:#ffffff
+        end
+
+        176("<div style='font-weight: bold'>ExternalSecret + ClusterSecretStore</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ExternalSecret]</div><div style='font-size: 80%; margin-top:10px'>houba-secret-store → OpenBao<br />(ESO vault provider)</div>")
+        style 176 fill:#8a94a0,stroke:#606770,color:#ffffff
+        177("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>BLAST_REPOS=demo/busybox<br />demo/debian — reads stamps,<br />answers the CVE-time query</div>")
+        style 177 fill:#8a94a0,stroke:#606770,color:#ffffff
+        178("<div style='font-weight: bold'>CronJob: houba-gc</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes CronJob]</div><div style='font-size: 80%; margin-top:10px'>Weekly houba gc --apply —<br />collects superseded scan<br />referrers<br />(keep=2/older-than=30d). No<br />git-sync/policies; walks the<br />roster only.</div>")
+        style 178 fill:#8a94a0,stroke:#606770,color:#ffffff
+        179("<div style='font-weight: bold'>Deployment: dependency-track (own app)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Deployment]</div><div style='font-size: 80%; margin-top:10px'>Worked-example SBOM consumer<br />(apiserver + frontend,<br />embedded H2) — its own ArgoCD<br />Application (ADR 0033).<br />Currency layer: package-level<br />blast-radius. DT is<br />CycloneDX-only; houba's SPDX<br />is converted by the publish<br />glue.</div>")
+        style 179 fill:#8a94a0,stroke:#606770,color:#ffffff
+        180("<div style='font-weight: bold'>Job: houba-publish-sbom</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Job]</div><div style='font-size: 80%; margin-top:10px'>Glue image (houba + syft):<br />pulls each rebuilt image's<br />SPDX SBOM attestation,<br />converts to CycloneDX,<br />uploads to DT. Twin of the<br />blast-radius consumer.</div>")
+        style 180 fill:#8a94a0,stroke:#606770,color:#ffffff
+      end
+
+      subgraph 181 ["namespace: external-secrets"]
+        style 181 fill:#ffffff,stroke:#444444,color:#ffffff
+
+        182("<div style='font-weight: bold'>External Secrets Operator</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ESO]</div><div style='font-size: 80%; margin-top:10px'>Helm child; materializes the<br />registry roster Secret</div>")
+        style 182 fill:#8a94a0,stroke:#606770,color:#ffffff
+      end
+
+      subgraph 183 ["namespace: openbao"]
+        style 183 fill:#ffffff,stroke:#444444,color:#ffffff
+
+        184("<div style='font-weight: bold'>OpenBao</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: OpenBao]</div><div style='font-size: 80%; margin-top:10px'>Helm child (dev mode on<br />kind); holds houba/registries</div>")
+        style 184 fill:#8a94a0,stroke:#606770,color:#ffffff
+      end
+
+      subgraph 185 ["namespace: registry"]
+        style 185 fill:#ffffff,stroke:#444444,color:#ffffff
+
+        186("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
+        style 186 fill:#69707a,stroke:#494e55,color:#ffffff
       end
 
     end
 
-    subgraph 172 ["Internet / org network"]
-      style 172 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 188 ["Internet / org network"]
+      style 188 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      173("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
-      style 173 fill:#69707a,stroke:#494e55,color:#ffffff
+      189("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
+      style 189 fill:#69707a,stroke:#494e55,color:#ffffff
     end
 
-    158-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->161
-    158-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->170
-    158-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->173
-    155-. "<div>Pulls manifests (App-of-Apps)</div><div style='font-size: 70%'>[git]</div>" .->150
-    154-. "<div>Syncs the houba install</div><div style='font-size: 70%'>[ArgoCD]</div>" .->158
-    154-. "<div>Syncs the buildkitd app</div><div style='font-size: 70%'>[ArgoCD]</div>" .->161
-    166-. "<div>Reads houba/registries</div><div style='font-size: 70%'>[vault API]</div>" .->168
-    163-. "<div>Requests the roster Secret</div><div style='font-size: 70%'>[ESO]</div>" .->166
-    159-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->151
-    164-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl]</div>" .->170
-    171-. "<div>Collects superseded scan<br />referrers</div><div style='font-size: 70%'>[regctl]</div>" .->170
+    171-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->174
+    171-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->186
+    171-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->189
+    168-. "<div>Pulls manifests (App-of-Apps)</div><div style='font-size: 70%'>[git]</div>" .->163
+    167-. "<div>Syncs the houba install</div><div style='font-size: 70%'>[ArgoCD]</div>" .->171
+    167-. "<div>Syncs the buildkitd app</div><div style='font-size: 70%'>[ArgoCD]</div>" .->174
+    182-. "<div>Reads houba/registries</div><div style='font-size: 70%'>[vault API]</div>" .->184
+    176-. "<div>Requests the roster Secret</div><div style='font-size: 70%'>[ESO]</div>" .->182
+    172-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->164
+    177-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl]</div>" .->186
+    178-. "<div>Collects superseded scan<br />referrers</div><div style='font-size: 70%'>[regctl]</div>" .->186
 
   end
