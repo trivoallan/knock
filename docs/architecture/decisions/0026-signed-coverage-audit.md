@@ -1,4 +1,4 @@
-# 25. Signed-coverage audit tier (houba audit --signed)
+# 26. Signed-coverage audit tier (houba audit --signed)
 
 Date: 2026-06-16
 

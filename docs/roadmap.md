@@ -66,19 +66,26 @@ The three gaps that made the front door **enforceable** and **trustworthy** are 
   image's revision and is omitted when undeclared — never fabricated from the digest or tag. The
   label is the API, and it no longer wobbles. *(ADR 0020)*
 
+## Delivered — trustworthy coverage, registry parity (2026-06)
+
+Two of the three former *Now* items shipped, deepening trustworthiness and verb consistency:
+
+- **Signed-coverage audit tier.** `houba audit --signed` reports *signed* vs merely *stamped*, with
+  `--fail-on-unsigned` as a CI gate — turning the verifiable front door (④) into a *trustworthy*
+  one. Three-tier ladder: `uncovered < stamped < signed`. *(ADR 0026; closed #98)*
+- **`attach` registry-config parity.** `houba attach` now drives the `HOUBA_REGISTRIES` roster
+  (host-match + `--registry` override) like `reconcile` / `audit` / `purge`, via a shared
+  `ensure_registry_session` helper — no more ambient regctl config. *(ADR 0025; closed #97)*
+
 ## Now — breadth and the per-format registry
 
 > Theme: the mandate is enforceable and trustworthy (see *Delivered*); the active frontier is making
-> the front door cover more *kinds* of signal, and more registries.
+> the front door cover more *kinds* of signal. The registry-parity and signed-coverage gaps are
+> closed (above); what remains is breadth of scan signal.
 
 - **Scan ecosystem breadth.** Generalize `attach` beyond CVE: the **`regis` / EOL format mapper**
   (the sibling-tool integration that proves the per-format registry), plus **Trivy-native** and
   **CycloneDX** mappers.
-- **`attach` registry-config parity.** Wire the `HOUBA_REGISTRIES` roster into `attach` as in
-  `reconcile`, instead of relying on ambient regctl config.
-- **Signed-coverage audit tier.** Extend `houba audit` to report *signed* vs merely *stamped* — now
-  **unblocked** by complete attestation coverage having shipped, so distinguishing signed from
-  unsigned provenance turns the verifiable front door (④) into a *trustworthy* one without misleading.
 
 ## Next — scaffolding and scale hygiene
 
