@@ -38,8 +38,9 @@ spec:
                 - all:
                     # Admit only if attested_at is newer than (now - 720h = 30 days).
                     # Kyverno time filters — VALIDATE both against your Kyverno version:
-                    #   (a) predicate fields are bare JMESPath identifiers here (e.g. attested_at),
-                    #       NOT nested {{ }} templates;
+                    #   (a) only the whole key is wrapped in {{ }} — field names within the
+                    #       expression are bare JMESPath identifiers (e.g. attested_at), NOT each
+                    #       wrapped in its own nested {{ }};
                     #   (b) time_add with a negative Go duration ('-720h') — some versions instead
                     #       want time_since(attested_at) <= '720h0m0s'.
                     # Docs: https://kyverno.io/docs/writing-policies/jmespath/
