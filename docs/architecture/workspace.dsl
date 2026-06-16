@@ -29,6 +29,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     cliPurge = component "purge" "The purge command: scans pending-deletion marks, queries the usage oracle, applies hard-deletes for safely-unused tags." "Typer"
                     cliAudit = component "audit" "The audit command: catalog-walks the registry, reports images missing the provenance stamp." "Typer"
                     cliAttach = component "attach" "The attach command: ingests an upstream scan report and attaches it as a stamped OCI referrer." "Typer"
+                    cliGc = component "gc" "The gc command: catalog-walks the registry and deletes superseded scan-result referrers, keeping the N newest per (tool, format) older than a grace window." "Typer"
                     cliRender = component "render" "Formats the RunReport to stdout (text / JSON)." "Python"
                     cliDi = component "_di" "Composition root: wires ports to adapters." "Python"
                 }
@@ -38,6 +39,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     ucPurge = component "purge (use case)" "Catalog-walks the registry for pending-deletion referrers; asks the usage oracle per digest; hard-deletes only the safely-unused. Fail-closed: oracle error ⇒ nothing purged." "Python"
                     ucAudit = component "audit (use case)" "Catalog-walks the registry and classifies each image as stamped or not; emits the coverage report + exit code." "Python"
                     ucAttach = component "attach (use case)" "Resolves the subject digest, summarizes the ingested scan report, and puts it as a stamped OCI referrer." "Python"
+                    ucGc = component "gc (use case)" "Catalog-walks the registry for scan-result referrers and collects the superseded ones (keep N newest per (tool, format) older than a grace window); pure temporal decision, no usage oracle. Dry-run by default." "Python"
                     ucReport = component "report" "RunReport contract + worst-wins exit code." "Pydantic"
                     ucRegistrySession = component "registry_session" "Shared use-case helper: configure TLS/CA + login once per host (idempotent via caller-owned logged_in set). Used by reconcile, audit, and attach." "Python"
                 }
@@ -117,6 +119,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         cliMain -> cliPurge "Registers the command" "Typer"
         cliMain -> cliAudit "Registers the command" "Typer"
         cliMain -> cliAttach "Registers the command" "Typer"
+        cliMain -> cliGc "Registers the command" "Typer"
         cliAudit -> cliDi "Builds the composition root" "Python"
         cliAudit -> ucAudit "Runs the audit" "Python"
         ucAudit -> domCoverage "Classifies each image" "Python"
@@ -132,6 +135,9 @@ workspace "houba" "Single front door / stamper for external container images." {
         cliPurge -> cliDi "Builds the composition root" "Python"
         cliPurge -> ucPurge "Runs the purge" "Python"
         cliPurge -> portClock "Reads now()" "Protocol"
+        cliGc -> cliDi "Builds the composition root" "Python"
+        cliGc -> ucGc "Runs the gc" "Python"
+        cliGc -> portClock "Reads now()" "Protocol"
         cliReconcile -> cliDi "Builds the composition root" "Python"
         cliReconcile -> ucLoader "Loads policies" "Python"
         cliReconcile -> ucReconcile "Runs reconciliation" "Python"
@@ -157,6 +163,9 @@ workspace "houba" "Single front door / stamper for external container images." {
         ucPurge -> portRegistry "Lists repos + referrers; hard-deletes purged tags" "Protocol"
         ucPurge -> portUsageOracle "Was this digest seen in prod?" "Protocol"
         ucPurge -> portClock "Computes idle window" "Protocol"
+
+        ucGc -> portRegistry "Lists repos + scan referrers; deletes superseded ones" "Protocol"
+        ucGc -> ucRegistrySession "Configures TLS/CA + login per registry" "Python"
 
         ucRegistrySession -> portRegistry "Calls configure_registry + login" "Protocol"
 

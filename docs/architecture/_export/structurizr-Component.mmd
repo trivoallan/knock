@@ -64,6 +64,8 @@ graph LR
           style 8 fill:#cdd5df,stroke:#8f959c,color:#1f2933
           9("<div style='font-weight: bold'>audit</div><div style='font-size: 70%; margin-top: 0px'>[Component: Typer]</div><div style='font-size: 80%; margin-top:10px'>The audit command:<br />catalog-walks the registry,<br />reports images missing the<br />provenance stamp.</div>")
           style 9 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+          55("<div style='font-weight: bold'>gc</div><div style='font-size: 70%; margin-top: 0px'>[Component: Typer]</div><div style='font-size: 80%; margin-top:10px'>The gc command:<br />catalog-walks the registry<br />and deletes superseded<br />scan-result referrers,<br />keeping the N newest per<br />(tool, format) older than a<br />grace window.</div>")
+          style 55 fill:#cdd5df,stroke:#8f959c,color:#1f2933
         end
 
         subgraph group3 ["Domain (pure)"]
@@ -119,6 +121,8 @@ graph LR
           style 18 fill:#cdd5df,stroke:#8f959c,color:#1f2933
           54("<div style='font-weight: bold'>registry_session</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Shared use-case helper:<br />configure TLS/CA + login<br />once per host (idempotent<br />via caller-owned logged_in<br />set). Used by reconcile,<br />audit, and attach.</div>")
           style 54 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+          56("<div style='font-weight: bold'>gc (use case)</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Catalog-walks the registry<br />for scan-result referrers<br />and collects the superseded<br />ones (keep N newest per<br />(tool, format) older than a<br />grace window); pure temporal<br />decision, no usage oracle.<br />Dry-run by default.</div>")
+          style 56 fill:#cdd5df,stroke:#8f959c,color:#1f2933
         end
 
         38("<div style='font-weight: bold'>config</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pydantic Settings]</div><div style='font-size: 80%; margin-top:10px'>Reads HOUBA_* settings +<br />roster resolvers — the only<br />os.environ reader.</div>")
@@ -163,6 +167,7 @@ graph LR
     6-. "<div>Registers the command</div><div style='font-size: 70%'>[Typer]</div>" .->8
     6-. "<div>Registers the command</div><div style='font-size: 70%'>[Typer]</div>" .->9
     6-. "<div>Registers the command</div><div style='font-size: 70%'>[Typer]</div>" .->10
+    6-. "<div>Registers the command</div><div style='font-size: 70%'>[Typer]</div>" .->55
     9-. "<div>Builds the composition root</div><div style='font-size: 70%'>[Python]</div>" .->12
     9-. "<div>Runs the audit</div><div style='font-size: 70%'>[Python]</div>" .->16
     16-. "<div>Classifies each image</div><div style='font-size: 70%'>[Python]</div>" .->23
@@ -188,5 +193,10 @@ graph LR
     16-. "<div>Configures TLS/CA + login<br />per registry</div><div style='font-size: 70%'>[Python]</div>" .->54
     17-. "<div>Configures TLS/CA + login per<br />registry (host-match or<br />--registry override)</div><div style='font-size: 70%'>[Python]</div>" .->54
     54-. "<div>Calls configure_registry +<br />login</div><div style='font-size: 70%'>[Protocol]</div>" .->26
+    55-. "<div>Builds the composition root</div><div style='font-size: 70%'>[Python]</div>" .->12
+    55-. "<div>Runs the gc</div><div style='font-size: 70%'>[Python]</div>" .->56
+    55-. "<div>Reads now()</div><div style='font-size: 70%'>[Protocol]</div>" .->29
+    56-. "<div>Lists repos + scan referrers;<br />deletes superseded ones</div><div style='font-size: 70%'>[Protocol]</div>" .->26
+    56-. "<div>Configures TLS/CA + login<br />per registry</div><div style='font-size: 70%'>[Python]</div>" .->54
 
   end

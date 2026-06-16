@@ -61,6 +61,9 @@ capability, runnable on its own with `uv run houba …` (not part of the bundled
   houba does not run a scanner — the scan is produced upstream (CI, registry-native
   scanner, or scan service) and handed in. `scan/sample.sarif.json` is a runnable
   example report (1 critical CVE, 1 medium).
+- **[`scan-gc/README.md`](scan-gc/README.md)** — the **`houba gc` path**: garbage-collect
+  superseded scan referrers across the roster, keeping the N newest per `(tool, format)` older
+  than a grace window. Dry-run by default; `--apply` to delete. See [ADR 0028](../architecture/decisions/0028-scan-referrer-gc.md).
 
 ### Pending-deletion (delegated deletion)
 
