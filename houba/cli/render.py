@@ -29,13 +29,15 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
         return
 
     for p in report.policies:
-        if p.status == "failed":
-            assert p.error is not None  # status=failed always carries a policy-level error
+        if p.error is not None:
+            # Policy-level failure: the orchestration itself threw (bad plan, list-tags,
+            # collision). A "failed" status with error=None means every operation failed
+            # instead — that renders as the totals line below, marked ✗ FAILED.
             stream.write(f"✗ {p.name}  FAILED: {p.error.type}: {p.error.message}\n")
         else:
             t = p.totals
-            mark = "✓" if p.status == "ok" else "≈"
-            label = "" if p.status == "ok" else "  PARTIAL"
+            mark = {"ok": "✓", "partial": "≈", "failed": "✗"}[p.status]
+            label = {"ok": "", "partial": "  PARTIAL", "failed": "  FAILED"}[p.status]
             stream.write(
                 f"{mark} {p.name}{label}  imported={t.imported} updated={t.updated} "
                 f"deleted={t.deleted} aliased={t.aliased} skipped={t.skipped} "
