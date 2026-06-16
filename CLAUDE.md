@@ -23,7 +23,13 @@ uv run ruff check .              # lint
 uv run ruff format .             # format (use --check in CI)
 uv run mypy houba                # strict type check
 docker build -t houba:dev .      # runtime image (bundles regctl + buildctl; ~5 min, pulls 2 upstream images)
+make reference                   # regenerate docs/reference/ (policy + config) from the Pydantic schemas
 ```
+
+`docs/reference/` (the `MirrorPolicy` + `HOUBA_*` reference) is **generated** from the Pydantic
+models via `json-schema-for-humans` (the `docs` dep group) and committed; CI fails on drift, so
+after any model change touching user-facing fields, run `make reference` and commit. Field prose
+lives as `Field(description=...)` on the models — the single source of truth for schema *and* docs.
 
 Coverage gates (enforced in CI, must stay green): **≥ 80 % global, ≥ 90 % on `houba.domain`**.
 

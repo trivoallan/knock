@@ -41,6 +41,12 @@ jobs:
       - name: mypy strict
         run: uv run mypy houba
 
+      - name: reference docs in sync (regenerate, fail on drift)
+        run: |
+          uv run --group docs python scripts/gen_reference.py
+          git diff --exit-code -- docs/reference \
+            || { echo "::error::docs/reference is stale — run 'make reference' and commit."; exit 1; }
+
   test:
     name: test (pytest + coverage gates)
     runs-on: ubuntu-latest

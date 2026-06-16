@@ -23,12 +23,32 @@ class RegistryConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    host: str  # registry host, e.g. "harbor.corp.example.com" or "localhost:5000"
-    username: str | None = None
-    password: SecretStr | None = None
-    tls_verify: bool = True
-    ca_cert: str | None = None  # path to a CA PEM regctl should trust for this registry's TLS
-    deletion_mode: DeletionMode | None = None  # destination-level cascade override
+    host: str = Field(
+        description="Registry host, e.g. `harbor.example.com` or `localhost:5001`.",
+    )
+    username: str | None = Field(
+        default=None,
+        description="Registry username (must be set together with `password`).",
+    )
+    password: SecretStr | None = Field(
+        default=None,
+        description="Registry password (must be set together with `username`).",
+    )
+    tls_verify: bool = Field(
+        default=True,
+        description="Set to `false` for plain-HTTP registries; houba then runs "
+        "`regctl registry set … --tls disabled` automatically.",
+    )
+    ca_cert: str | None = Field(
+        default=None,
+        description="Path to a CA PEM regctl should trust for this registry's TLS "
+        "(registries behind an internal CA).",
+    )
+    deletion_mode: DeletionMode | None = Field(
+        default=None,
+        description="Destination-level override in the deletion-mode cascade "
+        "(policy ← destination ← global).",
+    )
 
     @model_validator(mode="after")
     def _credentials_both_or_neither(self) -> RegistryConfig:
@@ -42,8 +62,14 @@ class CACertSource(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    path: str | None = None
-    pem: str | None = None
+    path: str | None = Field(
+        default=None,
+        description="Filesystem path to the CA certificate (exactly one of `path` | `pem`).",
+    )
+    pem: str | None = Field(
+        default=None,
+        description="Inline CA certificate PEM string (exactly one of `path` | `pem`).",
+    )
 
     @model_validator(mode="after")
     def _exactly_one(self) -> CACertSource:
@@ -57,8 +83,14 @@ class PackageMirror(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    apt: str | None = None
-    apk: str | None = None
+    apt: str | None = Field(
+        default=None,
+        description="Override URL for the apt package source (at least one of `apt` | `apk`).",
+    )
+    apk: str | None = Field(
+        default=None,
+        description="Override URL for the apk package source (at least one of `apt` | `apk`).",
+    )
 
     @model_validator(mode="after")
     def _at_least_one(self) -> PackageMirror:
@@ -76,11 +108,20 @@ class AttestSettings(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    signer: Literal["", "keyless", "kms", "key"] = ""
-    key_ref: str = ""  # KMS URI (kms) or key path (key)
-    fulcio_url: str = ""  # keyless CA; blank => public Fulcio
-    rekor_url: str = ""  # transparency log; blank => no log entry (air-gapped path)
-    builder_id: str = ""  # URI identifying this houba builder (feeds both predicates)
+    signer: Literal["", "keyless", "kms", "key"] = Field(
+        default="",
+        description='Signing mode: `""` (off, no attestation) | `keyless` | `kms` | `key`.',
+    )
+    key_ref: str = Field(
+        default="", description="KMS URI (`kms`) or key path (`key`); required for those signers."
+    )
+    fulcio_url: str = Field(default="", description="Keyless CA URL; blank ⇒ public Fulcio.")
+    rekor_url: str = Field(
+        default="", description="Transparency-log URL; blank ⇒ no log entry (the air-gapped path)."
+    )
+    builder_id: str = Field(
+        default="", description="URI identifying this houba builder (feeds both predicates)."
+    )
 
     @model_validator(mode="after")
     def _key_required_for_keyed_signers(self) -> AttestSettings:
@@ -96,30 +137,66 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    label_prefix: str = "io.houba"
-    registries: dict[str, RegistryConfig] = Field(default_factory=dict)
+    label_prefix: str = Field(
+        default="io.houba",
+        description="Prefix for houba's own provenance annotations; "
+        "empty ⇒ no houba labels (OCI-standard keys only).",
+    )
+    registries: dict[str, RegistryConfig] = Field(
+        default_factory=dict,
+        description="JSON map of logical registry name → `RegistryConfig`. "
+        "At least one is needed to reconcile.",
+    )
 
-    log_format: Literal["text", "json"] = "text"
-    log_level: Literal["DEBUG", "INFO", "WARN", "WARNING", "ERROR"] = "INFO"
-    dry_run_tags: bool = False
-    dry_run_deletions: bool = False
-    deletion_mode: DeletionMode = DeletionMode.purge  # global cascade baseline
-    retention: Archive | None = None  # global tier of the retention cascade (HOUBA_RETENTION)
-    work_dir: Path = Path("/tmp/houba-work")  # noqa: S108
+    log_format: Literal["text", "json"] = Field(
+        default="text", description="Log output format: `text` or `json`."
+    )
+    log_level: Literal["DEBUG", "INFO", "WARN", "WARNING", "ERROR"] = Field(
+        default="INFO", description="Minimum log level."
+    )
+    dry_run_tags: bool = Field(default=False, description="Skip image copies / pushes.")
+    dry_run_deletions: bool = Field(default=False, description="Skip deletions.")
+    deletion_mode: DeletionMode = Field(
+        default=DeletionMode.purge, description="Global baseline of the deletion-mode cascade."
+    )
+    retention: Archive | None = Field(
+        default=None,
+        description="Global tier of the retention cascade (a JSON `Archive`); "
+        "unset ⇒ retention off everywhere.",
+    )
+    work_dir: Path = Field(
+        default=Path("/tmp/houba-work"),  # noqa: S108
+        description="Scratch directory for build contexts.",
+    )
 
-    transform_ca_certs: dict[str, CACertSource] = Field(default_factory=dict)
-    transform_package_mirrors: dict[str, PackageMirror] = Field(default_factory=dict)
-    build_platform: str = "linux/amd64"
-    max_concurrency: int = Field(default=4, ge=1)
+    transform_ca_certs: dict[str, CACertSource] = Field(
+        default_factory=dict,
+        description="JSON map of name → CA source, resolved by the `injectCA` transform.",
+    )
+    transform_package_mirrors: dict[str, PackageMirror] = Field(
+        default_factory=dict,
+        description="JSON map of name → package mirror, resolved by `rewritePackageSources`.",
+    )
+    build_platform: str = Field(
+        default="linux/amd64", description="Platform for the rebuild path (single-platform)."
+    )
+    max_concurrency: int = Field(
+        default=4, ge=1, description="Max parallel tag operations per run (`1` = sequential)."
+    )
 
     # SLSA/in-toto attestation (off by default). Flat HOUBA_ATTEST_* fields keep the
     # single-Settings + single-underscore config invariant (CLAUDE.md); `.attest`
     # groups them into the typed DTO the cosign adapter consumes.
-    attest_signer: Literal["", "keyless", "kms", "key"] = ""
-    attest_key_ref: str = ""
-    attest_fulcio_url: str = ""
-    attest_rekor_url: str = ""
-    attest_builder_id: str = ""
+    attest_signer: Literal["", "keyless", "kms", "key"] = Field(
+        default="",
+        description="Signing mode for SLSA attestations on the rebuild path; empty ⇒ off.",
+    )
+    attest_key_ref: str = Field(default="", description="KMS URI (`kms`) or key path (`key`).")
+    attest_fulcio_url: str = Field(default="", description="Keyless CA URL; blank ⇒ public Fulcio.")
+    attest_rekor_url: str = Field(
+        default="", description="Transparency-log URL; blank ⇒ no log entry."
+    )
+    attest_builder_id: str = Field(default="", description="URI identifying this houba builder.")
 
     @property
     def attest(self) -> AttestSettings:
@@ -140,9 +217,18 @@ class Settings(BaseSettings):
         return self
 
     # houba purge (the reference reaper) — unused by reconcile.
-    usage_oracle_cmd: str | None = None
-    usage_oracle_timeout: int = Field(default=30, ge=1)
-    purge_min_idle_days: int | None = Field(default=None, ge=1)
+    usage_oracle_cmd: str | None = Field(
+        default=None,
+        description="Executable speaking the usage-oracle contract; required to run `houba purge`.",
+    )
+    usage_oracle_timeout: int = Field(
+        default=30, ge=1, description="Per-query timeout (seconds) for the usage oracle."
+    )
+    purge_min_idle_days: int | None = Field(
+        default=None,
+        ge=1,
+        description="Idle window `houba purge` requires before reaping a marked tag.",
+    )
 
 
 def resolve_registry(
@@ -215,3 +301,13 @@ def resolve_mirror(name: str, roster: dict[str, PackageMirror]) -> PackageMirror
 def attest_settings_json_schema() -> dict[str, Any]:
     """Published JSON Schema for the attestation config block (derived, never hand-written)."""
     return AttestSettings.model_json_schema()
+
+
+def settings_json_schema() -> dict[str, Any]:
+    """Published JSON Schema for the HOUBA_* environment config (derived, never hand-written).
+
+    The env-var name for each field is its property name upper-cased with the `HOUBA_`
+    prefix (e.g. `label_prefix` ⇒ `HOUBA_LABEL_PREFIX`); nested objects (`registries`,
+    `transform_ca_certs`, …) are passed as JSON in that single var.
+    """
+    return Settings.model_json_schema()

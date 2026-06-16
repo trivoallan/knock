@@ -3,8 +3,16 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from houba.config import RegistryConfig, Settings, resolve_registry
+from houba.config import RegistryConfig, Settings, resolve_registry, settings_json_schema
 from houba.errors import ConfigError
+
+
+def test_settings_json_schema_carries_field_descriptions() -> None:
+    # The generated config reference is only useful if descriptions live in the model;
+    # guard that they reach the published schema (see scripts/gen_reference.py).
+    schema = settings_json_schema()
+    assert schema["properties"]["label_prefix"]["description"]
+    assert schema["properties"]["max_concurrency"]["description"]
 
 
 def test_settings_constructs_with_no_env(monkeypatch: pytest.MonkeyPatch) -> None:

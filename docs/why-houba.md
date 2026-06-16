@@ -99,4 +99,5 @@ outlives the tool that wrote it.
 ---
 
 *Convinced, or want to see it run? → [Getting started](getting-started.md)
-· [Example policies](examples/README.md) · [The provenance contract](architecture/design.md)*
+· [Example policies](examples/README.md) · [Reference](reference/mirror-policy.md)
+· [The provenance contract](architecture/design.md)*

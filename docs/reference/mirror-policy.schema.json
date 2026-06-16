@@ -1,0 +1,589 @@
+{
+  "$defs": {
+    "Archive": {
+      "additionalProperties": false,
+      "properties": {
+        "keep": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Retain the N most-recently-imported tags of each stream.",
+          "title": "Keep"
+        },
+        "olderThanDays": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Of the surplus, only mark tags older than this many days (both conditions hold).",
+          "title": "Olderthandays"
+        }
+      },
+      "title": "Archive",
+      "type": "object"
+    },
+    "ArtifactType": {
+      "enum": [
+        "image",
+        "helmChart",
+        "generic"
+      ],
+      "title": "ArtifactType",
+      "type": "string"
+    },
+    "Defaults": {
+      "additionalProperties": false,
+      "properties": {
+        "destinations": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Destination"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default destinations for every import.",
+          "title": "Destinations"
+        },
+        "transform": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/TransformStep"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default transform steps for every import.",
+          "title": "Transform"
+        },
+        "archive": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Archive"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default retention policy for every import."
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TagSelection"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default tag-selection rules for every import."
+        },
+        "platforms": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default platforms for every import.",
+          "title": "Platforms"
+        },
+        "owners": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default owners (Backstage entity refs) for every import.",
+          "title": "Owners"
+        }
+      },
+      "title": "Defaults",
+      "type": "object"
+    },
+    "DeletionMode": {
+      "enum": [
+        "purge",
+        "mark"
+      ],
+      "title": "DeletionMode",
+      "type": "string"
+    },
+    "Destination": {
+      "additionalProperties": false,
+      "properties": {
+        "registry": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Logical registry name from the roster; may be omitted iff exactly one registry is configured.",
+          "title": "Registry"
+        },
+        "project": {
+          "description": "Destination project / namespace.",
+          "title": "Project",
+          "type": "string"
+        },
+        "repository": {
+          "description": "Destination repository.",
+          "title": "Repository",
+          "type": "string"
+        }
+      },
+      "required": [
+        "project",
+        "repository"
+      ],
+      "title": "Destination",
+      "type": "object"
+    },
+    "ImportProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Import name; part of the three-level policy/import/variant identity in the stamp.",
+          "title": "Name",
+          "type": "string"
+        },
+        "tags": {
+          "$ref": "#/$defs/TagSelection",
+          "description": "Tag-selection rules for this import."
+        },
+        "destinations": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Destination"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Destinations (overrides defaults).",
+          "title": "Destinations"
+        },
+        "transform": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/TransformStep"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Transform steps (overrides defaults).",
+          "title": "Transform"
+        },
+        "archive": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Archive"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Retention policy (overrides defaults)."
+        },
+        "platforms": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Platforms (overrides defaults).",
+          "title": "Platforms"
+        },
+        "variants": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Variant"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Variants to fan this import into.",
+          "title": "Variants"
+        },
+        "owners": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Owners as Backstage entity refs (stamped as `io.houba.owners`).",
+          "title": "Owners"
+        }
+      },
+      "required": [
+        "name",
+        "tags"
+      ],
+      "title": "ImportProfile",
+      "type": "object"
+    },
+    "Metadata": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Policy name; stamped as `io.houba.policy` and used for collision checks.",
+          "title": "Name",
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Free-form labels (not stamped).",
+          "title": "Labels",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Metadata",
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "registry": {
+          "description": "Source registry host, e.g. `docker.io`.",
+          "title": "Registry",
+          "type": "string"
+        },
+        "repository": {
+          "description": "Source repository, e.g. `library/redis`.",
+          "title": "Repository",
+          "type": "string"
+        }
+      },
+      "required": [
+        "registry",
+        "repository"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "Spec": {
+      "additionalProperties": false,
+      "properties": {
+        "artifactType": {
+          "$ref": "#/$defs/ArtifactType",
+          "description": "Artifact kind: `image` | `helmChart` | `generic`."
+        },
+        "source": {
+          "$ref": "#/$defs/Source",
+          "description": "Upstream source registry + repository."
+        },
+        "deletionMode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DeletionMode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Policy-level deletion mode; `null` \u21d2 defer to the destination/global cascade."
+        },
+        "defaults": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Defaults"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Defaults inherited by every import."
+        },
+        "imports": {
+          "description": "One or more import profiles (at least one).",
+          "items": {
+            "$ref": "#/$defs/ImportProfile"
+          },
+          "minItems": 1,
+          "title": "Imports",
+          "type": "array"
+        }
+      },
+      "required": [
+        "artifactType",
+        "source",
+        "imports"
+      ],
+      "title": "Spec",
+      "type": "object"
+    },
+    "TagSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "includeRegex": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Only tags matching this regex are selected (applied before excludes).",
+          "title": "Includeregex"
+        },
+        "excludeRegex": {
+          "description": "Tags matching any of these regexes are dropped.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Excluderegex",
+          "type": "array"
+        },
+        "semverOnly": {
+          "default": true,
+          "description": "Keep only tags parseable as semver (drops `latest`, date tags, \u2026).",
+          "title": "Semveronly",
+          "type": "boolean"
+        },
+        "names": {
+          "description": "Explicit tag names to always include.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Names",
+          "type": "array"
+        },
+        "aliases": {
+          "description": "Moving-tag alias templates (e.g. `{major}.{minor}`, `latest`) re-pointed every run.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        }
+      },
+      "title": "TagSelection",
+      "type": "object"
+    },
+    "TransformStep": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "injectCA": {
+              "additionalProperties": false,
+              "properties": {
+                "certs": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "title": "Certs",
+                  "type": "array"
+                }
+              },
+              "required": [
+                "certs"
+              ],
+              "title": "_InjectCAParams",
+              "type": "object"
+            }
+          },
+          "required": [
+            "injectCA"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rewritePackageSources": {
+              "additionalProperties": false,
+              "properties": {
+                "mirror": {
+                  "minLength": 1,
+                  "title": "Mirror",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mirror"
+              ],
+              "title": "_RewritePackageSourcesParams",
+              "type": "object"
+            }
+          },
+          "required": [
+            "rewritePackageSources"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "setTimezone": {
+              "additionalProperties": false,
+              "properties": {
+                "zone": {
+                  "minLength": 1,
+                  "title": "Zone",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "zone"
+              ],
+              "title": "_SetTimezoneParams",
+              "type": "object"
+            }
+          },
+          "required": [
+            "setTimezone"
+          ]
+        }
+      ]
+    },
+    "Variant": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Variant name.",
+          "title": "Name",
+          "type": "string"
+        },
+        "suffix": {
+          "default": "",
+          "description": "Tag suffix appended for this variant, e.g. `-eu`.",
+          "title": "Suffix",
+          "type": "string"
+        },
+        "transform": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/TransformStep"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Per-variant transform; `null` \u21d2 inherit the resolved transform.",
+          "title": "Transform"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Variant",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "const": "houba.io/v1alpha1",
+      "description": "API version; pinned to `houba.io/v1alpha1`.",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "MirrorPolicy",
+      "description": "Resource kind; always `MirrorPolicy`.",
+      "title": "Kind",
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/Metadata",
+      "description": "Policy metadata (name, labels)."
+    },
+    "spec": {
+      "$ref": "#/$defs/Spec",
+      "description": "Policy specification."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "title": "MirrorPolicy",
+  "type": "object"
+}
