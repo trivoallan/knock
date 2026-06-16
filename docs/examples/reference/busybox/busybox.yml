@@ -8,8 +8,6 @@ apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: busybox
-  labels:
-    team: platform          # stable owner key → stamped as io.houba.owner.team
 spec:
   artifactType: image
   source:
@@ -17,6 +15,8 @@ spec:
     repository: library/busybox
   imports:
     - name: stable
+      owners:
+        - group:default/platform     # stamped (comma-joined) as io.houba.owners
       tags:
         includeRegex: "^1\\.3[67]\\."   # the 1.36.x and 1.37.x families
         aliases:

@@ -95,8 +95,6 @@ apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: busybox
-  labels:
-    team: platform              # stable owner key → stamped as io.houba.owner.team
 spec:
   artifactType: image
   source:
@@ -104,6 +102,8 @@ spec:
     repository: library/busybox
   imports:
     - name: stable
+      owners:
+        - group:default/platform   # stamped (comma-joined) as io.houba.owners
       tags:
         includeRegex: "^1\\.3[67]\\."
         aliases:
@@ -220,12 +220,13 @@ Emitted (OCI standard; all but `.revision` are always present):
 With a non-empty prefix (houba identity + lineage):
 
 - `{prefix}.artifact.type`, `{prefix}.policy`, `{prefix}.import`, `{prefix}.variant`
-- `{prefix}.owner.team` (only when a team key is set)
+- `{prefix}.owners` (comma-joined list of Backstage entity-ref strings, e.g.
+  `group:default/payments,group:default/data`; sourced from the `owners` field on `Defaults`
+  or `ImportProfile`; omitted when none are declared)
 - `{prefix}.transform.steps`, `{prefix}.transform.version` (only when a transform ran)
 
 **Deliberately not stamped:** no registry / location fact (the same digest lives in many
-registries — a runtime fact resolved downstream), and no human owner (resolved downstream by
-joining the stable `team` key to a directory / CMDB). Immutable build facts on the artifact;
+registries — a runtime fact resolved downstream). Immutable build facts on the artifact;
 mutable org facts stay out. The three-level identity is `policy → import → variant`.
 
 Heavy, signed provenance (**SLSA / in-toto attestations**) is **implemented** on the rebuild path

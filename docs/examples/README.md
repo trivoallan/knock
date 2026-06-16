@@ -95,13 +95,14 @@ regctl manifest get localhost:5001/demo/busybox:1.37.0 --format '{{json .}}' \
   "io.houba.policy": "busybox",
   "io.houba.import": "stable",
   "io.houba.variant": "default",
-  "io.houba.owner.team": "platform",
+  "io.houba.owners": "group:default/platform",
   "io.houba.artifact.type": "image"
 }
 ```
 
-The whole point: when a CVE drops, `base.digest` + `io.houba.owner.team` make
-blast-radius a single annotation query.
+The whole point: when a CVE drops, `base.digest` + `io.houba.owners` make
+blast-radius a single annotation query (owners is a comma-joined list of Backstage entity-ref
+strings, so an image can appear under several owners).
 
 ## 5. Idempotency
 
