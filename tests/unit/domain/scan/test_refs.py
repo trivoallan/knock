@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from houba.domain.scan.refs import pin_to_digest
+from houba.domain.scan.refs import pin_to_digest, registry_host
 
 D = "sha256:newdigest"
 
@@ -19,3 +19,27 @@ def test_existing_digest_is_replaced() -> None:
 
 def test_ref_without_tag_gets_digest_appended() -> None:
     assert pin_to_digest("harbor.corp/lib/redis", D) == f"harbor.corp/lib/redis@{D}"
+
+
+def test_registry_host_with_dot() -> None:
+    assert registry_host("harbor.corp/lib/redis:7.2.0") == "harbor.corp"
+
+
+def test_registry_host_with_port() -> None:
+    assert registry_host("localhost:5000/lib/redis:7") == "localhost:5000"
+
+
+def test_registry_host_localhost_no_port() -> None:
+    assert registry_host("localhost/lib/redis:7") == "localhost"
+
+
+def test_registry_host_bare_name_is_none() -> None:
+    assert registry_host("redis:7.2.0") is None
+
+
+def test_registry_host_single_org_segment_is_none() -> None:
+    assert registry_host("library/redis:7.2.0") is None
+
+
+def test_registry_host_digest_pinned_ref() -> None:
+    assert registry_host("harbor.corp/lib/redis@sha256:abc") == "harbor.corp"

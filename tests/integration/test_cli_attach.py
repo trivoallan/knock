@@ -188,3 +188,20 @@ def test_attach_no_fail_on_is_zero(
     report.write_text(SARIF_WITH_CRITICAL)
     result = runner.invoke(app, ["attach", "harbor.corp/lib/redis:7.2.0", "--report", str(report)])
     assert result.exit_code == 0
+
+
+def test_attach_authenticates_via_roster(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "default")
+    log = tmp_path / "regctl.log"
+    monkeypatch.setenv("FAKE_REGCTL_LOG", str(log))
+    monkeypatch.setenv(
+        "HOUBA_REGISTRIES",
+        '{"prod": {"host": "harbor.corp", "username": "u", "password": "p"}}',
+    )
+    report = tmp_path / "scan.sarif.json"
+    report.write_text(SARIF)
+    result = runner.invoke(app, ["attach", "harbor.corp/lib/redis:7.2.0", "--report", str(report)])
+    assert result.exit_code == 0, result.stdout
+    assert "registry login" in log.read_text()

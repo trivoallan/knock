@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from houba.config import RegistryConfig, match_registry_by_host, resolve_registry
 from houba.domain.scan.attestation import build_scan_statement
 from houba.domain.scan.detect import resolve_format
 from houba.domain.scan.formats.registry import DEFAULT_REGISTRY, Registry
@@ -18,6 +19,7 @@ from houba.domain.scan.summary import Severity, build_scan_annotations, gate_bre
 from houba.ports.attestor import AttestationRef, AttestorPort
 from houba.ports.clock import ClockPort
 from houba.ports.registry import RegistryPort
+from houba.use_cases.registry_session import ensure_registry_session
 
 SCAN_RESULT_ARTIFACT_TYPE = "application/vnd.houba.scan.result.v1"
 
@@ -48,11 +50,21 @@ def attach_scan(
     registry: RegistryPort,
     clock: ClockPort,
     label_prefix: str,
+    roster: dict[str, RegistryConfig] | None = None,
+    registry_override: str | None = None,
     format_override: str | None = None,
     formats: Registry = DEFAULT_REGISTRY,
     attestor: AttestorPort | None = None,
     builder_id: str = "",
 ) -> ScanOutcome:
+    roster = roster or {}
+    if registry_override is not None:
+        _name, cfg = resolve_registry(registry_override, roster)
+        ensure_registry_session(registry, cfg, set())
+    else:
+        match = match_registry_by_host(image_ref, roster)
+        if match is not None:
+            ensure_registry_session(registry, match[1], set())
     info = registry.inspect(image_ref)
     subject = pin_to_digest(image_ref, info.digest)
     fmt = resolve_format(report_bytes, format_override, formats)

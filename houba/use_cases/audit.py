@@ -14,6 +14,7 @@ from houba.domain.coverage import is_stamped
 from houba.errors import HoubaError, exit_code_for
 from houba.ports.registry import RegistryPort
 from houba.ports.reporter import ErrorInfo
+from houba.use_cases.registry_session import ensure_registry_session
 
 
 class CoverageOutcome(BaseModel):
@@ -81,16 +82,7 @@ def audit_coverage(
     outcomes: list[CoverageOutcome] = []
     logged_in: set[str] = set()
     for _name, cfg in targets:
-        if cfg.host not in logged_in:
-            registry.configure_registry(cfg.host, tls_verify=cfg.tls_verify, ca_cert=cfg.ca_cert)
-            if cfg.username is not None and cfg.password is not None:
-                registry.login(
-                    cfg.host,
-                    username=cfg.username,
-                    password=cfg.password.get_secret_value(),
-                    tls_verify=cfg.tls_verify,
-                )
-            logged_in.add(cfg.host)
+        ensure_registry_session(registry, cfg, logged_in)
         for repo in registry.list_repositories(cfg.host):
             repo_ref = f"{cfg.host}/{repo}"
             for tag in registry.list_tags(repo_ref):

@@ -55,6 +55,7 @@ from houba.ports.attestor import AttestorPort
 from houba.ports.image_builder import BuildRequest, ImageBuilderPort
 from houba.ports.registry import ImageInfo, Referrer, RegistryPort
 from houba.ports.reporter import Counts, ErrorInfo, OperationEvent, OperationKind, Reporter
+from houba.use_cases.registry_session import ensure_registry_session
 from houba.use_cases.report import (
     Operation,
     PolicyReport,
@@ -833,18 +834,7 @@ def reconcile_policies(
                 targets: list[TargetReport] = []
                 for plan in policy_plans:
                     cfg = plan.config
-                    if cfg.host not in logged_in:
-                        registry.configure_registry(
-                            cfg.host, tls_verify=cfg.tls_verify, ca_cert=cfg.ca_cert
-                        )
-                        if cfg.username is not None and cfg.password is not None:
-                            registry.login(
-                                cfg.host,
-                                username=cfg.username,
-                                password=cfg.password.get_secret_value(),
-                                tls_verify=cfg.tls_verify,
-                            )
-                        logged_in.add(cfg.host)
+                    ensure_registry_session(registry, cfg, logged_in)
                     targets.append(
                         _apply_plan(
                             plan,

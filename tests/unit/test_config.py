@@ -366,3 +366,41 @@ def test_settings_retention_parses_json(monkeypatch) -> None:  # type: ignore[no
     assert s.retention is not None
     assert s.retention.keep == 5
     assert s.retention.older_than_days == 14
+
+
+# ---------------------------------------------------------------------------
+# match_registry_by_host resolver
+# ---------------------------------------------------------------------------
+
+
+from houba.config import match_registry_by_host  # noqa: E402
+
+
+def _roster_for_host_match() -> dict[str, RegistryConfig]:
+    return {
+        "prod": RegistryConfig(host="harbor.corp"),
+        "local": RegistryConfig(host="localhost:5000"),
+    }
+
+
+def test_match_registry_by_host_hits() -> None:
+    name, cfg = match_registry_by_host("harbor.corp/lib/redis:7", _roster_for_host_match())
+    assert name == "prod"
+    assert cfg.host == "harbor.corp"
+
+
+def test_match_registry_by_host_port_host() -> None:
+    name, _cfg = match_registry_by_host("localhost:5000/lib/redis:7", _roster_for_host_match())
+    assert name == "local"
+
+
+def test_match_registry_by_host_no_match_returns_none() -> None:
+    assert match_registry_by_host("other.example.com/x:1", _roster_for_host_match()) is None
+
+
+def test_match_registry_by_host_no_host_returns_none() -> None:
+    assert match_registry_by_host("redis:7", _roster_for_host_match()) is None
+
+
+def test_match_registry_by_host_empty_roster_returns_none() -> None:
+    assert match_registry_by_host("harbor.corp/x:1", {}) is None

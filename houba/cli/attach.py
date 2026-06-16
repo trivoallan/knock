@@ -24,6 +24,13 @@ def attach(
         str | None,
         typer.Option("--format", help="Override report-format auto-detection (e.g. 'sarif')."),
     ] = None,
+    registry_name: Annotated[
+        str | None,
+        typer.Option(
+            "--registry",
+            help="Roster entry to authenticate against (overrides ref host-matching).",
+        ),
+    ] = None,
     output: Annotated[
         str, typer.Option("--output", help="Output format: 'text' (default) or 'json'.")
     ] = "text",
@@ -49,6 +56,8 @@ def attach(
         format_override=format_,
         attestor=container.attestor,
         builder_id=container.settings.attest_builder_id,
+        roster=container.settings.registries,
+        registry_override=registry_name,
     )
     render_scan_outcome(outcome, fmt=output, stream=sys.stdout)
     if fail_on is not None and gate_breached(outcome.facts, fail_on):
