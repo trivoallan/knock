@@ -12,6 +12,7 @@ from datetime import datetime
 
 from houba.config import RegistryConfig, match_registry_by_host, resolve_registry
 from houba.domain.scan.attestation import build_scan_statement
+from houba.domain.scan.constants import SCAN_RESULT_ARTIFACT_TYPE
 from houba.domain.scan.detect import resolve_format
 from houba.domain.scan.formats.registry import DEFAULT_REGISTRY, Registry
 from houba.domain.scan.refs import pin_to_digest
@@ -20,8 +21,6 @@ from houba.ports.attestor import AttestationRef, AttestorPort
 from houba.ports.clock import ClockPort
 from houba.ports.registry import RegistryPort
 from houba.use_cases.registry_session import ensure_registry_session
-
-SCAN_RESULT_ARTIFACT_TYPE = "application/vnd.houba.scan.result.v1"
 
 
 @dataclass(frozen=True)
