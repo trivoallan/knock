@@ -1,0 +1,6 @@
+{
+  "label": "How-to guides",
+  "position": 2,
+  "collapsed": true,
+  "link": { "type": "doc", "id": "how-to/index" }
+}

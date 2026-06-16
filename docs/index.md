@@ -1,4 +1,9 @@
-# Why houba
+---
+sidebar_label: Why houba?
+sidebar_position: 0
+---
+
+# Why houba?
 
 ## 2 a.m. A critical CVE drops.
 

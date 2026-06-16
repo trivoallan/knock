@@ -22,7 +22,7 @@ houba attach harbor.corp/lib/redis:7.2.0 --report scan.sarif.json
 The referrer manifest carries the summary annotations (`io.houba.scan.*`) and the raw
 SARIF as its blob. Re-running `attach` after a fresh scan adds a new referrer (history).
 
-`sample.sarif.json` in this directory is a runnable example report (1 critical, 1 medium).
+[`sample.sarif.json`](https://github.com/trivoallan/houba/blob/main/docs/examples/scan/sample.sarif.json) is a runnable example report (1 critical, 1 medium).
 
 ## 3. Sign it (verifiable scan provenance)
 
