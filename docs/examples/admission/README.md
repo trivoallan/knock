@@ -5,7 +5,7 @@ signed scan attestation (predicate `https://houba.dev/predicate/scan/v1`) carryi
 the timestamp it attached and signed the scan. An admission controller *enforces* a **max-age**
 against that field: admit an image only if it was scanned recently enough.
 
-This is the freshness half of the [houba / Dependency-Track boundary](../../architecture/decisions/0032-attach-is-scan-provenance-not-a-store.md):
+This is the freshness half of the [houba / Dependency-Track boundary](https://github.com/trivoallan/houba/blob/main/docs/architecture/decisions/0032-attach-is-scan-provenance-not-a-store.md):
 the gate is **purely temporal** (age of a timestamp), never vulnerability correlation. "Is it
 vulnerable *today*?" stays Dependency-Track's question; "was it scanned recently and through the
 front door?" is what this policy answers.

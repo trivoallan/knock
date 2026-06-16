@@ -62,7 +62,7 @@ capability, runnable on its own with `uv run houba …` (not part of the bundled
 - **[`admission/`](https://github.com/trivoallan/houba/tree/main/docs/examples/admission)** — the
   **consumer side**: a Kyverno `ClusterPolicy` that admits an image only if its houba-signed scan
   attestation (`https://houba.dev/predicate/scan/v1`) carries an `attested_at` within a **max-age**.
-  The freshness half of the [Dependency-Track boundary](../architecture/decisions/0032-attach-is-scan-provenance-not-a-store.md) —
+  The freshness half of the [Dependency-Track boundary](https://github.com/trivoallan/houba/blob/main/docs/architecture/decisions/0032-attach-is-scan-provenance-not-a-store.md) —
   purely temporal, never vuln correlation. Requires `HOUBA_ATTEST_SIGNER` on the `attach` run.
 
 ## Going deeper
