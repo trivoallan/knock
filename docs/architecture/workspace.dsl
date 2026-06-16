@@ -237,6 +237,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     }
                     rfEsObj = infrastructureNode "ExternalSecret + ClusterSecretStore" "houba-secret-store → OpenBao (ESO vault provider)" "ExternalSecret"
                     rfBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/busybox demo/debian — reads stamps, answers the CVE-time query" "regctl"
+                    rfGc = infrastructureNode "CronJob: houba-gc" "Weekly houba gc --apply — collects superseded scan referrers (keep=2/older-than=30d). No git-sync/policies; walks the roster only." "Kubernetes CronJob"
                 }
                 deploymentNode "namespace: external-secrets" "ESO operator (wave 0)" "Namespace" {
                     rfEso = infrastructureNode "External Secrets Operator" "Helm child; materializes the registry roster Secret" "ESO"
@@ -258,6 +259,7 @@ workspace "houba" "Single front door / stamper for external container images." {
             rfEsObj -> rfEso "Requests the roster Secret" "ESO"
             rfGit -> rfPolicyRepo "Pulls policies" "git"
             rfBlast -> rfDest "Reads provenance stamps" "regctl" "DataCoupling"
+            rfGc -> rfDest "Collects superseded scan referrers" "regctl" "DataCoupling"
         }
 
         # ── The local inner-loop overlay — the escape hatch (`make local`, kubectl apply -k).
@@ -278,6 +280,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                         }
                         loSecret = infrastructureNode "Secret: houba-registries" "Plain secret roster (no operators) — the inner-loop escape hatch" "Secret"
                         loBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/busybox demo/debian" "regctl"
+                        loGc = infrastructureNode "CronJob: houba-gc" "Suspended (like reconcile); fired on demand. houba gc --apply over the roster." "Kubernetes CronJob"
                     }
                     deploymentNode "namespace: registry" "Throwaway Zot — plain HTTP; copied + rebuilt images pushed here; built-in web UI (make registry-ui)" "Namespace" {
                         loDest = softwareSystemInstance destRegistries
@@ -289,6 +292,7 @@ workspace "houba" "Single front door / stamper for external container images." {
             }
             loGit -> loRepo "Pulls policies" "git"
             loBlast -> loDest "Reads provenance stamps" "regctl" "DataCoupling"
+            loGc -> loDest "Collects superseded scan referrers" "regctl" "DataCoupling"
         }
     }
 

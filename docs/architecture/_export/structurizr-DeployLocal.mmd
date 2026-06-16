@@ -35,6 +35,8 @@ graph LR
           style 192 fill:#8a94a0,stroke:#606770,color:#ffffff
           193("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>BLAST_REPOS=demo/busybox<br />demo/debian</div>")
           style 193 fill:#8a94a0,stroke:#606770,color:#ffffff
+          196("<div style='font-weight: bold'>CronJob: houba-gc</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes CronJob]</div><div style='font-size: 80%; margin-top:10px'>Suspended (like reconcile);<br />fired on demand. houba gc<br />--apply over the roster.</div>")
+          style 196 fill:#8a94a0,stroke:#606770,color:#ffffff
         end
 
         subgraph 194 ["namespace: registry"]
@@ -60,5 +62,6 @@ graph LR
     187-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->198
     188-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->183
     193-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl]</div>" .->195
+    196-. "<div>Collects superseded scan<br />referrers</div><div style='font-size: 70%'>[regctl]</div>" .->195
 
   end

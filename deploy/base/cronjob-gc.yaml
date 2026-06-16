@@ -1,0 +1,63 @@
+# Scale-hygiene trigger: houba gc on a schedule.
+# Unlike reconcile, gc reads no policies (it walks the registry roster), so there is no
+# git-sync init container and no policies volume — just the roster secret and a writable
+# /tmp for regctl's destination logins. --apply makes it actually collect; the
+# HOUBA_DRY_RUN_DELETIONS kill-switch (shared with reconcile/purge) forces dry-run if set.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: houba-gc
+spec:
+  schedule: "0 3 * * 0" # weekly (Sun 03:00) — referrer hygiene is not urgent; keep=2/older-than=30d defaults
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0 # a failed gc reports per-subject and exits; let the next schedule retry
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: houba
+            app.kubernetes.io/component: gc
+        spec:
+          serviceAccountName: houba
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: houba
+              image: houba # rewritten by the kustomize images transformer
+              command: ["/bin/sh", "-c"]
+              args:
+                ["exec houba gc --apply"]
+              env:
+                # regctl's destination logins live on the writable /tmp mount (the root
+                # filesystem is read-only). gc pulls no source images, so no DOCKER_CONFIG.
+                - name: REGCTL_CONFIG
+                  value: /tmp/.regctl/config.json
+              envFrom:
+                - configMapRef:
+                    name: houba-config
+                - secretRef:
+                    name: houba-registries # provided per-overlay (literal / ExternalSecret)
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: "500m"
+                  memory: 512Mi
+              volumeMounts:
+                - name: work
+                  mountPath: /tmp
+          volumes:
+            - name: work
+              emptyDir: {}

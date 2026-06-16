@@ -48,6 +48,8 @@ graph LR
         style 163 fill:#8a94a0,stroke:#606770,color:#ffffff
         164("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>BLAST_REPOS=demo/busybox<br />demo/debian — reads stamps,<br />answers the CVE-time query</div>")
         style 164 fill:#8a94a0,stroke:#606770,color:#ffffff
+        171("<div style='font-weight: bold'>CronJob: houba-gc</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes CronJob]</div><div style='font-size: 80%; margin-top:10px'>Weekly houba gc --apply —<br />collects superseded scan<br />referrers (keep=2/older-than=30d).<br />No git-sync/policies; walks<br />the roster only.</div>")
+        style 171 fill:#8a94a0,stroke:#606770,color:#ffffff
       end
 
       subgraph 165 ["namespace: external-secrets"]
@@ -90,5 +92,6 @@ graph LR
     163-. "<div>Requests the roster Secret</div><div style='font-size: 70%'>[ESO]</div>" .->166
     159-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->151
     164-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl]</div>" .->170
+    171-. "<div>Collects superseded scan<br />referrers</div><div style='font-size: 70%'>[regctl]</div>" .->170
 
   end
