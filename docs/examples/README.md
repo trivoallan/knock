@@ -342,8 +342,24 @@ uv run houba audit --fail-on-uncovered    # exit 1 if uncovered > 0
 
 An image counts as covered when it carries the houba lineage annotation (`io.houba.policy`, or
 the OCI `org.opencontainers.image.base.digest` when `HOUBA_LABEL_PREFIX` is empty). `HOUBA_LOG_FORMAT=json`
-emits the full structured `CoverageReport`. v1 audits the annotation stamp; signed-attestation
-coverage is a later tier.
+emits the full structured `CoverageReport`.
+
+For the **trustworthiness tier**, add `--signed`: for each *stamped* image it also probes for a
+signed attestation referrer (a present cosign bundle ⇒ signed; no pull-and-verify), distinguishing
+*signed* from *merely stamped*:
+
+```bash
+uv run houba audit --signed
+# UNSIGNED  localhost:5001/demo/legacy-image:latest
+# audit  scanned=13 covered=12 uncovered=1 signed=11 unsigned=1 errored=0
+```
+
+As a CI gate, `--fail-on-unsigned` exits non-zero when any stamped image is unsigned (it implies
+`--signed`):
+
+```bash
+uv run houba audit --fail-on-unsigned    # exit 1 if unsigned > 0
+```
 
 ### Upgrade note
 
