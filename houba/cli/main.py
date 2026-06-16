@@ -14,6 +14,7 @@ from pydantic_settings import SettingsError
 
 from houba.cli.attach import attach as attach_cmd
 from houba.cli.audit import audit as audit_cmd
+from houba.cli.gc import gc as gc_cmd
 from houba.cli.purge import purge as purge_cmd
 from houba.cli.reconcile import reconcile as reconcile_cmd
 from houba.errors import HoubaError, exit_code_for
@@ -25,6 +26,7 @@ app.command(name="reconcile")(reconcile_cmd)
 app.command(name="purge")(purge_cmd)
 app.command(name="attach")(attach_cmd)
 app.command(name="audit")(audit_cmd)
+app.command(name="gc")(gc_cmd)
 
 
 @app.command()
