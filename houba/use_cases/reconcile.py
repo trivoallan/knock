@@ -436,7 +436,7 @@ def _apply_plan(
                         source_digest=source[w.src_tag].digest,
                         source_revision=source[w.src_tag].revision,
                         created=now,
-                        team=(plan.policy.metadata.labels or {}).get("team"),
+                        owners=plan.expanded.owners,
                         artifact_type=plan.policy.spec.artifact_type.value,
                         policy=plan.policy.metadata.name,
                         import_name=plan.expanded.name,
