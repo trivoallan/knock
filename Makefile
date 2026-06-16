@@ -5,9 +5,10 @@
 #                buildkitd + the reference policy + registry + reconcile + report)
 #   make local   the inner-loop escape hatch (kubectl apply -k, no Argo/operators)
 
-CLUSTER ?= houba-demo
-IMAGE   ?= houba:dev
-NS      ?= houba
+CLUSTER     ?= houba-demo
+IMAGE       ?= houba:dev
+GLUE_IMAGE  ?= houba-glue:dev
+NS          ?= houba
 
 # The blast-radius script lives outside the base dir (canonical scripts/), so the
 # configMapGenerator needs the relaxed load restrictor. `kubectl apply -k` can't pass
@@ -32,7 +33,7 @@ ARGOCD_VERSION  ?= v2.12.4
 # the agent-injector / csi-provider pods the chart also creates.
 OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+$$' | head -1)
 
-.PHONY: help reference docs-serve cluster image up-local local local-run \
+.PHONY: help reference docs-serve cluster image glue-image up-local local local-run \
         argocd demo demo-run openbao-seed \
         blast-radius registry-ui docker-auth logs down
 
@@ -52,6 +53,10 @@ cluster: ## Create the kind cluster if absent
 image: ## Build the houba runtime image and load it into kind
 	docker build -t $(IMAGE) .
 	kind load docker-image $(IMAGE) --name $(CLUSTER)
+
+glue-image: image ## Build the SBOM-publish glue image (houba + syft) and load it into kind
+	docker build -t $(GLUE_IMAGE) --build-arg HOUBA_IMAGE=$(IMAGE) -f deploy/glue.Dockerfile .
+	kind load docker-image $(GLUE_IMAGE) --name $(CLUSTER)
 
 # ---- LOCAL (inner-loop escape hatch: copy + rebuild, no Argo) -------------
 up-local: cluster image ## Bring up the local stack (buildkitd + throwaway registry)
