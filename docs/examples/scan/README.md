@@ -60,3 +60,45 @@ houba attach registry.example.com/lib/redis:7.2.0 --report scan.sarif.json --fai
 The raw referrer is always attached first; the gate only controls the exit code. With no
 findings at or above the threshold the command exits 0 (gate passes). Use `--fail-on low` or
 `--fail-on unknown` to catch every finding including unknowns.
+
+## 5. Roster-driven authentication
+
+`houba attach` authenticates against the `HOUBA_REGISTRIES` roster — the same roster that
+`reconcile` and `audit` use — so credentials are declared once and applied consistently.
+
+### 5a. Host-match (default)
+
+Set the roster and run `attach` as usual. houba parses the host from the image ref
+(`harbor.corp` in the example below), finds the matching roster entry, and logs in before
+touching the registry. No extra flag needed.
+
+```bash
+export HOUBA_REGISTRIES='{
+  "prod": {
+    "host": "harbor.corp",
+    "username": "robot$houba",
+    "password": "s3cr3t"
+  }
+}'
+
+houba attach harbor.corp/lib/redis:7.2.0 --report scan.sarif.json
+# houba matches harbor.corp → roster entry "prod", logs in, then attaches.
+```
+
+### 5b. `--registry` override
+
+Use `--registry <name>` to force a specific roster entry regardless of the ref's host — useful
+when the image is behind a pull-through proxy or the ref's host differs from the roster name:
+
+```bash
+houba attach harbor.corp/lib/redis:7.2.0 --report scan.sarif.json --registry prod
+```
+
+`--registry` with a name that is not in the roster exits 3 (`ConfigError`), consistent with the
+rest of the CLI.
+
+### 5c. Silent fallback
+
+When no `--registry` is given and the ref's host is not in any roster entry (for example a
+public image or an empty roster), `attach` configures nothing and falls back to ambient regctl
+config — exactly today's behaviour. No flag and no roster entry required for public registries.

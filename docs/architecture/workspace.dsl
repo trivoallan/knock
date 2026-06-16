@@ -39,6 +39,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     ucAudit = component "audit (use case)" "Catalog-walks the registry and classifies each image as stamped or not; emits the coverage report + exit code." "Python"
                     ucAttach = component "attach (use case)" "Resolves the subject digest, summarizes the ingested scan report, and puts it as a stamped OCI referrer." "Python"
                     ucReport = component "report" "RunReport contract + worst-wins exit code." "Pydantic"
+                    ucRegistrySession = component "registry_session" "Shared use-case helper: configure TLS/CA + login once per host (idempotent via caller-owned logged_in set). Used by reconcile, audit, and attach." "Python"
                 }
                 group "Domain (pure)" {
                     domSchema = component "policy schema" "MirrorPolicy model + published JSON Schema." "Pydantic" "Domain"
@@ -120,12 +121,14 @@ workspace "houba" "Single front door / stamper for external container images." {
         cliAudit -> ucAudit "Runs the audit" "Python"
         ucAudit -> domCoverage "Classifies each image" "Python"
         ucAudit -> portRegistry "Catalog-walks + reads annotations" "Protocol"
+        ucAudit -> ucRegistrySession "Configures TLS/CA + login per registry" "Python"
         cliAttach -> cliDi "Builds the composition root" "Python"
         cliAttach -> ucAttach "Runs the ingest" "Python"
         upstreamScanner -> ucAttach "Provides scan reports" "SARIF / file"
         ucAttach -> domScan "Detects format, parses & summarizes the report" "Python"
         ucAttach -> portRegistry "Resolves the subject digest + puts the scan referrer" "Protocol"
         ucAttach -> portClock "Reads now()" "Protocol"
+        ucAttach -> ucRegistrySession "Configures TLS/CA + login per registry (host-match or --registry override)" "Python"
         cliPurge -> cliDi "Builds the composition root" "Python"
         cliPurge -> ucPurge "Runs the purge" "Python"
         cliPurge -> portClock "Reads now()" "Protocol"
@@ -149,10 +152,13 @@ workspace "houba" "Single front door / stamper for external container images." {
         ucReconcile -> portRegistry "Uses" "Protocol"
         ucReconcile -> portBuilder "Uses" "Protocol"
         ucReconcile -> portReporter "Uses" "Protocol"
+        ucReconcile -> ucRegistrySession "Configures TLS/CA + login per registry" "Python"
 
         ucPurge -> portRegistry "Lists repos + referrers; hard-deletes purged tags" "Protocol"
         ucPurge -> portUsageOracle "Was this digest seen in prod?" "Protocol"
         ucPurge -> portClock "Computes idle window" "Protocol"
+
+        ucRegistrySession -> portRegistry "Calls configure_registry + login" "Protocol"
 
         adRegctl -> portRegistry "Implements" "Protocol"
         adBuildkit -> portBuilder "Implements" "Protocol"

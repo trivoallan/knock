@@ -117,6 +117,8 @@ graph LR
           style 17 fill:#cdd5df,stroke:#8f959c,color:#1f2933
           18("<div style='font-weight: bold'>report</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pydantic]</div><div style='font-size: 80%; margin-top:10px'>RunReport contract +<br />worst-wins exit code.</div>")
           style 18 fill:#cdd5df,stroke:#8f959c,color:#1f2933
+          54("<div style='font-weight: bold'>registry_session</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Shared use-case helper:<br />configure TLS/CA + login<br />once per host (idempotent<br />via caller-owned logged_in<br />set). Used by reconcile,<br />audit, and attach.</div>")
+          style 54 fill:#cdd5df,stroke:#8f959c,color:#1f2933
         end
 
         38("<div style='font-weight: bold'>config</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pydantic Settings]</div><div style='font-size: 80%; margin-top:10px'>Reads HOUBA_* settings +<br />roster resolvers — the only<br />os.environ reader.</div>")
@@ -182,5 +184,9 @@ graph LR
     12-. "<div>Reads HOUBA_* settings</div><div style='font-size: 70%'>[Pydantic Settings]</div>" .->38
     12-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->32
     12-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->33
+    14-. "<div>Configures TLS/CA + login<br />per registry</div><div style='font-size: 70%'>[Python]</div>" .->54
+    16-. "<div>Configures TLS/CA + login<br />per registry</div><div style='font-size: 70%'>[Python]</div>" .->54
+    17-. "<div>Configures TLS/CA + login per<br />registry (host-match or<br />--registry override)</div><div style='font-size: 70%'>[Python]</div>" .->54
+    54-. "<div>Calls configure_registry +<br />login</div><div style='font-size: 70%'>[Protocol]</div>" .->26
 
   end
