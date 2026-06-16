@@ -64,3 +64,10 @@ def test_json_schema_is_derived() -> None:
         "attested_at",
         "builder_id",
     }
+
+
+def test_attested_at_documents_freshness_contract() -> None:
+    desc = scan_predicate_json_schema()["properties"]["attested_at"]["description"]
+    assert "max-age" in desc
+    assert "admission" in desc
+    assert "trustworthy" in desc

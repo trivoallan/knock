@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from houba.domain.attestation import STATEMENT_TYPE
 
@@ -37,7 +37,16 @@ class ScanPredicate(BaseModel):
     format: str
     summary: dict[str, str]  # the io.houba.scan.* facts (prefix-less keys)
     report_digest: str  # digest of the raw SARIF referrer this attestation vouches for
-    attested_at: str  # ISO-8601, when houba attached/signed
+    attested_at: str = Field(
+        description=(
+            "ISO-8601 timestamp of when houba attached and signed this scan. The "
+            "freshness clock: an admission controller enforces a max-age policy "
+            "against it (admit only if now - attested_at <= max-age). This signed "
+            "field is the only trustworthy freshness source — not the unsigned "
+            "scan-timestamp annotation (the HOUBA_LABEL_PREFIX-prefixed key, e.g. "
+            "io.houba.scan.timestamp), which exists only for gc."
+        )
+    )
     builder_id: str  # houba as the attester
 
 
