@@ -35,29 +35,37 @@ Three forks, resolved during brainstorming:
 
 houba's deliverable is to make an **existing** contract explicit and demonstrate it. **Zero new
 domain logic. Zero schema field.** The freshness fact already ships, signed; what is missing is the
-stated contract, the documented precondition, and a worked admission example.
+stated contract (a field description — and, until now, the predicate schema was derivable via
+`scan_predicate_json_schema()` but never *rendered* to `docs/reference/`, so the contract was not
+actually published), the documented precondition, and a worked admission example.
 
 ## Changes
 
 1. **Contract prose.** Add `Field(description=...)` to `ScanPredicate.attested_at` in
    `houba/domain/scan/attestation.py`: the signed attach timestamp; the freshness clock an admission
    controller gates on via max-age; the *only* trustworthy (signed) source — not the unsigned
-   `{prefix}.scan.timestamp` annotation. Regenerate `make reference` (the CI drift-check keeps
-   schema↔docs in sync).
+   `{prefix}.scan.timestamp` annotation.
 
-2. **Precondition (documented, not built).** Max-age enforcement requires `HOUBA_ATTEST_SIGNER`:
+2. **Publish the scan-predicate schema.** Add a `scan-predicate` entry to the `SCHEMAS` dict in
+   `scripts/gen_reference.py` so `make reference` emits `docs/reference/scan-predicate.schema.json` +
+   `scan-predicate.md` (committed). The predicate's `scan_predicate_json_schema()` already exists but
+   was never rendered; publishing it makes the contract readable to admission-policy authors **and**
+   brings it under the CI drift gate — which is what makes the field description from change 1
+   meaningful and verified. Sidebar position 4 (after `cli`).
+
+3. **Precondition (documented, not built).** Max-age enforcement requires `HOUBA_ATTEST_SIGNER`:
    with no signer there is no signed predicate, so admission has nothing trustworthy to gate on.
    Admission reads the **signed** `attested_at`, never the unsigned `{prefix}.scan.timestamp`
    annotation (which stays, used only by `gc` for its local/temporal reap). Documented in the
-   reference, the example README, and the ADR.
+   example README and the ADR.
 
-3. **Worked example.** New `docs/examples/admission/` — a Kyverno policy (`verifyImages` +
+4. **Worked example.** New `docs/examples/admission/` — a Kyverno policy (`verifyImages` +
    `attestations` of type `https://houba.dev/predicate/scan/v1` + temporal `conditions` that reject
-   an `attested_at` older than the configured max-age) plus a README walkthrough. The exact JMESPath
-   time syntax (`time_after` / `time_add` / `time_now_utc`) is verified at implementation — shape
-   first.
+   an `attested_at` older than the configured max-age) plus a README walkthrough, and a catalog entry
+   in `docs/examples/README.md`. The exact JMESPath time syntax (`time_after` / `time_add` /
+   `time_now_utc`) is verified at implementation — shape first.
 
-4. **ADR 0033** (thin, follow-up to 0032): max-age = `attested_at`, enforced at admission; houba's
+5. **ADR 0033** (thin, follow-up to 0032): max-age = `attested_at`, enforced at admission; houba's
    role = present + signed + explicit contract; purely temporal, never correlation (the 0032
    boundary, restated at the freshness layer).
 
@@ -76,9 +84,11 @@ solve (non-goal).
 
 ## Testing
 
-No new domain logic ⇒ **no new unit test**. The contract is held by the existing `make reference`
-drift gate. The Kyverno example is illustrative YAML, outside the pytest suite (as are the other
-`docs/examples/`).
+No new domain *logic* (the field description is prose; the generator change is config). The contract
+is held two ways: (1) a unit test in `tests/unit/domain/scan/test_attestation.py` asserts
+`attested_at` carries the freshness description; (2) the `make reference` drift gate now covers the
+**published** `scan-predicate` schema/docs, so the rendered contract cannot drift from the model. The
+Kyverno example is illustrative YAML, outside the pytest suite (as are the other `docs/examples/`).
 
 ## Non-goals
 
