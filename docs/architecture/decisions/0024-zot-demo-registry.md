@@ -6,6 +6,9 @@ Date: 2026-06-16
 
 Accepted. Refines [23. Single Argo reference deployment that is the demo](0023-single-argo-reference-deployment.md):
 the out-of-band throwaway registry it leaves to the demo becomes Zot rather than `registry:2`.
+The "buildkitd plain-HTTP marking" referenced below was later removed —
+[31. Insecure-registry push is driven by the roster's tls_verify](0031-insecure-registry-from-tls-verify.md)
+derives it from `tls_verify` instead.
 
 ## Context
 

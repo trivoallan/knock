@@ -1,5 +1,0 @@
-# This demo overlay pushes rebuilt images to the in-cluster Zot registry over plain
-# HTTP. buildkitd defaults to HTTPS, so it must be told this one registry is HTTP.
-# Kept here (overlay-local), NOT in the shared components/buildkitd primitive.
-[registry."registry.houba.svc.cluster.local:5000"]
-  http = true

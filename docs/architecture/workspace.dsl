@@ -275,7 +275,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                             loHouba = containerInstance houbaCli
                             loGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
                         }
-                        deploymentNode "Deployment: buildkitd" "Rootless build engine; --config marks the Zot registry as plain-HTTP for the push" "Kubernetes Deployment" {
+                        deploymentNode "Deployment: buildkitd" "Rootless build engine; pushes to the plain-HTTP Zot via registry.insecure derived from the roster tls_verify (generic component, no daemon config)" "Kubernetes Deployment" {
                             loBuild = softwareSystemInstance buildkit
                         }
                         loSecret = infrastructureNode "Secret: houba-registries" "Plain secret roster (no operators) — the inner-loop escape hatch" "Secret"
