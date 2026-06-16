@@ -91,12 +91,27 @@ shipped** once design exposed the real gap:
   window (the same keep-N + older-than model proven on tag retention). Dry-run by default, `--apply`
   to delete; the decision is purely temporal (no usage oracle). *(ADR 0028)*
 
-## Now — adoption and scale hygiene
+## Delivered — package-level blast-radius (SBOM, 2026-06)
 
-> Theme: the mandate is enforceable, trustworthy, and the scan stamp is correct across finding types
-> (see *Delivered*). With the feature surface now complete — scan-referrer GC, the last feature-side
-> item, has shipped — the only remaining bet is **adoption**: lowering the barrier to becoming the
-> mandated front door.
+The blast-radius promise now reaches **package** granularity, not just base-image lineage. Every
+image houba **rebuilds** carries an **SPDX SBOM** that buildkit's native scanner generates during the
+build — the inventory that answers *"which images ship the vulnerable package?"* for the common
+incident (a CVE in a dependency, not the base). Depth validated empirically against the real
+`buildkit-syft-scanner` (Log4Shell nested fat-JAR, Heartbleed/XZ OS packages, runtime/bare-binary
+boundaries). Always-on on rebuild; mirrors the existing `provenance` flag. *(ADR 0029)*
+
+## Now — finish the SBOM tiers + adoption
+
+> Theme: the mandate is enforceable and trustworthy (see *Delivered*), and SBOM generation just
+> lifted blast-radius to package level. The active frontier: finish the SBOM's coverage and trust
+> tiers, and **adoption** — lowering the barrier to becoming the mandated front door.
+
+- **`audit` "has SBOM" coverage dimension.** Report images that lack an SBOM, with a
+  `--fail-on-no-sbom` gate — extending the verifiable front door to stamped → signed → has-SBOM.
+  buildkit attaches the SBOM as an image-index attestation manifest, *not* an OCI referrer, so this
+  needs an index-inspection probe rather than the `signed`-tier referrer mirror. *(ADR 0029, P0.5)*
+- **Sign the SBOM** under houba's identity (cosign) — the trust tier, sequenced like stamp-then-sign.
+  *(ADR 0029, P1)*
 
 - **User documentation site.** Create and publish a user-facing docs site — getting-started,
   policy/config reference, the CLI verbs, and the provenance-stamp contract — built from the existing
