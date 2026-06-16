@@ -23,7 +23,7 @@ uv run ruff check .              # lint
 uv run ruff format .             # format (use --check in CI)
 uv run mypy houba                # strict type check
 docker build -t houba:dev .      # runtime image (bundles regctl + buildctl; ~5 min, pulls 2 upstream images)
-make reference                   # regenerate docs/reference/ (policy + config) from the Pydantic schemas
+make reference                   # regenerate docs/reference/ (policy + config + CLI) from the schemas and Typer app
 ```
 
 `docs/reference/` (the `MirrorPolicy` + `HOUBA_*` reference) is **generated** from the Pydantic

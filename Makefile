@@ -40,7 +40,7 @@ help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
 	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
-reference: ## Regenerate docs/reference/ (policy + config) from the Pydantic schemas
+reference: ## Regenerate docs/reference/ (policy + config + CLI) from the schemas and Typer app
 	uv run --group docs python scripts/gen_reference.py
 
 docs-serve: ## Serve the Docusaurus docs site locally (hot reload)
