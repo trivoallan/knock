@@ -52,15 +52,13 @@ capability, runnable on its own with `uv run houba …` (not part of the bundled
   [Deletion & retention](../explanation/deletion-and-retention.md#retention-capping-valid-tags).
 - **[`oracles/datadog.sh`](https://github.com/trivoallan/houba/blob/main/docs/examples/oracles/datadog.sh)** — reference usage oracle for `houba purge`.
   See [Purge unused tags](../how-to/purge-unused-tags.md).
-- **[`scan/README.md`](scan/README.md)** — the **`houba attach` path**: ingest an
-  upstream SARIF report and stamp it as a portable OCI referrer on the image's digest —
-  also signed as an in-toto scan attestation when `HOUBA_ATTEST_SIGNER` is set.
-  houba does not run a scanner — the scan is produced upstream (CI, registry-native
-  scanner, or scan service) and handed in. `scan/sample.sarif.json` is a runnable
-  example report (1 critical CVE, 1 medium).
-- **[`scan-gc/README.md`](scan-gc/README.md)** — the **`houba gc` path**: garbage-collect
-  superseded scan referrers across the roster, keeping the N newest per `(tool, format)` older
-  than a grace window. Dry-run by default; `--apply` to delete. See [ADR 0028](https://github.com/trivoallan/houba/blob/main/docs/architecture/decisions/0028-scan-referrer-gc.md).
+- **[Attach a scan result](../how-to/attach-scan.md)** — the **`houba attach` path**: ingest an
+  upstream SARIF report and stamp it as a portable OCI referrer on the image's digest — also signed
+  as an in-toto scan attestation when `HOUBA_ATTEST_SIGNER` is set, with `--fail-on` as a CI gate.
+  Fixture: [`scan/sample.sarif.json`](https://github.com/trivoallan/houba/blob/main/docs/examples/scan/sample.sarif.json) (1 critical CVE, 1 medium).
+- **[GC superseded scan referrers](../how-to/gc-scan-referrers.md)** — the **`houba gc` path**:
+  garbage-collect superseded scan referrers across the roster, keeping the N newest per
+  `(tool, format)` older than a grace window. Dry-run by default; `--apply` to delete.
 
 ## Going deeper
 

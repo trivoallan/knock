@@ -48,6 +48,12 @@ const config: Config = {
   ],
 
   themeConfig: {
+    // The generated reference nests headings 5–6 levels deep; cap the on-page TOC at 3
+    // so the right rail stays navigable.
+    tableOfContents: {
+      minHeadingLevel: 2,
+      maxHeadingLevel: 3,
+    },
     navbar: {
       title: 'houba',
       items: [
