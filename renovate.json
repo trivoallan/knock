@@ -4,11 +4,21 @@
     "config:recommended",
     "helpers:pinGitHubActionDigests"
   ],
+  "lockFileMaintenance": {
+    "description": "Refresh lockfiles (incl. website/package-lock.json) so transitive security fixes land without waiting for a direct-dependency bump.",
+    "enabled": true
+  },
   "packageRules": [
     {
       "description": "Pin Python to 3.12.x — deployment target; revert of a premature 3.14 bump. Patch updates within 3.12 are fine; 3.13+ is a deliberate decision, not an auto-PR.",
       "matchPackageNames": ["python"],
       "allowedVersions": "<3.13"
+    },
+    {
+      "description": "Group the Docusaurus packages — they release ~15 packages in lockstep, so a single PR avoids a flood.",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["@docusaurus/**", "/^docusaurus/"],
+      "groupName": "docusaurus"
     }
   ]
 }
