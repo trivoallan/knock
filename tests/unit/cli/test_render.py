@@ -155,3 +155,41 @@ def test_render_text_marks_failed_policy() -> None:
     assert "FAILED" in out
     assert "RegctlError" in out
     assert "boom" in out
+
+
+def test_render_text_marks_failed_policy_with_only_operation_errors() -> None:
+    # status="failed" with error=None: every operation failed but the policy
+    # orchestration didn't itself throw (e.g. all builds hit a registry 429).
+    # The recap must render the totals line, not assert a policy-level error.
+    failed_op = Operation(
+        kind="imported",
+        out_tag="bookworm-slim-eu",
+        src_tag="bookworm-slim",
+        applied=False,
+        error=ErrorInfo("BuildkitError", "429 too many requests", 2),
+    )
+    variant = VariantReport(
+        name="eu", suffix="-eu", status="failed", totals=Counts(failed=1), operations=[failed_op]
+    )
+    target = TargetReport(
+        dest_repo="reg/demo/debian",
+        status="failed",
+        variants=[variant],
+        operations=[],
+        totals=Counts(failed=1),
+    )
+    policy = PolicyReport(
+        name="debian-tz",
+        source="docker.io/library/debian",
+        status="failed",
+        error=None,
+        totals=Counts(failed=1),
+        targets=[target],
+    )
+    report = RunReport(mode="apply", status="partial", totals=Counts(failed=1), policies=[policy])
+    buf = io.StringIO()
+    render_report(report, fmt="text", verbose=False, stream=buf)
+    out = buf.getvalue()
+    assert "debian-tz" in out
+    assert "FAILED" in out
+    assert "failed=1" in out
