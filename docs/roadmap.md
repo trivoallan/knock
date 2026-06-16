@@ -141,4 +141,9 @@ These are not refused on principle — they are waiting for a concrete trigger t
 - **Runtime presence / fleet inventory.** houba stamps; it does not watch where its images run. The
   blast-radius query is assembled in the org's observability stack by reading the stamp. Closing that
   loop (native inventory, an operator) is a different, much larger product and is not on this roadmap.
+- **Vulnerability store / continuous correlation.** houba emits signed scan *provenance* (the
+  `attach` referrer, verified at admission — proof that *this digest came through the front door,
+  signed*), not a vuln database. It never re-correlates a frozen package list against today's CVE
+  feeds; that *currency* is the org's SBOM/vuln platform's job (e.g. Dependency-Track). The referrer
+  is provenance, not a competing store — collapsing it into a store reopens the overlap. *(ADR 0032)*
 - **End-of-life awareness.** Carried by a sibling tool (`regis`).
