@@ -1,7 +1,7 @@
 # Example policies
 
 A catalog of runnable `MirrorPolicy` files, each demonstrating one houba capability against a
-**local registry**. New to houba? Start with **[Getting started](../getting-started.md)** — it
+**local registry**. New to houba? Start with **[Getting started](../tutorials/getting-started.md)** — it
 walks the smallest copy-path example (busybox) from an empty registry to an inspectable
 provenance stamp in about ten minutes. The examples below build on that same local setup
 (`HOUBA_REGISTRIES` roster + a throwaway `registry:2`).
@@ -16,7 +16,7 @@ demonstrates **copy *and* rebuild** in a single, self-contained pass (no Harbor,
 
 - **[`reference/busybox/`](reference/busybox/busybox.yml)** — the **copy path**: select
   `1.36.x`/`1.37.x`, alias `{major}.{minor}` + `latest`, mirror into `demo/busybox`. The smallest,
-  fastest case, and the one [Getting started](../getting-started.md) runs.
+  fastest case, and the one [Getting started](../tutorials/getting-started.md) runs.
 - **[`reference/debian-tz/`](reference/debian-tz/debian-tz.yml)** — the **rebuild path, runnable
   self-contained**: rebuild `debian:bookworm-slim` through `setTimezone` (the one built-in step that
   needs no org config) and fan it into **`-eu` / `-us` variants** via the per-variant `suffix` (the

@@ -2,7 +2,7 @@
 
 Run `houba reconcile` end-to-end against a **local registry** in about ten minutes — from
 nothing to a stamped image you can inspect. This is the **copy path** (mirror + stamp; the
-BuildKit hardening/rebuild path is shown in the [examples](examples/README.md)).
+BuildKit hardening/rebuild path is shown in the [examples](../examples/README.md)).
 
 What you'll see: houba selects tags from a public source, copies them into your local
 registry, sets the derived moving-tag **aliases** (`1.37`, `latest`, …), and writes a
@@ -125,8 +125,8 @@ docker rm -f houba-demo-registry
 
 ---
 
-**Next:** the [example policies](examples/README.md) catalog — semver selection, the
+**Next:** the [example policies](../examples/README.md) catalog — semver selection, the
 rebuild/hardening path, retention, delegated deletion, `houba purge`, scan ingestion, and the
 coverage audit, each a runnable `MirrorPolicy` demonstrating one capability. For every field and
-every `HOUBA_*` variable, see the generated [policy](reference/mirror-policy.md) and
-[config](reference/config.md) reference.
+every `HOUBA_*` variable, see the generated [policy](../reference/mirror-policy.md) and
+[config](../reference/config.md) reference.

@@ -1,7 +1,7 @@
 # houba — ALTERNATIVE TRIGGER (documented variant, not the reference spine).
 #
 # The reference deployment runs houba as a Kubernetes CronJob (see deploy/ and
-# docs/runbooks/reference-deployment.md). For GitLab shops that prefer it, this runs
+# docs/how-to/reference-deployment.md). For GitLab shops that prefer it, this runs
 # the SAME `houba reconcile` against the SAME policy repo on a pipeline *schedule* —
 # GitLab is already a first-class houba integration, so this is a natural fit.
 #
