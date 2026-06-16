@@ -5,8 +5,9 @@ from datetime import UTC, datetime
 
 import pytest
 
+from houba.config import RegistryConfig
 from houba.domain.scan.summary import Severity
-from houba.errors import CosignError, UnknownFormatError
+from houba.errors import ConfigError, CosignError, UnknownFormatError
 from houba.ports.registry import ImageInfo
 from houba.use_cases.attach import (
     SCAN_RESULT_ARTIFACT_TYPE,
@@ -134,3 +135,64 @@ def test_attach_exit_code_gates_on_breach() -> None:
 
 def test_attach_exit_code_none_never_gates() -> None:
     assert attach_exit_code(_outcome(critical=99), fail_on=None) == 0
+
+
+def _roster_for_attach() -> dict[str, RegistryConfig]:
+    return {"prod": RegistryConfig(host="harbor.corp", username="u", password="p")}
+
+
+def test_attach_runs_session_on_host_match() -> None:
+    reg = _registry()
+    attach_scan(
+        REF,
+        SARIF,
+        registry=reg,
+        clock=FakeClock(TS),
+        label_prefix="io.houba",
+        roster=_roster_for_attach(),
+    )
+    assert reg.configured == [("harbor.corp", True, None)]
+    assert reg.logins == [("harbor.corp", "u", True)]
+
+
+def test_attach_no_session_when_host_not_in_roster() -> None:
+    reg = _registry()
+    attach_scan(
+        REF,
+        SARIF,
+        registry=reg,
+        clock=FakeClock(TS),
+        label_prefix="io.houba",
+        roster={},
+    )
+    assert reg.configured == []
+    assert reg.logins == []
+
+
+def test_attach_registry_override_selects_entry() -> None:
+    reg = _registry()
+    roster = {"other": RegistryConfig(host="harbor.corp", username="u", password="p")}
+    attach_scan(
+        REF,
+        SARIF,
+        registry=reg,
+        clock=FakeClock(TS),
+        label_prefix="io.houba",
+        roster=roster,
+        registry_override="other",
+    )
+    assert reg.logins == [("harbor.corp", "u", True)]
+
+
+def test_attach_unknown_registry_override_raises() -> None:
+    reg = _registry()
+    with pytest.raises(ConfigError):
+        attach_scan(
+            REF,
+            SARIF,
+            registry=reg,
+            clock=FakeClock(TS),
+            label_prefix="io.houba",
+            roster=_roster_for_attach(),
+            registry_override="nope",
+        )
