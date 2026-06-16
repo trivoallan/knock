@@ -28,6 +28,7 @@ from typer.cli import get_docs_for_click
 from houba.cli.main import app as cli_app
 from houba.config import settings_json_schema
 from houba.domain.mirror_policy import mirror_policy_json_schema
+from houba.domain.scan.attestation import scan_predicate_json_schema
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "reference"
 
@@ -37,6 +38,7 @@ OUT = Path(__file__).resolve().parent.parent / "docs" / "reference"
 SCHEMAS: dict[str, tuple[Callable[[], dict[str, Any]], str, int]] = {
     "mirror-policy": (mirror_policy_json_schema, "MirrorPolicy", 1),
     "config": (settings_json_schema, "houba configuration (HOUBA_*)", 2),
+    "scan-predicate": (scan_predicate_json_schema, "Scan attestation predicate (/scan/v1)", 4),
 }
 
 # with_footer=False drops the "Generated on <date>" line, so the Markdown is a
