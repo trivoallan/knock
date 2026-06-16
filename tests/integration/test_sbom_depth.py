@@ -99,7 +99,17 @@ def test_sbom_depth_incident_matrix(tmp_path: Path) -> None:
         text=True,
         timeout=600,
     )
-    assert r.returncode == 0, r.stderr
+    if r.returncode != 0:
+        # The plain `docker` buildx driver (default on CI runners) cannot emit attestations;
+        # this gate needs the docker-container driver or the containerd image store. Skip rather
+        # than fail there — it is a local/nightly depth guard, not a per-PR CI check. Any OTHER
+        # build error is a real failure.
+        if (
+            "is not supported for the docker driver" in r.stderr
+            or "Attestation is not supported" in r.stderr
+        ):
+            pytest.skip(f"buildx driver lacks attestation support: {r.stderr.strip()}")
+        pytest.fail(f"buildx build failed:\n{r.stderr}")
     names = _spdx_package_names(out)
 
     # Present — each incident class captured at the right layer
