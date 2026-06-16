@@ -1,4 +1,4 @@
-# 26. Multi-owner ownership: io.houba.owners replaces io.houba.owner.team
+# 30. Multi-owner ownership: io.houba.owners replaces io.houba.owner.team
 
 Date: 2026-06-16
 
