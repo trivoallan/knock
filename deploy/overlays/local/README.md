@@ -6,11 +6,17 @@ path** (busybox) and the **rebuild path** (debian) against the reference policy 
 in-cluster **[Zot](https://zotregistry.dev)** as the mirror destination.
 
 ```bash
-make local   # build image → up stack → one reconcile → blast-radius report
+make local   # build image+glue → up stack → reconcile → bootstrap DT → publish SBOMs → blast-radius report
+make dt-ui   # browse Dependency-Track (the package-level blast-radius consumer)
 ```
 
 No Harbor, no ExternalSecret, no CA/mirror config — everything needed to run houba
 end-to-end fits in this single overlay.
+
+houba's lineage stamp answers *which images derive from base X* (`make blast-radius`); the SPDX SBOM,
+converted to CycloneDX and uploaded to Dependency-Track, answers the **package**-level question
+*which images ship the vulnerable package X*. Component inventory works offline; CVE/severity
+correlation needs DT to have downloaded its NVD feeds (online, slow on first boot).
 
 Zot ships a **built-in web UI** (the `search` + `ui` extensions), so you can *see* what
 houba pushed — browse the mirrored repos/tags and the provenance annotations on each

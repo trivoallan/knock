@@ -35,7 +35,7 @@ OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+
 
 .PHONY: help reference docs-serve cluster image glue-image up-local local local-run \
         argocd demo demo-run openbao-seed \
-        blast-radius registry-ui docker-auth logs down
+        blast-radius dt-bootstrap publish-sbom dt-ui registry-ui docker-auth logs down
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -59,13 +59,16 @@ glue-image: image ## Build the SBOM-publish glue image (houba + syft) and load i
 	kind load docker-image $(GLUE_IMAGE) --name $(CLUSTER)
 
 # ---- LOCAL (inner-loop escape hatch: copy + rebuild, no Argo) -------------
-up-local: cluster image ## Bring up the local stack (buildkitd + throwaway registry)
+up-local: cluster glue-image ## Bring up the local stack (buildkitd + throwaway registry)
 	$(KUSTOMIZE) deploy/overlays/local | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
 
-local: up-local local-run ## Local stack + one reconcile (copy + rebuild) + report
+local: up-local local-run ## Local stack + reconcile + bootstrap DT + publish SBOMs + report
 	@sleep 3
+	$(MAKE) dt-bootstrap
+	$(MAKE) publish-sbom
 	$(MAKE) blast-radius
+	@echo ">> SBOMs published to Dependency-Track. Browse them with 'make dt-ui'."
 
 local-run: ## Fire a one-shot reconcile from the suspended CronJob
 	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
@@ -106,6 +109,8 @@ demo: cluster image argocd ## The single Argo reference on kind, end-to-end (ope
 	$(MAKE) demo-run
 	@sleep 3
 	$(MAKE) blast-radius OVERLAY=deploy/argocd/sources/houba
+	$(MAKE) dt-bootstrap OVERLAY=deploy/argocd/sources/houba
+	$(MAKE) publish-sbom OVERLAY=deploy/argocd/sources/houba
 	@echo ">> The Argo reference is up and mirrored the reference policy end-to-end: operators"
 	@echo ">>       (ESO+OpenBao) + houba/buildkitd, the ESO->OpenBao secret path, a git-sync'd"
 	@echo ">>       policy (busybox copy + debian rebuild), and the registry destination."
@@ -127,6 +132,23 @@ blast-radius: ## (Re)run the blast-radius consumer and print its report
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-blast-radius --timeout=120s
 	$(KUBECTL) -n $(NS) logs job/houba-blast-radius
+
+dt-bootstrap: ## Mint DT's API key into the dt-api-key Secret (re-runnable)
+	-$(KUBECTL) -n $(NS) delete job houba-dt-bootstrap --ignore-not-found
+	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-dt-bootstrap --timeout=300s
+	$(KUBECTL) -n $(NS) logs job/houba-dt-bootstrap
+
+publish-sbom: ## Convert each rebuilt image's SBOM to CycloneDX and upload it to Dependency-Track
+	-$(KUBECTL) -n $(NS) delete job houba-publish-sbom --ignore-not-found
+	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-publish-sbom --timeout=300s
+	$(KUBECTL) -n $(NS) logs job/houba-publish-sbom
+
+dt-ui: ## Open the Dependency-Track UI (frontend on :8080, apiserver on :8081 — both needed)
+	@echo ">> DT UI at http://localhost:8080  (login admin / $${DT_ADMIN_PASSWORD:-houba-demo-admin}). Ctrl-C to stop."
+	$(KUBECTL) -n $(NS) port-forward svc/dependency-track-apiserver 8081:8080 & \
+	  $(KUBECTL) -n $(NS) port-forward svc/dependency-track-frontend 8080:8080
 
 docker-auth: ## Seed source-registry creds (set DOCKER_USER + DOCKER_PASS) so pulls authenticate (avoids rate limits)
 	@test -n "$$DOCKER_USER" && test -n "$$DOCKER_PASS" || \
