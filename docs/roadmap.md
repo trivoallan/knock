@@ -10,15 +10,17 @@ remaining feature bets were deliberately cut or deferred (see *Deferred* / *Out 
 
 houba is a **stamper**, not a query engine. It is the single front door through which external
 container images enter your organization: it hardens them (internal CAs, internal package mirrors)
-and stamps them with **standardized, portable provenance**. The value lands at incident time — when
-a critical CVE drops, the consistent provenance stamp turns *"what's our blast radius, and who owns
-it?"* into one query in the observability stack you already run.
+and stamps them with **standardized, portable provenance** — and, for rebuilt images, a
+**package-level SPDX SBOM** (buildkit's native scanner). The value lands at incident time — when a
+critical CVE drops, the stamp (lineage, ownership) and the SBOM (package inventory) turn *"which
+images ship the vulnerable package, and who owns them?"* into one query in the tools you already
+run. houba produces both facts; it never runs the query — still a stamper, not a query engine.
 
 Two consequences drive everything below:
 
-1. **The label is the product.** Because houba's value flows through the stamp into someone else's
-   query tool, the provenance schema is the public API. It must be standardized, portable, and
-   trustworthy before anything else.
+1. **The label is the product.** Because houba's value flows through the stamp *and the SBOM* into
+   someone else's query tool, the provenance surface (the annotation schema + SPDX) is the public
+   API. It must be standardized, portable, and trustworthy before anything else.
 2. **Coverage gates value.** A stamp on 40 % of the fleet yields a blast-radius query with blind
    spots — useless in an incident. houba's value is proportional to it being the *mandatory* path
    for external images. This *was* the riskiest assumption — now **validated** (see below).
@@ -89,12 +91,27 @@ shipped** once design exposed the real gap:
   window (the same keep-N + older-than model proven on tag retention). Dry-run by default, `--apply`
   to delete; the decision is purely temporal (no usage oracle). *(ADR 0028)*
 
-## Now — adoption and scale hygiene
+## Delivered — package-level blast-radius (SBOM, 2026-06)
 
-> Theme: the mandate is enforceable, trustworthy, and the scan stamp is correct across finding types
-> (see *Delivered*). With the feature surface now complete — scan-referrer GC, the last feature-side
-> item, has shipped — the only remaining bet is **adoption**: lowering the barrier to becoming the
-> mandated front door.
+The blast-radius promise now reaches **package** granularity, not just base-image lineage. Every
+image houba **rebuilds** carries an **SPDX SBOM** that buildkit's native scanner generates during the
+build — the inventory that answers *"which images ship the vulnerable package?"* for the common
+incident (a CVE in a dependency, not the base). Depth validated empirically against the real
+`buildkit-syft-scanner` (Log4Shell nested fat-JAR, Heartbleed/XZ OS packages, runtime/bare-binary
+boundaries). Always-on on rebuild; mirrors the existing `provenance` flag. *(ADR 0029)*
+
+## Now — finish the SBOM tiers + adoption
+
+> Theme: the mandate is enforceable and trustworthy (see *Delivered*), and SBOM generation just
+> lifted blast-radius to package level. The active frontier: finish the SBOM's coverage and trust
+> tiers, and **adoption** — lowering the barrier to becoming the mandated front door.
+
+- **`audit` "has SBOM" coverage dimension.** Report images that lack an SBOM, with a
+  `--fail-on-no-sbom` gate — extending the verifiable front door to stamped → signed → has-SBOM.
+  buildkit attaches the SBOM as an image-index attestation manifest, *not* an OCI referrer, so this
+  needs an index-inspection probe rather than the `signed`-tier referrer mirror. *(ADR 0029, P0.5)*
+- **Sign the SBOM** under houba's identity (cosign) — the trust tier, sequenced like stamp-then-sign.
+  *(ADR 0029, P1)*
 
 - **User documentation site.** Create and publish a user-facing docs site — getting-started,
   policy/config reference, the CLI verbs, and the provenance-stamp contract — built from the existing

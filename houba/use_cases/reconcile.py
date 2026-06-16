@@ -180,6 +180,7 @@ def _build_variant(
                 platform=platform,
                 provenance=provenance,
                 tls_verify=tls_verify,
+                sbom=True,  # always-on: every rebuild carries an SBOM (coverage gates value)
             )
         )
 

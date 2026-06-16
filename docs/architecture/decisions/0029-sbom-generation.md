@@ -1,0 +1,59 @@
+# 29. SBOM generation on the rebuild path
+
+Date: 2026-06-16
+
+## Status
+
+Accepted.
+
+## Context
+
+The provenance stamp carries lineage (`base.digest`, `transform.steps`, `owners`), not contents.
+Lineage answers "which images derive from base X"; nearly every real CVE is a content question —
+"which images contain package P". houba's own hardening updates packages, so package versions cannot
+even be inferred from `base.digest`. An attached scan report does not fill the gap: a scan is
+known-vulnerable *as of its run date*, so it reads "clean" for a zero-day on the day it drops. Only a
+CVE-agnostic **SBOM** answers package-level blast-radius retroactively. As the single front door over
+bytes it controls (≈99% rebuild), houba is the natural choke point to guarantee 100% SBOM coverage.
+
+Depth was the one real risk — does buildkit's native scanner see application-layer dependencies
+buried in nested JARs? Replayed Log4Shell / Heartbleed / XZ / Leaky-Vessels against the real
+`docker/buildkit-syft-scanner:stable-1`: nested `log4j-core 2.14.1`, OS `libssl3` / `liblzma5` (with
+versions and `upstream=` purls) all captured; host-runtime `runc` correctly absent. Risk retired.
+
+## Decision
+
+`BuildRequest` gains an `sbom: bool` flag, mirroring the existing `provenance` flag, mapping to
+`--opt=attest:sbom=true` in `BuildkitAdapter`. buildkit generates an SPDX SBOM during the build and
+attaches it at push as an **image-index attestation manifest** (`vnd.docker.reference.type=
+attestation-manifest`) — no extraction pipeline for *presence*. The rebuild path enables it
+always-on (coverage gates value; an optional SBOM defeats the mandate). A permanent CI acceptance
+gate replays the incident matrix against the real buildkit scanner config, guarding against silent
+depth regression.
+
+Scope follows houba's coverage ladder: **SBOM present** is P0 — it answers the blast-radius query.
+A **`houba audit` "has SBOM" dimension** is a fast-follow (P0.5): because the SBOM is index-embedded,
+not an OCI referrer, detecting it needs an index-inspection probe — not the `signed`-tier referrer
+mirror first assumed. **SBOM cosign-signed** under houba's identity is P1 — the trust tier, sequenced
+as stamp-then-sign was.
+
+## Non-goals (v1)
+
+The `houba audit` "has SBOM" dimension (P0.5 fast-follow — needs index inspection, see Decision);
+cosign-signing the SBOM (P1 fast-follow); copy-path SBOM generation (≈1% of intake — no build to
+observe; `# ponytail:` pull+syft only at a real volume signal, flagged by the future audit
+dimension); CycloneDX / alternate formats (buildkit emits SPDX natively); SBOM backfill on
+already-mirrored images; the blast-radius query engine / CVE matching / runtime fleet inventory
+(downstream in the org's observability stack — houba's standing non-goal).
+
+## Consequences
+
+- This change (P0): no new port, adapter, actor, external system, or `MirrorPolicy` field — just a
+  build-time flag and its wiring. C4 model unchanged.
+- The provenance stamp's blast-radius promise extends from base-image granularity to package level.
+- Fast-follow (P0.5): the `houba audit` "has SBOM" dimension will add an index-inspection capability
+  to `RegistryPort` (the SBOM is index-embedded, not a referrer); coverage will then read
+  stamped → signed → has-SBOM.
+
+Full design spec:
+[2026-06-16-sbom-generation-design.md](../../superpowers/specs/2026-06-16-sbom-generation-design.md)

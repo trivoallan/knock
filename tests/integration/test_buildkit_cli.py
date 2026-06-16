@@ -124,3 +124,29 @@ def test_build_omits_registry_insecure_by_default(
         BuildRequest(dockerfile_path=df, context_dir=tmp_path, image_ref="reg/x:1")
     )
     assert "registry.insecure" not in log.read_text()
+
+
+def test_build_emits_sbom_opt_when_requested(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = tmp_path / "buildctl.log"
+    monkeypatch.setenv("FAKE_BUILDCTL_LOG", str(log))
+    df = tmp_path / "Dockerfile"
+    df.write_text("FROM scratch\n")
+    BuildkitAdapter().build_and_push(
+        BuildRequest(dockerfile_path=df, context_dir=tmp_path, image_ref="reg/x:1", sbom=True)
+    )
+    assert "--opt=attest:sbom=true" in log.read_text()
+
+
+def test_build_omits_sbom_opt_by_default(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = tmp_path / "buildctl.log"
+    monkeypatch.setenv("FAKE_BUILDCTL_LOG", str(log))
+    df = tmp_path / "Dockerfile"
+    df.write_text("FROM scratch\n")
+    BuildkitAdapter().build_and_push(
+        BuildRequest(dockerfile_path=df, context_dir=tmp_path, image_ref="reg/x:1")
+    )
+    assert "attest:sbom" not in log.read_text()
