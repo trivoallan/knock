@@ -5,9 +5,10 @@
 # no CORS plumbing. Reach it with:
 #   kubectl -n houba port-forward svc/registry 8080:5000   # then open http://localhost:8080
 # Real deployments point at their own registry (Harbor/Zot) with its own console — see
-# the full/prod overlays. Same Service name + port (registry:5000) the roster and the
-# buildkitd plain-HTTP marking already expect, so swapping registry:2 → Zot is invisible
-# to the copy (regctl) and rebuild (buildctl) paths.
+# the full/prod overlays. Same Service name + port (registry:5000) the roster's
+# `tls_verify=false` already drives — for both the copy (regctl `--tls disabled`) and
+# rebuild (buildctl `registry.insecure=true`) paths — so the registry image is invisible
+# to houba.
 apiVersion: v1
 kind: ConfigMap
 metadata:

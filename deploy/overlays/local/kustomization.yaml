@@ -19,10 +19,6 @@ generatorOptions:
   disableNameSuffixHash: true
 
 configMapGenerator:
-  # buildkitd config marking the in-cluster HTTP registry as plain-HTTP (mounted by the patch).
-  - name: buildkitd-config
-    files:
-      - buildkitd.toml
   # Point the reconcile + blast-radius at the reference policy.
   - name: houba-config
     behavior: merge
@@ -40,18 +36,6 @@ patches:
       - op: add
         path: /spec/suspend
         value: true
-  - path: patch-buildkitd-insecure.yaml
-  # The rootless buildkit image does NOT auto-load /etc/buildkit/buildkitd.toml (its
-  # advertised default): without this, the daemon keeps talking HTTPS and the push to the
-  # plain-HTTP registry fails ("server gave HTTP response to HTTPS client"). Point it at
-  # the mounted config explicitly by appending --config to the component's args.
-  - target:
-      kind: Deployment
-      name: buildkitd
-    patch: |-
-      - op: add
-        path: /spec/template/spec/containers/0/args/-
-        value: --config
-      - op: add
-        path: /spec/template/spec/containers/0/args/-
-        value: /etc/buildkit/buildkitd.toml
+  # No buildkitd plain-HTTP config: houba derives BuildKit's `registry.insecure=true`
+  # from the roster's `tls_verify=false` (same primitive regctl uses), so the rebuild
+  # push to the plain-HTTP Zot works with the generic components/buildkitd as-is.

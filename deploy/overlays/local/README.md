@@ -26,13 +26,13 @@ same port as the registry API; a real cluster browses its own Harbor/Zot console
 ## The insecure-HTTP detail
 
 The rebuilt images are **pushed by buildkit** to the throwaway Zot registry, which serves
-plain HTTP. buildkitd defaults to HTTPS, so [`buildkitd.toml`](buildkitd.toml) marks that one
-registry `http = true`, [`patch-buildkitd-insecure.yaml`](patch-buildkitd-insecure.yaml) mounts
-it at `/etc/buildkit`, and the kustomization appends `--config /etc/buildkit/buildkitd.toml` to
-the daemon's args — the **rootless** buildkit image does *not* auto-load that path, so without the
-explicit `--config` the push fails with `server gave HTTP response to HTTPS client`. All of this
-lives **here**, in the overlay — the shared [`components/buildkitd`](../../components/buildkitd)
-primitive stays generic.
+plain HTTP. buildkitd defaults to HTTPS — but houba derives BuildKit's
+`registry.insecure=true` push flag from the destination's `tls_verify=false` in the roster
+([`secret-registries.yaml`](secret-registries.yaml)), the *same* primitive that makes
+`regctl` copy over HTTP (`--tls disabled`). So the copy and rebuild paths share one source
+of truth and the shared [`components/buildkitd`](../../components/buildkitd) is used as-is —
+no overlay-local `buildkitd.toml`, no `--config` patch. (BuildKit's `registry.insecure`
+covers the *push*; base images here are pulled from Docker Hub over HTTPS.)
 
 ## Running before merge
 
