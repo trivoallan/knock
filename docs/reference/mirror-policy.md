@@ -73,6 +73,9 @@ sidebar_position: 1
         - [4.4.1.6.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > owners > anyOf > item 0`](#spec_defaults_anyOf_i0_owners_anyOf_i0)
           - [4.4.1.6.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > owners > anyOf > item 0 > item 0 items](#spec_defaults_anyOf_i0_owners_anyOf_i0_items)
         - [4.4.1.6.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > owners > anyOf > item 1`](#spec_defaults_anyOf_i0_owners_anyOf_i1)
+      - [4.4.1.7. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor`](#spec_defaults_anyOf_i0_vendor)
+        - [4.4.1.7.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor > anyOf > item 0`](#spec_defaults_anyOf_i0_vendor_anyOf_i0)
+        - [4.4.1.7.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor > anyOf > item 1`](#spec_defaults_anyOf_i0_vendor_anyOf_i1)
     - [4.4.2. Property `MirrorPolicy > spec > defaults > anyOf > item 1`](#spec_defaults_anyOf_i1)
   - [4.5. Property `MirrorPolicy > spec > imports`](#spec_imports)
     - [4.5.1. MirrorPolicy > spec > imports > ImportProfile](#spec_imports_items)
@@ -107,6 +110,9 @@ sidebar_position: 1
         - [4.5.1.8.1. Property `MirrorPolicy > spec > imports > ImportProfile > owners > anyOf > item 0`](#spec_imports_items_owners_anyOf_i0)
           - [4.5.1.8.1.1. MirrorPolicy > spec > imports > ImportProfile > owners > anyOf > item 0 > item 0 items](#spec_imports_items_owners_anyOf_i0_items)
         - [4.5.1.8.2. Property `MirrorPolicy > spec > imports > ImportProfile > owners > anyOf > item 1`](#spec_imports_items_owners_anyOf_i1)
+      - [4.5.1.9. Property `MirrorPolicy > spec > imports > ImportProfile > vendor`](#spec_imports_items_vendor)
+        - [4.5.1.9.1. Property `MirrorPolicy > spec > imports > ImportProfile > vendor > anyOf > item 0`](#spec_imports_items_vendor_anyOf_i0)
+        - [4.5.1.9.2. Property `MirrorPolicy > spec > imports > ImportProfile > vendor > anyOf > item 1`](#spec_imports_items_vendor_anyOf_i1)
 
 **Title:** MirrorPolicy
 
@@ -351,6 +357,7 @@ Must be one of:
 | - [tags](#spec_defaults_anyOf_i0_tags )                 | No      | Combination | No         | -          | Default tag-selection rules for every import. |
 | - [platforms](#spec_defaults_anyOf_i0_platforms )       | No      | Combination | No         | -          | Platforms                                     |
 | - [owners](#spec_defaults_anyOf_i0_owners )             | No      | Combination | No         | -          | Owners                                        |
+| - [vendor](#spec_defaults_anyOf_i0_vendor )             | No      | Combination | No         | -          | Vendor                                        |
 
 ##### 4.4.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations` {#spec_defaults_anyOf_i0_destinations}
 
@@ -1039,6 +1046,38 @@ Must be one of:
 | **Type**     | `null` |
 | **Required** | No     |
 
+##### 4.4.1.7. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor` {#spec_defaults_anyOf_i0_vendor}
+
+**Title:** Vendor
+
+|                           |                  |
+| ------------------------- | ---------------- |
+| **Type**                  | `combining`      |
+| **Required**              | No               |
+| **Additional properties** | Any type allowed |
+| **Default**               | `null`           |
+
+**Description:** Default vendor for every import, stamped as `org.opencontainers.image.vendor` (the rebuilding organization).
+
+| Any of(Option)                                    |
+| ------------------------------------------------- |
+| [item 0](#spec_defaults_anyOf_i0_vendor_anyOf_i0) |
+| [item 1](#spec_defaults_anyOf_i0_vendor_anyOf_i1) |
+
+###### 4.4.1.7.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor > anyOf > item 0` {#spec_defaults_anyOf_i0_vendor_anyOf_i0}
+
+|              |          |
+| ------------ | -------- |
+| **Type**     | `string` |
+| **Required** | No       |
+
+###### 4.4.1.7.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor > anyOf > item 1` {#spec_defaults_anyOf_i0_vendor_anyOf_i1}
+
+|              |        |
+| ------------ | ------ |
+| **Type**     | `null` |
+| **Required** | No     |
+
 #### 4.4.2. Property `MirrorPolicy > spec > defaults > anyOf > item 1` {#spec_defaults_anyOf_i1}
 
 |              |        |
@@ -1090,6 +1129,7 @@ Must be one of:
 | - [platforms](#spec_imports_items_platforms )       | No      | Combination | No         | -                                                              | Platforms                              |
 | - [variants](#spec_imports_items_variants )         | No      | Combination | No         | -                                                              | Variants                               |
 | - [owners](#spec_imports_items_owners )             | No      | Combination | No         | -                                                              | Owners                                 |
+| - [vendor](#spec_imports_items_vendor )             | No      | Combination | No         | -                                                              | Vendor                                 |
 
 ##### 4.5.1.1. Property `MirrorPolicy > spec > imports > ImportProfile > name` {#spec_imports_items_name}
 
@@ -1490,6 +1530,38 @@ Must be one of:
 | **Required** | No       |
 
 ###### 4.5.1.8.2. Property `MirrorPolicy > spec > imports > ImportProfile > owners > anyOf > item 1` {#spec_imports_items_owners_anyOf_i1}
+
+|              |        |
+| ------------ | ------ |
+| **Type**     | `null` |
+| **Required** | No     |
+
+##### 4.5.1.9. Property `MirrorPolicy > spec > imports > ImportProfile > vendor` {#spec_imports_items_vendor}
+
+**Title:** Vendor
+
+|                           |                  |
+| ------------------------- | ---------------- |
+| **Type**                  | `combining`      |
+| **Required**              | No               |
+| **Additional properties** | Any type allowed |
+| **Default**               | `null`           |
+
+**Description:** Vendor (overrides defaults), stamped as `org.opencontainers.image.vendor`.
+
+| Any of(Option)                                |
+| --------------------------------------------- |
+| [item 0](#spec_imports_items_vendor_anyOf_i0) |
+| [item 1](#spec_imports_items_vendor_anyOf_i1) |
+
+###### 4.5.1.9.1. Property `MirrorPolicy > spec > imports > ImportProfile > vendor > anyOf > item 0` {#spec_imports_items_vendor_anyOf_i0}
+
+|              |          |
+| ------------ | -------- |
+| **Type**     | `string` |
+| **Required** | No       |
+
+###### 4.5.1.9.2. Property `MirrorPolicy > spec > imports > ImportProfile > vendor > anyOf > item 1` {#spec_imports_items_vendor_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |

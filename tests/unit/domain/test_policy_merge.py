@@ -217,6 +217,30 @@ def test_owners_none_when_unset() -> None:
     assert resolved.owners is None
 
 
+def test_vendor_inherited_from_defaults() -> None:
+    spec = _spec(
+        defaults={"vendor": "ACME Platform"},
+        imports=[{"name": "v", "tags": {}}],
+    )
+    [resolved] = resolve_imports(spec)
+    assert resolved.vendor == "ACME Platform"
+
+
+def test_vendor_override_replaces_defaults() -> None:
+    spec = _spec(
+        defaults={"vendor": "ACME Platform"},
+        imports=[{"name": "v", "tags": {}, "vendor": "ACME Payments"}],
+    )
+    [resolved] = resolve_imports(spec)
+    assert resolved.vendor == "ACME Payments"
+
+
+def test_vendor_none_when_unset() -> None:
+    spec = _spec(defaults=None, imports=[{"name": "v", "tags": {}}])
+    [resolved] = resolve_imports(spec)
+    assert resolved.vendor is None
+
+
 def test_empty_owners_override_clears_defaults() -> None:
     # an explicit `owners: []` is present (not None), so it overrides the default
     # wholesale → no owner (the stamp omits io.houba.owners).

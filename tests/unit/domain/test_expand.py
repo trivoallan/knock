@@ -78,3 +78,17 @@ def test_expand_carries_owners() -> None:
     )[0]
     expanded = expand_import(resolved, ["1.0.0"])
     assert expanded.owners == ["group:default/payments"]
+
+
+def test_expand_carries_vendor() -> None:
+    resolved = resolve_imports(
+        Spec.model_validate(
+            {
+                "artifactType": "image",
+                "source": {"registry": "docker.io", "repository": "library/redis"},
+                "imports": [{"name": "v", "tags": {}, "vendor": "ACME Platform"}],
+            }
+        )
+    )[0]
+    expanded = expand_import(resolved, ["1.0.0"])
+    assert expanded.vendor == "ACME Platform"

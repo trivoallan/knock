@@ -21,6 +21,7 @@ def build_stamp_annotations(
     source_revision: str | None,
     created: datetime,
     owners: list[str] | None,
+    vendor: str | None = None,
     artifact_type: str,
     policy: str,
     import_name: str,
@@ -30,11 +31,16 @@ def build_stamp_annotations(
 ) -> dict[str, str]:
     source = f"{source_registry}/{source_repository}"
     annotations: dict[str, str] = {
+        # human-readable name = the upstream image's short name (so registry UIs read it for free)
+        "org.opencontainers.image.title": source_repository.rsplit("/", 1)[-1],
         "org.opencontainers.image.source": source,
         "org.opencontainers.image.base.name": f"{source}:{source_tag}",
         "org.opencontainers.image.base.digest": source_digest,
         "org.opencontainers.image.created": created.isoformat(),
     }
+    # vendor = the rebuilding org; org-specific so it is configuration, never hardcoded.
+    if vendor:
+        annotations["org.opencontainers.image.vendor"] = vendor
     # revision = the SCM revision of the *packaged software*, as the SOURCE image declares it
     # (OCI semantics). houba does not know the upstream commit, so it propagates the source's
     # own .revision when present and omits the key otherwise — never a fabricated digest/tag.
