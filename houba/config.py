@@ -36,8 +36,9 @@ class RegistryConfig(BaseModel):
     )
     tls_verify: bool = Field(
         default=True,
-        description="Set to `false` for plain-HTTP registries; houba then runs "
-        "`regctl registry set … --tls disabled` automatically.",
+        description="Set to `false` for plain-HTTP registries; houba then pushes "
+        "insecurely on both paths — `regctl registry set … --tls disabled` for "
+        "copies and `registry.insecure=true` for BuildKit rebuilds.",
     )
     ca_cert: str | None = Field(
         default=None,

@@ -32,13 +32,19 @@ class BuildkitAdapter:
         return self._bin
 
     def build_and_push(self, request: BuildRequest) -> None:
+        output = f"--output=type=image,name={request.image_ref},push=true"
+        if not request.tls_verify:
+            # Plain-HTTP registry: tell BuildKit's pusher to skip TLS, mirroring
+            # regctl's `--tls disabled`. Without it the push speaks HTTPS to an
+            # HTTP registry and fails ("server gave HTTP response to HTTPS client").
+            output += ",registry.insecure=true"
         args = [
             "build",
             "--frontend=dockerfile.v0",
             f"--local=context={request.context_dir}",
             f"--local=dockerfile={request.dockerfile_path.parent}",
             f"--opt=filename={request.dockerfile_path.name}",
-            f"--output=type=image,name={request.image_ref},push=true",
+            output,
         ]
         if request.platform:
             args.append(f"--opt=platform={request.platform}")

@@ -15,6 +15,7 @@ class BuildRequest:
     build_args: dict[str, str] = field(default_factory=dict)
     platform: str | None = None
     provenance: bool = False  # enable BuildKit's native SLSA provenance attestation
+    tls_verify: bool = True  # False => push over plain HTTP (registry.insecure=true)
 
 
 class ImageBuilderPort(Protocol):

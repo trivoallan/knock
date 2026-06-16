@@ -148,7 +148,7 @@
         },
         "tls_verify": {
           "default": true,
-          "description": "Set to `false` for plain-HTTP registries; houba then runs `regctl registry set \u2026 --tls disabled` automatically.",
+          "description": "Set to `false` for plain-HTTP registries; houba then pushes insecurely on both paths \u2014 `regctl registry set \u2026 --tls disabled` for copies and `registry.insecure=true` for BuildKit rebuilds.",
           "title": "Tls Verify",
           "type": "boolean"
         },
