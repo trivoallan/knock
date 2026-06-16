@@ -12,8 +12,6 @@ apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis-delegated
-  labels:
-    team: data-platform
 spec:
   artifactType: image
   source:
@@ -22,6 +20,8 @@ spec:
   deletionMode: mark
   imports:
     - name: v7
+      owners:
+        - group:default/data-platform     # stamped as io.houba.owners
       tags:
         includeRegex: "^7\\.2\\."
       destinations:
