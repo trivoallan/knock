@@ -25,7 +25,11 @@ configMapGenerator:
   - name: houba-config
     literals:
       - HOUBA_LABEL_PREFIX=io.houba
-      - HOUBA_LOG_FORMAT=json
+      # Human-readable console logs in the reconcile/blast-radius Jobs — `make logs`
+      # and `kubectl logs` are read by a person watching the demo, so text beats JSON
+      # here (and matches houba's own default). Flip to json where a log pipeline
+      # (Loki/ELK) ingests these structured events instead.
+      - HOUBA_LOG_FORMAT=text
       - HOUBA_LOG_LEVEL=INFO
       - HOUBA_WORK_DIR=/tmp/houba-work
       # GitOps source of the policies (a merged PR here is the front door).

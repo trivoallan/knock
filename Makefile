@@ -34,7 +34,7 @@ OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+
 
 .PHONY: help cluster image up-local local local-run \
         argocd demo demo-run openbao-seed \
-        blast-radius docker-auth logs down
+        blast-radius registry-ui docker-auth logs down
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -84,8 +84,8 @@ demo: cluster image argocd ## The single Argo reference on kind, end-to-end (ope
 	  sleep 10; \
 	done
 	-$(MAKE) openbao-seed
-	@echo ">> Deploying registry:2 — the push destination (host registry.houba.svc.cluster.local:5000)."
-	@echo ">>       Applied out-of-band; ArgoCD does not manage it."
+	@echo ">> Deploying Zot — the push destination + built-in UI (host registry.houba.svc.cluster.local:5000)."
+	@echo ">>       Applied out-of-band; ArgoCD does not manage it. Browse it with 'make registry-ui'."
 	$(KUSTOMIZE) deploy/argocd/sources/registry | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=180s
 	@echo ">> Waiting for ESO to materialize the houba-registries Secret from OpenBao ..."
@@ -124,6 +124,10 @@ docker-auth: ## Seed source-registry creds (set DOCKER_USER + DOCKER_PASS) so pu
 	  "$$(printf '%s:%s' "$$DOCKER_USER" "$$DOCKER_PASS" | base64 | tr -d '\n')" \
 	  | $(KUBECTL) -n $(NS) create secret generic houba-docker-config \
 	      --from-file=config.json=/dev/stdin --dry-run=client -o yaml | $(KUBECTL) apply -f -
+
+registry-ui: ## Open Zot's built-in registry UI (port-forward svc/registry to localhost:8080)
+	@echo ">> Browse the mirrored images at http://localhost:8080 (Ctrl-C to stop)."
+	$(KUBECTL) -n $(NS) port-forward svc/registry 8080:5000
 
 logs: ## Tail the last reconcile run's logs
 	$(KUBECTL) -n $(NS) logs job/houba-reconcile-run -f

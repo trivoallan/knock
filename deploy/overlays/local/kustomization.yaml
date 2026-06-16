@@ -1,5 +1,5 @@
 # LOCAL overlay — the inner-loop escape hatch (kubectl apply -k), self-contained:
-# buildkitd + a throwaway registry:2, the plain-secret registry roster, NO operators.
+# buildkitd + a throwaway Zot registry, the plain-secret registry roster, NO operators.
 # Reconciles the reference policy (busybox copy + debian rebuild). Renders local,
 # uncommitted manifests; the CronJob is suspended and fired on demand by `make local`.
 apiVersion: kustomize.config.k8s.io/v1beta1

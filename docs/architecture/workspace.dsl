@@ -229,7 +229,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                 deploymentNode "namespace: openbao" "Secret backend (wave 0)" "Namespace" {
                     rfBao = infrastructureNode "OpenBao" "Helm child (dev mode on kind); holds houba/registries" "OpenBao"
                 }
-                deploymentNode "namespace: registry" "Throwaway registry:2 — applied out-of-band by make demo; ArgoCD does not manage it" "Namespace" {
+                deploymentNode "namespace: registry" "Throwaway Zot — OCI registry + built-in web UI (make registry-ui); applied out-of-band by make demo, ArgoCD does not manage it" "Namespace" {
                     rfDest = softwareSystemInstance destRegistries
                 }
             }
@@ -258,13 +258,13 @@ workspace "houba" "Single front door / stamper for external container images." {
                             loHouba = containerInstance houbaCli
                             loGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
                         }
-                        deploymentNode "Deployment: buildkitd" "Rootless build engine; --config marks registry:2 as plain-HTTP for the push" "Kubernetes Deployment" {
+                        deploymentNode "Deployment: buildkitd" "Rootless build engine; --config marks the Zot registry as plain-HTTP for the push" "Kubernetes Deployment" {
                             loBuild = softwareSystemInstance buildkit
                         }
                         loSecret = infrastructureNode "Secret: houba-registries" "Plain secret roster (no operators) — the inner-loop escape hatch" "Secret"
                         loBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/busybox demo/debian" "regctl"
                     }
-                    deploymentNode "namespace: registry" "Throwaway registry:2 — plain HTTP; copied + rebuilt images pushed here" "Namespace" {
+                    deploymentNode "namespace: registry" "Throwaway Zot — plain HTTP; copied + rebuilt images pushed here; built-in web UI (make registry-ui)" "Namespace" {
                         loDest = softwareSystemInstance destRegistries
                     }
                 }
@@ -306,11 +306,11 @@ workspace "houba" "Single front door / stamper for external container images." {
 
         # Two deployment views: the Argo reference (which is the demo) and the local
         # inner-loop overlay. The same kustomize base underlies both — the demo IS the blueprint.
-        deployment houba "Reference — Argo App-of-Apps (the demo)" "DeployReference" "The single reference: an Argo App-of-Apps that is both the production blueprint and the kind demo. ESO + OpenBao (wave 0), houba + buildkitd (wave 1); the reference policy (busybox copy + debian rebuild); registry:2 applied out-of-band. KEDA/Prometheus autoscaling is an optional add-on, not on this path." {
+        deployment houba "Reference — Argo App-of-Apps (the demo)" "DeployReference" "The single reference: an Argo App-of-Apps that is both the production blueprint and the kind demo. ESO + OpenBao (wave 0), houba + buildkitd (wave 1); the reference policy (busybox copy + debian rebuild); a throwaway Zot (registry + built-in UI) applied out-of-band. KEDA/Prometheus autoscaling is an optional add-on, not on this path." {
             include *
             autolayout lr
         }
-        deployment houba "Local — inner-loop overlay (make local)" "DeployLocal" "The inner-loop escape hatch: kubectl apply -k overlays/local — buildkitd + a throwaway registry:2, a plain-secret roster, no operators. Reconciles the same reference policy (copy + rebuild) and renders local, uncommitted manifests." {
+        deployment houba "Local — inner-loop overlay (make local)" "DeployLocal" "The inner-loop escape hatch: kubectl apply -k overlays/local — buildkitd + a throwaway Zot (registry + built-in UI), a plain-secret roster, no operators. Reconciles the same reference policy (copy + rebuild) and renders local, uncommitted manifests." {
             include *
             autolayout lr
         }
