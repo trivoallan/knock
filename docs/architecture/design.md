@@ -158,7 +158,9 @@ which is what keeps this public repo generic.
    and the recorded mirror state (the `org.opencontainers.image.base.digest` +
    `io.houba.transform.version` annotations), then compute per-variant `to_import` / `to_update` /
    `aliases` and the target `to_delete`. Each output tag goes copy or rebuild; both paths then
-   `annotate` with the provenance stamp. Aliases are `copy`; deletions are `delete_tag`.
+   `annotate` with the provenance stamp and, when a signer is configured, `attest` the stamped
+   digest (back-filling a signature on an already-mirrored tag that predates signing). Aliases are
+   `copy`; deletions are `delete_tag`.
 
 **Change detection is provenance-based.** houba compares the **recorded** `base.digest` against
 the current source digest — never mirror-vs-source (a rebuilt image's digest differs by
@@ -229,13 +231,17 @@ With a non-empty prefix (houba identity + lineage):
 registries — a runtime fact resolved downstream). Immutable build facts on the artifact;
 mutable org facts stay out. The three-level identity is `policy → import → variant`.
 
-Heavy, signed provenance (**SLSA / in-toto attestations**) is **implemented** on the rebuild path
+Heavy, signed provenance (**SLSA / in-toto attestations**) is **implemented across every path**
 via `AttestorPort` → `CosignAdapter` (the pure builder is `domain/attestation.py`): cosign attaches
-a signed DSSE attestation as an OCI referrer to the produced digest. It is **off by default**
-(`HOUBA_ATTEST_SIGNER=""`) and supports `keyless` (Fulcio/Rekor), `kms`, and `key` signers — so a
-registry with no signing config still gets the annotation stamp, and turning attestation on adds the
-signed layer without changing the stamp. See the SLSA attestation spec under
-`docs/superpowers/specs/`.
+a signed DSSE attestation as an OCI referrer to the produced digest. Coverage is complete — **copy,
+rebuild, and already-mirrored (backfill)**: every placed image is signed, not just the rebuilt ones,
+and a tag that was mirrored before signing was turned on is back-filled on the next reconcile (the
+`attested` flag on recorded mirror state drives that stage, so it costs one referrer probe only when
+signing is configured). `houba attach` likewise signs the scan result as an in-toto **scan**
+attestation when a signer is set. Signing is **off by default** (`HOUBA_ATTEST_SIGNER=""`) and
+supports `keyless` (Fulcio/Rekor), `kms`, and `key` signers — so a registry with no signing config
+still gets the annotation stamp, and turning attestation on adds the signed layer without changing
+the stamp. See the SLSA attestation spec under `docs/superpowers/specs/`.
 
 Fulcio/Rekor are passed to cosign via a generated **signing-config** file (cosign v3 enables the
 signing-config by default and rejects the older `--fulcio-url`/`--rekor-url`/`--tlog-upload` flags);
@@ -337,10 +343,17 @@ Five commands (`houba …`):
 - **`purge [--registry NAME] [--apply]`** — the reference reaper: walk `pending-deletion` marks and
   delete tags not seen in production within `HOUBA_PURGE_MIN_IDLE_DAYS` (resolved against a usage
   oracle). Dry-run by default; `--apply` actually deletes (still gated by `HOUBA_DRY_RUN_DELETIONS`).
-- **`attach <image-ref> --report <file|-> [--format F] [--output text|json]`** — ingest a scan
-  report produced upstream and attach it as a stamped OCI referrer on the image.
-- **`audit [--registry NAME] [--fail-on-uncovered]`** — coverage-gap report: walk the registry and
-  list images that do **not** carry houba's stamp; `--fail-on-uncovered` makes it a CI gate.
+- **`attach <image-ref> --report <file|-> [--format F] [--registry NAME] [--output text|json]
+  [--fail-on SEVERITY]`** — ingest a scan report produced upstream and attach it as a stamped (and,
+  when a signer is set, signed) OCI referrer on the image. `--registry` authenticates against a
+  roster entry (parity with `reconcile`, overriding ref host-matching); `--fail-on <severity>` turns
+  the command into a CI gate — exit non-zero on any finding at or above the threshold (the first
+  enforcement lever).
+- **`audit [--registry NAME] [--fail-on-uncovered] [--signed] [--fail-on-unsigned]`** — coverage-gap
+  report: walk the registry and list images that do **not** carry houba's stamp; `--fail-on-uncovered`
+  makes it a CI gate. `--signed` additionally probes each stamped image for a signed-attestation
+  referrer (reporting `signed` / `unsigned`), and `--fail-on-unsigned` gates on it (implying
+  `--signed`).
 - **`version`** — print the installed version.
 
 (`cli/render.py` is the shared report formatter, not a separate command.)
@@ -356,8 +369,9 @@ Five commands (`houba …`):
   + `buildctl` + `cosign` runtime image; and a kind-based [reference deployment](README.md) that
   doubles as the production blueprint.
 - **Deferred** — multi-platform rebuild (the copy path is multi-arch, the rebuild path is
-  single-platform); the remaining roadmap verbs (`archive_restore`, `product_init` /
-  `product_delete`).
+  single-platform); the declaration-scaffolding verbs (`product_init` / `product_delete`).
+  (`archive_restore` was **rejected**, not deferred — soft-delete already gives reversible removal;
+  ADR 0017.)
 - **Out of scope** — runtime presence / fleet inventory (the org's observability stack assembles
   the blast-radius query by reading the stamp); end-of-life awareness (carried by the sibling tool
   `regis`).
