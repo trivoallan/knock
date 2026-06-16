@@ -12,6 +12,7 @@ Run via `make reference` (uses the `docs` dependency group).
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,16 @@ CONFIG = GenerationConfiguration(
     deprecated_from_description=True,
 )
 
+# json-schema-for-humans marks headings with HTML anchors (`## <a name="x"></a>Title`)
+# and links its TOC to `#x`. Docusaurus derives heading ids from the *text* instead, so
+# those `#x` links break. Rewrite each into a Docusaurus explicit heading id
+# (`## Title {#x}`) so the in-page TOC and cross-references resolve.
+_HEADING_ANCHOR = re.compile(r'^(#{1,6}) <a name="([^"]+)"></a>(.*)$', re.MULTILINE)
+
+
+def _docusaurus_heading_ids(md: str) -> str:
+    return _HEADING_ANCHOR.sub(r"\1 \3 {#\2}", md)
+
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
@@ -51,9 +62,10 @@ def main() -> None:
         json_path.write_text(json.dumps(schema, indent=2) + "\n")
         md_path = OUT / f"{slug}.md"
         generate_from_filename(json_path, str(md_path), config=CONFIG)
+        body = _docusaurus_heading_ids(md_path.read_text())
         # json-schema-for-humans has no front-matter hook, so prepend the Docusaurus
         # sidebar position after rendering (front matter is honored in CommonMark too).
-        md_path.write_text(f"---\nsidebar_position: {position}\n---\n\n{md_path.read_text()}")
+        md_path.write_text(f"---\nsidebar_position: {position}\n---\n\n{body}")
         print(f"wrote {json_path.name} + {slug}.md")
 
 
