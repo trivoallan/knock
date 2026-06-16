@@ -32,13 +32,16 @@ ARGOCD_VERSION  ?= v2.12.4
 # the agent-injector / csi-provider pods the chart also creates.
 OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+$$' | head -1)
 
-.PHONY: help cluster image up-local local local-run \
+.PHONY: help reference cluster image up-local local local-run \
         argocd demo demo-run openbao-seed \
         blast-radius registry-ui docker-auth logs down
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
 	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+
+reference: ## Regenerate docs/reference/ (policy + config) from the Pydantic schemas
+	uv run --group docs python scripts/gen_reference.py
 
 cluster: ## Create the kind cluster if absent
 	@kind get clusters 2>/dev/null | grep -qx $(CLUSTER) || kind create cluster --name $(CLUSTER)

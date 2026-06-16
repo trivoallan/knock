@@ -1,0 +1,364 @@
+{
+  "$defs": {
+    "Archive": {
+      "additionalProperties": false,
+      "properties": {
+        "keep": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Retain the N most-recently-imported tags of each stream.",
+          "title": "Keep"
+        },
+        "olderThanDays": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Of the surplus, only mark tags older than this many days (both conditions hold).",
+          "title": "Olderthandays"
+        }
+      },
+      "title": "Archive",
+      "type": "object"
+    },
+    "CACertSource": {
+      "additionalProperties": false,
+      "description": "A CA certificate supplied either as a filesystem path or as an inline PEM string.",
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Filesystem path to the CA certificate (exactly one of `path` | `pem`).",
+          "title": "Path"
+        },
+        "pem": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Inline CA certificate PEM string (exactly one of `path` | `pem`).",
+          "title": "Pem"
+        }
+      },
+      "title": "CACertSource",
+      "type": "object"
+    },
+    "DeletionMode": {
+      "enum": [
+        "purge",
+        "mark"
+      ],
+      "title": "DeletionMode",
+      "type": "string"
+    },
+    "PackageMirror": {
+      "additionalProperties": false,
+      "description": "Override URLs for one or more OS package managers during image hardening.",
+      "properties": {
+        "apt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Override URL for the apt package source (at least one of `apt` | `apk`).",
+          "title": "Apt"
+        },
+        "apk": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Override URL for the apk package source (at least one of `apt` | `apk`).",
+          "title": "Apk"
+        }
+      },
+      "title": "PackageMirror",
+      "type": "object"
+    },
+    "RegistryConfig": {
+      "additionalProperties": false,
+      "description": "One real registry behind a logical destination name (host + credentials).",
+      "properties": {
+        "host": {
+          "description": "Registry host, e.g. `harbor.example.com` or `localhost:5001`.",
+          "title": "Host",
+          "type": "string"
+        },
+        "username": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Registry username (must be set together with `password`).",
+          "title": "Username"
+        },
+        "password": {
+          "anyOf": [
+            {
+              "format": "password",
+              "type": "string",
+              "writeOnly": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Registry password (must be set together with `username`).",
+          "title": "Password"
+        },
+        "tls_verify": {
+          "default": true,
+          "description": "Set to `false` for plain-HTTP registries; houba then runs `regctl registry set \u2026 --tls disabled` automatically.",
+          "title": "Tls Verify",
+          "type": "boolean"
+        },
+        "ca_cert": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Path to a CA PEM regctl should trust for this registry's TLS (registries behind an internal CA).",
+          "title": "Ca Cert"
+        },
+        "deletion_mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DeletionMode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Destination-level override in the deletion-mode cascade (policy \u2190 destination \u2190 global)."
+        }
+      },
+      "required": [
+        "host"
+      ],
+      "title": "RegistryConfig",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "label_prefix": {
+      "default": "io.houba",
+      "description": "Prefix for houba's own provenance annotations; empty \u21d2 no houba labels (OCI-standard keys only).",
+      "title": "Label Prefix",
+      "type": "string"
+    },
+    "registries": {
+      "additionalProperties": {
+        "$ref": "#/$defs/RegistryConfig"
+      },
+      "description": "JSON map of logical registry name \u2192 `RegistryConfig`. At least one is needed to reconcile.",
+      "title": "Registries",
+      "type": "object"
+    },
+    "log_format": {
+      "default": "text",
+      "description": "Log output format: `text` or `json`.",
+      "enum": [
+        "text",
+        "json"
+      ],
+      "title": "Log Format",
+      "type": "string"
+    },
+    "log_level": {
+      "default": "INFO",
+      "description": "Minimum log level.",
+      "enum": [
+        "DEBUG",
+        "INFO",
+        "WARN",
+        "WARNING",
+        "ERROR"
+      ],
+      "title": "Log Level",
+      "type": "string"
+    },
+    "dry_run_tags": {
+      "default": false,
+      "description": "Skip image copies / pushes.",
+      "title": "Dry Run Tags",
+      "type": "boolean"
+    },
+    "dry_run_deletions": {
+      "default": false,
+      "description": "Skip deletions.",
+      "title": "Dry Run Deletions",
+      "type": "boolean"
+    },
+    "deletion_mode": {
+      "$ref": "#/$defs/DeletionMode",
+      "default": "purge",
+      "description": "Global baseline of the deletion-mode cascade."
+    },
+    "retention": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Archive"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Global tier of the retention cascade (a JSON `Archive`); unset \u21d2 retention off everywhere."
+    },
+    "work_dir": {
+      "default": "/tmp/houba-work",
+      "description": "Scratch directory for build contexts.",
+      "format": "path",
+      "title": "Work Dir",
+      "type": "string"
+    },
+    "transform_ca_certs": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CACertSource"
+      },
+      "description": "JSON map of name \u2192 CA source, resolved by the `injectCA` transform.",
+      "title": "Transform Ca Certs",
+      "type": "object"
+    },
+    "transform_package_mirrors": {
+      "additionalProperties": {
+        "$ref": "#/$defs/PackageMirror"
+      },
+      "description": "JSON map of name \u2192 package mirror, resolved by `rewritePackageSources`.",
+      "title": "Transform Package Mirrors",
+      "type": "object"
+    },
+    "build_platform": {
+      "default": "linux/amd64",
+      "description": "Platform for the rebuild path (single-platform).",
+      "title": "Build Platform",
+      "type": "string"
+    },
+    "max_concurrency": {
+      "default": 4,
+      "description": "Max parallel tag operations per run (`1` = sequential).",
+      "minimum": 1,
+      "title": "Max Concurrency",
+      "type": "integer"
+    },
+    "attest_signer": {
+      "default": "",
+      "description": "Signing mode for SLSA attestations on the rebuild path; empty \u21d2 off.",
+      "enum": [
+        "",
+        "keyless",
+        "kms",
+        "key"
+      ],
+      "title": "Attest Signer",
+      "type": "string"
+    },
+    "attest_key_ref": {
+      "default": "",
+      "description": "KMS URI (`kms`) or key path (`key`).",
+      "title": "Attest Key Ref",
+      "type": "string"
+    },
+    "attest_fulcio_url": {
+      "default": "",
+      "description": "Keyless CA URL; blank \u21d2 public Fulcio.",
+      "title": "Attest Fulcio Url",
+      "type": "string"
+    },
+    "attest_rekor_url": {
+      "default": "",
+      "description": "Transparency-log URL; blank \u21d2 no log entry.",
+      "title": "Attest Rekor Url",
+      "type": "string"
+    },
+    "attest_builder_id": {
+      "default": "",
+      "description": "URI identifying this houba builder.",
+      "title": "Attest Builder Id",
+      "type": "string"
+    },
+    "usage_oracle_cmd": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Executable speaking the usage-oracle contract; required to run `houba purge`.",
+      "title": "Usage Oracle Cmd"
+    },
+    "usage_oracle_timeout": {
+      "default": 30,
+      "description": "Per-query timeout (seconds) for the usage oracle.",
+      "minimum": 1,
+      "title": "Usage Oracle Timeout",
+      "type": "integer"
+    },
+    "purge_min_idle_days": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Idle window `houba purge` requires before reaping a marked tag.",
+      "title": "Purge Min Idle Days"
+    }
+  },
+  "title": "houba configuration (HOUBA_*)",
+  "type": "object"
+}

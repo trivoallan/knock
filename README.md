@@ -129,7 +129,9 @@ When running from source you need `regctl` on `PATH` (plus `buildctl` if you use
 ### Configuration
 
 `houba` reads its configuration from environment variables (12-factor). All variables are
-namespaced `HOUBA_*`.
+namespaced `HOUBA_*`. The table below covers the common ones; the exhaustive, always-current
+list is the generated [config reference](docs/reference/config.md) (and
+[policy reference](docs/reference/mirror-policy.md) for `MirrorPolicy` fields).
 
 | Variable | Required | Default | Description |
 |---|---|---|---|

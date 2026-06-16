@@ -25,6 +25,9 @@ dev = [
     "syrupy>=4.6",
     "types-pyyaml>=6.0",
 ]
+docs = [
+    "json-schema-for-humans>=1.0",
+]
 
 [build-system]
 requires = ["hatchling"]

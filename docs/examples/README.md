@@ -261,6 +261,7 @@ any registry roster.
 > two policies writing the same repo is rejected at load time (they would mutually delete each other's
 > tags). This is also what makes horizontal sharding safe (one writer per repo).
 
-> A policy is just data. `uv run python -c "import json,houba.domain.mirror_policy as m;
-> print(json.dumps(m.MirrorPolicy.model_json_schema(), indent=2))"` prints the JSON Schema
-> if you want editor validation.
+> A policy is just data. The full field reference is generated from the Pydantic models:
+> **[policy reference](../reference/mirror-policy.md)** (human) and
+> [`mirror-policy.schema.json`](../reference/mirror-policy.schema.json) (for editor/CI validation).
+> Every `HOUBA_*` variable is likewise documented in the **[config reference](../reference/config.md)**.
