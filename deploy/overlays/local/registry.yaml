@@ -1,5 +1,31 @@
-# Throwaway destination registry for the demo (anonymous, HTTP). Real
-# deployments use a proper registry (Harbor/Zot) — see the full/prod overlays.
+# Throwaway destination registry for the demo: Zot (OCI-native), anonymous + plain
+# HTTP. Zot ships a built-in web UI (the `ui` + `search` extensions), so a human can
+# *see* what houba pushed — browse the mirrored repos/tags and the provenance
+# annotations on each manifest, the stamp made visible — with no second component and
+# no CORS plumbing. Reach it with:
+#   kubectl -n houba port-forward svc/registry 8080:5000   # then open http://localhost:8080
+# Real deployments point at their own registry (Harbor/Zot) with its own console — see
+# the full/prod overlays. Same Service name + port (registry:5000) the roster and the
+# buildkitd plain-HTTP marking already expect, so swapping registry:2 → Zot is invisible
+# to the copy (regctl) and rebuild (buildctl) paths.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-config
+  labels:
+    app.kubernetes.io/name: registry
+data:
+  config.json: |
+    {
+      "storage": { "rootDirectory": "/var/lib/registry" },
+      "http": { "address": "0.0.0.0", "port": "5000" },
+      "log": { "level": "info" },
+      "extensions": {
+        "search": { "enable": true },
+        "ui": { "enable": true }
+      }
+    }
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,15 +42,29 @@ spec:
       labels:
         app.kubernetes.io/name: registry
     spec:
+      # Zot runs as uid/gid 1000; fsGroup makes the emptyDir storage writable by it.
+      securityContext:
+        fsGroup: 1000
       containers:
         - name: registry
-          image: registry:2
+          # The full image (not -minimal) bundles the search + ui extensions.
+          image: ghcr.io/project-zot/zot-linux-amd64:v2.1.17
+          # Default entrypoint is `zot serve /etc/zot/config.json`.
           ports:
             - containerPort: 5000
           volumeMounts:
+            - name: config
+              mountPath: /etc/zot
+              readOnly: true
             - name: data
               mountPath: /var/lib/registry
       volumes:
+        - name: config
+          configMap:
+            name: registry-config
+            items:
+              - key: config.json
+                path: config.json
         - name: data
           emptyDir: {}
 ---

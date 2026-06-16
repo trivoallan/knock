@@ -20,8 +20,8 @@ deploy/
   components/buildkitd/       rebuild-path add-on (rootless buildkitd + NetworkPolicy)
   components/keda-buildkitd/  OPTIONAL buildkitd autoscaling (KEDA + Prometheus)
   argocd/                     App-of-Apps reference: ESO + OpenBao (wave 0),     ← make demo
-                              houba + buildkitd (wave 1); registry:2 out-of-band
-  overlays/local/             kind: base + buildkitd + registry:2, no operators  ← make local
+                              houba + buildkitd (wave 1); Zot out-of-band
+  overlays/local/             kind: base + buildkitd + Zot, no operators         ← make local
 ```
 
 ## Prerequisites
@@ -33,9 +33,10 @@ deploy/
 
 ```sh
 make demo             # kind up → install argo-cd → apply root → sync from git → seed OpenBao
-                      #   → registry:2 out-of-band → reconcile → report
+                      #   → Zot out-of-band → reconcile → report
 make demo-run         # another one-shot reconcile from the synced CronJob
 make blast-radius     # re-read the stamp and print blast radius
+make registry-ui      # port-forward Zot's built-in UI to http://localhost:8080
 make logs             # tail the reconcile logs
 make down             # tear down the cluster
 ```
@@ -47,9 +48,17 @@ end-to-end**:
    Applications from git and syncs them — **ESO + OpenBao** in sync wave 0, then **houba +
    buildkitd** in wave 1;
 2. seeds the dev OpenBao so ESO materializes the `houba-registries` Secret;
-3. deploys `registry:2` **out-of-band** (the push destination the Argo apps set omits — it matches
-   the seeded roster host `registry.houba.svc.cluster.local:5000`);
+3. deploys a throwaway **[Zot](https://zotregistry.dev)** **out-of-band** (the push destination the
+   Argo apps set omits — it matches the seeded roster host `registry.houba.svc.cluster.local:5000`);
 4. waits for the secret + CronJob, fires a one-shot reconcile, and runs blast-radius.
+
+Zot ships a **built-in web UI** (the `search` + `ui` extensions), so after a reconcile
+`make registry-ui` port-forwards it to <http://localhost:8080>, where you can browse the mirrored
+repos/tags and read the provenance annotations on each manifest — the stamp, made visible. The UI is
+served by the registry itself (no second component, no CORS plumbing); it is demo-only — a real
+cluster browses its own Harbor/Zot console. The reconcile/blast-radius Jobs log in **human-readable
+text** (`HOUBA_LOG_FORMAT=text`) so `make logs` reads cleanly; point `HOUBA_LOG_FORMAT=json` where a
+log pipeline ingests the structured events instead.
 
 The policy front door defaults to the bundled **reference example**
 (`docs/examples/reference`, git-sync'd from this repo), which carries **both** a copy entry
@@ -81,7 +90,7 @@ make local-run        # another one-shot reconcile (idempotent — unchanged tag
 ```
 
 `make local` renders **`deploy/overlays/local`** — `base` + the buildkitd component + a
-plain-secret registry roster + a throwaway `registry:2`, with the CronJob suspended and fired on
+plain-secret registry roster + a throwaway Zot, with the CronJob suspended and fired on
 demand. It uses **no operators** (no ESO, no OpenBao) and renders your **local, uncommitted**
 manifests, so it is the fast path for iterating on a branch. It reconciles the same reference
 policy (copy + rebuild) as `make demo`.
@@ -116,7 +125,7 @@ policy (copy + rebuild) as `make demo`.
    repoint the `ClusterSecretStore` (`sources/houba/clustersecretstore.yaml`) at your existing
    OpenBao / Vault / cloud SM, and write the real registry token the same way. Sealed Secrets is a
    drop-in alternative. **Never commit the roster with credentials.**
-4. Use **your** registry, not the throwaway `registry:2` the demo deploys out-of-band.
+4. Use **your** registry, not the throwaway Zot the demo deploys out-of-band.
 
 > Each operator ships large CRDs; the children use `ServerSideApply=true`. Sync waves order the
 > install (the operators' CRDs before the `ExternalSecret` that needs them).

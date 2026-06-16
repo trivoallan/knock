@@ -3,7 +3,7 @@
 The self-contained local overlay for iterating without ArgoCD. Runs both the **copy
 path** (busybox) and the **rebuild path** (debian) against the reference policy at
 [`docs/examples/reference/`](../../../docs/examples/reference/), with a throwaway
-in-cluster `registry:2` as the mirror destination.
+in-cluster **[Zot](https://zotregistry.dev)** as the mirror destination.
 
 ```bash
 make local   # build image → up stack → one reconcile → blast-radius report
@@ -12,9 +12,20 @@ make local   # build image → up stack → one reconcile → blast-radius repor
 No Harbor, no ExternalSecret, no CA/mirror config — everything needed to run houba
 end-to-end fits in this single overlay.
 
+Zot ships a **built-in web UI** (the `search` + `ui` extensions), so you can *see* what
+houba pushed — browse the mirrored repos/tags and the provenance annotations on each
+manifest, the stamp made visible:
+
+```bash
+make registry-ui   # port-forward svc/registry → http://localhost:8080
+```
+
+The UI is served by the registry itself (no second component, no CORS plumbing) on the
+same port as the registry API; a real cluster browses its own Harbor/Zot console instead.
+
 ## The insecure-HTTP detail
 
-The rebuilt images are **pushed by buildkit** to the throwaway `registry:2`, which serves
+The rebuilt images are **pushed by buildkit** to the throwaway Zot registry, which serves
 plain HTTP. buildkitd defaults to HTTPS, so [`buildkitd.toml`](buildkitd.toml) marks that one
 registry `http = true`, [`patch-buildkitd-insecure.yaml`](patch-buildkitd-insecure.yaml) mounts
 it at `/etc/buildkit`, and the kustomization appends `--config /etc/buildkit/buildkitd.toml` to

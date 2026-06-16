@@ -1,4 +1,4 @@
-# Throwaway registry:2 — the push destination the Argo reference omits. `make demo`
+# Throwaway Zot (registry + built-in UI) — the push destination the Argo reference omits. `make demo`
 # applies this out-of-band; ArgoCD does not manage it. Reuses the same manifest the
 # overlays/local overlay ships, so there is one source of truth.
 apiVersion: kustomize.config.k8s.io/v1beta1
