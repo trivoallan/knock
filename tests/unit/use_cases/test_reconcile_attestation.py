@@ -172,6 +172,8 @@ def test_no_attestor_means_no_provenance() -> None:
     builder = FakeImageBuilder()
     _run(_hardened_policy(), registry, builder=builder, attestor=None)
     assert builder.requests[0].provenance is False
+    # SBOM is always-on on the rebuild path — not gated on the attestor like provenance.
+    assert builder.requests[0].sbom is True
 
 
 def test_dry_run_does_not_attest() -> None:
