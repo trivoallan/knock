@@ -1,8 +1,9 @@
 # houba — Roadmap
 
-*Format: Now / Next / Later. Status as of **0.5.0** (2026-06). The core loop is delivered; what
-remains is completing coverage, firming the public contract, and turning the now-confirmed
-single-front-door mandate into enforced coverage.*
+*Format: Now / Next / Later. Status as of **0.5.0** (2026-06). The core loop is delivered, and the
+single-front-door mandate is now **enforceable and trustworthy** — complete attestation coverage, a
+`--fail-on` CI gate, and a frozen provenance contract have all shipped. The active frontier moves to
+**breadth**: more kinds of scan signal, and per-format registries.*
 
 ## Product thesis
 
@@ -26,8 +27,8 @@ Two consequences drive everything below:
 A platform / security team has **confirmed they would mandate houba as the single front door** for
 external images. The riskiest assumption is answered *yes*: enforcement investment is now justified,
 and *coverage gates value* moves from theory to a live requirement — the mandate is only worth as
-much as houba covering 100 % of what enters. This reprioritizes **Now** around making that mandate
-real, and retires the standalone "assumption to validate" gate.
+much as houba covering 100 % of what enters. This drove the mandate-enforcement work now **delivered**
+(see *Delivered — the mandate, made real*), and retired the standalone "assumption to validate" gate.
 
 ## Delivered — the core loop (Phases A/B + Phase C ①–⑤)
 
@@ -47,45 +48,47 @@ inverts, schema-first. ①–⑤ are now all delivered:
 Beyond the original 7 phases, also delivered: **signed SLSA / in-toto attestations** (rebuild path),
 **`houba attach`** (scan ingestion → signed OCI referrers), and operational maturity — **in-pod
 concurrency**, **cross-pod sharding**, **KEDA-driven buildkit autoscaling**, deb822 package sources,
-cosign v3 signing-config. CLI verbs today: `reconcile · purge · attach · audit · version`.
+cosign v3 signing-config, and a **single Argo reference deployment that is the demo** — one
+App-of-Apps replaces the prior multi-overlay demo sprawl, so the demo *is* the adoptable blueprint
+(six entry points → two; thesis-minimum operators, autoscaling an optional add-on). CLI verbs today:
+`reconcile · purge · attach · audit · version`.
 
-## Now — make the mandate real
+## Delivered — the mandate, made real (the former *Now*)
 
-> Theme: with the single-front-door bet **confirmed** (see *Validated* above), the priority is a
-> front door that is **complete** (coverage gates value) and **trustworthy** (the label is the
-> product) — so the mandating team can actually rely on it. These are known, scoped gaps in what
-> just shipped.
+The three gaps that made the front door **enforceable** and **trustworthy** are closed:
 
-- **Complete attestation coverage.** Today only the *rebuild* path is signed; copied and
-  already-mirrored (skipped) images carry the stamp but no signed attestation — a hole the coverage
-  audit itself surfaces. Close it so every image houba fronts carries signed provenance.
-  *(closes the known #49 / #53 gaps)*
-- **Let the front door say *no*.** `houba attach --fail-on <severity>` turns scan ingestion into a
-  CI gate — the first enforcement lever, not just observation.
-- **Firm the public contract.** Resolve the one open schema question: what
-  `org.opencontainers.image.revision` means for a *mirrored* image (today it maps to the source tag;
-  OCI semantics say SCM commit). Decide before real artifacts depend on it — the label is the API and
-  must not wobble.
+- **Complete attestation coverage.** Every path — copy, rebuild, and already-mirrored (backfill) —
+  now carries a *signed* attestation, not just a stamp; the hole the coverage audit surfaced is shut.
+  *(ADR 0019; closed #49 / #53)*
+- **The front door can say *no*.** `houba attach --fail-on <severity>` turns scan ingestion into a CI
+  gate — the first enforcement lever, not just observation. *(ADR 0021)*
+- **The public contract is frozen.** `org.opencontainers.image.revision` now propagates the source
+  image's revision and is omitted when undeclared — never fabricated from the digest or tag. The
+  label is the API, and it no longer wobbles. *(ADR 0020)*
 
-## Next — breadth and the per-format registry
+## Now — breadth and the per-format registry
+
+> Theme: the mandate is enforceable and trustworthy (see *Delivered*); the active frontier is making
+> the front door cover more *kinds* of signal, and more registries.
 
 - **Scan ecosystem breadth.** Generalize `attach` beyond CVE: the **`regis` / EOL format mapper**
   (the sibling-tool integration that proves the per-format registry), plus **Trivy-native** and
   **CycloneDX** mappers.
 - **`attach` registry-config parity.** Wire the `HOUBA_REGISTRIES` roster into `attach` as in
   `reconcile`, instead of relying on ambient regctl config.
-- **Signed-coverage audit tier.** Extend `houba audit` to report *signed* vs merely *stamped*. Today
-  it counts the annotation stamp; once *complete attestation coverage* (Now) lands, the audit can
-  distinguish signed from unsigned provenance — turning the verifiable front door (④) into a
-  *trustworthy* one. Gated on Now: until every path is signed, a signed-coverage number would
-  mislead.
+- **Signed-coverage audit tier.** Extend `houba audit` to report *signed* vs merely *stamped* — now
+  **unblocked** by complete attestation coverage having shipped, so distinguishing signed from
+  unsigned provenance turns the verifiable front door (④) into a *trustworthy* one without misleading.
 
-## Later — scaffolding, scale hygiene, directional
+## Next — scaffolding and scale hygiene
 
 - **Declaration scaffolding (⑥).** `product_init` / `product_delete` — CRUD ergonomics around the
-  policy declaration. Secondary; do when authoring friction is the real bottleneck.
+  policy declaration. Do when authoring friction is the real bottleneck.
 - **Scan-referrer GC.** v1 accumulates referrers; retention / garbage-collection matters once volume
   does.
+
+## Later — directional
+
 - **`proxycache_update` (⑦) — under review, leaning cut.** Pure pass-through: no transform, no stamp,
   so it does not fit the stamper essence. Likely belongs in a separate tool, or is dropped. Decision
   still formally open.
