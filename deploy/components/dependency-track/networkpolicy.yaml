@@ -1,0 +1,18 @@
+# DT's apiserver fetches NVD vulnerability feeds from the internet, so egress is open.
+# Ingress is restricted to in-namespace peers only (frontend↔apiserver, the publish/bootstrap jobs).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dependency-track
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: dependency-track
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}   # same namespace (frontend↔apiserver, the publish/bootstrap jobs)
+  egress:
+    - {}   # apiserver fetches NVD feeds; keep egress open (demo)

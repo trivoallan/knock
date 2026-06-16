@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dependency-track-apiserver
+  labels:
+    app.kubernetes.io/name: dependency-track
+    app.kubernetes.io/component: apiserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dependency-track
+      app.kubernetes.io/component: apiserver
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dependency-track
+        app.kubernetes.io/component: apiserver
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: apiserver
+          image: dependencytrack/apiserver:4.12.7
+          ports:
+            - containerPort: 8080
+          env:
+            # ponytail: H2 + low heap so DT fits a kind/laptop demo; production swaps in Postgres + TLS
+            - name: EXTRA_JAVA_OPTIONS
+              value: "-Xmx1536m"
+          resources:
+            requests:
+              memory: 1Gi
+              cpu: 250m
+            limits:
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /api/version
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 60
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}   # ponytail: ephemeral demo store (H2 + Lucene index live here)
