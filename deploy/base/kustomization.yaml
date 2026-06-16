@@ -70,3 +70,8 @@ images:
   - name: houba
     newName: houba
     newTag: dev
+  # The publish-sbom Job runs the glue image (houba + syft); same :dev default as houba so
+  # both `make local` and `make demo` (Argo) pick up the kind-loaded houba-glue:dev.
+  - name: houba-glue
+    newName: houba-glue
+    newTag: dev
