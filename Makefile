@@ -1,5 +1,5 @@
 # houba reference deployment — local driver (kind).
-# See docs/runbooks/reference-deployment.md for the full walkthrough.
+# See docs/how-to/reference-deployment.md for the full walkthrough.
 #
 #   make demo    the single Argo reference on kind (operators + ESO->OpenBao +
 #                buildkitd + the reference policy + registry + reconcile + report)

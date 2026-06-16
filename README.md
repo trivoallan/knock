@@ -24,7 +24,7 @@ stamp; your tools (Datadog, PowerBI, Wiz…) read it.
 houba is **not** an image mirror. `skopeo sync` and Harbor replication copy images byte-for-byte.
 houba *stamps* every image with portable provenance — and *hardens* the ones you choose to rebuild.
 
-**New here?** Read [Why houba](docs/why-houba.md) for the case, then [Getting started](docs/getting-started.md)
+**New here?** Read [Why houba](docs/index.md) for the case, then [Getting started](docs/tutorials/getting-started.md)
 to mirror your first image and inspect its stamp in ten minutes.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -88,7 +88,7 @@ production blueprint. Fastest taste:
 make demo             # kind up, sync the Argo reference, reconcile the example, print blast radius
 ```
 
-See [docs/runbooks/reference-deployment.md](docs/runbooks/reference-deployment.md).
+See [docs/how-to/reference-deployment.md](docs/how-to/reference-deployment.md).
 
 ---
 
@@ -177,7 +177,7 @@ list is the generated [config reference](docs/reference/config.md) (and
 
 ### Try it
 
-[**Getting started**](docs/getting-started.md) runs `houba reconcile` end-to-end against a local
+[**Getting started**](docs/tutorials/getting-started.md) runs `houba reconcile` end-to-end against a local
 registry in about ten minutes — from an empty registry to an inspectable provenance stamp. From
 there, [`docs/examples/`](docs/examples/README.md) is a catalog of runnable `MirrorPolicy` files,
 one per capability: select redis by semver, rebuild Debian into per-region timezone variants,
