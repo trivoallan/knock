@@ -5,6 +5,12 @@ scanner, or a scan service); houba ingests its report and stamps it as a portabl
 **referrer** on the image's digest. This makes "which images carry a critical CVE?" one
 referrers query at incident time.
 
+> **SBOM vs scan — both provenance, different artifacts.** Don't confuse this with the
+> [SBOM](../architecture/design.md#provenance-stamp--the-label-is-the-product) houba *generates* on
+> the rebuild path: the SBOM is the package **inventory** (what's inside), produced by houba at build
+> time; a scan is a **vulnerability assessment** (what's wrong with those packages), produced by a
+> scanner houba does not run and merely ingests here. Building an inventory is not scanning.
+
 ## 1. Produce a report upstream (example: Trivy emitting SARIF)
 
 ```bash

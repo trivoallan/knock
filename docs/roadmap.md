@@ -10,15 +10,17 @@ remaining feature bets were deliberately cut or deferred (see *Deferred* / *Out 
 
 houba is a **stamper**, not a query engine. It is the single front door through which external
 container images enter your organization: it hardens them (internal CAs, internal package mirrors)
-and stamps them with **standardized, portable provenance**. The value lands at incident time — when
-a critical CVE drops, the consistent provenance stamp turns *"what's our blast radius, and who owns
-it?"* into one query in the observability stack you already run.
+and stamps them with **standardized, portable provenance** — and, for rebuilt images, a
+**package-level SPDX SBOM** (buildkit's native scanner). The value lands at incident time — when a
+critical CVE drops, the stamp (lineage, ownership) and the SBOM (package inventory) turn *"which
+images ship the vulnerable package, and who owns them?"* into one query in the tools you already
+run. houba produces both facts; it never runs the query — still a stamper, not a query engine.
 
 Two consequences drive everything below:
 
-1. **The label is the product.** Because houba's value flows through the stamp into someone else's
-   query tool, the provenance schema is the public API. It must be standardized, portable, and
-   trustworthy before anything else.
+1. **The label is the product.** Because houba's value flows through the stamp *and the SBOM* into
+   someone else's query tool, the provenance surface (the annotation schema + SPDX) is the public
+   API. It must be standardized, portable, and trustworthy before anything else.
 2. **Coverage gates value.** A stamp on 40 % of the fleet yields a blast-radius query with blind
    spots — useless in an incident. houba's value is proportional to it being the *mandatory* path
    for external images. This *was* the riskiest assumption — now **validated** (see below).

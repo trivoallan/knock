@@ -6,14 +6,17 @@ houba is a **stamper** and **single front door** for external container images �
 image mirror. A mirror (`skopeo sync`, Harbor replication) makes a byte-for-byte copy. houba does
 more: it routes every external image through one declarative policy, optionally **rebuilds** it
 through a hardening transform (internal CAs, internal package mirrors), and **stamps** it with
-standardized, portable provenance.
+standardized, portable provenance — plus, for rebuilt images, a package-level **SPDX SBOM** that
+buildkit's native scanner generates during the build houba controls.
 
-The value lands at incident time. When a critical CVE drops, a consistent provenance stamp turns
-*"what's our blast radius, and who owns it?"* into a single query in the observability stack you
-already run. Two consequences drive the design:
+The value lands at incident time. When a critical CVE drops, the stamp (lineage, ownership) and the
+SBOM (package inventory) turn *"which images ship the vulnerable package, and who owns them?"* into a
+single query in the tools you already run. houba produces both facts; it never runs the query. Two
+consequences drive the design:
 
-- **The label is the product.** houba's value flows through the stamp into someone else's query
-  tool, so the provenance schema is the public API: standardized, portable, trustworthy.
+- **The label is the product.** houba's value flows through the stamp *and the SBOM* into someone
+  else's query tool, so the provenance surface (annotation schema + SPDX) is the public API:
+  standardized, portable, trustworthy.
 - **Coverage gates value.** A stamp on part of the fleet yields a blast-radius query with blind
   spots. houba's worth is proportional to it being the *mandatory* path for external images.
 
@@ -242,6 +245,18 @@ attestation when a signer is set. Signing is **off by default** (`HOUBA_ATTEST_S
 supports `keyless` (Fulcio/Rekor), `kms`, and `key` signers — so a registry with no signing config
 still gets the annotation stamp, and turning attestation on adds the signed layer without changing
 the stamp. See the SLSA attestation spec under `docs/superpowers/specs/`.
+
+**Package-level SBOM (rebuild path).** Beyond the annotation stamp and the signed attestation, every
+image houba *rebuilds* carries an **SPDX SBOM** that buildkit's native scanner
+(`buildkit-syft-scanner`) generates during the build — package inventory down to nested application
+dependencies (a `log4j-core` shaded in a fat-JAR is caught), observed from the actual build rather
+than inferred. buildkit attaches it at push as an **image-index attestation manifest**
+(`vnd.docker.reference.type=attestation-manifest`), *not* an OCI subject-referrer — a distinction the
+coverage audit must account for (it reads the image index, not `list_referrers`). The SBOM is what
+lifts blast-radius from base-image granularity (the `.base.digest` annotation) to **package**
+granularity. It is always-on on the rebuild path; the ~1 % copy path carries no SBOM (no build to
+observe). Enabled by the `sbom` flag on `BuildRequest` → `--opt=attest:sbom=true`; see the
+SBOM-generation spec and ADR 0029.
 
 Fulcio/Rekor are passed to cosign via a generated **signing-config** file (cosign v3 enables the
 signing-config by default and rejects the older `--fulcio-url`/`--rekor-url`/`--tlog-upload` flags);
