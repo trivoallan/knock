@@ -147,3 +147,29 @@ def test_check_signed_covered_without_referrer_is_unsigned() -> None:
     assert by[f"{_REPO}:7.1"].signed is False
     assert report.counts.signed == 0
     assert report.counts.unsigned == 1
+
+
+def test_fail_on_unsigned_gate() -> None:
+    report = audit_coverage(
+        registry=_reg(),  # 7.1 covered-but-unsigned, 7.2 uncovered
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.houba",
+        check_signed=True,
+    )
+    assert report.counts.unsigned == 1
+    assert audit_exit_code(report, fail_on_uncovered=False, fail_on_unsigned=False) == 0
+    assert audit_exit_code(report, fail_on_uncovered=False, fail_on_unsigned=True) == 1
+
+
+def test_read_error_dominates_unsigned_gate() -> None:
+    reg = _reg(fail_get={f"{_REPO}:7.1"})
+    report = audit_coverage(
+        registry=reg,
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.houba",
+        check_signed=True,
+    )
+    # AdapterError -> 2 wins over the unsigned gate's 1
+    assert audit_exit_code(report, fail_on_uncovered=False, fail_on_unsigned=True) == 2

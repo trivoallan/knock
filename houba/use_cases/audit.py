@@ -46,12 +46,16 @@ def coverage_report_json_schema() -> dict[str, Any]:
     return CoverageReport.model_json_schema()
 
 
-def audit_exit_code(report: CoverageReport, *, fail_on_uncovered: bool) -> int:
-    """Worst per-image read-error code if any; else 1 when gating on a non-empty gap; else 0."""
+def audit_exit_code(
+    report: CoverageReport, *, fail_on_uncovered: bool, fail_on_unsigned: bool = False
+) -> int:
+    """Worst per-image read-error code if any; else 1 when a gating tier is non-empty; else 0."""
     codes = [o.error.exit_code for o in report.outcomes if o.error is not None]
     if codes:
         return max(codes)
     if fail_on_uncovered and report.counts.uncovered > 0:
+        return 1
+    if fail_on_unsigned and report.counts.unsigned > 0:
         return 1
     return 0
 
