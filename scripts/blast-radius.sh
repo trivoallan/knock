@@ -16,7 +16,7 @@
 #   BLAST_REGISTRY     roster entry to scan (default: the sole entry)
 #   BLAST_REPOS        space/comma-separated repos to walk, e.g. "demo/busybox demo/redis"
 #   BLAST_BASE_DIGEST  (optional) filter the report to rows deriving from this base digest
-#   BLAST_TEAM         (optional) filter the report to rows owned by this team
+#   BLAST_OWNER        (optional) filter the report to rows owned by this owner (membership)
 #
 # Usage (standalone, against the local examples registry):
 #   HOUBA_REGISTRIES='{"local":{"host":"localhost:5001","tls_verify":false}}' \
@@ -49,7 +49,7 @@ if [ "${USER_NAME}" != "-" ] && [ "${PASSWORD}" != "-" ]; then
   printf '%s' "${PASSWORD}" | regctl registry login "${HOST}" -u "${USER_NAME}" --pass-stdin
 fi
 
-# Collect (ref, base.digest, owner.team, policy) for every tag of every repo,
+# Collect (ref, base.digest, owners, policy) for every tag of every repo,
 # reading the annotations off the top-level manifest (the index for multi-arch).
 REPOS=${BLAST_REPOS//,/ }
 ROWS_FILE=$(mktemp)
@@ -65,29 +65,31 @@ for repo in ${REPOS}; do
 import json, os, sys
 ann = (json.loads(sys.argv[1] or "{}") or {}).get("annotations", {}) or {}
 base = ann.get("org.opencontainers.image.base.digest", "-")
-team = ann.get("io.houba.owner.team", "-")
+owners = ann.get("io.houba.owners", "-")
 policy = ann.get("io.houba.policy", "-")
-print("\t".join([os.environ["REF"], base, team, policy]))
+print("\t".join([os.environ["REF"], base, owners, policy]))
 PY
   done
 done
 
 # Render the inventory and the two blast-radius rollups (optionally filtered).
-BLAST_BASE_DIGEST="${BLAST_BASE_DIGEST:-}" BLAST_TEAM="${BLAST_TEAM:-}" \
+BLAST_BASE_DIGEST="${BLAST_BASE_DIGEST:-}" BLAST_OWNER="${BLAST_OWNER:-}" \
   python3 - "${ROWS_FILE}" <<'PY'
 import os, sys
 rows = []
 for line in open(sys.argv[1]):
-    ref, base, team, policy = (line.rstrip("\n").split("\t") + ["-", "-", "-", "-"])[:4]
-    rows.append(dict(ref=ref, base=base, team=team, policy=policy))
+    ref, base, owners, policy = (line.rstrip("\n").split("\t") + ["-", "-", "-", "-"])[:4]
+    rows.append(dict(ref=ref, base=base, owners=owners, policy=policy))
 
-fb, ft = os.environ.get("BLAST_BASE_DIGEST", ""), os.environ.get("BLAST_TEAM", "")
-sel = [r for r in rows if (not fb or r["base"] == fb) and (not ft or r["team"] == ft)]
+fb, fo = os.environ.get("BLAST_BASE_DIGEST", ""), os.environ.get("BLAST_OWNER", "")
+def owns(row, owner):
+    return owner in (row["owners"].split(",") if row["owners"] != "-" else [])
+sel = [r for r in rows if (not fb or r["base"] == fb) and (not fo or owns(r, fo))]
 
 print(f"\n=== inventory ({len(sel)}/{len(rows)} artifacts) ===")
-print(f"{'REF':40} {'TEAM':12} {'POLICY':12} BASE.DIGEST")
+print(f"{'REF':40} {'OWNERS':36} {'POLICY':12} BASE.DIGEST")
 for r in sorted(sel, key=lambda r: r["ref"]):
-    print(f"{r['ref']:40} {r['team']:12} {r['policy']:12} {r['base']}")
+    print(f"{r['ref']:40} {r['owners']:36} {r['policy']:12} {r['base']}")
 
 def rollup(key, title):
     groups = {}
@@ -97,8 +99,17 @@ def rollup(key, title):
     for k, refs in sorted(groups.items()):
         print(f"{k}  →  {len(refs)} image(s): {', '.join(sorted(refs))}")
 
+def rollup_owners(title):
+    groups = {}
+    for r in sel:
+        for owner in (r["owners"].split(",") if r["owners"] != "-" else ["-"]):
+            groups.setdefault(owner, []).append(r["ref"])
+    print(f"\n=== blast radius by {title} ===")
+    for k, refs in sorted(groups.items()):
+        print(f"{k}  →  {len(refs)} image(s): {', '.join(sorted(refs))}")
+
 rollup("base", "base.digest (CVE on an upstream base)")
-rollup("team", "owner.team (who to page)")
+rollup_owners("owners (who to page)")
 
 missing = [r["ref"] for r in rows if r["base"] == "-"]
 if missing:
