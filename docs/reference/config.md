@@ -235,7 +235,7 @@ sidebar_position: 2
 | **Required** | No        |
 | **Default**  | `true`    |
 
-**Description:** Set to `false` for plain-HTTP registries; houba then runs `regctl registry set … --tls disabled` automatically.
+**Description:** Set to `false` for plain-HTTP registries; houba then pushes insecurely on both paths — `regctl registry set … --tls disabled` for copies and `registry.insecure=true` for BuildKit rebuilds.
 
 #### 2.1.5. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > ca_cert` {#registries_additionalProperties_ca_cert}
 

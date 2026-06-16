@@ -93,3 +93,34 @@ def test_build_omits_provenance_opt_by_default(
         BuildRequest(dockerfile_path=df, context_dir=tmp_path, image_ref="reg/x:1")
     )
     assert "attest:provenance" not in log.read_text()
+
+
+def test_build_marks_registry_insecure_when_tls_disabled(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # tls_verify=False ⇒ buildkit must push over plain HTTP, else it speaks HTTPS
+    # to an HTTP registry and the push fails with "server gave HTTP response to
+    # HTTPS client". Mirrors regctl's `--tls disabled`.
+    log = tmp_path / "buildctl.log"
+    monkeypatch.setenv("FAKE_BUILDCTL_LOG", str(log))
+    df = tmp_path / "Dockerfile"
+    df.write_text("FROM scratch\n")
+    BuildkitAdapter().build_and_push(
+        BuildRequest(
+            dockerfile_path=df, context_dir=tmp_path, image_ref="reg:5000/x:1", tls_verify=False
+        )
+    )
+    assert "registry.insecure=true" in log.read_text()
+
+
+def test_build_omits_registry_insecure_by_default(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = tmp_path / "buildctl.log"
+    monkeypatch.setenv("FAKE_BUILDCTL_LOG", str(log))
+    df = tmp_path / "Dockerfile"
+    df.write_text("FROM scratch\n")
+    BuildkitAdapter().build_and_push(
+        BuildRequest(dockerfile_path=df, context_dir=tmp_path, image_ref="reg/x:1")
+    )
+    assert "registry.insecure" not in log.read_text()

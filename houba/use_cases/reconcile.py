@@ -161,6 +161,7 @@ def _build_variant(
     platform: str,
     work_dir: Path | None = None,
     provenance: bool = False,
+    tls_verify: bool = True,
 ) -> None:
     if work_dir is not None:
         work_dir.mkdir(parents=True, exist_ok=True)
@@ -178,6 +179,7 @@ def _build_variant(
                 image_ref=dest_ref,
                 platform=platform,
                 provenance=provenance,
+                tls_verify=tls_verify,
             )
         )
 
@@ -423,6 +425,7 @@ def _apply_plan(
                         platform=build_platform,
                         work_dir=work_dir,
                         provenance=attestor is not None,
+                        tls_verify=plan.config.tls_verify,
                     )
                 else:
                     registry.copy(f"{src_repo}:{w.src_tag}", f"{plan.dest_repo}:{w.out_tag}")

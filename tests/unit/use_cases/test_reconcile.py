@@ -430,6 +430,25 @@ def test_transformed_variant_builds_then_stamps_lineage() -> None:
     df = builder.dockerfiles[0]
     assert "update-ca-certificates" in df and "/etc/apt/sources.list" in df
     assert builder.contexts[0]["corp.crt"] == "PEMDATA"
+
+
+def test_rebuild_propagates_dest_tls_verify_to_builder() -> None:
+    # The destination registry's tls_verify must reach the build/push path, not
+    # just regctl — otherwise buildkit pushes over HTTPS to a plain-HTTP registry.
+    src_repo = "docker.io/library/redis"
+    registry = FakeRegistryPort(
+        tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": []},
+        infos={
+            f"{src_repo}:7.2.5": ImageInfo(
+                digest="sha256:src", created=HARDENED_NOW, annotations={}
+            )
+        },
+    )
+    builder = FakeImageBuilder()
+    _run_hardened(
+        registry, builder, roster={"local": RegistryConfig(host="reg.local", tls_verify=False)}
+    )
+    assert builder.requests[0].tls_verify is False
     assert registry.copied == []
     _ref, ann = registry.annotated[0]
     assert ann["io.houba.transform.steps"] == "injectCA,rewritePackageSources"
