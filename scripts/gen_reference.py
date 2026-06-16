@@ -24,9 +24,12 @@ from houba.domain.mirror_policy import mirror_policy_json_schema
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "reference"
 
-SCHEMAS: dict[str, tuple[Callable[[], dict[str, Any]], str]] = {
-    "mirror-policy": (mirror_policy_json_schema, "MirrorPolicy"),
-    "config": (settings_json_schema, "houba configuration (HOUBA_*)"),
+# slug -> (schema builder, page title, sidebar position).
+# The position makes mirror-policy precede config in the Docusaurus sidebar (Reference
+# section); without it Docusaurus falls back to alphabetical (config first).
+SCHEMAS: dict[str, tuple[Callable[[], dict[str, Any]], str, int]] = {
+    "mirror-policy": (mirror_policy_json_schema, "MirrorPolicy", 1),
+    "config": (settings_json_schema, "houba configuration (HOUBA_*)", 2),
 }
 
 # with_footer=False drops the "Generated on <date>" line, so the Markdown is a
@@ -41,12 +44,16 @@ CONFIG = GenerationConfiguration(
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    for slug, (schema_fn, title) in SCHEMAS.items():
+    for slug, (schema_fn, title, position) in SCHEMAS.items():
         schema = schema_fn()
         schema["title"] = title
         json_path = OUT / f"{slug}.schema.json"
         json_path.write_text(json.dumps(schema, indent=2) + "\n")
-        generate_from_filename(json_path, str(OUT / f"{slug}.md"), config=CONFIG)
+        md_path = OUT / f"{slug}.md"
+        generate_from_filename(json_path, str(md_path), config=CONFIG)
+        # json-schema-for-humans has no front-matter hook, so prepend the Docusaurus
+        # sidebar position after rendering (front matter is honored in CommonMark too).
+        md_path.write_text(f"---\nsidebar_position: {position}\n---\n\n{md_path.read_text()}")
         print(f"wrote {json_path.name} + {slug}.md")
 
 

@@ -1,3 +1,7 @@
+---
+sidebar_position: 2
+---
+
 # houba configuration (HOUBA_*)
 
 - [1. Property `houba configuration (HOUBA_*) > label_prefix`](#label_prefix)

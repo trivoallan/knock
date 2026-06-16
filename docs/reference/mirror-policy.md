@@ -1,3 +1,7 @@
+---
+sidebar_position: 1
+---
+
 # MirrorPolicy
 
 - [1. Property `MirrorPolicy > apiVersion`](#apiVersion)
