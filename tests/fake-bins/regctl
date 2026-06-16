@@ -38,6 +38,7 @@ case "$cmd" in
             repos) printf 'lib/redis\nlib/nginx\n' ;;
             coverage-covered) printf 'lib/redis\n' ;;
             coverage-signed) printf 'lib/redis\n' ;;
+            gc-superseded) printf 'lib/redis\n' ;;
             *) : ;;
         esac
         ;;
@@ -90,6 +91,8 @@ case "$cmd" in
                 printf '{"descriptors":[]}\n' ;;
             coverage-signed)
                 printf '{"descriptors":[{"digest":"sha256:sig","artifactType":"application/vnd.dev.sigstore.bundle.v0.3+json","annotations":{}}]}\n' ;;
+            gc-superseded)
+                printf '{"descriptors":[{"digest":"sha256:old","artifactType":"application/vnd.houba.scan.result.v1","annotations":{"io.houba.scan.tool":"trivy","io.houba.scan.format":"sarif","io.houba.scan.timestamp":"2024-01-01T00:00:00+00:00"}},{"digest":"sha256:new","artifactType":"application/vnd.houba.scan.result.v1","annotations":{"io.houba.scan.tool":"trivy","io.houba.scan.format":"sarif","io.houba.scan.timestamp":"2025-01-01T00:00:00+00:00"}}]}\n' ;;
             *) printf '{"descriptors":[]}\n' ;;
         esac
         ;;
