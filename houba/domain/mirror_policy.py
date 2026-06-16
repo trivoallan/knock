@@ -6,11 +6,12 @@ a policy file fail fast (the schema is the public API).
 
 from __future__ import annotations
 
+import re
 from enum import StrEnum
-from typing import Any, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError, model_validator
 from pydantic.alias_generators import to_camel
 
 from houba.domain.deletion_mode import DeletionMode
@@ -84,12 +85,29 @@ class Variant(_CamelModel):
     transform: list[TransformStep] | None = None  # None ⇒ inherit resolved transform
 
 
+# ponytail: shape-only check, not a Backstage catalog lookup. Accepts the three
+# Backstage entity-ref forms: name | namespace/name | kind:namespace/name.
+# Upgrade path: resolve/validate against a real catalog when one is wired.
+_OWNER_RE = re.compile(r"^([A-Za-z0-9]+:)?([A-Za-z0-9._-]+/)?[A-Za-z0-9._-]+$")
+
+
+def _validate_owner(value: str) -> str:
+    if not _OWNER_RE.match(value):
+        raise ValueError(f"invalid owner ref {value!r}: expected [kind:][namespace/]name")
+    return value
+
+
+# A Backstage organizational-entity reference, validated by shape only.
+Owner = Annotated[str, AfterValidator(_validate_owner)]
+
+
 class Defaults(_CamelModel):
     destinations: list[Destination] | None = None
     transform: list[TransformStep] | None = None
     archive: Archive | None = None
     tags: TagSelection | None = None
     platforms: list[str] | None = None
+    owners: list[Owner] | None = None
 
 
 class ImportProfile(_CamelModel):
@@ -100,6 +118,7 @@ class ImportProfile(_CamelModel):
     archive: Archive | None = None
     platforms: list[str] | None = None
     variants: list[Variant] | None = None
+    owners: list[Owner] | None = None
 
 
 class Spec(_CamelModel):
