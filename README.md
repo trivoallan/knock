@@ -2,7 +2,7 @@
 
 **The single front door for the external container images your organization runs.**
 
-> **Status — young but functional (`v0.5`).** Delivered: the full hexagon, both the copy and the
+> **Status — young but functional (`v0.6`).** Delivered: the full hexagon, both the copy and the
 > rebuild / derive-and-stamp paths, the pluggable transform engine, the OCI provenance stamp **plus
 > signed SLSA / in-toto attestations** (rebuild *and* ingested scan results), the
 > `reconcile` / `purge` / `attach` / `audit` commands, retention-driven soft-delete, concurrent +
@@ -77,7 +77,7 @@ buildkitd, a blast-radius consumer) — the same `deploy/` manifests serve a loc
 production blueprint. Fastest taste:
 
 ```bash
-make demo-lite        # kind up, reconcile the busybox example, print blast radius
+make demo             # kind up, sync the Argo reference, reconcile the example, print blast radius
 ```
 
 See [docs/runbooks/reference-deployment.md](docs/runbooks/reference-deployment.md).
@@ -92,7 +92,7 @@ See [docs/runbooks/reference-deployment.md](docs/runbooks/reference-deployment.m
 itself:
 
 ```bash
-docker pull ghcr.io/<your-org>/houba:0.5
+docker pull ghcr.io/<your-org>/houba:0.6
 ```
 
 (The runtime image also bundles `cosign` for the optional signed attestations.)
@@ -102,7 +102,7 @@ carries an SBOM and SLSA provenance attached as buildx attestations. Verify the 
 running:
 
 ```bash
-cosign verify ghcr.io/trivoallan/houba:0.4 \
+cosign verify ghcr.io/trivoallan/houba:0.6 \
   --certificate-identity-regexp 'https://github.com/trivoallan/houba/.*' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -111,8 +111,8 @@ The SBOM and provenance are buildx attestations (OCI referrers, not cosign-signe
 with `docker buildx imagetools inspect`:
 
 ```bash
-docker buildx imagetools inspect ghcr.io/trivoallan/houba:0.4 --format '{{ json .SBOM }}'
-docker buildx imagetools inspect ghcr.io/trivoallan/houba:0.4 --format '{{ json .Provenance }}'
+docker buildx imagetools inspect ghcr.io/trivoallan/houba:0.6 --format '{{ json .SBOM }}'
+docker buildx imagetools inspect ghcr.io/trivoallan/houba:0.6 --format '{{ json .Provenance }}'
 ```
 
 Or from source with [uv](https://github.com/astral-sh/uv):

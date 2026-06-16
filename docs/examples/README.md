@@ -10,7 +10,7 @@ idempotent — unchanged tags are skipped via the recorded `base.digest`.
 
 ## Prerequisites
 
-- **houba** — `uv run houba version` should print `0.2.0`.
+- **houba** — `uv run houba version` should print `0.6.0`.
 - **[regctl](https://github.com/regclient/regclient/blob/main/docs/install.md)** on your `PATH` — houba shells out to it for all registry operations.
 - **Docker** (or Podman) — to run a throwaway local registry.
 
