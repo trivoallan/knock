@@ -52,7 +52,7 @@ concurrency**, **cross-pod sharding**, **KEDA-driven buildkit autoscaling**, deb
 cosign v3 signing-config, and a **single Argo reference deployment that is the demo** — one
 App-of-Apps replaces the prior multi-overlay demo sprawl, so the demo *is* the adoptable blueprint
 (six entry points → two; thesis-minimum operators, autoscaling an optional add-on). CLI verbs today:
-`reconcile · purge · attach · audit · version`.
+`reconcile · purge · attach · audit · version · gc`.
 
 ## Delivered — the mandate, made real (the former *Now*)
 
@@ -84,20 +84,23 @@ shipped** once design exposed the real gap:
   posture report (pass/fail rules, EOL, hygiene) inflated `vuln.*` and tripped `--fail-on`. Now the
   mapper classifies rule evaluations as `rule.passed`/`rule.failed`, generically (no `regis`-specific
   code). *(ADR 0027; closed #102)*
+- **Scan-referrer GC — the last feature-side item.** `houba gc` walks the roster and collects
+  superseded scan-result referrers, keeping the N newest per `(tool, format)` older than a grace
+  window (the same keep-N + older-than model proven on tag retention). Dry-run by default, `--apply`
+  to delete; the decision is purely temporal (no usage oracle). *(ADR 0028)*
 
 ## Now — adoption and scale hygiene
 
 > Theme: the mandate is enforceable, trustworthy, and the scan stamp is correct across finding types
-> (see *Delivered*). With the feature surface essentially complete, the active work turns to
-> **adoption** (lowering the barrier to becoming the mandated front door) and operational hygiene.
+> (see *Delivered*). With the feature surface now complete — scan-referrer GC, the last feature-side
+> item, has shipped — the only remaining bet is **adoption**: lowering the barrier to becoming the
+> mandated front door.
 
 - **User documentation site.** Create and publish a user-facing docs site — getting-started,
   policy/config reference, the CLI verbs, and the provenance-stamp contract — built from the existing
   in-repo material (`README`, `docs/examples/`, the policy/scan schemas) and published on every merge
   to `main`. *The label is the product*, and a mandated front door only gets adopted if its users can
   self-serve; today that knowledge is scattered across the repo. The highest-leverage adoption item.
-- **Scan-referrer GC.** v1 accumulates referrers per subject; retention / garbage-collection of
-  superseded scan referrers matters once attach volume grows. The remaining feature-side work.
 
 ## Deferred — revisit only on a real signal (YAGNI until then)
 
