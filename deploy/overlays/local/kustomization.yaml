@@ -26,6 +26,11 @@ configMapGenerator:
       - POLICY_DIR=/policies/current/docs/examples/reference
       - BLAST_REPOS=demo/busybox demo/debian
 
+images:
+  - name: houba-glue
+    newName: houba-glue
+    newTag: dev
+
 patches:
   - path: patch-suspend.yaml
   # gc is suspended in the local loop too — fired on demand, never auto-deletes during a demo.

@@ -18,6 +18,7 @@ resources:
   - job-blast-radius.yaml
   - rbac-dt-bootstrap.yaml
   - job-dt-bootstrap.yaml
+  - job-publish-sbom.yaml
 
 # Stable, predictable resource names (no content-hash suffix) so the on-demand
 # blast-radius Job and the CronJob reference config/script by fixed name.
@@ -56,6 +57,12 @@ configMapGenerator:
   - name: houba-dt-bootstrap
     files:
       - dt-bootstrap.py=../../scripts/dt-bootstrap.py
+  # The publish-sbom scripts, mounted into the publish-sbom Job. Canonical copies
+  # live at scripts/ so they are also runnable standalone.
+  - name: houba-publish-sbom
+    files:
+      - publish-sbom.sh=../../scripts/publish-sbom.sh
+      - extract_sbom.py=../../scripts/extract_sbom.py
 
 # Container image is rewritten per overlay (houba:dev loaded into kind for the
 # demos; a pinned ghcr.io tag in prod).
