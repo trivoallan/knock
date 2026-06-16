@@ -150,6 +150,11 @@ class Defaults(_CamelModel):
     owners: list[Owner] | None = Field(
         default=None, description="Default owners (Backstage entity refs) for every import."
     )
+    vendor: str | None = Field(
+        default=None,
+        description="Default vendor for every import, stamped as "
+        "`org.opencontainers.image.vendor` (the rebuilding organization).",
+    )
 
 
 class ImportProfile(_CamelModel):
@@ -173,6 +178,10 @@ class ImportProfile(_CamelModel):
     )
     owners: list[Owner] | None = Field(
         default=None, description="Owners as Backstage entity refs (stamped as `io.houba.owners`)."
+    )
+    vendor: str | None = Field(
+        default=None,
+        description="Vendor (overrides defaults), stamped as `org.opencontainers.image.vendor`.",
     )
 
 

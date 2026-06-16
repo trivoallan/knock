@@ -13,6 +13,7 @@ metadata:
 spec:
   artifactType: image
   defaults:
+    vendor: Example Platform Team    # stamped as org.opencontainers.image.vendor (the rebuilder)
     owners:
       - group:default/platform       # default owner for every import...
   source:

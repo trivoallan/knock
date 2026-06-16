@@ -441,6 +441,7 @@ def _apply_plan(
                         source_revision=source[w.src_tag].revision,
                         created=now,
                         owners=plan.expanded.owners,
+                        vendor=plan.expanded.vendor,
                         artifact_type=plan.policy.spec.artifact_type.value,
                         policy=plan.policy.metadata.name,
                         import_name=plan.expanded.name,

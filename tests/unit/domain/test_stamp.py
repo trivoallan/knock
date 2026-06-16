@@ -11,6 +11,7 @@ def _ann(
     prefix: str = "io.houba",
     owners: list[str] | None = None,
     source_revision: str | None = None,
+    vendor: str | None = None,
 ) -> dict[str, str]:
     return build_stamp_annotations(
         prefix=prefix,
@@ -21,6 +22,7 @@ def _ann(
         source_revision=source_revision,
         created=CREATED,
         owners=owners,
+        vendor=vendor,
         artifact_type="image",
         policy="redis",
         import_name="v7",
@@ -34,6 +36,28 @@ def test_oci_standard_annotations_always_present() -> None:
     assert a["org.opencontainers.image.base.name"] == "docker.io/library/redis:7.2.1"
     assert a["org.opencontainers.image.base.digest"] == "sha256:abc"
     assert a["org.opencontainers.image.created"] == "2026-06-11T12:00:00+00:00"
+
+
+def test_title_is_source_repository_basename() -> None:
+    # zui (and any OCI consumer) reads org.opencontainers.image.title as the human name.
+    a = _ann()
+    assert a["org.opencontainers.image.title"] == "redis"
+
+
+def test_vendor_stamped_when_provided() -> None:
+    a = _ann(vendor="ACME Platform")
+    assert a["org.opencontainers.image.vendor"] == "ACME Platform"
+
+
+def test_vendor_omitted_when_absent() -> None:
+    a = _ann(vendor=None)
+    assert "org.opencontainers.image.vendor" not in a
+
+
+def test_title_and_vendor_are_oci_standard_survive_empty_prefix() -> None:
+    a = _ann(prefix="", vendor="ACME")
+    assert a["org.opencontainers.image.title"] == "redis"
+    assert a["org.opencontainers.image.vendor"] == "ACME"
 
 
 def test_revision_omitted_when_source_declares_none() -> None:

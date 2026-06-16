@@ -31,6 +31,7 @@ class ResolvedImport:
     platforms: list[str] | None
     variants: list[Variant] | None
     owners: list[str] | None
+    vendor: str | None
 
 
 def _merge_tags(default: TagSelection, override: TagSelection) -> TagSelection:
@@ -72,6 +73,7 @@ def resolve_imports(spec: Spec) -> list[ResolvedImport]:
             archive = d.archive if d is not None else None
         platforms = imp.platforms if imp.platforms is not None else (d.platforms if d else None)
         owners = imp.owners if imp.owners is not None else (d.owners if d else None)
+        vendor = imp.vendor if imp.vendor is not None else (d.vendor if d else None)
         if transform and platforms is not None and len(platforms) > 1:
             raise PolicyValidationError(
                 f"multi-platform rebuild is not supported (import '{imp.name}'): "
@@ -88,6 +90,7 @@ def resolve_imports(spec: Spec) -> list[ResolvedImport]:
                 platforms=platforms,
                 variants=imp.variants,
                 owners=owners,
+                vendor=vendor,
             )
         )
     return resolved

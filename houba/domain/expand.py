@@ -33,6 +33,7 @@ class ExpandedImport:
     archive: Archive | None
     variants: list[VariantPlan]
     owners: list[str] | None = None
+    vendor: str | None = None
 
 
 def expand_import(resolved: ResolvedImport, source_tags: list[str]) -> ExpandedImport:
@@ -55,4 +56,5 @@ def expand_import(resolved: ResolvedImport, source_tags: list[str]) -> ExpandedI
         archive=resolved.archive,
         variants=plans,
         owners=resolved.owners,
+        vendor=resolved.vendor,
     )

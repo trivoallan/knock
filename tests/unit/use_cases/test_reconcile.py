@@ -82,6 +82,7 @@ spec:
   imports:
     - name: v7
       owners: [group:default/platform-data]
+      vendor: ACME Platform
       tags: { includeRegex: "^7\\\\.", aliases: ["{major}.{minor}", "latest"] }
       destinations: [{ project: lib, repository: redis }]
 """)
@@ -132,6 +133,10 @@ def test_reconcile_copies_new_tags_and_stamps() -> None:
     assert base_digest == "sha256:a"
     assert stamped["harbor.corp/lib/redis:7.2.0"]["io.houba.owners"] == (
         "group:default/platform-data"
+    )
+    assert stamped["harbor.corp/lib/redis:7.2.0"]["org.opencontainers.image.title"] == "redis"
+    assert stamped["harbor.corp/lib/redis:7.2.0"]["org.opencontainers.image.vendor"] == (
+        "ACME Platform"
     )
     assert ("harbor.corp/lib/redis:7.3.0", "harbor.corp/lib/redis:latest") in fake.copied
     assert report.totals.imported == 2

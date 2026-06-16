@@ -132,6 +132,19 @@
           "default": null,
           "description": "Default owners (Backstage entity refs) for every import.",
           "title": "Owners"
+        },
+        "vendor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default vendor for every import, stamped as `org.opencontainers.image.vendor` (the rebuilding organization).",
+          "title": "Vendor"
         }
       },
       "title": "Defaults",
@@ -282,6 +295,19 @@
           "default": null,
           "description": "Owners as Backstage entity refs (stamped as `io.houba.owners`).",
           "title": "Owners"
+        },
+        "vendor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Vendor (overrides defaults), stamped as `org.opencontainers.image.vendor`.",
+          "title": "Vendor"
         }
       },
       "required": [
