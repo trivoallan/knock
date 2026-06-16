@@ -167,9 +167,11 @@ namespaced `HOUBA_*`.
 
 ### Try it
 
-Runnable `MirrorPolicy` walkthroughs live in [`docs/examples/`](docs/examples/README.md): mirror a
-few busybox tags into a local registry with derived moving-tag aliases, select redis by semver, or
-rebuild Debian into per-region timezone variants. Every `reconcile` is **plan-then-apply** — pass
+[**Getting started**](docs/getting-started.md) runs `houba reconcile` end-to-end against a local
+registry in about ten minutes — from an empty registry to an inspectable provenance stamp. From
+there, [`docs/examples/`](docs/examples/README.md) is a catalog of runnable `MirrorPolicy` files,
+one per capability: select redis by semver, rebuild Debian into per-region timezone variants,
+retention, delegated deletion, scan ingestion. Every `reconcile` is **plan-then-apply** — pass
 `--dry-run` to see the plan first.
 
 ---

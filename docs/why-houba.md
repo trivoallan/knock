@@ -98,5 +98,5 @@ outlives the tool that wrote it.
 
 ---
 
-*Convinced, or want to see it run? → [Getting started](../README.md#quick-start)
+*Convinced, or want to see it run? → [Getting started](getting-started.md)
 · [Example policies](examples/README.md) · [The provenance contract](architecture/design.md)*
