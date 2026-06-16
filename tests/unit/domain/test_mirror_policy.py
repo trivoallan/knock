@@ -349,3 +349,41 @@ def test_deletion_mode_defaults_to_none() -> None:
 def test_deletion_mode_parses_mark() -> None:
     policy = parse_mirror_policy(_BASE.format(deletion_mode_line="deletionMode: mark"))
     assert policy.spec.deletion_mode is DeletionMode.mark
+
+
+def test_owners_parsed_on_import_and_defaults() -> None:
+    policy = parse_mirror_policy(
+        "apiVersion: houba.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
+        "spec:\n"
+        "  artifactType: image\n"
+        "  source: {registry: docker.io, repository: library/redis}\n"
+        "  defaults: {owners: ['group:default/platform']}\n"
+        "  imports:\n"
+        "    - name: v7\n"
+        "      tags: {}\n"
+        "      owners: ['group:default/payments', 'group:default/data']\n"
+    )
+    assert policy.spec.defaults.owners == ["group:default/platform"]
+    assert policy.spec.imports[0].owners == ["group:default/payments", "group:default/data"]
+
+
+def test_short_owner_form_accepted() -> None:
+    policy = parse_mirror_policy(
+        "apiVersion: houba.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
+        "spec:\n"
+        "  artifactType: image\n"
+        "  source: {registry: docker.io, repository: library/redis}\n"
+        "  imports: [{name: v, tags: {}, owners: ['payments']}]\n"
+    )
+    assert policy.spec.imports[0].owners == ["payments"]
+
+
+def test_malformed_owner_rejected() -> None:
+    with pytest.raises(PolicyValidationError):
+        parse_mirror_policy(
+            "apiVersion: houba.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
+            "spec:\n"
+            "  artifactType: image\n"
+            "  source: {registry: docker.io, repository: library/redis}\n"
+            "  imports: [{name: v, tags: {}, owners: ['bad owner!']}]\n"
+        )

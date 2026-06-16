@@ -75,12 +75,13 @@ ROSTER = {"only": RegistryConfig(host="harbor.corp", username="robot", password=
 POLICY = parse_mirror_policy("""
 apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy
-metadata: { name: redis, labels: { team: platform-data } }
+metadata: { name: redis }
 spec:
   artifactType: image
   source: { registry: docker.io, repository: library/redis }
   imports:
     - name: v7
+      owners: [group:default/platform-data]
       tags: { includeRegex: "^7\\\\.", aliases: ["{major}.{minor}", "latest"] }
       destinations: [{ project: lib, repository: redis }]
 """)
@@ -129,7 +130,9 @@ def test_reconcile_copies_new_tags_and_stamps() -> None:
     stamped = {ref: ann for ref, ann in fake.annotated}
     base_digest = stamped["harbor.corp/lib/redis:7.2.0"]["org.opencontainers.image.base.digest"]
     assert base_digest == "sha256:a"
-    assert stamped["harbor.corp/lib/redis:7.2.0"]["io.houba.owner.team"] == "platform-data"
+    assert stamped["harbor.corp/lib/redis:7.2.0"]["io.houba.owners"] == (
+        "group:default/platform-data"
+    )
     assert ("harbor.corp/lib/redis:7.3.0", "harbor.corp/lib/redis:latest") in fake.copied
     assert report.totals.imported == 2
 

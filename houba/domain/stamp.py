@@ -1,9 +1,9 @@
 """Build the provenance stamp annotations for a mirrored/derived artifact (§9).
 
 OCI-standard annotations carry the immutable build facts every scanner reads for
-free; `{prefix}.*` carries houba facts (team owner key, artifact type, three-level
+free; `{prefix}.*` carries houba facts (owners key, artifact type, three-level
 policy.import.variant identity). No location fact is stamped — the same digest can
-live in many registries — and the human owner is resolved downstream from `team`.
+live in many registries.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ def build_stamp_annotations(
     source_digest: str,
     source_revision: str | None,
     created: datetime,
-    team: str | None,
+    owners: list[str] | None,
     artifact_type: str,
     policy: str,
     import_name: str,
@@ -45,8 +45,8 @@ def build_stamp_annotations(
         annotations[f"{prefix}.policy"] = policy
         annotations[f"{prefix}.import"] = import_name
         annotations[f"{prefix}.variant"] = variant
-        if team is not None:
-            annotations[f"{prefix}.owner.team"] = team
+        if owners:
+            annotations[f"{prefix}.owners"] = ",".join(owners)
     if prefix and transform_steps and transform_version_value is not None:
         annotations[f"{prefix}.transform.steps"] = ",".join(transform_steps)
         annotations[f"{prefix}.transform.version"] = transform_version_value

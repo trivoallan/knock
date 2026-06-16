@@ -64,3 +64,17 @@ def test_expand_no_aliases() -> None:
     resolved = _resolved({"name": "v", "tags": {"includeRegex": "^7\\."}})
     [variant] = expand_import(resolved, SOURCE).variants
     assert variant.aliases == {}
+
+
+def test_expand_carries_owners() -> None:
+    resolved = resolve_imports(
+        Spec.model_validate(
+            {
+                "artifactType": "image",
+                "source": {"registry": "docker.io", "repository": "library/redis"},
+                "imports": [{"name": "v", "tags": {}, "owners": ["group:default/payments"]}],
+            }
+        )
+    )[0]
+    expanded = expand_import(resolved, ["1.0.0"])
+    assert expanded.owners == ["group:default/payments"]

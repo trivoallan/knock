@@ -10,8 +10,6 @@ apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis
-  labels:
-    team: data-platform
 spec:
   artifactType: image
   source:
@@ -19,6 +17,8 @@ spec:
     repository: library/redis
   imports:
     - name: v7
+      owners:
+        - group:default/data-platform     # stamped as io.houba.owners
       tags:
         includeRegex: "^7\\.2\\."       # just the 7.2.x line, to keep the demo quick
         # semverOnly is true by default → non-semver tags (e.g. "latest", "alpine") are dropped

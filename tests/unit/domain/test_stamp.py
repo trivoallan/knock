@@ -9,7 +9,7 @@ CREATED = datetime(2026, 6, 11, 12, 0, tzinfo=UTC)
 
 def _ann(
     prefix: str = "io.houba",
-    team: str | None = "platform-data",
+    owners: list[str] | None = None,
     source_revision: str | None = None,
 ) -> dict[str, str]:
     return build_stamp_annotations(
@@ -20,7 +20,7 @@ def _ann(
         source_digest="sha256:abc",
         source_revision=source_revision,
         created=CREATED,
-        team=team,
+        owners=owners,
         artifact_type="image",
         policy="redis",
         import_name="v7",
@@ -48,23 +48,29 @@ def test_revision_is_the_propagated_source_revision() -> None:
 
 
 def test_houba_facts_under_prefix() -> None:
-    a = _ann(prefix="io.houba")
-    assert a["io.houba.owner.team"] == "platform-data"
+    a = _ann(prefix="io.houba", owners=["group:default/payments", "group:default/data"])
+    assert a["io.houba.owners"] == "group:default/payments,group:default/data"
     assert a["io.houba.artifact.type"] == "image"
     assert a["io.houba.policy"] == "redis"
     assert a["io.houba.import"] == "v7"
     assert a["io.houba.variant"] == "standard"
+    assert "io.houba.owner.team" not in a
+
+
+def test_no_owners_omits_owners_key() -> None:
+    a = _ann(owners=None)
+    assert "io.houba.owners" not in a
+
+
+def test_empty_owners_omits_owners_key() -> None:
+    a = _ann(owners=[])
+    assert "io.houba.owners" not in a
 
 
 def test_empty_prefix_drops_houba_facts_keeps_oci() -> None:
     a = _ann(prefix="")
     assert not any(k.startswith("io.houba") for k in a)
     assert "org.opencontainers.image.base.digest" in a
-
-
-def test_no_team_omits_team_key() -> None:
-    a = _ann(team=None)
-    assert "io.houba.owner.team" not in a
 
 
 def test_no_location_fact_stamped() -> None:
@@ -86,7 +92,7 @@ def _base_kwargs() -> dict:
         source_digest="sha256:src",
         source_revision=None,
         created=datetime(2026, 6, 11, tzinfo=UTC),
-        team="data",
+        owners=None,
         artifact_type="image",
         policy="redis-hardened",
         import_name="v7",

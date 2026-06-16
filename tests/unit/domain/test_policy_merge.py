@@ -191,3 +191,38 @@ def test_variants_none_when_absent() -> None:
     spec = _spec(defaults=None, imports=[{"name": "v", "tags": {}}])
     [resolved] = resolve_imports(spec)
     assert resolved.variants is None
+
+
+def test_owners_inherited_from_defaults() -> None:
+    spec = _spec(
+        defaults={"owners": ["group:default/platform"]},
+        imports=[{"name": "v", "tags": {}}],
+    )
+    [resolved] = resolve_imports(spec)
+    assert resolved.owners == ["group:default/platform"]
+
+
+def test_owners_override_replaces_defaults() -> None:
+    spec = _spec(
+        defaults={"owners": ["group:default/platform"]},
+        imports=[{"name": "v", "tags": {}, "owners": ["group:default/payments"]}],
+    )
+    [resolved] = resolve_imports(spec)
+    assert resolved.owners == ["group:default/payments"]
+
+
+def test_owners_none_when_unset() -> None:
+    spec = _spec(defaults=None, imports=[{"name": "v", "tags": {}}])
+    [resolved] = resolve_imports(spec)
+    assert resolved.owners is None
+
+
+def test_empty_owners_override_clears_defaults() -> None:
+    # an explicit `owners: []` is present (not None), so it overrides the default
+    # wholesale → no owner (the stamp omits io.houba.owners).
+    spec = _spec(
+        defaults={"owners": ["group:default/platform"]},
+        imports=[{"name": "v", "tags": {}, "owners": []}],
+    )
+    [resolved] = resolve_imports(spec)
+    assert resolved.owners == []

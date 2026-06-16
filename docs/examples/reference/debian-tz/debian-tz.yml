@@ -10,15 +10,19 @@ apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: debian-tz
-  labels:
-    team: platform            # stable owner key → stamped as io.houba.owner.team
 spec:
   artifactType: image
+  defaults:
+    owners:
+      - group:default/platform       # default owner for every import...
   source:
     registry: docker.io
     repository: library/debian
   imports:
     - name: slim
+      owners:
+        - group:default/platform     # ...overridable per import (here: co-owned)
+        - group:default/base-images
       tags:
         semverOnly: false     # bookworm-slim is not a semver tag
         includeRegex: "^bookworm-slim$"

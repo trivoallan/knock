@@ -26,8 +26,6 @@ apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis-attested
-  labels:
-    team: data-platform
 spec:
   artifactType: image
   source:
@@ -35,6 +33,8 @@ spec:
     repository: library/redis
   imports:
     - name: v7
+      owners:
+        - group:default/data-platform     # stamped as io.houba.owners
       tags:
         includeRegex: "^7\\.2\\."
       transform:

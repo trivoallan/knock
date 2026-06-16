@@ -73,7 +73,7 @@ because `base` references `scripts/blast-radius.sh` outside `deploy/`; ArgoCD ha
 equivalent).
 
 Expect the blast-radius report to list the mirrored `demo/busybox` + `demo/debian` artifacts grouped
-by `base.digest` and by `owner.team`, and to flag any artifact carrying no stamp as a
+by `base.digest` and by `owners`, and to flag any artifact carrying no stamp as a
 **coverage gap** (run `make blast-radius` *before* the first reconcile to see the gap, then again
 after to see it close — coverage gates the value).
 
@@ -203,14 +203,14 @@ houba's no-retry first connection always lands).
 
 `scripts/blast-radius.sh` is the generic, zero-lock-in consumer: regctl + python3 reading
 the OCI annotations houba stamps (`org.opencontainers.image.base.digest`,
-`io.houba.owner.team`, `io.houba.policy`). It is the minimal proof that **the stamp alone
+`io.houba.owners`, `io.houba.policy`). It is the minimal proof that **the stamp alone
 computes blast radius**.
 
 In a real deployment you point your existing stack at the *same* annotations:
 
 - **Trivy / Grype** — scan the mirrored repos; pivot a CVE's affected base layer to
-  `base.digest`, then to `owner.team`.
-- **Wiz / registry webhooks** — ingest the annotations on push; index `owner.team` +
+  `base.digest`, then to `io.houba.owners` (comma-joined; split to get each owner).
+- **Wiz / registry webhooks** — ingest the annotations on push; index `io.houba.owners` +
   `base.digest` for instant blast-radius queries.
 - **Datadog / PowerBI / a CMDB** — periodically harvest annotations (the script's logic,
   scheduled) into your query layer.
