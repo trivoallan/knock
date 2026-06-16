@@ -1,9 +1,10 @@
 # houba — Roadmap
 
-*Format: Now / Next / Later. Status as of **0.5.0** (2026-06). The core loop is delivered, and the
+*Format: Now / Deferred / Later. Status as of **0.6.0** (2026-06). The core loop is delivered, and the
 single-front-door mandate is now **enforceable and trustworthy** — complete attestation coverage, a
-`--fail-on` CI gate, and a frozen provenance contract have all shipped. The active frontier moves to
-**breadth**: more kinds of scan signal, and per-format registries.*
+`--fail-on` CI gate, and a frozen provenance contract have all shipped. Scan signal is now correct
+across finding types (vulns vs. posture). The active frontier narrows to **scale hygiene**; the
+remaining feature bets were deliberately cut or deferred (see *Deferred* / *Out of scope*).*
 
 ## Product thesis
 
@@ -66,9 +67,10 @@ The three gaps that made the front door **enforceable** and **trustworthy** are 
   image's revision and is omitted when undeclared — never fabricated from the digest or tag. The
   label is the API, and it no longer wobbles. *(ADR 0020)*
 
-## Delivered — trustworthy coverage, registry parity (2026-06)
+## Delivered — trustworthy coverage, registry parity, correct scan signal (2026-06)
 
-Two of the three former *Now* items shipped, deepening trustworthiness and verb consistency:
+All three former *Now* items are now resolved — two shipped as designed, the third **reframed and
+shipped** once design exposed the real gap:
 
 - **Signed-coverage audit tier.** `houba audit --signed` reports *signed* vs merely *stamped*, with
   `--fail-on-unsigned` as a CI gate — turning the verifiable front door (④) into a *trustworthy*
@@ -76,32 +78,40 @@ Two of the three former *Now* items shipped, deepening trustworthiness and verb 
 - **`attach` registry-config parity.** `houba attach` now drives the `HOUBA_REGISTRIES` roster
   (host-match + `--registry` override) like `reconcile` / `audit` / `purge`, via a shared
   `ensure_registry_session` helper — no more ambient regctl config. *(ADR 0025; closed #97)*
+- **Scan ecosystem breadth — reframed to finding-type correctness.** The original "more format
+  mappers" framing was a near-non-problem: Trivy already emits SARIF and `regis` will too. The real
+  gap was *semantic* — the SARIF mapper counted every result as a vulnerability, so a `regis`
+  posture report (pass/fail rules, EOL, hygiene) inflated `vuln.*` and tripped `--fail-on`. Now the
+  mapper classifies rule evaluations as `rule.passed`/`rule.failed`, generically (no `regis`-specific
+  code). *(ADR 0027; closed #102)*
 
-## Now — breadth and the per-format registry
+## Now — scale hygiene
 
-> Theme: the mandate is enforceable and trustworthy (see *Delivered*); the active frontier is making
-> the front door cover more *kinds* of signal. The registry-parity and signed-coverage gaps are
-> closed (above); what remains is breadth of scan signal.
+> Theme: the mandate is enforceable, trustworthy, and the scan stamp is correct across finding types
+> (see *Delivered*). The remaining committed work is operational, not new surface area.
 
-- **Scan ecosystem breadth.** Generalize `attach` beyond CVE: the **`regis` / EOL format mapper**
-  (the sibling-tool integration that proves the per-format registry), plus **Trivy-native** and
-  **CycloneDX** mappers.
+- **Scan-referrer GC.** v1 accumulates referrers per subject; retention / garbage-collection of
+  superseded scan referrers matters once attach volume grows. The one feature still worth building.
 
-## Next — scaffolding and scale hygiene
+## Deferred — revisit only on a real signal (YAGNI until then)
 
-- **Declaration scaffolding (⑥).** `product_init` / `product_delete` — CRUD ergonomics around the
-  policy declaration. Do when authoring friction is the real bottleneck.
-- **Scan-referrer GC.** v1 accumulates referrers; retention / garbage-collection matters once volume
-  does.
+These are not refused on principle — they are waiting for a concrete trigger that has not appeared:
+
+- **More scan formats (CycloneDX, Trivy-native).** No transport gap exists today: Trivy emits SARIF
+  and `regis` will. Add a mapper only when a scanner that emits *neither* SARIF shows up. A native
+  `regis` mapper was likewise rejected in favor of `regis`-via-SARIF.
+- **Declaration scaffolding (⑥) — `product_init` / `product_delete`.** CRUD ergonomics around the
+  policy declaration. Build only when authoring friction is demonstrably the bottleneck.
 
 ## Later — directional
 
-- **`proxycache_update` (⑦) — under review, leaning cut.** Pure pass-through: no transform, no stamp,
-  so it does not fit the stamper essence. Likely belongs in a separate tool, or is dropped. Decision
-  still formally open.
+*(empty — the standing bets are either delivered, deferred above, or out of scope below.)*
 
 ## Explicitly out of scope
 
+- **`proxycache_update` (⑦) — cut (decision closed).** Pure pass-through: no transform, no stamp, so
+  it does not fit the stamper essence (*the label is the product*). It belongs in a separate tool, or
+  nowhere. The formerly-open decision is now settled: out.
 - **Runtime presence / fleet inventory.** houba stamps; it does not watch where its images run. The
   blast-radius query is assembled in the org's observability stack by reading the stamp. Closing that
   loop (native inventory, an operator) is a different, much larger product and is not on this roadmap.
