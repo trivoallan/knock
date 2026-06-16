@@ -37,6 +37,7 @@ case "$cmd" in
         case "$scenario" in
             repos) printf 'lib/redis\nlib/nginx\n' ;;
             coverage-covered) printf 'lib/redis\n' ;;
+            coverage-signed) printf 'lib/redis\n' ;;
             *) : ;;
         esac
         ;;
@@ -51,6 +52,8 @@ case "$cmd" in
         elif [ "$scenario" = "mirror-stamped" ]; then
             printf '{"annotations":{"org.opencontainers.image.base.digest":"sha256:src999"}}\n'
         elif [ "$scenario" = "coverage-covered" ]; then
+            printf '{"annotations":{"io.houba.policy":"redis"}}\n'
+        elif [ "$scenario" = "coverage-signed" ]; then
             printf '{"annotations":{"io.houba.policy":"redis"}}\n'
         else
             printf '{"annotations":{}}\n'
@@ -85,6 +88,8 @@ case "$cmd" in
                 printf '{"descriptors":[{"digest":"sha256:ref1","artifactType":"application/vnd.houba.lifecycle.pending+json","annotations":{}}]}\n' ;;
             referrers-empty)
                 printf '{"descriptors":[]}\n' ;;
+            coverage-signed)
+                printf '{"descriptors":[{"digest":"sha256:sig","artifactType":"application/vnd.dev.sigstore.bundle.v0.3+json","annotations":{}}]}\n' ;;
             *) printf '{"descriptors":[]}\n' ;;
         esac
         ;;
