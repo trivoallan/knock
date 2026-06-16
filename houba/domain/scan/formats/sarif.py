@@ -35,7 +35,18 @@ def _rule_severities(driver: dict[str, Any]) -> dict[str, float]:
     return out
 
 
-def _bucket(result: dict[str, Any], severities: dict[str, float]) -> str:
+def _score_to_bucket(score: float) -> str:
+    if score >= 9.0:
+        return "critical"
+    if score >= 7.0:
+        return "high"
+    if score >= 4.0:
+        return "medium"
+    return "low"
+
+
+def _classify(result: dict[str, Any], severities: dict[str, float]) -> str:
+    """Full fact key for one SARIF result: a `vuln.<severity>` or a `rule.<status>`."""
     props = result.get("properties")
     score = _to_float(props.get("security-severity")) if isinstance(props, dict) else None
     if score is None:
@@ -43,27 +54,29 @@ def _bucket(result: dict[str, Any], severities: dict[str, float]) -> str:
         if isinstance(rid, str):
             score = severities.get(rid)
     if score is not None:
-        if score >= 9.0:
-            return "critical"
-        if score >= 7.0:
-            return "high"
-        if score >= 4.0:
-            return "medium"
-        return "low"
+        return f"vuln.{_score_to_bucket(score)}"
+    # A rule/policy evaluation announces itself with an explicit SARIF `kind`. Route those to
+    # rule.* so posture findings (e.g. regis EOL/hygiene via SARIF) don't inflate vuln counts.
+    # Only an explicit kind triggers this; producers that omit it keep the legacy bucketing below.
+    if "kind" in result:
+        return "rule.passed" if result.get("kind") == "pass" else "rule.failed"
+    # ponytail: no CVSS + no explicit kind -> legacy level fallback as a vuln. Ceiling: a
+    # kind-less, scoreless real vuln classifies by level; fine for CVSS-emitting scanners. Upgrade
+    # path: read a SARIF taxonomy/tag if a producer ever sets kind:"fail" on uncscored vulns.
     level = result.get("level")
     if level == "error":
-        return "high"
+        return "vuln.high"
     if level == "warning":
-        return "medium"
+        return "vuln.medium"
     if level in ("note", "none"):
-        return "low"
-    return "unknown"
+        return "vuln.low"
+    return "vuln.unknown"
 
 
 class SarifMapper(ScanFormatMapper):
     name = "sarif"
     report_media_type = "application/sarif+json"
-    fact_keys = tuple(f"vuln.{b}" for b in _BUCKETS)
+    fact_keys = (*(f"vuln.{b}" for b in _BUCKETS), "rule.passed", "rule.failed")
 
     def recognizes(self, doc: dict[str, Any]) -> bool:
         schema = doc.get("$schema")
@@ -79,7 +92,7 @@ class SarifMapper(ScanFormatMapper):
         if not isinstance(doc, dict) or not isinstance(doc.get("runs"), list):
             raise ScanReportError("SARIF report must be an object with a 'runs' array")
 
-        counts = dict.fromkeys(_BUCKETS, 0)
+        counts = dict.fromkeys(self.fact_keys, 0)
         tool = ""
         tool_version = ""
         for run in doc["runs"]:
@@ -96,7 +109,7 @@ class SarifMapper(ScanFormatMapper):
             results = run.get("results")
             for result in results if isinstance(results, list) else []:
                 if isinstance(result, dict):
-                    counts[_bucket(result, severities)] += 1
+                    counts[_classify(result, severities)] += 1
 
-        facts = {f"vuln.{b}": str(counts[b]) for b in _BUCKETS}
+        facts = {k: str(counts[k]) for k in self.fact_keys}
         return ScanSummary(tool=tool, tool_version=tool_version, facts=facts)

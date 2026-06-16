@@ -102,3 +102,22 @@ rest of the CLI.
 When no `--registry` is given and the ref's host is not in any roster entry (for example a
 public image or an empty roster), `attach` configures nothing and falls back to ambient regctl
 config — exactly today's behaviour. No flag and no roster entry required for public registries.
+
+## Posture reports (rule evaluations, not vulnerabilities)
+
+A SARIF report is not always a vulnerability scan. Policy / posture tools (for example the sibling
+tool **regis**, which emits SARIF) report **rule evaluations** — each result carries an explicit
+SARIF `kind` (`pass` / `fail` / …) rather than a CVSS `security-severity` score.
+
+`houba attach` recognizes this: a result with an explicit `kind` is summarized as a rule outcome,
+not a vulnerability, so a failed hygiene rule never inflates the `vuln.*` counts:
+
+```bash
+uv run houba attach --format sarif posture.sarif.json harbor.corp/lib/redis:7.2.0
+# attached sarif scan (regis 1.x) → harbor.corp/lib/redis@sha256:ref…
+```
+
+The stamp then carries `io.houba.scan.rule.passed` / `io.houba.scan.rule.failed` alongside the
+`io.houba.scan.vuln.*` buckets (a CVSS-scored result is always counted as a vulnerability, even if
+it also carries a `kind`). The `--fail-on <severity>` gate acts on `vuln.*` only — rule failures
+are reported in the stamp, not gated.

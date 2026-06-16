@@ -21,4 +21,6 @@ def test_vocabulary_lists_per_format_fact_keys() -> None:
         "scan.vuln.medium",
         "scan.vuln.low",
         "scan.vuln.unknown",
+        "scan.rule.passed",
+        "scan.rule.failed",
     ]

@@ -76,6 +76,39 @@ def test_no_results_all_zero() -> None:
     )
 
 
+def test_kind_pass_counts_as_rule_passed() -> None:
+    s = SarifMapper().summarize(_sarif([{"ruleId": "R1", "kind": "pass"}]))
+    assert s.facts["rule.passed"] == "1"
+    assert s.facts["rule.failed"] == "0"
+    assert s.facts["vuln.high"] == "0"  # not miscounted as a vuln
+
+
+def test_kind_fail_counts_as_rule_failed() -> None:
+    s = SarifMapper().summarize(_sarif([{"ruleId": "R1", "kind": "fail", "level": "error"}]))
+    assert s.facts["rule.failed"] == "1"
+    assert s.facts["rule.passed"] == "0"
+    assert s.facts["vuln.high"] == "0"  # level no longer routes to vuln once kind is explicit
+
+
+def test_kind_open_counts_as_rule_failed() -> None:
+    s = SarifMapper().summarize(_sarif([{"ruleId": "R1", "kind": "open"}]))
+    assert s.facts["rule.failed"] == "1"
+
+
+def test_cvss_score_wins_over_kind() -> None:
+    s = SarifMapper().summarize(
+        _sarif([{"ruleId": "R1", "kind": "pass", "properties": {"security-severity": "9.8"}}])
+    )
+    assert s.facts["vuln.critical"] == "1"
+    assert s.facts["rule.passed"] == "0"
+
+
+def test_rule_keys_present_and_zero_when_no_results() -> None:
+    s = SarifMapper().summarize(_sarif([]))
+    assert s.facts["rule.passed"] == "0"
+    assert s.facts["rule.failed"] == "0"
+
+
 def test_malformed_json_raises_scan_report_error() -> None:
     with pytest.raises(ScanReportError, match="JSON"):
         SarifMapper().summarize(b"{not json")
