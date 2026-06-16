@@ -5,7 +5,7 @@
 # canonical incident-time questions:
 #
 #   1. "Which images derive from base digest X?"   (a CVE drops on an upstream base)
-#   2. "Which images does team Y own?"             (who do we page?)
+#   2. "Which images does owner Y own?"            (who do we page?)
 #
 # This is deliberately generic — regctl + python3, no jq, no scanner, no lock-in.
 # A real deployment points Datadog / Wiz / Trivy at the *same* annotations; this

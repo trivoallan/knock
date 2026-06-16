@@ -215,3 +215,14 @@ def test_owners_none_when_unset() -> None:
     spec = _spec(defaults=None, imports=[{"name": "v", "tags": {}}])
     [resolved] = resolve_imports(spec)
     assert resolved.owners is None
+
+
+def test_empty_owners_override_clears_defaults() -> None:
+    # an explicit `owners: []` is present (not None), so it overrides the default
+    # wholesale → no owner (the stamp omits io.houba.owners).
+    spec = _spec(
+        defaults={"owners": ["group:default/platform"]},
+        imports=[{"name": "v", "tags": {}, "owners": []}],
+    )
+    [resolved] = resolve_imports(spec)
+    assert resolved.owners == []
