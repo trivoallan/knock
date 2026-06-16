@@ -85,13 +85,19 @@ shipped** once design exposed the real gap:
   mapper classifies rule evaluations as `rule.passed`/`rule.failed`, generically (no `regis`-specific
   code). *(ADR 0027; closed #102)*
 
-## Now — scale hygiene
+## Now — adoption and scale hygiene
 
 > Theme: the mandate is enforceable, trustworthy, and the scan stamp is correct across finding types
-> (see *Delivered*). The remaining committed work is operational, not new surface area.
+> (see *Delivered*). With the feature surface essentially complete, the active work turns to
+> **adoption** (lowering the barrier to becoming the mandated front door) and operational hygiene.
 
+- **User documentation site.** Create and publish a user-facing docs site — getting-started,
+  policy/config reference, the CLI verbs, and the provenance-stamp contract — built from the existing
+  in-repo material (`README`, `docs/examples/`, the policy/scan schemas) and published on every merge
+  to `main`. *The label is the product*, and a mandated front door only gets adopted if its users can
+  self-serve; today that knowledge is scattered across the repo. The highest-leverage adoption item.
 - **Scan-referrer GC.** v1 accumulates referrers per subject; retention / garbage-collection of
-  superseded scan referrers matters once attach volume grows. The one feature still worth building.
+  superseded scan referrers matters once attach volume grows. The remaining feature-side work.
 
 ## Deferred — revisit only on a real signal (YAGNI until then)
 
