@@ -14,6 +14,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from houba.domain.deletion_mode import DeletionMode
 from houba.domain.mirror_policy import Archive
+from houba.domain.scan.refs import registry_host
 from houba.errors import ConfigError
 
 
@@ -167,6 +168,25 @@ def resolve_registry(
         f"destination registry omitted but {len(roster)} configured; "
         f"specify one of {sorted(roster)}"
     )
+
+
+def match_registry_by_host(
+    ref: str, roster: dict[str, RegistryConfig]
+) -> tuple[str, RegistryConfig] | None:
+    """Find the roster entry whose host serves `ref`, by matching the ref's host.
+
+    Returns the (name, config) pair, or None when the ref carries no host-like
+    segment or no roster entry matches — the signal to fall back to ambient
+    registry config. Never raises (unlike resolve_registry): a non-match is a
+    valid, expected outcome for attach.
+    """
+    host = registry_host(ref)
+    if host is None:
+        return None
+    for name, cfg in roster.items():
+        if cfg.host == host:
+            return name, cfg
+    return None
 
 
 def resolve_ca_certs(
