@@ -14,6 +14,7 @@ resources:
   - namespace.yaml
   - serviceaccount.yaml
   - cronjob-reconcile.yaml
+  - cronjob-gc.yaml
   - job-blast-radius.yaml
 
 # Stable, predictable resource names (no content-hash suffix) so the on-demand
