@@ -24,9 +24,7 @@ def gc(
     ] = DEFAULT_KEEP,
     older_than_days: Annotated[
         int,
-        typer.Option(
-            "--older-than-days", help="Only collect referrers older than this many days."
-        ),
+        typer.Option("--older-than-days", help="Only collect referrers older than this many days."),
     ] = DEFAULT_OLDER_THAN_DAYS,
     apply: Annotated[
         bool, typer.Option("--apply", help="Actually delete (default: dry-run, plan only).")
