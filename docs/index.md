@@ -100,4 +100,4 @@ outlives the tool that wrote it.
 
 *Convinced, or want to see it run? → [Getting started](tutorials/getting-started.md)
 · [Example policies](examples/README.md) · [Reference](reference/mirror-policy.md)
-· [The provenance contract](architecture/design.md)*
+· [The provenance contract](https://github.com/trivoallan/houba/blob/main/docs/architecture/design.md)*

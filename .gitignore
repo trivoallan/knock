@@ -28,3 +28,8 @@ docs/architecture/workspace.json
 docs/architecture/_export/*
 !docs/architecture/_export/*.mmd
 docs/architecture/build/
+
+# Docusaurus (website/ has its own .gitignore too)
+website/node_modules/
+website/build/
+website/.docusaurus/

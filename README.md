@@ -27,6 +27,8 @@ houba *stamps* every image with portable provenance — and *hardens* the ones y
 **New here?** Read [Why houba](docs/index.md) for the case, then [Getting started](docs/tutorials/getting-started.md)
 to mirror your first image and inspect its stamp in ten minutes.
 
+📖 **Full documentation:** <https://trivoallan.github.io/houba/>
+
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
 

@@ -11,8 +11,8 @@ git-sync'd policy repo. There are **two** entry points, and they share the same 
 
 The Argo reference reads its children **from git**, so it reflects what is *pushed*; `make local`
 is what you reach for to iterate on a local branch. Design rationale:
-[the spec](../superpowers/specs/2026-06-11-reference-deployment-design.md) and the C4
-[Deployment view](../architecture/workspace.dsl).
+[the spec](https://github.com/trivoallan/houba/blob/main/docs/superpowers/specs/2026-06-11-reference-deployment-design.md) and the C4
+[Deployment view](https://github.com/trivoallan/houba/blob/main/docs/architecture/workspace.dsl).
 
 ```
 deploy/
@@ -134,7 +134,7 @@ policy (copy + rebuild) as `make demo`.
 
 The operator set above is the **thesis minimum** (ESO + OpenBao + buildkitd). Autoscaling
 `buildkitd` under build load is an **opt-in add-on**, off the default path: layer in the
-[`keda-buildkitd`](../../deploy/components/keda-buildkitd) component (KEDA + a Prometheus
+[`keda-buildkitd`](https://github.com/trivoallan/houba/tree/main/deploy/components/keda-buildkitd) component (KEDA + a Prometheus
 `ServiceMonitor`). See [buildkitd autoscaling](#buildkitd-autoscaling-optional) below for the
 prerequisites and tunables.
 
@@ -154,11 +154,11 @@ every policy in one pod, exactly as before.
 
 ## buildkitd autoscaling (optional)
 
-The [`keda-buildkitd`](../../deploy/components/keda-buildkitd) component autoscales `buildkitd` from a
+The [`keda-buildkitd`](https://github.com/trivoallan/houba/tree/main/deploy/components/keda-buildkitd) component autoscales `buildkitd` from a
 **warm floor of 1** to `K` replicas under build load. It is an **opt-in add-on** — layer it into a
 deployment (it is **not** on the default path of either `make demo` or `make local`). Design:
-[ADR 0016](../architecture/decisions/0016-buildkitd-autoscaling.md) /
-[the autoscaling spec](../superpowers/specs/2026-06-12-buildkitd-autoscaling-design.md).
+[ADR 0016](https://github.com/trivoallan/houba/blob/main/docs/architecture/decisions/0016-buildkitd-autoscaling.md) /
+[the autoscaling spec](https://github.com/trivoallan/houba/blob/main/docs/superpowers/specs/2026-06-12-buildkitd-autoscaling-design.md).
 
 **Cluster prerequisites** (documented, not installed by houba — same posture as the External Secrets
 Operator):
@@ -175,7 +175,7 @@ rebuild burst many builds complete → the rate rises → KEDA scales `1→K`; b
 the floor. **No scale-to-zero** (keeps the build cache warm; the Service always has an endpoint, so
 houba's no-retry first connection always lands).
 
-**Tunables** (in [`scaledobject.yaml`](../../deploy/components/keda-buildkitd/scaledobject.yaml)):
+**Tunables** (in [`scaledobject.yaml`](https://github.com/trivoallan/houba/blob/main/deploy/components/keda-buildkitd/scaledobject.yaml)):
 `maxReplicaCount` (`K`, the ceiling), `threshold` (target Solves/sec per replica), and
 `serverAddress` (your Prometheus). Without the component, `buildkitd` stays at a single replica
 (today's behaviour).
@@ -191,7 +191,7 @@ houba's no-retry first connection always lands).
 
 - **buildkitd is rootless** (no privileged container) but needs *unconfined*
   seccomp/AppArmor — that is the rootless trade-off, not a shortcut. Its TCP endpoint is
-  **unauthenticated**: the bundled [`NetworkPolicy`](../../deploy/components/buildkitd/networkpolicy.yaml)
+  **unauthenticated**: the bundled [`NetworkPolicy`](https://github.com/trivoallan/houba/blob/main/deploy/components/buildkitd/networkpolicy.yaml)
   restricts it to the houba pod, but for anything beyond a single-node demo add **mTLS**
   (buildkitd client certs) on top.
 - **houba needs no Kubernetes API access** — its ServiceAccount has token automounting
