@@ -99,7 +99,7 @@ sidebar_position: 2
 | - [usage_oracle_timeout](#usage_oracle_timeout )           | No      | integer          | No         | -                       | Usage Oracle Timeout                                                                         |
 | - [purge_min_idle_days](#purge_min_idle_days )             | No      | Combination      | No         | -                       | Purge Min Idle Days                                                                          |
 
-## <a name="label_prefix"></a>1. Property `houba configuration (HOUBA_*) > label_prefix`
+## 1. Property `houba configuration (HOUBA_*) > label_prefix` {#label_prefix}
 
 **Title:** Label Prefix
 
@@ -111,7 +111,7 @@ sidebar_position: 2
 
 **Description:** Prefix for houba's own provenance annotations; empty ⇒ no houba labels (OCI-standard keys only).
 
-## <a name="registries"></a>2. Property `houba configuration (HOUBA_*) > registries`
+## 2. Property `houba configuration (HOUBA_*) > registries` {#registries}
 
 **Title:** Registries
 
@@ -127,7 +127,7 @@ sidebar_position: 2
 | --------------------------------------- | ------- | ------ | ---------- | ------------------------- | ----------------- |
 | - [](#registries_additionalProperties ) | No      | object | No         | In #/$defs/RegistryConfig | RegistryConfig    |
 
-### <a name="registries_additionalProperties"></a>2.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig`
+### 2.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig` {#registries_additionalProperties}
 
 **Title:** RegistryConfig
 
@@ -149,7 +149,7 @@ sidebar_position: 2
 | - [ca_cert](#registries_additionalProperties_ca_cert )             | No      | Combination | No         | -          | Ca Cert                                                                                  |
 | - [deletion_mode](#registries_additionalProperties_deletion_mode ) | No      | Combination | No         | -          | Destination-level override in the deletion-mode cascade (policy ← destination ← global). |
 
-#### <a name="registries_additionalProperties_host"></a>2.1.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > host`
+#### 2.1.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > host` {#registries_additionalProperties_host}
 
 **Title:** Host
 
@@ -160,7 +160,7 @@ sidebar_position: 2
 
 **Description:** Registry host, e.g. `harbor.example.com` or `localhost:5001`.
 
-#### <a name="registries_additionalProperties_username"></a>2.1.2. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > username`
+#### 2.1.2. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > username` {#registries_additionalProperties_username}
 
 **Title:** Username
 
@@ -178,21 +178,21 @@ sidebar_position: 2
 | [item 0](#registries_additionalProperties_username_anyOf_i0) |
 | [item 1](#registries_additionalProperties_username_anyOf_i1) |
 
-##### <a name="registries_additionalProperties_username_anyOf_i0"></a>2.1.2.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > username > anyOf > item 0`
+##### 2.1.2.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > username > anyOf > item 0` {#registries_additionalProperties_username_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-##### <a name="registries_additionalProperties_username_anyOf_i1"></a>2.1.2.2. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > username > anyOf > item 1`
+##### 2.1.2.2. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > username > anyOf > item 1` {#registries_additionalProperties_username_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### <a name="registries_additionalProperties_password"></a>2.1.3. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > password`
+#### 2.1.3. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > password` {#registries_additionalProperties_password}
 
 **Title:** Password
 
@@ -210,7 +210,7 @@ sidebar_position: 2
 | [item 0](#registries_additionalProperties_password_anyOf_i0) |
 | [item 1](#registries_additionalProperties_password_anyOf_i1) |
 
-##### <a name="registries_additionalProperties_password_anyOf_i0"></a>2.1.3.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > password > anyOf > item 0`
+##### 2.1.3.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > password > anyOf > item 0` {#registries_additionalProperties_password_anyOf_i0}
 
 |              |            |
 | ------------ | ---------- |
@@ -218,14 +218,14 @@ sidebar_position: 2
 | **Required** | No         |
 | **Format**   | `password` |
 
-##### <a name="registries_additionalProperties_password_anyOf_i1"></a>2.1.3.2. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > password > anyOf > item 1`
+##### 2.1.3.2. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > password > anyOf > item 1` {#registries_additionalProperties_password_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### <a name="registries_additionalProperties_tls_verify"></a>2.1.4. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > tls_verify`
+#### 2.1.4. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > tls_verify` {#registries_additionalProperties_tls_verify}
 
 **Title:** Tls Verify
 
@@ -237,7 +237,7 @@ sidebar_position: 2
 
 **Description:** Set to `false` for plain-HTTP registries; houba then runs `regctl registry set … --tls disabled` automatically.
 
-#### <a name="registries_additionalProperties_ca_cert"></a>2.1.5. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > ca_cert`
+#### 2.1.5. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > ca_cert` {#registries_additionalProperties_ca_cert}
 
 **Title:** Ca Cert
 
@@ -255,21 +255,21 @@ sidebar_position: 2
 | [item 0](#registries_additionalProperties_ca_cert_anyOf_i0) |
 | [item 1](#registries_additionalProperties_ca_cert_anyOf_i1) |
 
-##### <a name="registries_additionalProperties_ca_cert_anyOf_i0"></a>2.1.5.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > ca_cert > anyOf > item 0`
+##### 2.1.5.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > ca_cert > anyOf > item 0` {#registries_additionalProperties_ca_cert_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-##### <a name="registries_additionalProperties_ca_cert_anyOf_i1"></a>2.1.5.2. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > ca_cert > anyOf > item 1`
+##### 2.1.5.2. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > ca_cert > anyOf > item 1` {#registries_additionalProperties_ca_cert_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### <a name="registries_additionalProperties_deletion_mode"></a>2.1.6. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > deletion_mode`
+#### 2.1.6. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > deletion_mode` {#registries_additionalProperties_deletion_mode}
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -285,7 +285,7 @@ sidebar_position: 2
 | [DeletionMode](#registries_additionalProperties_deletion_mode_anyOf_i0) |
 | [item 1](#registries_additionalProperties_deletion_mode_anyOf_i1)       |
 
-##### <a name="registries_additionalProperties_deletion_mode_anyOf_i0"></a>2.1.6.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > deletion_mode > anyOf > DeletionMode`
+##### 2.1.6.1. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > deletion_mode > anyOf > DeletionMode` {#registries_additionalProperties_deletion_mode_anyOf_i0}
 
 **Title:** DeletionMode
 
@@ -299,14 +299,14 @@ Must be one of:
 * "purge"
 * "mark"
 
-##### <a name="registries_additionalProperties_deletion_mode_anyOf_i1"></a>2.1.6.2. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > deletion_mode > anyOf > item 1`
+##### 2.1.6.2. Property `houba configuration (HOUBA_*) > registries > RegistryConfig > deletion_mode > anyOf > item 1` {#registries_additionalProperties_deletion_mode_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-## <a name="log_format"></a>3. Property `houba configuration (HOUBA_*) > log_format`
+## 3. Property `houba configuration (HOUBA_*) > log_format` {#log_format}
 
 **Title:** Log Format
 
@@ -322,7 +322,7 @@ Must be one of:
 * "text"
 * "json"
 
-## <a name="log_level"></a>4. Property `houba configuration (HOUBA_*) > log_level`
+## 4. Property `houba configuration (HOUBA_*) > log_level` {#log_level}
 
 **Title:** Log Level
 
@@ -341,7 +341,7 @@ Must be one of:
 * "WARNING"
 * "ERROR"
 
-## <a name="dry_run_tags"></a>5. Property `houba configuration (HOUBA_*) > dry_run_tags`
+## 5. Property `houba configuration (HOUBA_*) > dry_run_tags` {#dry_run_tags}
 
 **Title:** Dry Run Tags
 
@@ -353,7 +353,7 @@ Must be one of:
 
 **Description:** Skip image copies / pushes.
 
-## <a name="dry_run_deletions"></a>6. Property `houba configuration (HOUBA_*) > dry_run_deletions`
+## 6. Property `houba configuration (HOUBA_*) > dry_run_deletions` {#dry_run_deletions}
 
 **Title:** Dry Run Deletions
 
@@ -365,7 +365,7 @@ Must be one of:
 
 **Description:** Skip deletions.
 
-## <a name="deletion_mode"></a>7. Property `houba configuration (HOUBA_*) > deletion_mode`
+## 7. Property `houba configuration (HOUBA_*) > deletion_mode` {#deletion_mode}
 
 **Title:** DeletionMode
 
@@ -382,7 +382,7 @@ Must be one of:
 * "purge"
 * "mark"
 
-## <a name="retention"></a>8. Property `houba configuration (HOUBA_*) > retention`
+## 8. Property `houba configuration (HOUBA_*) > retention` {#retention}
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -398,7 +398,7 @@ Must be one of:
 | [Archive](#retention_anyOf_i0) |
 | [item 1](#retention_anyOf_i1)  |
 
-### <a name="retention_anyOf_i0"></a>8.1. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive`
+### 8.1. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive` {#retention_anyOf_i0}
 
 **Title:** Archive
 
@@ -414,7 +414,7 @@ Must be one of:
 | - [keep](#retention_anyOf_i0_keep )                   | No      | Combination | No         | -          | Keep              |
 | - [olderThanDays](#retention_anyOf_i0_olderThanDays ) | No      | Combination | No         | -          | Olderthandays     |
 
-#### <a name="retention_anyOf_i0_keep"></a>8.1.1. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > keep`
+#### 8.1.1. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > keep` {#retention_anyOf_i0_keep}
 
 **Title:** Keep
 
@@ -432,21 +432,21 @@ Must be one of:
 | [item 0](#retention_anyOf_i0_keep_anyOf_i0) |
 | [item 1](#retention_anyOf_i0_keep_anyOf_i1) |
 
-##### <a name="retention_anyOf_i0_keep_anyOf_i0"></a>8.1.1.1. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > keep > anyOf > item 0`
+##### 8.1.1.1. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > keep > anyOf > item 0` {#retention_anyOf_i0_keep_anyOf_i0}
 
 |              |           |
 | ------------ | --------- |
 | **Type**     | `integer` |
 | **Required** | No        |
 
-##### <a name="retention_anyOf_i0_keep_anyOf_i1"></a>8.1.1.2. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > keep > anyOf > item 1`
+##### 8.1.1.2. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > keep > anyOf > item 1` {#retention_anyOf_i0_keep_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### <a name="retention_anyOf_i0_olderThanDays"></a>8.1.2. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > olderThanDays`
+#### 8.1.2. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > olderThanDays` {#retention_anyOf_i0_olderThanDays}
 
 **Title:** Olderthandays
 
@@ -464,28 +464,28 @@ Must be one of:
 | [item 0](#retention_anyOf_i0_olderThanDays_anyOf_i0) |
 | [item 1](#retention_anyOf_i0_olderThanDays_anyOf_i1) |
 
-##### <a name="retention_anyOf_i0_olderThanDays_anyOf_i0"></a>8.1.2.1. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > olderThanDays > anyOf > item 0`
+##### 8.1.2.1. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > olderThanDays > anyOf > item 0` {#retention_anyOf_i0_olderThanDays_anyOf_i0}
 
 |              |           |
 | ------------ | --------- |
 | **Type**     | `integer` |
 | **Required** | No        |
 
-##### <a name="retention_anyOf_i0_olderThanDays_anyOf_i1"></a>8.1.2.2. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > olderThanDays > anyOf > item 1`
+##### 8.1.2.2. Property `houba configuration (HOUBA_*) > retention > anyOf > Archive > olderThanDays > anyOf > item 1` {#retention_anyOf_i0_olderThanDays_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-### <a name="retention_anyOf_i1"></a>8.2. Property `houba configuration (HOUBA_*) > retention > anyOf > item 1`
+### 8.2. Property `houba configuration (HOUBA_*) > retention > anyOf > item 1` {#retention_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-## <a name="work_dir"></a>9. Property `houba configuration (HOUBA_*) > work_dir`
+## 9. Property `houba configuration (HOUBA_*) > work_dir` {#work_dir}
 
 **Title:** Work Dir
 
@@ -498,7 +498,7 @@ Must be one of:
 
 **Description:** Scratch directory for build contexts.
 
-## <a name="transform_ca_certs"></a>10. Property `houba configuration (HOUBA_*) > transform_ca_certs`
+## 10. Property `houba configuration (HOUBA_*) > transform_ca_certs` {#transform_ca_certs}
 
 **Title:** Transform Ca Certs
 
@@ -514,7 +514,7 @@ Must be one of:
 | ----------------------------------------------- | ------- | ------ | ---------- | ----------------------- | ----------------- |
 | - [](#transform_ca_certs_additionalProperties ) | No      | object | No         | In #/$defs/CACertSource | CACertSource      |
 
-### <a name="transform_ca_certs_additionalProperties"></a>10.1. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource`
+### 10.1. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource` {#transform_ca_certs_additionalProperties}
 
 **Title:** CACertSource
 
@@ -532,7 +532,7 @@ Must be one of:
 | - [path](#transform_ca_certs_additionalProperties_path ) | No      | Combination | No         | -          | Path              |
 | - [pem](#transform_ca_certs_additionalProperties_pem )   | No      | Combination | No         | -          | Pem               |
 
-#### <a name="transform_ca_certs_additionalProperties_path"></a>10.1.1. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > path`
+#### 10.1.1. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > path` {#transform_ca_certs_additionalProperties_path}
 
 **Title:** Path
 
@@ -550,21 +550,21 @@ Must be one of:
 | [item 0](#transform_ca_certs_additionalProperties_path_anyOf_i0) |
 | [item 1](#transform_ca_certs_additionalProperties_path_anyOf_i1) |
 
-##### <a name="transform_ca_certs_additionalProperties_path_anyOf_i0"></a>10.1.1.1. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > path > anyOf > item 0`
+##### 10.1.1.1. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > path > anyOf > item 0` {#transform_ca_certs_additionalProperties_path_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-##### <a name="transform_ca_certs_additionalProperties_path_anyOf_i1"></a>10.1.1.2. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > path > anyOf > item 1`
+##### 10.1.1.2. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > path > anyOf > item 1` {#transform_ca_certs_additionalProperties_path_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### <a name="transform_ca_certs_additionalProperties_pem"></a>10.1.2. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > pem`
+#### 10.1.2. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > pem` {#transform_ca_certs_additionalProperties_pem}
 
 **Title:** Pem
 
@@ -582,21 +582,21 @@ Must be one of:
 | [item 0](#transform_ca_certs_additionalProperties_pem_anyOf_i0) |
 | [item 1](#transform_ca_certs_additionalProperties_pem_anyOf_i1) |
 
-##### <a name="transform_ca_certs_additionalProperties_pem_anyOf_i0"></a>10.1.2.1. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > pem > anyOf > item 0`
+##### 10.1.2.1. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > pem > anyOf > item 0` {#transform_ca_certs_additionalProperties_pem_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-##### <a name="transform_ca_certs_additionalProperties_pem_anyOf_i1"></a>10.1.2.2. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > pem > anyOf > item 1`
+##### 10.1.2.2. Property `houba configuration (HOUBA_*) > transform_ca_certs > CACertSource > pem > anyOf > item 1` {#transform_ca_certs_additionalProperties_pem_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-## <a name="transform_package_mirrors"></a>11. Property `houba configuration (HOUBA_*) > transform_package_mirrors`
+## 11. Property `houba configuration (HOUBA_*) > transform_package_mirrors` {#transform_package_mirrors}
 
 **Title:** Transform Package Mirrors
 
@@ -612,7 +612,7 @@ Must be one of:
 | ------------------------------------------------------ | ------- | ------ | ---------- | ------------------------ | ----------------- |
 | - [](#transform_package_mirrors_additionalProperties ) | No      | object | No         | In #/$defs/PackageMirror | PackageMirror     |
 
-### <a name="transform_package_mirrors_additionalProperties"></a>11.1. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror`
+### 11.1. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror` {#transform_package_mirrors_additionalProperties}
 
 **Title:** PackageMirror
 
@@ -630,7 +630,7 @@ Must be one of:
 | - [apt](#transform_package_mirrors_additionalProperties_apt ) | No      | Combination | No         | -          | Apt               |
 | - [apk](#transform_package_mirrors_additionalProperties_apk ) | No      | Combination | No         | -          | Apk               |
 
-#### <a name="transform_package_mirrors_additionalProperties_apt"></a>11.1.1. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apt`
+#### 11.1.1. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apt` {#transform_package_mirrors_additionalProperties_apt}
 
 **Title:** Apt
 
@@ -648,21 +648,21 @@ Must be one of:
 | [item 0](#transform_package_mirrors_additionalProperties_apt_anyOf_i0) |
 | [item 1](#transform_package_mirrors_additionalProperties_apt_anyOf_i1) |
 
-##### <a name="transform_package_mirrors_additionalProperties_apt_anyOf_i0"></a>11.1.1.1. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apt > anyOf > item 0`
+##### 11.1.1.1. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apt > anyOf > item 0` {#transform_package_mirrors_additionalProperties_apt_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-##### <a name="transform_package_mirrors_additionalProperties_apt_anyOf_i1"></a>11.1.1.2. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apt > anyOf > item 1`
+##### 11.1.1.2. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apt > anyOf > item 1` {#transform_package_mirrors_additionalProperties_apt_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### <a name="transform_package_mirrors_additionalProperties_apk"></a>11.1.2. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apk`
+#### 11.1.2. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apk` {#transform_package_mirrors_additionalProperties_apk}
 
 **Title:** Apk
 
@@ -680,21 +680,21 @@ Must be one of:
 | [item 0](#transform_package_mirrors_additionalProperties_apk_anyOf_i0) |
 | [item 1](#transform_package_mirrors_additionalProperties_apk_anyOf_i1) |
 
-##### <a name="transform_package_mirrors_additionalProperties_apk_anyOf_i0"></a>11.1.2.1. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apk > anyOf > item 0`
+##### 11.1.2.1. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apk > anyOf > item 0` {#transform_package_mirrors_additionalProperties_apk_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-##### <a name="transform_package_mirrors_additionalProperties_apk_anyOf_i1"></a>11.1.2.2. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apk > anyOf > item 1`
+##### 11.1.2.2. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apk > anyOf > item 1` {#transform_package_mirrors_additionalProperties_apk_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-## <a name="build_platform"></a>12. Property `houba configuration (HOUBA_*) > build_platform`
+## 12. Property `houba configuration (HOUBA_*) > build_platform` {#build_platform}
 
 **Title:** Build Platform
 
@@ -706,7 +706,7 @@ Must be one of:
 
 **Description:** Platform for the rebuild path (single-platform).
 
-## <a name="max_concurrency"></a>13. Property `houba configuration (HOUBA_*) > max_concurrency`
+## 13. Property `houba configuration (HOUBA_*) > max_concurrency` {#max_concurrency}
 
 **Title:** Max Concurrency
 
@@ -722,7 +722,7 @@ Must be one of:
 | ------------ | ------ |
 | **Minimum**  | &ge; 1 |
 
-## <a name="attest_signer"></a>14. Property `houba configuration (HOUBA_*) > attest_signer`
+## 14. Property `houba configuration (HOUBA_*) > attest_signer` {#attest_signer}
 
 **Title:** Attest Signer
 
@@ -740,7 +740,7 @@ Must be one of:
 * "kms"
 * "key"
 
-## <a name="attest_key_ref"></a>15. Property `houba configuration (HOUBA_*) > attest_key_ref`
+## 15. Property `houba configuration (HOUBA_*) > attest_key_ref` {#attest_key_ref}
 
 **Title:** Attest Key Ref
 
@@ -752,7 +752,7 @@ Must be one of:
 
 **Description:** KMS URI (`kms`) or key path (`key`).
 
-## <a name="attest_fulcio_url"></a>16. Property `houba configuration (HOUBA_*) > attest_fulcio_url`
+## 16. Property `houba configuration (HOUBA_*) > attest_fulcio_url` {#attest_fulcio_url}
 
 **Title:** Attest Fulcio Url
 
@@ -764,7 +764,7 @@ Must be one of:
 
 **Description:** Keyless CA URL; blank ⇒ public Fulcio.
 
-## <a name="attest_rekor_url"></a>17. Property `houba configuration (HOUBA_*) > attest_rekor_url`
+## 17. Property `houba configuration (HOUBA_*) > attest_rekor_url` {#attest_rekor_url}
 
 **Title:** Attest Rekor Url
 
@@ -776,7 +776,7 @@ Must be one of:
 
 **Description:** Transparency-log URL; blank ⇒ no log entry.
 
-## <a name="attest_builder_id"></a>18. Property `houba configuration (HOUBA_*) > attest_builder_id`
+## 18. Property `houba configuration (HOUBA_*) > attest_builder_id` {#attest_builder_id}
 
 **Title:** Attest Builder Id
 
@@ -788,7 +788,7 @@ Must be one of:
 
 **Description:** URI identifying this houba builder.
 
-## <a name="usage_oracle_cmd"></a>19. Property `houba configuration (HOUBA_*) > usage_oracle_cmd`
+## 19. Property `houba configuration (HOUBA_*) > usage_oracle_cmd` {#usage_oracle_cmd}
 
 **Title:** Usage Oracle Cmd
 
@@ -806,21 +806,21 @@ Must be one of:
 | [item 0](#usage_oracle_cmd_anyOf_i0) |
 | [item 1](#usage_oracle_cmd_anyOf_i1) |
 
-### <a name="usage_oracle_cmd_anyOf_i0"></a>19.1. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 0`
+### 19.1. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 0` {#usage_oracle_cmd_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-### <a name="usage_oracle_cmd_anyOf_i1"></a>19.2. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 1`
+### 19.2. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 1` {#usage_oracle_cmd_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-## <a name="usage_oracle_timeout"></a>20. Property `houba configuration (HOUBA_*) > usage_oracle_timeout`
+## 20. Property `houba configuration (HOUBA_*) > usage_oracle_timeout` {#usage_oracle_timeout}
 
 **Title:** Usage Oracle Timeout
 
@@ -836,7 +836,7 @@ Must be one of:
 | ------------ | ------ |
 | **Minimum**  | &ge; 1 |
 
-## <a name="purge_min_idle_days"></a>21. Property `houba configuration (HOUBA_*) > purge_min_idle_days`
+## 21. Property `houba configuration (HOUBA_*) > purge_min_idle_days` {#purge_min_idle_days}
 
 **Title:** Purge Min Idle Days
 
@@ -854,7 +854,7 @@ Must be one of:
 | [item 0](#purge_min_idle_days_anyOf_i0) |
 | [item 1](#purge_min_idle_days_anyOf_i1) |
 
-### <a name="purge_min_idle_days_anyOf_i0"></a>21.1. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 0`
+### 21.1. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 0` {#purge_min_idle_days_anyOf_i0}
 
 |              |           |
 | ------------ | --------- |
@@ -865,7 +865,7 @@ Must be one of:
 | ------------ | ------ |
 | **Minimum**  | &ge; 1 |
 
-### <a name="purge_min_idle_days_anyOf_i1"></a>21.2. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 1`
+### 21.2. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 1` {#purge_min_idle_days_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
