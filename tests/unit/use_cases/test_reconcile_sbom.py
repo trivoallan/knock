@@ -11,7 +11,7 @@ from houba.use_cases.report import RunReport
 from tests.fakes.image_builder import FakeImageBuilder
 from tests.fakes.registry import FakeRegistryPort
 from tests.fakes.reporter import FakeReporter
-from tests.fakes.sbom_generator import FakeSbomGenerator
+from tests.fakes.sbom_generator import FAKE_SYFT_VERSION, FakeSbomGenerator
 
 NOW = datetime(2026, 6, 17, tzinfo=UTC)
 
@@ -129,6 +129,17 @@ def test_sbom_generation_failure_fails_the_op() -> None:
     assert report.totals.imported == 0
     assert report.totals.failed == 1
     assert report.status != "ok"
+
+
+def test_sbom_referrer_records_tool_version() -> None:
+    registry = _copy_registry()
+    _run(_copy_policy(), registry, sbom_generator=FakeSbomGenerator(), sbom_formats=["spdx-json"])
+
+    out_digest = registry.annotate("reg.local/demo/busybox:1.36.0", {})
+    subject = f"reg.local/demo/busybox@{out_digest}"
+    # artifact_referrers entries: (image_ref, artifact_type, media_type, blob, annotations)
+    ann = next(r[4] for r in registry.artifact_referrers if r[0] == subject)
+    assert ann.get("io.houba.sbom.tool.version") == FAKE_SYFT_VERSION
 
 
 def test_no_formats_means_no_sbom_calls() -> None:

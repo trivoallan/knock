@@ -480,7 +480,7 @@ def _apply_plan(
                                 subject_digest=out_digest,
                                 fmt=d.format,
                                 tool="syft",
-                                tool_version="",
+                                tool_version=d.tool_version,
                                 timestamp=now,
                             ),
                             blob=d.content,
