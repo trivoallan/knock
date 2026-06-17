@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dependency-track-frontend
+data:
+  # The SPA runs in the BROWSER, so API_BASE_URL must be where the operator port-forwards the
+  # apiserver — NOT the in-cluster service DNS. `make dt-ui` binds apiserver to localhost:8081.
+  # ponytail: hardcoded to the make dt-ui port-forward; a real deploy sets the public API URL.
+  API_BASE_URL: "http://localhost:8081"

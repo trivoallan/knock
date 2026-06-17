@@ -28,13 +28,16 @@ deployment view per worked example (and the production blueprint):
   - **[Reference · Argo App-of-Apps](_export/structurizr-DeployReference.mmd)** — the single
     reference, which on kind is the demo (`make demo`) and adopts unchanged to a real cluster: an
     Argo App-of-Apps brings up ESO + OpenBao (wave 0) then houba + `buildkitd` (wave 1), reconciles
-    the reference policy (busybox copy + debian rebuild) git-sync'd from the policy repo, and pushes
-    to a throwaway Zot (registry + built-in UI) applied out-of-band. KEDA + Prometheus autoscaling
-    is an optional add-on (`components/keda-buildkitd`), deliberately off this path.
+    the reference policy (busybox copy + debian rebuild) git-sync'd from the policy repo, pushes to
+    a throwaway Zot (registry + built-in UI) applied out-of-band, and uploads each rebuilt image's
+    SBOM to an off-the-shelf Dependency-Track — the worked-example currency consumer (ADR 0035).
+    KEDA + Prometheus autoscaling is an optional add-on (`components/keda-buildkitd`), deliberately
+    off this path.
   - **[Local · inner-loop overlay](_export/structurizr-DeployLocal.mmd)** — the escape hatch
     (`make local`, `kubectl apply -k overlays/local`): `buildkitd` + a throwaway Zot (registry +
-    built-in UI), a plain-secret roster, no operators. Reconciles the same reference policy and
-    renders local, uncommitted manifests.
+    built-in UI), a plain-secret roster, no operators, and the same Dependency-Track glue for the
+    SBOM publish loop (ADR 0035). Reconciles the same reference policy and renders local,
+    uncommitted manifests.
 
   (Optionally a sharded Indexed Job swaps in for the CronJob for horizontal scale-out.) These views
   track the [`deploy/`](../../deploy) manifests and the

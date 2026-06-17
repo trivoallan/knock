@@ -48,6 +48,9 @@ ignore = ["S101"]  # assert OK dans tests
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S"]
+# Operational demo glue (reference deployment): intentional subprocess + internal-HTTP calls.
+"scripts/dt-bootstrap.py" = ["S"]
+"scripts/extract_sbom.py" = ["S"]
 
 [tool.mypy]
 python_version = "3.12"

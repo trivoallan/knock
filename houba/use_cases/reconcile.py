@@ -20,6 +20,7 @@ from houba.config import (
     CACertSource,
     PackageMirror,
     RegistryConfig,
+    match_registry_by_host,
     resolve_ca_certs,
     resolve_mirror,
     resolve_registry,
@@ -825,8 +826,16 @@ def reconcile_policies(
     # config errors here, before ANY mutation. ---
     plans_by_policy: list[tuple[MirrorPolicy, list[_Plan]]] = []
     alias_entries: list[AliasTarget] = []
+    logged_in: set[str] = set()
     for policy in policies:
-        src_tags = registry.list_tags(_source_repo(policy))
+        # Configure the source registry's TLS/auth (from the roster) before listing its tags —
+        # a plain-HTTP or custom-CA source registry otherwise fails the plan-phase `tag ls`.
+        # Sources not in the roster (public upstreams like docker.io) keep ambient HTTPS config.
+        src_repo = _source_repo(policy)
+        src_match = match_registry_by_host(src_repo, roster)
+        if src_match is not None:
+            ensure_registry_session(registry, src_match[1], logged_in)
+        src_tags = registry.list_tags(src_repo)
         policy_plans: list[_Plan] = []
         for resolved in resolve_imports(policy.spec):
             expanded = expand_import(resolved, src_tags)
@@ -863,7 +872,6 @@ def reconcile_policies(
 
     # --- Apply phase (isolated per policy). ---
     reporter.run_started(len(plans_by_policy), mode=mode)
-    logged_in: set[str] = set()
     policy_reports: list[PolicyReport] = []
     with ExitStack() as stack:
         executor: ThreadPoolExecutor | None = (

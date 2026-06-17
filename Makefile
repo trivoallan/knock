@@ -33,8 +33,8 @@ ARGOCD_VERSION  ?= v2.12.4
 OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+$$' | head -1)
 
 .PHONY: help reference docs-serve cluster image up-local local local-run \
-        argocd demo demo-run openbao-seed \
-        blast-radius registry-ui docker-auth logs down
+        argocd demo demo-run openbao-seed seed-incident \
+        blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui docker-auth logs down
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -58,9 +58,14 @@ up-local: cluster image ## Bring up the local stack (buildkitd + throwaway regis
 	$(KUSTOMIZE) deploy/overlays/local | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
 
-local: up-local local-run ## Local stack + one reconcile (copy + rebuild) + report
+local: up-local ## Local stack + reconcile + bootstrap DT + publish SBOMs + report
+	$(MAKE) seed-incident
+	$(MAKE) local-run
 	@sleep 3
+	$(MAKE) dt-bootstrap
+	$(MAKE) publish-sbom
 	$(MAKE) blast-radius
+	@echo ">> SBOMs published to Dependency-Track. Browse them with 'make dt-ui'."
 
 local-run: ## Fire a one-shot reconcile from the suspended CronJob
 	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
@@ -94,6 +99,7 @@ demo: cluster image argocd ## The single Argo reference on kind, end-to-end (ope
 	@echo ">>       Applied out-of-band; ArgoCD does not manage it. Browse it with 'make registry-ui'."
 	$(KUSTOMIZE) deploy/argocd/sources/registry | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=180s
+	$(MAKE) seed-incident
 	@echo ">> Waiting for ESO to materialize the houba-registries Secret from OpenBao ..."
 	@for i in $$(seq 1 30); do $(KUBECTL) -n $(NS) get secret houba-registries >/dev/null 2>&1 && break; sleep 10; done
 	@echo ">> Waiting for the houba CronJob (wave 1) to sync ..."
@@ -101,6 +107,8 @@ demo: cluster image argocd ## The single Argo reference on kind, end-to-end (ope
 	$(MAKE) demo-run
 	@sleep 3
 	$(MAKE) blast-radius OVERLAY=deploy/argocd/sources/houba
+	$(MAKE) dt-bootstrap OVERLAY=deploy/argocd/sources/houba
+	$(MAKE) publish-sbom OVERLAY=deploy/argocd/sources/houba
 	@echo ">> The Argo reference is up and mirrored the reference policy end-to-end: operators"
 	@echo ">>       (ESO+OpenBao) + houba/buildkitd, the ESO->OpenBao secret path, a git-sync'd"
 	@echo ">>       policy (busybox copy + debian rebuild), and the registry destination."
@@ -117,11 +125,43 @@ openbao-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (place
 	$(KUBECTL) -n openbao exec -i $(OPENBAO_POD) -- sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/houba/registries HOUBA_REGISTRIES='\''{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'\'''
 
 # ---- consumer / ops ------------------------------------------------------
+seed-incident: ## Build the xz fixture IN-CLUSTER (buildkitd) → upstream/ + bypassed/ repos in the Zot
+	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
+	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=120s
+	-$(KUBECTL) -n $(NS) delete job houba-seed-incident --ignore-not-found
+	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-seed-incident --timeout=600s
+	$(KUBECTL) -n $(NS) logs job/houba-seed-incident
+
 blast-radius: ## (Re)run the blast-radius consumer and print its report
 	-$(KUBECTL) -n $(NS) delete job houba-blast-radius --ignore-not-found
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-blast-radius --timeout=120s
 	$(KUBECTL) -n $(NS) logs job/houba-blast-radius
+
+dt-bootstrap: ## Mint DT's API key into the dt-api-key Secret (re-runnable)
+	-$(KUBECTL) -n $(NS) delete job houba-dt-bootstrap --ignore-not-found
+	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-dt-bootstrap --timeout=300s
+	$(KUBECTL) -n $(NS) logs job/houba-dt-bootstrap
+
+publish-sbom: ## Convert each rebuilt image's SBOM to CycloneDX and upload it to Dependency-Track
+	-$(KUBECTL) -n $(NS) delete job houba-publish-sbom --ignore-not-found
+	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-publish-sbom --timeout=300s
+	$(KUBECTL) -n $(NS) logs job/houba-publish-sbom
+
+dt-vulns: ## Trigger DT's OSV (Debian) vuln mirror — restart the apiserver (data persists on the PVC)
+	@echo ">> dt-bootstrap enables the OSV Debian ecosystem; the mirror only runs on restart. Restarting ..."
+	$(KUBECTL) -n $(NS) rollout restart deploy/dependency-track-apiserver
+	$(KUBECTL) -n $(NS) rollout status deploy/dependency-track-apiserver --timeout=300s
+	@echo ">> OSV Debian mirror now running in the background (a few minutes). Then re-run 'make publish-sbom'"
+	@echo ">>       to re-analyze the projects; CVEs then show in 'make dt-ui'."
+
+dt-ui: ## Open the Dependency-Track UI (frontend on :8080, apiserver on :8081 — both needed)
+	@echo ">> DT UI at http://localhost:8080  (login admin / $${DT_ADMIN_PASSWORD:-houba-demo-admin} — set by dt-bootstrap). Ctrl-C to stop."
+	$(KUBECTL) -n $(NS) port-forward svc/dependency-track-apiserver 8081:8080 & \
+	  $(KUBECTL) -n $(NS) port-forward svc/dependency-track-frontend 8080:8080
 
 docker-auth: ## Seed source-registry creds (set DOCKER_USER + DOCKER_PASS) so pulls authenticate (avoids rate limits)
 	@test -n "$$DOCKER_USER" && test -n "$$DOCKER_PASS" || \

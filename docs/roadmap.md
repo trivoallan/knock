@@ -102,6 +102,9 @@ in a dependency, not the base). Depth validated empirically (Log4Shell nested fa
 OS packages, runtime/bare-binary boundaries). Always-on on both paths; `HOUBA_SBOM_FORMATS` chooses
 format(s), not whether. *(ADRs 0029 + 0034)*
 
+The demo now *reproduces* a real incident (XZ / CVE-2024-3094) end to end — the package-level query
+lights up on a recognizable CVE, with a bypass image as the durable coverage blind spot.
+
 ## Now — finish the SBOM tiers + adoption
 
 > Theme: the mandate is enforceable and trustworthy (see *Delivered*), and SBOM generation just
@@ -148,4 +151,6 @@ These are not refused on principle — they are waiting for a concrete trigger t
   signed*), not a vuln database. It never re-correlates a frozen package list against today's CVE
   feeds; that *currency* is the org's SBOM/vuln platform's job (e.g. Dependency-Track). The referrer
   is provenance, not a competing store — collapsing it into a store reopens the overlap. *(ADR 0032)*
+  The reference deployment now *demonstrates* this loop with an off-the-shelf Dependency-Track
+  (ADR 0035) — houba still does not own currency; the demo wires a third-party consumer.
 - **End-of-life awareness.** Carried by a sibling tool (`regis`).

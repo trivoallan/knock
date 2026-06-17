@@ -16,6 +16,10 @@ resources:
   - cronjob-reconcile.yaml
   - cronjob-gc.yaml
   - job-blast-radius.yaml
+  - rbac-dt-bootstrap.yaml
+  - job-dt-bootstrap.yaml
+  - job-publish-sbom.yaml
+  - job-seed-incident.yaml
 
 # Stable, predictable resource names (no content-hash suffix) so the on-demand
 # blast-radius Job and the CronJob reference config/script by fixed name.
@@ -39,16 +43,36 @@ configMapGenerator:
       - POLICY_REPO_REF=main
       - POLICY_DIR=/policies/current/docs/examples/reference
       # Repos the blast-radius consumer walks (the reference policy: copy + rebuild).
-      - BLAST_REPOS=demo/busybox demo/debian
+      - BLAST_REPOS=demo/busybox demo/debian demo/debian-xz bypassed/debian-xz
       # Number of shards for the Indexed reconcile Job (= completions). Both
       # this value and jobTemplate.spec.completions must be bumped together per
       # overlay; base is 1 (identical to the former non-indexed behaviour).
       - SHARD_COUNT=1
+      # SBOM formats syft attaches (one OCI referrer each) on every placed image. CycloneDX is
+      # what Dependency-Track ingests (publish-sbom fetches that referrer); SPDX kept as the
+      # portable default. Always-on; this only chooses formats. (ADR 0034 / #140)
+      - 'HOUBA_SBOM_FORMATS=["spdx-json","cyclonedx-json"]'
   # The blast-radius consumer script, mounted into its Job. Canonical copy
   # lives at scripts/blast-radius.sh so it is also runnable standalone.
   - name: houba-blast-radius
     files:
       - blast-radius.sh=../../scripts/blast-radius.sh
+  # The DT bootstrap script, mounted into its one-shot Job. Canonical copy
+  # lives at scripts/dt-bootstrap.py so it is also inspectable standalone.
+  - name: houba-dt-bootstrap
+    files:
+      - dt-bootstrap.py=../../scripts/dt-bootstrap.py
+  # The publish-sbom scripts, mounted into the publish-sbom Job. Canonical copies
+  # live at scripts/ so they are also runnable standalone.
+  - name: houba-publish-sbom
+    files:
+      - publish-sbom.sh=../../scripts/publish-sbom.sh
+  # The XZ incident seed: the build script + the fixture Dockerfile (buildctl's context),
+  # mounted together at /ctx so buildkitd builds the deliberately-vulnerable fixture in-cluster.
+  - name: houba-seed-incident
+    files:
+      - seed-incident.sh=../../scripts/seed-incident.sh
+      - debian-xz.Dockerfile=../incidents/debian-xz.Dockerfile
 
 # Container image is rewritten per overlay (houba:dev loaded into kind for the
 # demos; a pinned ghcr.io tag in prod).

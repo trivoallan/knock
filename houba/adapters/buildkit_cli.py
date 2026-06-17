@@ -32,7 +32,9 @@ class BuildkitAdapter:
         return self._bin
 
     def build_and_push(self, request: BuildRequest) -> None:
-        output = f"--output=type=image,name={request.image_ref},push=true"
+        # oci-mediatypes=true: push an OCI image manifest, not buildkit's default Docker
+        # schema2 — OCI-native registries (e.g. Zot) reject the latter with HTTP 415.
+        output = f"--output=type=image,name={request.image_ref},push=true,oci-mediatypes=true"
         if not request.tls_verify:
             # Plain-HTTP registry: tell BuildKit's pusher to skip TLS, mirroring
             # regctl's `--tls disabled`. Without it the push speaks HTTPS to an

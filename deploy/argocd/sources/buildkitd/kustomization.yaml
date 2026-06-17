@@ -13,3 +13,4 @@ resources:
   - ../../../components/buildkitd/deployment.yaml
   - ../../../components/buildkitd/service.yaml
   - ../../../components/buildkitd/networkpolicy.yaml
+  - ../../../components/buildkitd/config.yaml

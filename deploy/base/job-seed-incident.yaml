@@ -1,0 +1,53 @@
+# Seeds the XZ incident fixture into the demo registry, IN-CLUSTER: builds the deliberately-
+# vulnerable image via buildkitd (Docker Desktop's host daemon can't reach a host port-forward)
+# and pushes it as the pretend-upstream + a direct bypass copy. Must run before the reconcile
+# that sources upstream/debian-xz. Re-runnable via `make seed-incident`.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: houba-seed-incident
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: houba
+        app.kubernetes.io/component: seed-incident   # allowed to reach buildkitd (networkpolicy)
+    spec:
+      serviceAccountName: houba
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: seed-incident
+          image: houba # rewritten by the kustomize images transformer; has buildctl + regctl + python3
+          command: ["bash", "/ctx/seed-incident.sh"]
+          env:
+            - name: HOME # regctl persists its registry config under $HOME/.regctl
+              value: /tmp
+            - name: BUILDKIT_HOST
+              value: tcp://buildkitd.houba.svc.cluster.local:1234
+          envFrom:
+            - secretRef:
+                name: houba-registries # HOUBA_REGISTRIES roster (the Zot host + tls_verify)
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: ctx # the seed script + the fixture Dockerfile (buildctl context)
+              mountPath: /ctx
+              readOnly: true
+            - name: home
+              mountPath: /tmp
+      volumes:
+        - name: ctx
+          configMap:
+            name: houba-seed-incident
+            defaultMode: 0755
+        - name: home
+          emptyDir: {}

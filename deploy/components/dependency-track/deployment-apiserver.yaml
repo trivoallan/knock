@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dependency-track-apiserver
+  labels:
+    app.kubernetes.io/name: dependency-track
+    app.kubernetes.io/component: apiserver
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate   # the data PVC is RWO — never run two pods both mounting /data
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dependency-track
+      app.kubernetes.io/component: apiserver
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dependency-track
+        app.kubernetes.io/component: apiserver
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: apiserver
+          image: dependencytrack/apiserver:4.12.7
+          ports:
+            - containerPort: 8080
+          env:
+            # ponytail: H2 (not Postgres) is the demo simplification. Heap is NOT tunable down —
+            # DT's RequirementsVerifier hard-refuses to boot below 4G heap, so 4g is the floor.
+            # The demo therefore needs ~6Gi for DT alone (kind VM must have the headroom).
+            - name: EXTRA_JAVA_OPTIONS
+              value: "-Xmx4g"
+          resources:
+            requests:
+              memory: 4Gi
+              cpu: 500m
+            limits:
+              memory: 6Gi
+          readinessProbe:
+            httpGet:
+              path: /api/version
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 60
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          # Persisted (not emptyDir) so the OSV/NVD vuln mirror — which only refreshes on
+          # restart — survives the `make dt-vulns` restart that triggers it. H2 + Lucene + the
+          # mirror live here. ponytail: kind's local-path SC; production sizes a real volume.
+          persistentVolumeClaim:
+            claimName: dependency-track-data

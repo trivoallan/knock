@@ -247,6 +247,8 @@ workspace "houba" "Single front door / stamper for external container images." {
                     rfEsObj = infrastructureNode "ExternalSecret + ClusterSecretStore" "houba-secret-store → OpenBao (ESO vault provider)" "ExternalSecret"
                     rfBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/busybox demo/debian — reads stamps, answers the CVE-time query" "regctl"
                     rfGc = infrastructureNode "CronJob: houba-gc" "Weekly houba gc --apply — collects superseded scan referrers (keep=2/older-than=30d). No git-sync/policies; walks the roster only." "Kubernetes CronJob"
+                    rfDt = infrastructureNode "Deployment: dependency-track (own app)" "Worked-example SBOM consumer (apiserver + frontend, embedded H2) — its own ArgoCD Application (ADR 0035). Currency layer: package-level blast-radius. Fed the CycloneDX SBOM referrer houba attaches (HOUBA_SBOM_FORMATS), uploaded by publish-sbom." "Kubernetes Deployment"
+                    rfPublishSbom = infrastructureNode "Job: houba-publish-sbom" "Fetches the CycloneDX SBOM referrer houba attaches to each placed image and uploads it to DT. regctl + python, no conversion. Twin of the blast-radius consumer." "Kubernetes Job"
                 }
                 deploymentNode "namespace: external-secrets" "ESO operator (wave 0)" "Namespace" {
                     rfEso = infrastructureNode "External Secrets Operator" "Helm child; materializes the registry roster Secret" "ESO"
@@ -290,6 +292,8 @@ workspace "houba" "Single front door / stamper for external container images." {
                         loSecret = infrastructureNode "Secret: houba-registries" "Plain secret roster (no operators) — the inner-loop escape hatch" "Secret"
                         loBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/busybox demo/debian" "regctl"
                         loGc = infrastructureNode "CronJob: houba-gc" "Suspended (like reconcile); fired on demand. houba gc --apply over the roster." "Kubernetes CronJob"
+                        loDt = infrastructureNode "Deployment: dependency-track (own app)" "Worked-example SBOM consumer (apiserver + frontend, embedded H2) — (ADR 0035). Currency layer: package-level blast-radius. Fed the CycloneDX SBOM referrer houba attaches (HOUBA_SBOM_FORMATS), uploaded by publish-sbom." "Kubernetes Deployment"
+                        loPublishSbom = infrastructureNode "Job: houba-publish-sbom" "Fetches the CycloneDX SBOM referrer houba attaches to each placed image and uploads it to DT. regctl + python, no conversion. Twin of the blast-radius consumer." "Kubernetes Job"
                     }
                     deploymentNode "namespace: registry" "Throwaway Zot — plain HTTP; copied + rebuilt images pushed here; built-in web UI (make registry-ui)" "Namespace" {
                         loDest = softwareSystemInstance destRegistries

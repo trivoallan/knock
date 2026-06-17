@@ -1,0 +1,62 @@
+# Publishes each rebuilt image's SPDX SBOM (buildkit attestation) to Dependency-Track.
+# Runs after bootstrap (wave 3); tolerates missing DT_API_KEY (optional secretKeyRef).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: houba-publish-sbom
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"   # after bootstrap (wave 2)
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: houba
+        app.kubernetes.io/component: publish-sbom
+    spec:
+      serviceAccountName: houba
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: publish-sbom
+          image: houba # rewritten by the kustomize images transformer; has regctl + python3
+          command: ["bash", "/scripts/publish-sbom.sh"]
+          env:
+            - name: HOME # regctl persists its registry config under $HOME/.regctl
+              value: /tmp
+            - name: BLAST_REPOS
+              valueFrom:
+                configMapKeyRef:
+                  name: houba-config
+                  key: BLAST_REPOS
+            - name: DT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: dt-api-key
+                  key: DT_API_KEY
+                  optional: true
+          envFrom:
+            - secretRef:
+                name: houba-registries # same roster houba uses (host + creds)
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: home
+              mountPath: /tmp
+      volumes:
+        - name: scripts
+          configMap:
+            name: houba-publish-sbom
+            defaultMode: 0755
+        - name: home
+          emptyDir: {}

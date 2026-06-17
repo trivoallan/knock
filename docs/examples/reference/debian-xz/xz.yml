@@ -1,0 +1,35 @@
+# Incident reproduction — XZ backdoor (CVE-2024-3094). Sources the deliberately-vulnerable fixture
+# (seeded into the demo Zot by `make seed-incident`) and REBUILDS it through the front door, so
+# houba attaches a CycloneDX SBOM referrer capturing xz-utils 5.6.1-1 that DT flags. The setTimezone
+# transform forces the rebuild path (the front door hardens). NOT standalone: needs the fixture in a registry.
+#
+# houba never CLAIMS to detect the backdoor — it makes the post-disclosure blast-radius query have
+# an answer, third-party images included.
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: debian-xz
+spec:
+  artifactType: image
+  defaults:
+    vendor: Example Platform Team
+    owners:
+      - group:default/platform
+  source:
+    registry: registry.houba.svc.cluster.local:5000   # the demo Zot (the fixture's "upstream")
+    repository: upstream/debian-xz
+  imports:
+    - name: incident
+      owners:
+        - group:default/platform
+      tags:
+        semverOnly: false
+        includeRegex: "^5\\.6\\.1$"
+      variants:
+        - name: hardened
+          suffix: ""                # keep the tag 5.6.1; one variant only
+          transform:
+            - setTimezone: { zone: Europe/Paris }
+      destinations:
+        - project: demo
+          repository: debian-xz
