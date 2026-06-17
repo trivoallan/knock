@@ -147,23 +147,38 @@ def write_secret(key):
 
 def enable_osv(jwt):
     # OSV is keyless and covers the Debian ecosystem (the rebuilt image's deb packages). Enabling
-    # an ecosystem is what turns OSV mirroring on; the mirror itself runs on the next DT restart
+    # an ecosystem turns OSV mirroring on; the mirror itself runs on the next DT restart
     # (`make dt-vulns`). The property name is discovered, not hard-coded, to survive DT renames.
     props = json.load(_req("GET", "/api/v1/configProperty", jwt=jwt))
     osv = next(
         (
             p
             for p in props
-            if "osv" in p.get("propertyName", "").lower()
-            and "ecosystem" in p.get("propertyName", "").lower()
+            if "ecosystem" in p.get("propertyName", "").lower()
+            and (
+                "osv" in p.get("propertyName", "").lower()
+                or "osv" in p.get("groupName", "").lower()
+            )
         ),
         None,
     )
     if osv is None:
+        # Name not where we expected — dump the OSV/vuln-source candidates so we can wire the
+        # exact one. (Diagnostic; harmless — just enable OSV Debian in the UI meanwhile.)
+        cands = [
+            p
+            for p in props
+            if "osv" in (p.get("groupName", "") + p.get("propertyName", "")).lower()
+            or "vuln" in p.get("groupName", "").lower()
+        ]
         print(
-            "» OSV ecosystems config property not found — skipping (enable it in the UI)",
-            flush=True,
+            f"» OSV ecosystems property not found among {len(props)} props. Candidates:", flush=True
         )
+        for p in cands:
+            print(
+                f"   - {p.get('groupName')} / {p.get('propertyName')} = {p.get('propertyValue')!r}",
+                flush=True,
+            )
         return
     body = [
         {
