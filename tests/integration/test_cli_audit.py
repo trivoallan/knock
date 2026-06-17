@@ -74,3 +74,17 @@ def test_audit_fail_on_unsigned_flips_exit_to_1(
     assert result.exit_code == 1, result.stdout
     data = json.loads(result.stdout)
     assert data["counts"]["unsigned"] >= 1
+
+
+def test_audit_sbom_reports_with_sbom_count(
+    monkeypatch: pytest.MonkeyPatch, fake_bin_path: Path
+) -> None:
+    _env(monkeypatch, fake_bin_path)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "coverage-sbom")
+    result = runner.invoke(app, ["audit", "--sbom"])
+    assert result.exit_code == 0, result.stdout
+    data = json.loads(result.stdout)
+    assert data["counts"]["with_sbom"] >= 1
+    assert data["counts"]["without_sbom"] == 0
+    # per-outcome digest flows through
+    assert all(o["digest"] == "sha256:abc123" for o in data["outcomes"])

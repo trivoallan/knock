@@ -36,20 +36,26 @@ def audit(
             help="Exit non-zero if any stamped image is unsigned (implies --signed).",
         ),
     ] = False,
+    sbom: Annotated[
+        bool,
+        typer.Option("--sbom", help="Also probe each stamped image for a package SBOM referrer."),
+    ] = False,
 ) -> None:
     """Walk the registry and report images that do NOT carry houba's provenance stamp."""
     container = build_container()
     settings = container.settings
     configure(format_=settings.log_format, level=settings.log_level)
     check_signed = signed or fail_on_unsigned  # the gate implies the probe
+    check_sbom = sbom
     report = audit_coverage(
         registry=container.registry,
         roster=settings.registries,
         only_registry=registry_name,
         label_prefix=settings.label_prefix,
         check_signed=check_signed,
+        check_sbom=check_sbom,
     )
-    _render(report, fmt=settings.log_format, check_signed=check_signed)
+    _render(report, fmt=settings.log_format, check_signed=check_signed, check_sbom=check_sbom)
     raise typer.Exit(
         audit_exit_code(
             report, fail_on_uncovered=fail_on_uncovered, fail_on_unsigned=fail_on_unsigned
@@ -57,11 +63,11 @@ def audit(
     )
 
 
-def _render(report: CoverageReport, *, fmt: str, check_signed: bool) -> None:
+def _render(report: CoverageReport, *, fmt: str, check_signed: bool, check_sbom: bool) -> None:
     if fmt == "json":
         sys.stdout.write(report.model_dump_json() + "\n")
         return
-    # Text: list only the gaps (uncovered, unsigned, read errors); the summary carries totals.
+    # Text: list only the gaps (uncovered, unsigned, no-sbom, read errors); summary carries totals.
     for o in report.outcomes:
         if o.error is not None:
             sys.stdout.write(f"ERROR     {o.image_ref}  {o.error.message}\n")
@@ -69,9 +75,12 @@ def _render(report: CoverageReport, *, fmt: str, check_signed: bool) -> None:
             sys.stdout.write(f"UNCOVERED {o.image_ref}\n")
         elif check_signed and o.signed is False:
             sys.stdout.write(f"UNSIGNED  {o.image_ref}\n")
+        elif check_sbom and o.sbom is False:
+            sys.stdout.write(f"NO-SBOM   {o.image_ref}\n")
     c = report.counts
     signed_part = f"signed={c.signed} unsigned={c.unsigned} " if check_signed else ""
+    sbom_part = f"with_sbom={c.with_sbom} without_sbom={c.without_sbom} " if check_sbom else ""
     sys.stdout.write(
         f"\naudit  scanned={c.scanned} covered={c.covered} "
-        f"uncovered={c.uncovered} {signed_part}errored={c.errored}\n"
+        f"uncovered={c.uncovered} {signed_part}{sbom_part}errored={c.errored}\n"
     )
