@@ -5,10 +5,11 @@
 #                buildkitd + the reference policy + registry + reconcile + report)
 #   make local   the inner-loop escape hatch (kubectl apply -k, no Argo/operators)
 
-CLUSTER     ?= houba-demo
-IMAGE       ?= houba:dev
-GLUE_IMAGE  ?= houba-glue:dev
-NS          ?= houba
+CLUSTER        ?= houba-demo
+IMAGE          ?= houba:dev
+GLUE_IMAGE     ?= houba-glue:dev
+FIXTURE_IMAGE  ?= houba-fixture-debian-xz:5.6.1
+NS             ?= houba
 
 # The blast-radius script lives outside the base dir (canonical scripts/), so the
 # configMapGenerator needs the relaxed load restrictor. `kubectl apply -k` can't pass
@@ -34,7 +35,7 @@ ARGOCD_VERSION  ?= v2.12.4
 OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+$$' | head -1)
 
 .PHONY: help reference docs-serve cluster image glue-image up-local local local-run \
-        argocd demo demo-run openbao-seed \
+        argocd demo demo-run openbao-seed seed-incident \
         blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui docker-auth logs down
 
 help: ## List targets
@@ -63,7 +64,9 @@ up-local: cluster glue-image ## Bring up the local stack (buildkitd + throwaway 
 	$(KUSTOMIZE) deploy/overlays/local | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
 
-local: up-local local-run ## Local stack + reconcile + bootstrap DT + publish SBOMs + report
+local: up-local ## Local stack + reconcile + bootstrap DT + publish SBOMs + report
+	$(MAKE) seed-incident
+	$(MAKE) local-run
 	@sleep 3
 	$(MAKE) dt-bootstrap
 	$(MAKE) publish-sbom
@@ -102,6 +105,7 @@ demo: cluster image argocd ## The single Argo reference on kind, end-to-end (ope
 	@echo ">>       Applied out-of-band; ArgoCD does not manage it. Browse it with 'make registry-ui'."
 	$(KUSTOMIZE) deploy/argocd/sources/registry | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=180s
+	$(MAKE) seed-incident
 	@echo ">> Waiting for ESO to materialize the houba-registries Secret from OpenBao ..."
 	@for i in $$(seq 1 30); do $(KUBECTL) -n $(NS) get secret houba-registries >/dev/null 2>&1 && break; sleep 10; done
 	@echo ">> Waiting for the houba CronJob (wave 1) to sync ..."
@@ -127,6 +131,18 @@ openbao-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (place
 	$(KUBECTL) -n openbao exec -i $(OPENBAO_POD) -- sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/houba/registries HOUBA_REGISTRIES='\''{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'\'''
 
 # ---- consumer / ops ------------------------------------------------------
+seed-incident: ## Build the xz fixture, push it as the pretend-upstream + the bypass blind-spot
+	docker build -t $(FIXTURE_IMAGE) -f deploy/incidents/debian-xz.Dockerfile deploy/incidents
+	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=120s
+	$(KUBECTL) -n $(NS) port-forward svc/registry 5000:5000 & \
+	  PF=$$!; sleep 3; \
+	  docker tag $(FIXTURE_IMAGE) localhost:5000/upstream/debian-xz:5.6.1; \
+	  docker push localhost:5000/upstream/debian-xz:5.6.1; \
+	  docker tag $(FIXTURE_IMAGE) localhost:5000/bypassed/debian-xz:5.6.1; \
+	  docker push localhost:5000/bypassed/debian-xz:5.6.1; \
+	  kill $$PF
+	@echo ">> seeded upstream/debian-xz:5.6.1 (houba will rebuild it) + bypassed/debian-xz:5.6.1 (never through houba)."
+
 blast-radius: ## (Re)run the blast-radius consumer and print its report
 	-$(KUBECTL) -n $(NS) delete job houba-blast-radius --ignore-not-found
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
