@@ -64,17 +64,18 @@ for repo in ${REPOS}; do
     fi
 
     # SPDX → CycloneDX, then upload (PUT /api/v1/bom takes base64 CycloneDX JSON; autoCreate).
+    # python reads + base64-encodes the file itself — a large SBOM as an argv blows ARG_MAX.
     cdx="${WORK}/sbom.cdx.json"
     syft convert "${spdx}" -o "cyclonedx-json=${cdx}"
-    B64=$(base64 -w0 < "${cdx}" 2>/dev/null || base64 < "${cdx}" | tr -d '\n')
-    DT_API_KEY="${DT_API_KEY}" python3 - "$tag" "$repo" "$B64" <<'PY'
-import json, os, sys, urllib.request
-tag, repo, b64 = sys.argv[1], sys.argv[2], sys.argv[3]
+    DT_API_KEY="${DT_API_KEY}" CDX="${cdx}" python3 - "$tag" "$repo" <<'PY'
+import base64, json, os, sys, urllib.request
+tag, repo = sys.argv[1], sys.argv[2]
+b64 = base64.b64encode(open(os.environ["CDX"], "rb").read()).decode()
 body = json.dumps({"projectName": repo, "projectVersion": tag, "autoCreate": True, "bom": b64}).encode()
 req = urllib.request.Request(os.environ["DT_URL"] + "/api/v1/bom", data=body, method="PUT")
 req.add_header("Content-Type", "application/json")
 req.add_header("X-Api-Key", os.environ["DT_API_KEY"])
-urllib.request.urlopen(req, timeout=30)  # noqa: S310
+urllib.request.urlopen(req, timeout=60)  # noqa: S310
 print(f"» published {repo}:{tag} to Dependency-Track", flush=True)
 PY
   done
