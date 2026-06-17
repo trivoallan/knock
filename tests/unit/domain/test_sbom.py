@@ -6,7 +6,9 @@ import pytest
 
 from houba.domain.sbom import (
     FORMAT_MEDIA_TYPES,
+    SBOM_PREDICATE_TYPES,
     build_sbom_annotations,
+    build_sbom_statement,
     media_type_for,
 )
 from houba.errors import UnknownFormatError
@@ -66,3 +68,40 @@ def test_build_sbom_annotations_empty_prefix_emits_nothing() -> None:
         timestamp=TS,
     )
     assert ann == {}
+
+
+def test_build_sbom_statement_spdx() -> None:
+    stmt = build_sbom_statement(
+        subject_name="reg.local/demo/busybox:1.36.0",
+        subject_digest="sha256:abc",
+        fmt="spdx-json",
+        content=b'{"spdxVersion": "SPDX-2.3"}',
+    )
+    assert stmt["_type"] == "https://in-toto.io/Statement/v1"
+    assert stmt["predicateType"] == "https://spdx.dev/Document"
+    assert stmt["subject"] == [
+        {"name": "reg.local/demo/busybox:1.36.0", "digest": {"sha256": "abc"}}
+    ]
+    assert stmt["predicate"] == {"spdxVersion": "SPDX-2.3"}
+
+
+def test_build_sbom_statement_cyclonedx_predicate_type() -> None:
+    stmt = build_sbom_statement(
+        subject_name="x:1",
+        subject_digest="sha256:def",
+        fmt="cyclonedx-json",
+        content=b'{"bomFormat": "CycloneDX"}',
+    )
+    assert stmt["predicateType"] == "https://cyclonedx.org/bom"
+
+
+def test_build_sbom_statement_unknown_format_raises() -> None:
+    with pytest.raises(UnknownFormatError):
+        build_sbom_statement(
+            subject_name="x:1", subject_digest="sha256:abc", fmt="bogus", content=b"{}"
+        )
+
+
+def test_sbom_predicate_types_cover_the_known_formats() -> None:
+    # Every format that gets a media type must also get a predicate type.
+    assert set(SBOM_PREDICATE_TYPES) == set(FORMAT_MEDIA_TYPES)

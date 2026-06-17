@@ -8,6 +8,7 @@ from houba.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
 from houba.ports.registry import ImageInfo
 from houba.use_cases.reconcile import reconcile_policies
 from houba.use_cases.report import RunReport
+from tests.fakes.attestor import FakeAttestor
 from tests.fakes.image_builder import FakeImageBuilder
 from tests.fakes.registry import FakeRegistryPort
 from tests.fakes.reporter import FakeReporter
@@ -17,6 +18,18 @@ NOW = datetime(2026, 6, 17, tzinfo=UTC)
 
 SPDX = "application/spdx+json"
 CYCLONEDX = "application/vnd.cyclonedx+json"
+
+SPDX_PREDICATE = "https://spdx.dev/Document"
+CYCLONEDX_PREDICATE = "https://cyclonedx.org/bom"
+SBOM_PREDICATES = {SPDX_PREDICATE, CYCLONEDX_PREDICATE}
+
+
+def _sbom_attestations(attestor: FakeAttestor) -> list[tuple[str, dict]]:
+    # attestor.attested journals (subject_ref, statement); keep only SBOM-typed ones
+    # (the transform attestation, signed on the same digest, is filtered out).
+    return [
+        (ref, st) for ref, st in attestor.attested if st.get("predicateType") in SBOM_PREDICATES
+    ]
 
 
 def _copy_policy() -> MirrorPolicy:
@@ -150,3 +163,33 @@ def test_no_formats_means_no_sbom_calls() -> None:
     assert report.totals.imported == 1
     assert gen.calls == []
     assert registry.artifact_referrers == []
+
+
+def test_signs_one_sbom_attestation_per_format() -> None:
+    registry = _copy_registry()
+    attestor = FakeAttestor()
+    report = _run(
+        _copy_policy(),
+        registry,
+        sbom_generator=FakeSbomGenerator(),
+        sbom_formats=["spdx-json", "cyclonedx-json"],
+        attestor=attestor,
+    )
+
+    assert report.totals.imported == 1
+    out_digest = registry.annotate("reg.local/demo/busybox:1.36.0", {})
+    subject = f"reg.local/demo/busybox@{out_digest}"
+    sboms = _sbom_attestations(attestor)
+    assert {st["predicateType"] for _, st in sboms} == SBOM_PREDICATES
+    assert all(ref == subject for ref, _ in sboms)
+    assert all(st["subject"][0]["name"] == "reg.local/demo/busybox:1.36.0" for _, st in sboms)
+
+
+def test_sbom_signing_is_gated_on_sbom_generation() -> None:
+    # Attestor configured but no SBOM formats => transform is signed, SBOM is not.
+    registry = _copy_registry()
+    attestor = FakeAttestor()
+    _run(_copy_policy(), registry, sbom_generator=FakeSbomGenerator(), attestor=attestor)
+
+    assert _sbom_attestations(attestor) == []
+    assert len(attestor.attested) == 1  # the transform attestation only

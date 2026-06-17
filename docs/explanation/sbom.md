@@ -22,12 +22,17 @@ per-policy field. It chooses *which* formats (SPDX by default; CycloneDX alongsi
 *whether*. To enable CycloneDX see [Inspect an image's SBOM](../how-to/inspect-sbom.md); for the
 variable itself, the [configuration reference](../reference/config.md).
 
-## Presence, not yet trust
+## Presence, then trust
 
-The SBOM is attached **unsigned**: its *presence* already answers the blast-radius query.
-Cryptographically **signing** the SBOM under houba's identity is a separate, planned trust tier,
-sequenced exactly as houba sequenced stamp-then-sign for the [signed attestations](attestations.md).
-(Today the signed attestations cover the transform / provenance predicate, not the SBOM itself.)
+The raw SBOM referrer answers the blast-radius query by its *presence* alone — it is attached on
+every placed image, signed or not. When signing is configured (`HOUBA_ATTEST_SIGNER`, the **same**
+identity that signs the transform and scan attestations), houba **additionally** signs each SBOM as
+an in-toto attestation under its own identity, with the canonical predicate type
+(`https://spdx.dev/Document` for SPDX, `https://cyclonedx.org/bom` for CycloneDX). A downstream
+admission controller can then *require* a trustworthy SBOM with stock
+`cosign verify-attestation --type spdxjson|cyclonedx`, exactly as it can require a signed transform or
+scan. Presence is unconditional; trust rides the signer. See [signed attestations](attestations.md)
+and [Inspect an image's SBOM](../how-to/inspect-sbom.md#verify-the-signed-sbom).
 
 ## Known limit — bare-binary middleware
 

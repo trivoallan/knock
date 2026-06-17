@@ -34,3 +34,19 @@ HOUBA_SBOM_FORMATS='["spdx-json","cyclonedx-json"]' uv run houba reconcile docs/
 ```
 
 See the [configuration reference](../reference/config.md) for the variable.
+
+## Verify the signed SBOM
+
+When `HOUBA_ATTEST_SIGNER` is set, each SBOM is *also* attached as a signed in-toto attestation under
+houba's identity. Verify it with stock cosign — the predicate type is the canonical document type
+(`spdxjson` / `cyclonedx`):
+
+```bash
+cosign verify-attestation --type spdxjson \
+  --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' \
+  registry.example.com/demo/busybox@sha256:<digest>
+```
+
+Tune the `--certificate-*` flags to your trust root; for `kms`/`key` signing use `--key` instead. The
+raw referrer (above) is always present; this signed attestation is the trust tier — an admission
+controller can *require* it. See [signed attestations](../explanation/attestations.md).
