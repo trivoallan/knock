@@ -18,6 +18,10 @@ converted to CycloneDX and uploaded to Dependency-Track, answers the **package**
 *which images ship the vulnerable package X*. Component inventory works offline; CVE/severity
 correlation needs DT to have downloaded its NVD feeds (online, slow on first boot).
 
+> **Heads-up — DT is RAM-hungry.** Dependency-Track hard-requires a **4 GB heap** (it refuses
+> to boot below that), so the apiserver pod requests 4 Gi / limits 6 Gi. Give your kind/Docker
+> VM ≥ 8 GB or the apiserver pod stays `Pending`/`OOMKilled` and `make dt-ui` finds no service.
+
 Zot ships a **built-in web UI** (the `search` + `ui` extensions), so you can *see* what
 houba pushed — browse the mirrored repos/tags and the provenance annotations on each
 manifest, the stamp made visible:

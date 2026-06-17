@@ -27,15 +27,17 @@ spec:
           ports:
             - containerPort: 8080
           env:
-            # ponytail: H2 + low heap so DT fits a kind/laptop demo; production swaps in Postgres + TLS
+            # ponytail: H2 (not Postgres) is the demo simplification. Heap is NOT tunable down —
+            # DT's RequirementsVerifier hard-refuses to boot below 4G heap, so 4g is the floor.
+            # The demo therefore needs ~6Gi for DT alone (kind VM must have the headroom).
             - name: EXTRA_JAVA_OPTIONS
-              value: "-Xmx1536m"
+              value: "-Xmx4g"
           resources:
             requests:
-              memory: 1Gi
-              cpu: 250m
+              memory: 4Gi
+              cpu: 500m
             limits:
-              memory: 2Gi
+              memory: 6Gi
           readinessProbe:
             httpGet:
               path: /api/version
