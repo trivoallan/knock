@@ -16,7 +16,6 @@ class BuildRequest:
     platform: str | None = None
     provenance: bool = False  # enable BuildKit's native SLSA provenance attestation
     tls_verify: bool = True  # False => push over plain HTTP (registry.insecure=true)
-    sbom: bool = False  # enable BuildKit's native SPDX SBOM attestation
 
 
 class ImageBuilderPort(Protocol):
