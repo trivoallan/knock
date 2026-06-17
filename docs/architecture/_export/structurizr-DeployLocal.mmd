@@ -37,9 +37,9 @@ graph LR
           style 218 fill:#8a94a0,stroke:#606770,color:#ffffff
           219("<div style='font-weight: bold'>CronJob: houba-gc</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes CronJob]</div><div style='font-size: 80%; margin-top:10px'>Suspended (like reconcile);<br />fired on demand. houba gc<br />--apply over the roster.</div>")
           style 219 fill:#8a94a0,stroke:#606770,color:#ffffff
-          220("<div style='font-weight: bold'>Deployment: dependency-track (own app)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Deployment]</div><div style='font-size: 80%; margin-top:10px'>Worked-example SBOM consumer<br />(apiserver + frontend,<br />embedded H2) — (ADR 0035).<br />Currency layer: package-level<br />blast-radius. DT is<br />CycloneDX-only; houba's SPDX<br />is converted by the publish<br />glue.</div>")
+          220("<div style='font-weight: bold'>Deployment: dependency-track (own app)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Deployment]</div><div style='font-size: 80%; margin-top:10px'>Worked-example SBOM consumer<br />(apiserver + frontend,<br />embedded H2) — (ADR 0035).<br />Currency layer: package-level<br />blast-radius. Fed the<br />CycloneDX SBOM referrer houba<br />attaches<br />(HOUBA_SBOM_FORMATS),<br />uploaded by publish-sbom.</div>")
           style 220 fill:#8a94a0,stroke:#606770,color:#ffffff
-          221("<div style='font-weight: bold'>Job: houba-publish-sbom</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Job]</div><div style='font-size: 80%; margin-top:10px'>Glue image (houba + syft):<br />pulls each rebuilt image's<br />SPDX SBOM attestation,<br />converts to CycloneDX,<br />uploads to DT. Twin of the<br />blast-radius consumer.</div>")
+          221("<div style='font-weight: bold'>Job: houba-publish-sbom</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Job]</div><div style='font-size: 80%; margin-top:10px'>Fetches the CycloneDX SBOM<br />referrer houba attaches to<br />each placed image and uploads<br />it to DT. regctl + python, no<br />conversion. Twin of the<br />blast-radius consumer.</div>")
           style 221 fill:#8a94a0,stroke:#606770,color:#ffffff
         end
 

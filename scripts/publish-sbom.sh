@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# publish-sbom.sh — push each rebuilt image's SBOM into Dependency-Track.
+# publish-sbom.sh — push each image's CycloneDX SBOM into Dependency-Track.
 #
-# For every tag of every BLAST_REPOS repo: pull the SPDX SBOM that buildkit attached at build
-# (an in-toto attestation manifest in the image index), unwrap the SPDX predicate, convert it
-# to CycloneDX with `syft convert`, and upload it to DT. Copy-only images carry no SBOM and are
-# skipped + logged (the same "coverage gap" semantics as blast-radius.sh).
-#
-# Generic glue: regctl + syft + python3, no houba coupling. DT is the worked-example consumer.
+# houba attaches a package-level SBOM as an OCI referrer on every placed image — copy AND
+# rebuild — one referrer per HOUBA_SBOM_FORMATS entry (artifactType == the SBOM media type).
+# With cyclonedx-json enabled, we fetch the CycloneDX referrer for each tag and upload it to DT.
+# No conversion, no glue image: just regctl + python3 (both in the houba runtime image).
+# Images with no CycloneDX referrer (e.g. the bypass image, never through houba) are skipped +
+# logged — the same "coverage gap" semantics as blast-radius.sh.
 #
 # Inputs (environment):
 #   HOUBA_REGISTRIES  JSON roster (same secret houba uses)
 #   BLAST_REGISTRY    roster entry to scan (default: the sole entry)
 #   BLAST_REPOS       space/comma-separated repos to walk
 #   DT_URL            Dependency-Track apiserver base URL (default in-cluster service)
-#   DT_API_KEY        key with BOM_UPLOAD + PROJECT_CREATION (from the dt-api-key Secret)
+#   DT_API_KEY        key with BOM_UPLOAD + PROJECT_CREATION_UPLOAD (from the dt-api-key Secret)
 set -euo pipefail
 
 : "${HOUBA_REGISTRIES:?set HOUBA_REGISTRIES (the registry roster JSON)}"
@@ -49,24 +49,23 @@ fi
 
 REPOS=${BLAST_REPOS//,/ }
 WORK=$(mktemp -d); trap 'rm -rf "${WORK}"' EXIT
+CDX_TYPE="application/vnd.cyclonedx+json"
 
 for repo in ${REPOS}; do
   ref_base="${HOST}/${repo}"
   for tag in $(regctl tag ls "${ref_base}" 2>/dev/null); do
     ref="${ref_base}:${tag}"
-    spdx="${WORK}/sbom.spdx.json"
+    cdx="${WORK}/sbom.cdx.json"
 
-    # Extract the SPDX predicate from buildkit's attestation manifest (if any).
-    if ! regctl manifest get "${ref}" --format '{{json .}}' 2>/dev/null \
-         | DT_REF="${ref}" python3 /scripts/extract_sbom.py "${spdx}"; then
-      echo "» ${repo}:${tag} — no SBOM attestation (copy-only?) — skipped" >&2
+    # Fetch the CycloneDX SBOM referrer houba attached to this image (if any).
+    if ! regctl artifact get --subject "${ref}" --filter-artifact-type "${CDX_TYPE}" \
+         > "${cdx}" 2>/dev/null || ! [ -s "${cdx}" ]; then
+      echo "» ${repo}:${tag} — no CycloneDX SBOM referrer (never through houba?) — skipped" >&2
       continue
     fi
 
-    # SPDX → CycloneDX, then upload (PUT /api/v1/bom takes base64 CycloneDX JSON; autoCreate).
+    # Upload to DT (PUT /api/v1/bom takes base64 CycloneDX JSON; autoCreate the project).
     # python reads + base64-encodes the file itself — a large SBOM as an argv blows ARG_MAX.
-    cdx="${WORK}/sbom.cdx.json"
-    syft convert "${spdx}" -o "cyclonedx-json=${cdx}"
     DT_API_KEY="${DT_API_KEY}" CDX="${cdx}" python3 - "$tag" "$repo" <<'PY'
 import base64, json, os, sys, urllib.request
 tag, repo = sys.argv[1], sys.argv[2]

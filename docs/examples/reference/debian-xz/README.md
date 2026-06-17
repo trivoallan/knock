@@ -3,8 +3,9 @@
 This policy reproduces the **XZ backdoor** in the demo so the package-level blast-radius loop lights
 up on a real incident. A deliberately-vulnerable fixture (`xz-utils 5.6.1-1`, built from a Debian sid
 snapshot) is seeded into the demo registry as a pretend-upstream; this policy **rebuilds** it through
-houba, so houba's SPDX SBOM captures `xz-utils 5.6.1-1` and Dependency-Track flags
-`DEBIAN-CVE-2024-3094`.
+houba, which attaches a **CycloneDX SBOM referrer** capturing `xz-utils 5.6.1-1`
+(`HOUBA_SBOM_FORMATS` includes `cyclonedx-json`). `make publish-sbom` fetches that referrer and
+uploads it, and Dependency-Track flags `DEBIAN-CVE-2024-3094`.
 
 **What this does NOT claim.** houba does **not** detect or block the backdoor — nothing did, pre-
 disclosure. houba rebuilds faithfully; the value is that on disclosure day, *"which images ship

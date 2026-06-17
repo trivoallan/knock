@@ -48,6 +48,10 @@ configMapGenerator:
       # this value and jobTemplate.spec.completions must be bumped together per
       # overlay; base is 1 (identical to the former non-indexed behaviour).
       - SHARD_COUNT=1
+      # SBOM formats syft attaches (one OCI referrer each) on every placed image. CycloneDX is
+      # what Dependency-Track ingests (publish-sbom fetches that referrer); SPDX kept as the
+      # portable default. Always-on; this only chooses formats. (ADR 0034 / #140)
+      - 'HOUBA_SBOM_FORMATS=["spdx-json","cyclonedx-json"]'
   # The blast-radius consumer script, mounted into its Job. Canonical copy
   # lives at scripts/blast-radius.sh so it is also runnable standalone.
   - name: houba-blast-radius
@@ -69,16 +73,10 @@ configMapGenerator:
     files:
       - seed-incident.sh=../../scripts/seed-incident.sh
       - debian-xz.Dockerfile=../incidents/debian-xz.Dockerfile
-      - extract_sbom.py=../../scripts/extract_sbom.py
 
 # Container image is rewritten per overlay (houba:dev loaded into kind for the
 # demos; a pinned ghcr.io tag in prod).
 images:
   - name: houba
     newName: houba
-    newTag: dev
-  # The publish-sbom Job runs the glue image (houba + syft); same :dev default as houba so
-  # both `make local` and `make demo` (Argo) pick up the kind-loaded houba-glue:dev.
-  - name: houba-glue
-    newName: houba-glue
     newTag: dev

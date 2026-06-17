@@ -23,7 +23,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: publish-sbom
-          image: houba-glue # rewritten by the kustomize images transformer; has regctl + python3 + syft
+          image: houba # rewritten by the kustomize images transformer; has regctl + python3
           command: ["bash", "/scripts/publish-sbom.sh"]
           env:
             - name: HOME # regctl persists its registry config under $HOME/.regctl
