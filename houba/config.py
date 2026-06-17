@@ -14,6 +14,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from houba.domain.deletion_mode import DeletionMode
 from houba.domain.mirror_policy import Archive
+from houba.domain.sbom import FORMAT_MEDIA_TYPES
 from houba.domain.scan.refs import registry_host
 from houba.errors import ConfigError
 
@@ -181,6 +182,12 @@ class Settings(BaseSettings):
     build_platform: str = Field(
         default="linux/amd64", description="Platform for the rebuild path (single-platform)."
     )
+    sbom_formats: list[str] = Field(
+        default_factory=lambda: ["spdx-json"],
+        description="SBOM formats syft emits on every placed image (copy and rebuild), "
+        "as a JSON list. Allowed: spdx-json, cyclonedx-json. Non-empty — the knob "
+        "chooses which formats, never whether (always-on coverage).",
+    )
     max_concurrency: int = Field(
         default=4, ge=1, description="Max parallel tag operations per run (`1` = sequential)."
     )
@@ -215,6 +222,17 @@ class Settings(BaseSettings):
         # HOUBA_ATTEST_* combo surfaces as a ValidationError at Settings() time
         # (mapped to exit 3 in cli/main.py).
         _ = self.attest
+        return self
+
+    @model_validator(mode="after")
+    def _validate_sbom_formats(self) -> Settings:
+        if not self.sbom_formats:
+            raise ValueError("HOUBA_SBOM_FORMATS must list at least one format")
+        unknown = sorted(set(self.sbom_formats) - set(FORMAT_MEDIA_TYPES))
+        if unknown:
+            raise ValueError(
+                f"unknown SBOM format(s) {unknown}; allowed {sorted(FORMAT_MEDIA_TYPES)}"
+            )
         return self
 
     # houba purge (the reference reaper) — unused by reconcile.
