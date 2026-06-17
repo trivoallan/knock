@@ -127,13 +127,15 @@ Two of the former *Now* items shipped:
   reports `with_sbom` / `without_sbom`. The coverage ladder is now four rungs:
   `uncovered < stamped < signed < has-SBOM`. *(ADR 0029; closed #143)*
 
-## Now — close the has-SBOM gate
+## Now — 0.8: close the has-SBOM gate
 
 > Theme: the mandate is enforceable and trustworthy, blast-radius reaches package level, and both
-> the adoption surface (docs site) and the observational has-SBOM audit have shipped (see
-> *Delivered*). One coverage lever remains.
+> the adoption surface (docs site) and the observational has-SBOM audit have shipped in 0.7.0 (see
+> *Delivered*). **0.8 commits to one coverage lever** — and nothing else; the Deferred bets stay
+> deferred until a concrete signal lands.
 
-- **`audit --fail-on-no-sbom` gate.** The observational `--sbom` tier already reports SBOM presence;
+- **`audit --fail-on-no-sbom` gate** — *the* 0.8 deliverable. The observational `--sbom` tier already
+  reports SBOM presence;
   the remaining step is the CI gate that *fails* the build when a stamped image lacks an SBOM —
   completing the enforcement ladder `--fail-on-uncovered` → `--fail-on-unsigned` → `--fail-on-no-sbom`.
   *(ADR 0029, P0.5)*
