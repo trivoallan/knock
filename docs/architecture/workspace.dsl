@@ -51,6 +51,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     domCoverage = component "coverage" "Pure stamp-presence predicate: is the image houba-stamped?" "Pure Python" "Domain"
                     domAttestation = component "attestation predicate" "Builds the in-toto transform Statement (predicate type /v1)." "Pure Python" "Domain"
                     domScan = component "scan ingestion" "Detects the scan-report format, parses it (e.g. SARIF), and summarizes it into stamp annotations." "Pure Python" "Domain"
+                    domSbom = component "SBOM facts" "SBOM format media-types and referrer annotation builder (domain/sbom.py)." "Pure Python" "Domain"
                 }
                 group "Ports" {
                     portRegistry = component "RegistryPort" "OCI registry ops: list, inspect, copy, annotate, delete, login, referrer list/put/delete; list_repositories (catalog walk for purge)." "typing.Protocol" "Port"
@@ -59,14 +60,16 @@ workspace "houba" "Single front door / stamper for external container images." {
                     portClock = component "ClockPort" "Injectable now()." "typing.Protocol" "Port"
                     portUsageOracle = component "UsageOraclePort" "Was this image digest seen in prod since a given timestamp? (stateless, point-in-time query)." "typing.Protocol" "Port"
                     portAttestor = component "AttestorPort" "Sign an in-toto Statement (DSSE) + attach it as an OCI referrer." "typing.Protocol" "Port"
+                    portSbomGenerator = component "SbomGeneratorPort" "Generate package-level SBOM(s) for a placed image by digest; returns one document per format." "typing.Protocol" "Port"
                 }
                 group "Adapters" {
                     adRegctl = component "RegctlAdapter" "Drives the regctl CLI via subprocess." "regctl" "Adapter"
-                    adBuildkit = component "BuildkitAdapter" "Drives buildctl against buildkitd via subprocess." "buildctl" "Adapter"
+                    adBuildkit = component "BuildkitAdapter" "Drives buildctl against buildkitd via subprocess (provenance attestation; no SBOM — superseded by SyftAdapter)." "buildctl" "Adapter"
                     adReporter = component "StructlogReporter" "Writes the event journal to stderr." "structlog" "Adapter"
                     adClock = component "SystemClock" "OS wall clock." "stdlib" "Adapter"
                     adUsageOracle = component "CommandUsageAdapter" "Shells out to HOUBA_USAGE_ORACLE_CMD; passes digest + idle window via stdin (JSON); expects {last_seen} on stdout." "subprocess" "Adapter"
                     adCosign = component "CosignAdapter" "Drives the cosign CLI via subprocess (keyless | kms | key)." "cosign" "Adapter"
+                    adSyft = component "SyftAdapter" "Drives the syft CLI via subprocess; config-file auth/TLS; lazy binary resolution." "syft" "Adapter"
                 }
                 config = component "config" "Reads HOUBA_* settings + roster resolvers — the only os.environ reader." "Pydantic Settings"
 
@@ -182,10 +185,16 @@ workspace "houba" "Single front door / stamper for external container images." {
 
         ucReconcile -> domAttestation "Builds the transform Statement (rebuild path)" "Python"
         ucReconcile -> portAttestor "Signs the transform predicate (rebuild path)" "Protocol"
+        ucReconcile -> domSbom "Builds SBOM referrer annotations (both paths)" "Python"
         cliDi -> adCosign "Wires" "DI"
         adCosign -> portAttestor "Implements" "Protocol"
         adCosign -> signingService "Signs attestations (DSSE)" "cosign"
         adCosign -> transparencyLog "Records the signature (optional)" "cosign / rekor"
+
+        cliDi -> adSyft "Wires" "DI"
+        adSyft -> portSbomGenerator "Implements" "Protocol"
+        ucReconcile -> portSbomGenerator "Generates SBOM(s) after placing each image (both paths)" "Protocol"
+        adSyft -> destRegistries "Scans the placed image by digest" "syft"
 
         # Coarse hexagon relationships — rendered only in the synthetic "Hexagon" view.
         platformEng -> layCli "Runs / schedules reconcile" "CLI"
