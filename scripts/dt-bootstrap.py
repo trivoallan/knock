@@ -72,11 +72,19 @@ def automation_key(jwt):
     auto = next((t for t in teams if t.get("name") == "Automation"), None)
     if auto is None:
         raise SystemExit("no Automation team in DT")
-    for k in auto.get("apiKeys") or []:
-        print("» reusing the Automation team's API key", flush=True)
-        return k["key"]
-    print("» generating an Automation API key ...", flush=True)
-    created = json.load(_req("PUT", f"/api/v1/team/{auto['uuid']}/key", jwt=jwt))
+    uuid = auto["uuid"]
+    # Ensure the team can upload + auto-create projects (the default set varies by DT version);
+    # granting an already-held permission is a harmless no-op.
+    for perm in ("BOM_UPLOAD", "PROJECT_CREATION", "VIEW_PORTFOLIO"):
+        try:
+            _req("POST", f"/api/v1/permission/{perm}/team/{uuid}", jwt=jwt)
+            print(f"» granted {perm} to Automation", flush=True)
+        except urllib.error.HTTPError as e:
+            print(f"» grant {perm} returned {e.code} (already held?)", flush=True)
+    # Generate a FRESH key — recent DT masks existing keys in GET responses, so a reused key
+    # 401s on upload. The PUT returns the full, usable key once.
+    print("» generating a fresh Automation API key ...", flush=True)
+    created = json.load(_req("PUT", f"/api/v1/team/{uuid}/key", jwt=jwt))
     return created["key"]
 
 
