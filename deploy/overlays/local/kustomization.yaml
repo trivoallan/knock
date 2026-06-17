@@ -25,7 +25,7 @@ configMapGenerator:
     behavior: merge
     literals:
       - POLICY_DIR=/policies/current/docs/examples/reference
-      - BLAST_REPOS=demo/busybox demo/debian
+      - BLAST_REPOS=demo/busybox demo/debian demo/debian-xz bypassed/debian-xz
 
 patches:
   - path: patch-suspend.yaml

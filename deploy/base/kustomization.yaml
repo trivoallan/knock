@@ -42,7 +42,7 @@ configMapGenerator:
       - POLICY_REPO_REF=main
       - POLICY_DIR=/policies/current/docs/examples/reference
       # Repos the blast-radius consumer walks (the reference policy: copy + rebuild).
-      - BLAST_REPOS=demo/busybox demo/debian
+      - BLAST_REPOS=demo/busybox demo/debian demo/debian-xz bypassed/debian-xz
       # Number of shards for the Indexed reconcile Job (= completions). Both
       # this value and jobTemplate.spec.completions must be bumped together per
       # overlay; base is 1 (identical to the former non-indexed behaviour).

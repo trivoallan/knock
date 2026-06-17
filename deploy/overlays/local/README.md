@@ -23,6 +23,10 @@ hence the data PVC, so the mirror isn't wiped). After it finishes (a few minutes
 `make publish-sbom` to re-analyze and the CVEs show on the projects. (NVD is keyed + slow, so the
 demo uses OSV; production can add an NVD API key.)
 
+The demo reproduces a real incident: `demo/debian-xz` ships the backdoored `xz-utils 5.6.1-1`
+(CVE-2024-3094) and lights up red in DT; `bypassed/debian-xz` (never through houba) is the coverage
+blind spot. See `docs/examples/reference/debian-xz/`.
+
 > **Heads-up — DT is RAM-hungry.** Dependency-Track hard-requires a **4 GB heap** (it refuses
 > to boot below that), so the apiserver pod requests 4 Gi / limits 6 Gi. Give your kind/Docker
 > VM ≥ 8 GB or the apiserver pod stays `Pending`/`OOMKilled` and `make dt-ui` finds no service.

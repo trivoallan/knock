@@ -102,6 +102,9 @@ in a dependency, not the base). Depth validated empirically (Log4Shell nested fa
 OS packages, runtime/bare-binary boundaries). Always-on on both paths; `HOUBA_SBOM_FORMATS` chooses
 format(s), not whether. *(ADRs 0029 + 0034)*
 
+The demo now *reproduces* a real incident (XZ / CVE-2024-3094) end to end — the package-level query
+lights up on a recognizable CVE, with a bypass image as the durable coverage blind spot.
+
 ## Now — finish the SBOM tiers + adoption
 
 > Theme: the mandate is enforceable and trustworthy (see *Delivered*), and SBOM generation just

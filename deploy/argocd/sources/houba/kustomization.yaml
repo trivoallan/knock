@@ -36,7 +36,7 @@ configMapGenerator:
       - POLICY_REPO_URL=https://github.com/trivoallan/houba
       - POLICY_REPO_REF=main
       - POLICY_DIR=/policies/current/docs/examples/reference
-      - BLAST_REPOS=demo/busybox demo/debian
+      - BLAST_REPOS=demo/busybox demo/debian demo/debian-xz bypassed/debian-xz
       # Org-specific transform data lives here (policies only NAME these):
       #   HOUBA_TRANSFORM_CA_CERTS={"corp":{"path":"/etc/houba/certs/corp-root.pem"}}
       #   HOUBA_TRANSFORM_PACKAGE_MIRRORS={"corp":{"apt":"https://mirror.corp/debian"}}
