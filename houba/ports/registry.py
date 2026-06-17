@@ -29,10 +29,12 @@ class RegistryPort(Protocol):
     def list_repositories(self, registry: str) -> list[str]: ...
     def list_tags(self, repo_ref: str) -> list[str]: ...
     def inspect(self, image_ref: str) -> ImageInfo: ...
-    def get_annotations(self, image_ref: str) -> dict[str, str]:
-        """Return the OCI manifest/index annotations for a ref (lightweight; one read).
+    def get_annotations(self, image_ref: str) -> tuple[str, dict[str, str]]:
+        """Return (manifest digest, OCI annotations) for a ref — two reads (digest + manifest),
+        no config blob.
 
-        Cheaper than `inspect` (no digest/config fetch) — for whole-registry coverage sweeps.
+        Cheaper than `inspect` (skips the image-config fetch) — for whole-registry coverage
+        sweeps that also need the digest as a stable, replication-surviving join key.
         """
         ...
 

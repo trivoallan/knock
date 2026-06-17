@@ -173,3 +173,80 @@ def test_read_error_dominates_unsigned_gate() -> None:
     )
     # AdapterError -> 2 wins over the unsigned gate's 1
     assert audit_exit_code(report, fail_on_uncovered=False, fail_on_unsigned=True) == 2
+
+
+def test_outcomes_carry_the_digest() -> None:
+    reg = _reg(digests={f"{_REPO}:7.1": "sha256:d71", f"{_REPO}:7.2": "sha256:d72"})
+    report = audit_coverage(
+        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+    )
+    by = {o.image_ref: o for o in report.outcomes}
+    assert by[f"{_REPO}:7.1"].digest == "sha256:d71"  # covered carries it
+    assert by[f"{_REPO}:7.2"].digest == "sha256:d72"  # uncovered carries it too
+
+
+def test_read_error_leaves_digest_none() -> None:
+    reg = _reg(fail_get={f"{_REPO}:7.1"})
+    report = audit_coverage(
+        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+    )
+    by = {o.image_ref: o for o in report.outcomes}
+    assert by[f"{_REPO}:7.1"].error is not None
+    assert by[f"{_REPO}:7.1"].digest is None
+
+
+def _sbom_ref(subject: str, fmt: str = "application/spdx+json") -> Referrer:
+    return Referrer(digest="sha256:sbom", artifact_type=fmt, annotations={}, subject_tag=subject)
+
+
+def test_check_sbom_off_leaves_sbom_none() -> None:
+    report = audit_coverage(
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+    )
+    assert all(o.sbom is None for o in report.outcomes)
+    assert report.counts.with_sbom == 0
+    assert report.counts.without_sbom == 0
+
+
+def test_check_sbom_probes_only_covered() -> None:
+    reg = _reg(referrers={f"{_REPO}:7.1": [_sbom_ref(f"{_REPO}:7.1")]})
+    report = audit_coverage(
+        registry=reg,
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.houba",
+        check_sbom=True,
+    )
+    by = {o.image_ref: o for o in report.outcomes}
+    assert by[f"{_REPO}:7.1"].sbom is True
+    assert by[f"{_REPO}:7.2"].sbom is None  # uncovered -> not probed
+    assert report.counts.with_sbom == 1
+    assert report.counts.without_sbom == 0
+
+
+def test_check_sbom_covered_without_referrer_is_without_sbom() -> None:
+    report = audit_coverage(
+        registry=_reg(),
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.houba",
+        check_sbom=True,
+    )
+    by = {o.image_ref: o for o in report.outcomes}
+    assert by[f"{_REPO}:7.1"].sbom is False
+    assert report.counts.with_sbom == 0
+    assert report.counts.without_sbom == 1
+
+
+def test_check_sbom_matches_cyclonedx_too() -> None:
+    cdx_ref = _sbom_ref(f"{_REPO}:7.1", "application/vnd.cyclonedx+json")
+    reg = _reg(referrers={f"{_REPO}:7.1": [cdx_ref]})
+    report = audit_coverage(
+        registry=reg,
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.houba",
+        check_sbom=True,
+    )
+    by = {o.image_ref: o for o in report.outcomes}
+    assert by[f"{_REPO}:7.1"].sbom is True

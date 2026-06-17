@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from houba.config import RegistryConfig, resolve_registry
 from houba.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE
 from houba.domain.coverage import is_stamped
+from houba.domain.sbom import FORMAT_MEDIA_TYPES
 from houba.errors import HoubaError, exit_code_for
 from houba.ports.registry import RegistryPort
 from houba.ports.reporter import ErrorInfo
@@ -20,8 +21,10 @@ from houba.use_cases.registry_session import ensure_registry_session
 
 class CoverageOutcome(BaseModel):
     image_ref: str
+    digest: str | None = None  # manifest digest — the portal's stable join key; None on read error
     covered: bool = False
     signed: bool | None = None  # None = not probed; set only for covered images when check_signed
+    sbom: bool | None = None  # None = not probed; set only for covered images when check_sbom
     policy: str | None = None  # {prefix}.policy when covered & present (audit context)
     error: ErrorInfo | None = None  # set => a hard failure reading this image
 
@@ -32,6 +35,8 @@ class CoverageCounts(BaseModel):
     uncovered: int = 0
     signed: int = 0
     unsigned: int = 0
+    with_sbom: int = 0
+    without_sbom: int = 0
     errored: int = 0
 
 
@@ -65,16 +70,31 @@ def _err(exc: BaseException) -> ErrorInfo:
 
 
 def _classify(
-    image_ref: str, *, registry: RegistryPort, label_prefix: str, check_signed: bool
+    image_ref: str,
+    *,
+    registry: RegistryPort,
+    label_prefix: str,
+    check_signed: bool,
+    check_sbom: bool,
 ) -> CoverageOutcome:
     try:
-        annotations = registry.get_annotations(image_ref)
+        digest, annotations = registry.get_annotations(image_ref)
         covered = is_stamped(annotations, prefix=label_prefix)
         policy = annotations.get(f"{label_prefix}.policy") if (covered and label_prefix) else None
         signed: bool | None = None
         if check_signed and covered:
             signed = bool(registry.list_referrers(image_ref, COSIGN_ATTESTATION_ARTIFACT_TYPE))
-        return CoverageOutcome(image_ref=image_ref, covered=covered, signed=signed, policy=policy)
+        sbom: bool | None = None
+        if check_sbom and covered:
+            sbom = any(registry.list_referrers(image_ref, mt) for mt in FORMAT_MEDIA_TYPES.values())
+        return CoverageOutcome(
+            image_ref=image_ref,
+            digest=digest,
+            covered=covered,
+            signed=signed,
+            sbom=sbom,
+            policy=policy,
+        )
     except HoubaError as exc:
         return CoverageOutcome(image_ref=image_ref, error=_err(exc))
 
@@ -86,6 +106,7 @@ def audit_coverage(
     only_registry: str | None,
     label_prefix: str,
     check_signed: bool = False,
+    check_sbom: bool = False,
 ) -> CoverageReport:
     if only_registry is not None:
         name, cfg = resolve_registry(only_registry, roster)
@@ -106,6 +127,7 @@ def audit_coverage(
                         registry=registry,
                         label_prefix=label_prefix,
                         check_signed=check_signed,
+                        check_sbom=check_sbom,
                     )
                 )
 
@@ -115,6 +137,8 @@ def audit_coverage(
         uncovered=sum(1 for o in outcomes if o.error is None and not o.covered),
         signed=sum(1 for o in outcomes if o.signed is True),
         unsigned=sum(1 for o in outcomes if o.signed is False),
+        with_sbom=sum(1 for o in outcomes if o.sbom is True),
+        without_sbom=sum(1 for o in outcomes if o.sbom is False),
         errored=sum(1 for o in outcomes if o.error is not None),
     )
     return CoverageReport(

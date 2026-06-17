@@ -101,6 +101,7 @@ $ houba audit [OPTIONS]
 * `--fail-on-uncovered`: Exit non-zero if any image lacks the stamp (CI gate).
 * `--signed`: Also probe each stamped image for a signed attestation referrer.
 * `--fail-on-unsigned`: Exit non-zero if any stamped image is unsigned (implies --signed).
+* `--sbom`: Also probe each stamped image for a package SBOM referrer.
 * `--help`: Show this message and exit.
 
 ## `houba gc`

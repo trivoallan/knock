@@ -80,10 +80,12 @@ class RegctlAdapter:
             digest=digest, created=created, annotations=annotations, config_labels=config_labels
         )
 
-    def get_annotations(self, image_ref: str) -> dict[str, str]:
+    def get_annotations(self, image_ref: str) -> tuple[str, dict[str, str]]:
+        digest = self._run(["image", "digest", image_ref]).strip()
         manifest = self._json(["manifest", "get", image_ref, "--format", "{{json .}}"])
         raw = manifest.get("annotations")
-        return {str(k): str(v) for k, v in raw.items()} if isinstance(raw, dict) else {}
+        annotations = {str(k): str(v) for k, v in raw.items()} if isinstance(raw, dict) else {}
+        return digest, annotations
 
     def copy(self, src_ref: str, dst_ref: str) -> None:
         self._run(["image", "copy", src_ref, dst_ref])

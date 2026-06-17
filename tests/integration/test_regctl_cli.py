@@ -348,19 +348,20 @@ def test_put_referrer_with_blob_failure_raises_regctl_error(
         )
 
 
-def test_get_annotations_returns_manifest_annotations(
+def test_get_annotations_returns_digest_and_annotations(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "mirror-stamped")
-    ann = RegctlAdapter().get_annotations("harbor.example/lib/redis:7.2")
+    digest, ann = RegctlAdapter().get_annotations("harbor.example/lib/redis:7.2")
     assert ann == {"org.opencontainers.image.base.digest": "sha256:src999"}
+    assert digest == "sha256:abc123"
 
 
 def test_get_annotations_empty_when_none(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "default")
-    assert RegctlAdapter().get_annotations("harbor.example/lib/redis:7.2") == {}
+    assert RegctlAdapter().get_annotations("harbor.example/lib/redis:7.2") == ("sha256:abc123", {})
 
 
 def test_get_annotations_failure_raises_regctl_error(
