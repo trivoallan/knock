@@ -1,0 +1,13 @@
+# buildkitd daemon config. The demo's in-cluster Zot serves plain HTTP, so buildkitd must be
+# told to PULL base images from it over HTTP — needed when a policy sources an image FROM the
+# Zot (the XZ incident fixture: `FROM registry.houba.svc.cluster.local:5000/upstream/debian-xz`).
+# The push side is handled per-build by `registry.insecure=true` on the buildctl output; this
+# covers the pull side, which has no per-build knob. A real cluster sources over TLS — drop this.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: buildkitd-config
+data:
+  buildkitd.toml: |
+    [registry."registry.houba.svc.cluster.local:5000"]
+      http = true

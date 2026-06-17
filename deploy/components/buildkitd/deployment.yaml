@@ -34,6 +34,10 @@ spec:
             # Prometheus metrics (OpenTelemetry) for KEDA autoscaling (keda-buildkitd component).
             - --debugaddr
             - 0.0.0.0:6060
+            # Registry config: marks the plain-HTTP demo Zot so base-image PULLs (FROM the Zot)
+            # use HTTP. Push-insecure is per-build (registry.insecure on the output).
+            - --config
+            - /etc/buildkit/buildkitd.toml
           ports:
             - name: grpc
               containerPort: 1234
@@ -65,6 +69,12 @@ spec:
           volumeMounts:
             - name: buildkitd
               mountPath: /home/user/.local/share/buildkit
+            - name: config
+              mountPath: /etc/buildkit
+              readOnly: true
       volumes:
         - name: buildkitd
           emptyDir: {}
+        - name: config
+          configMap:
+            name: buildkitd-config
