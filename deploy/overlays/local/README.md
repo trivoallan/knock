@@ -6,8 +6,9 @@ path** (busybox) and the **rebuild path** (debian) against the reference policy 
 in-cluster **[Zot](https://zotregistry.dev)** as the mirror destination.
 
 ```bash
-make local   # build image+glue → up stack → reconcile → bootstrap DT → publish SBOMs → blast-radius report
-make dt-ui   # browse Dependency-Track (the package-level blast-radius consumer)
+make local     # build image+glue → up stack → reconcile → bootstrap DT → publish SBOMs → blast-radius report
+make dt-vulns  # trigger DT's keyless OSV (Debian) vuln mirror, then re-run `make publish-sbom`
+make dt-ui     # browse Dependency-Track (the package-level blast-radius consumer)
 ```
 
 No Harbor, no ExternalSecret, no CA/mirror config — everything needed to run houba
@@ -16,7 +17,11 @@ end-to-end fits in this single overlay.
 houba's lineage stamp answers *which images derive from base X* (`make blast-radius`); the SPDX SBOM,
 converted to CycloneDX and uploaded to Dependency-Track, answers the **package**-level question
 *which images ship the vulnerable package X*. Component inventory works offline; CVE/severity
-correlation needs DT to have downloaded its NVD feeds (online, slow on first boot).
+correlation needs a mirrored vuln source. `dt-bootstrap` enables DT's **keyless OSV** Debian
+ecosystem; `make dt-vulns` restarts the apiserver to run the mirror (DT only mirrors on restart —
+hence the data PVC, so the mirror isn't wiped). After it finishes (a few minutes, online), re-run
+`make publish-sbom` to re-analyze and the CVEs show on the projects. (NVD is keyed + slow, so the
+demo uses OSV; production can add an NVD API key.)
 
 > **Heads-up — DT is RAM-hungry.** Dependency-Track hard-requires a **4 GB heap** (it refuses
 > to boot below that), so the apiserver pod requests 4 Gi / limits 6 Gi. Give your kind/Docker

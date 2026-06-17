@@ -35,7 +35,7 @@ OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+
 
 .PHONY: help reference docs-serve cluster image glue-image up-local local local-run \
         argocd demo demo-run openbao-seed \
-        blast-radius dt-bootstrap publish-sbom dt-ui registry-ui docker-auth logs down
+        blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui docker-auth logs down
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -144,6 +144,13 @@ publish-sbom: ## Convert each rebuilt image's SBOM to CycloneDX and upload it to
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-publish-sbom --timeout=300s
 	$(KUBECTL) -n $(NS) logs job/houba-publish-sbom
+
+dt-vulns: ## Trigger DT's OSV (Debian) vuln mirror — restart the apiserver (data persists on the PVC)
+	@echo ">> dt-bootstrap enables the OSV Debian ecosystem; the mirror only runs on restart. Restarting ..."
+	$(KUBECTL) -n $(NS) rollout restart deploy/dependency-track-apiserver
+	$(KUBECTL) -n $(NS) rollout status deploy/dependency-track-apiserver --timeout=300s
+	@echo ">> OSV Debian mirror now running in the background (a few minutes). Then re-run 'make publish-sbom'"
+	@echo ">>       to re-analyze the projects; CVEs then show in 'make dt-ui'."
 
 dt-ui: ## Open the Dependency-Track UI (frontend on :8080, apiserver on :8081 — both needed)
 	@echo ">> DT UI at http://localhost:8080  (login admin / $${DT_ADMIN_PASSWORD:-houba-demo-admin} — set by dt-bootstrap). Ctrl-C to stop."

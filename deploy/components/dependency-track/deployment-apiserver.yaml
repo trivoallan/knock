@@ -7,6 +7,8 @@ metadata:
     app.kubernetes.io/component: apiserver
 spec:
   replicas: 1
+  strategy:
+    type: Recreate   # the data PVC is RWO — never run two pods both mounting /data
   selector:
     matchLabels:
       app.kubernetes.io/name: dependency-track
@@ -55,4 +57,8 @@ spec:
               mountPath: /data
       volumes:
         - name: data
-          emptyDir: {}   # ponytail: ephemeral demo store (H2 + Lucene index live here)
+          # Persisted (not emptyDir) so the OSV/NVD vuln mirror — which only refreshes on
+          # restart — survives the `make dt-vulns` restart that triggers it. H2 + Lucene + the
+          # mirror live here. ponytail: kind's local-path SC; production sizes a real volume.
+          persistentVolumeClaim:
+            claimName: dependency-track-data

@@ -30,11 +30,14 @@ NEW_PW = os.environ.get("DT_ADMIN_PASSWORD", "houba-demo-admin")
 SA = "/var/run/secrets/kubernetes.io/serviceaccount"
 
 
-def _req(method, path, *, jwt=None, form=None):
+def _req(method, path, *, jwt=None, form=None, json_body=None):
     data, headers = None, {}
     if form is not None:
         data = urllib.parse.urlencode(form).encode()
         headers["Content-Type"] = "application/x-www-form-urlencoded"
+    elif json_body is not None:
+        data = json.dumps(json_body).encode()
+        headers["Content-Type"] = "application/json"
     if jwt:
         headers["Authorization"] = f"Bearer {jwt}"
     req = urllib.request.Request(DT + path, data=data, method=method, headers=headers)
@@ -142,6 +145,39 @@ def write_secret(key):
     print("» dt-api-key Secret written", flush=True)
 
 
+def enable_osv(jwt):
+    # OSV is keyless and covers the Debian ecosystem (the rebuilt image's deb packages). Enabling
+    # an ecosystem is what turns OSV mirroring on; the mirror itself runs on the next DT restart
+    # (`make dt-vulns`). The property name is discovered, not hard-coded, to survive DT renames.
+    props = json.load(_req("GET", "/api/v1/configProperty", jwt=jwt))
+    osv = next(
+        (
+            p
+            for p in props
+            if "osv" in p.get("propertyName", "").lower()
+            and "ecosystem" in p.get("propertyName", "").lower()
+        ),
+        None,
+    )
+    if osv is None:
+        print(
+            "» OSV ecosystems config property not found — skipping (enable it in the UI)",
+            flush=True,
+        )
+        return
+    body = [
+        {
+            "groupName": osv["groupName"],
+            "propertyName": osv["propertyName"],
+            "propertyValue": "Debian",
+        }
+    ]
+    _req("POST", "/api/v1/configProperty/aggregate", jwt=jwt, json_body=body)
+    print(f"» enabled OSV ecosystem 'Debian' ({osv['propertyName']})", flush=True)
+
+
 if __name__ == "__main__":
     wait_api()
-    write_secret(automation_key(jwt_token()))
+    jwt = jwt_token()
+    enable_osv(jwt)
+    write_secret(automation_key(jwt))
