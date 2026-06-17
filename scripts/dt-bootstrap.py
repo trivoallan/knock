@@ -146,49 +146,32 @@ def write_secret(key):
 
 
 def enable_osv(jwt):
-    # OSV is keyless and covers the Debian ecosystem (the rebuilt image's deb packages). Enabling
-    # an ecosystem turns OSV mirroring on; the mirror itself runs on the next DT restart
-    # (`make dt-vulns`). The property name is discovered, not hard-coded, to survive DT renames.
+    # OSV is keyless; DT stores the enabled ecosystems as a ';'-separated list in a single
+    # `google.osv.enabled` property (e.g. 'Debian;Alpine' — Debian is on by default). Ensure
+    # 'Debian' is present (idempotent). The mirror itself only runs on the next DT restart
+    # (`make dt-vulns`); enabling the ecosystem alone does nothing without that.
     props = json.load(_req("GET", "/api/v1/configProperty", jwt=jwt))
-    osv = next(
-        (
-            p
-            for p in props
-            if "ecosystem" in p.get("propertyName", "").lower()
-            and (
-                "osv" in p.get("propertyName", "").lower()
-                or "osv" in p.get("groupName", "").lower()
-            )
-        ),
-        None,
-    )
+    osv = next((p for p in props if p.get("propertyName") == "google.osv.enabled"), None)
     if osv is None:
-        # Name not where we expected — dump the OSV/vuln-source candidates so we can wire the
-        # exact one. (Diagnostic; harmless — just enable OSV Debian in the UI meanwhile.)
-        cands = [
-            p
-            for p in props
-            if "osv" in (p.get("groupName", "") + p.get("propertyName", "")).lower()
-            or "vuln" in p.get("groupName", "").lower()
-        ]
-        print(
-            f"» OSV ecosystems property not found among {len(props)} props. Candidates:", flush=True
-        )
-        for p in cands:
-            print(
-                f"   - {p.get('groupName')} / {p.get('propertyName')} = {p.get('propertyValue')!r}",
-                flush=True,
-            )
+        print("» google.osv.enabled not found — enable OSV Debian in the UI", flush=True)
         return
+    ecosystems = [e for e in (osv.get("propertyValue") or "").split(";") if e]
+    if "Debian" in ecosystems:
+        print(
+            f"» OSV Debian already enabled ({';'.join(ecosystems)!r}); mirror runs on restart",
+            flush=True,
+        )
+        return
+    ecosystems.append("Debian")
     body = [
         {
             "groupName": osv["groupName"],
-            "propertyName": osv["propertyName"],
-            "propertyValue": "Debian",
+            "propertyName": "google.osv.enabled",
+            "propertyValue": ";".join(ecosystems),
         }
     ]
     _req("POST", "/api/v1/configProperty/aggregate", jwt=jwt, json_body=body)
-    print(f"» enabled OSV ecosystem 'Debian' ({osv['propertyName']})", flush=True)
+    print(f"» enabled OSV ecosystem 'Debian' ({';'.join(ecosystems)!r})", flush=True)
 
 
 if __name__ == "__main__":
