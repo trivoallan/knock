@@ -112,6 +112,47 @@ def _run(policies, **kw):  # type: ignore[no-untyped-def]
     return reconcile_policies(policies, **defaults)
 
 
+def test_source_registry_in_roster_is_configured_before_listing() -> None:
+    # Sourcing from an in-roster registry must configure its TLS (regctl set --tls disabled)
+    # BEFORE the plan-phase list_tags — else a plain-HTTP / custom-CA source registry fails
+    # the source `tag ls`. Source host differs from the destination host, so the config can
+    # ONLY come from the source path (not the destination's apply-phase session).
+    policy = parse_mirror_policy("""
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata: { name: src-insecure }
+spec:
+  artifactType: image
+  source: { registry: src.local, repository: library/busybox }
+  imports:
+    - name: stable
+      tags: { includeRegex: "^1\\\\.36\\\\.0$" }
+      destinations: [{ registry: dst, project: demo, repository: busybox }]
+""")
+    registry = FakeRegistryPort(
+        tags={"src.local/library/busybox": ["1.36.0"], "dst.local/demo/busybox": []},
+        infos={"src.local/library/busybox:1.36.0": _info("sha256:s")},
+    )
+    reconcile_policies(
+        [policy],
+        registry=registry,
+        builder=FakeImageBuilder(),
+        roster={
+            "src": RegistryConfig(host="src.local", tls_verify=False),
+            "dst": RegistryConfig(host="dst.local"),
+        },
+        ca_certs={},
+        package_mirrors={},
+        build_platform="linux/amd64",
+        now=NOW,
+        label_prefix="io.houba",
+        dry_run_tags=False,
+        dry_run_deletions=False,
+        reporter=FakeReporter(),
+    )
+    assert ("src.local", False, None) in registry.configured
+
+
 def test_reconcile_copies_new_tags_and_stamps() -> None:
     fake = FakeRegistryPort(
         tags={
