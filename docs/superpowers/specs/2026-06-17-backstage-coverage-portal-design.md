@@ -66,8 +66,9 @@ namespaces the SBOM + signature are **absent**.
 **The design absorbs it without waiting on a Harbor fix** (#23210 has none): the digest is identical
 after a byte-for-byte copy, and referrers are addressable by digest wherever they live. So **bar 2 is
 computed at the attachment site (the entry namespace) by digest**, not at the consuming team namespace;
-Dependency-Track is digest-keyed and namespace-agnostic for the same reason (§8). The "validation test"
-below now only confirms the org's exact Harbor version/config and that the digest-follow resolves.
+the same digest-addressability would make a DT lookup namespace-agnostic too, *if* the org keys DT by
+digest — an open question, see §8. The "validation test" below now only confirms the org's exact Harbor
+version/config and that the digest-follow resolves.
 
 **The gap is Harbor-specific, not inherent to OCI registries.** Zot's `sync` (stable 2.1.16) *does*
 propagate OCI 1.1 referrers — signatures, SBOMs, attestations (`onlySigned` / `syncLegacyCosignTags`
@@ -226,17 +227,35 @@ walk of Decision 1) and joins. Consequences:
   `digest` to `CoverageOutcome` (the join key; the regctl adapter already resolves it); (2) an
   **`--sbom` referrer tier** for bar 2. Both small.
 
-### 8. Dependency-Track join — by digest, on demand, upload out of houba's scope
+### 8. Dependency-Track is a deep-link, not an embedded card — and houba does not decide DT's keying
 
-- **Join key = the digest.** DT project model: `name = <repo>, version = <digest>` — immutable. The
-  resolver (Decision 1) already yields the external base **digest**; the card looks up DT by
-  `(repo, digest)` directly — no tag indirection.
-- **`SBOM-present` ≠ `SBOM-in-DT`.** Do **not** add an "in-DT" tier to the FactRetriever (a DT call
-  per image at collection). The headline stays registry/audit-only; the DT round-trip is **on-demand
-  at card-click** — vuln posture, or *"no DT project for this digest"* (the ingestion gap, reactive).
-- **Loading the SBOM into DT is not houba's job** — no HTTP layer, never calls external services (same
-  stance as `attach`). A CI step or DT registry-pull does it. **Format gap closed:** #140 emits
-  CycloneDX natively (`HOUBA_SBOM_FORMATS`), DT's first-class format — no conversion needed.
+The vuln surface splits by *plane*, not by audience: **DT computes the vuln posture; Backstage presents
+coverage.** Both planes have human users — the **owner** (proactive, per-service → the Backstage card)
+and the **incident responder** (reactive, org-wide → DT's own frontend). So:
+
+- **No embedded DT card, no findings API in Backstage.** When the owner asks "and is it vulnerable?",
+  the coverage card **deep-links by digest to DT's own frontend** (which the org already deploys —
+  `dependency-track-frontend`). DT's UI is the responder's surface; we link to it, we do not
+  re-implement it. This keeps Decision 3 intact (no per-image DT call at collection) and keeps both
+  registry **and** DT credentials off the FactRetriever path.
+- **houba does not decide DT's project keying.** By its own boundary (ADR 0032; no HTTP layer) houba
+  **never writes to DT**, so it has no standing to make `version = <digest>` true — whoever owns the
+  org's DT *ingestion* (a CI push or a DT registry-pull) picks the key. houba's only contribution is to
+  **emit the digest as a stable join key** (the §7 `digest`-on-`CoverageOutcome` ask); the resolver
+  (Decision 1) already yields the external base digest the link is built from.
+- **OPEN — the org's DT taxonomy is undecided (confirmed 2026-06-17), and DT is greenfield with no
+  ingestion owner yet.** This section therefore captures intent, it does not commit a join. Two unknowns
+  gate it, neither houba's to resolve: *who owns ingestion*, and *how DT addresses a project*. The
+  cheapest next check (≈30 min on the org instance): **does DT's frontend route a URL by `name`+`version`
+  (or by search), or only by internal project UUID (`/projects/{uuid}`)?** If the latter, the deep-link
+  needs one **read-only** `GET /api/v1/project/lookup?name=&version=` to resolve the UUID — so clic-through
+  costs "1 lookup + 1 read-only token", not zero. That answer plus the keying decision become their own
+  spec; nothing here blocks shipping the coverage portal (Decisions 1–7).
+- **Graceful degradation + still not houba's job to load.** Until ingestion exists, the deep-link
+  resolves to *"no DT project for this digest"* — honest, reactive, and it lights up the day the org
+  wires ingestion. **Loading the SBOM into DT remains out of houba's scope** (same stance as `attach`);
+  #140 already emits CycloneDX natively (`HOUBA_SBOM_FORMATS`), DT's first-class format, so the format
+  gap is closed when someone does build that ingestion.
 
 ## Edge cases of the base-chain walk (replaces the old "parsing FROM" gotcha)
 

@@ -115,7 +115,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         argocd -> houba "Syncs the install manifests from git into the cluster (App-of-Apps reference)" "GitOps"
         backstage -> houba "Consumes the coverage audit (CoverageReport JSON)" "houba audit"
         backstage -> houba "Scaffolds onboarding PRs against the MirrorPolicy repo" "git PR"
-        backstage -> dependencyTrack "Drills into per-image vuln posture" "API"
+        backstage -> dependencyTrack "Deep-links by digest to DT's frontend for vuln posture (owner clicks through; no embedded card, no findings API in Backstage)" "deep-link"
         productTeam -> backstage "Sees coverage; requests onboarding for dark images" "Web UI"
         dependencyTrack -> destRegistries "Ingests SBOM referrers" "OCI referrers API" "DataCoupling"
 

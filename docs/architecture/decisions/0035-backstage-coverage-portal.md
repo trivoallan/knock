@@ -46,8 +46,15 @@ A **developer-scoped** Backstage surface, backed by a **TechInsights FactRetriev
 - **The portal consumes `houba audit`** (supply side) and only adds the demand-side `FROM` scan — no
   registry credentials in Backstage. Bar 2 *is* `audit --signed` per namespace; #140 makes an
   `audit --sbom` referrer tier cheap.
-- **Dependency-Track joined by digest** (`name=repo, version=digest`), on demand at card-click. Loading
-  the SBOM into DT is out of houba's scope; #140 emits CycloneDX natively (format gap closed).
+- **Dependency-Track is a deep-link, not an embedded card** (split by plane: DT computes vuln posture,
+  Backstage presents coverage). When the owner asks "is it vulnerable?", the card deep-links by digest
+  to DT's own frontend; no findings API in Backstage, no DT credentials on the FactRetriever path.
+  **houba does not decide DT's keying** — by its own boundary (ADR 0032; no HTTP layer) it never writes
+  to DT, so whoever owns ingestion picks the key; houba only emits the digest as the join key. **OPEN:**
+  the org's DT taxonomy is undecided and DT is greenfield with no ingestion owner — this captures intent,
+  not a committed join. Next check: does DT's frontend route by `name`+`version` or only by project UUID
+  (a UUID needs one read-only `project/lookup`)? Loading the SBOM into DT stays out of houba's scope;
+  #140 emits CycloneDX natively (format gap closed).
 
 Adds `backstage` and `dependencyTrack` as External/Downstream software systems to the C4 model
 (`workspace.dsl`; `_export/*.mmd` regen pending — no CI drift-check today).
