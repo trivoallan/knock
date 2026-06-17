@@ -1,5 +1,69 @@
 # Changelog
 
+## [0.7.0](https://github.com/trivoallan/houba/compare/v0.6.0...v0.7.0) (2026-06-17)
+
+
+### Features
+
+* attach registry-config parity — wire HOUBA_REGISTRIES into `houba attach` ([#97](https://github.com/trivoallan/houba/issues/97)) ([c320179](https://github.com/trivoallan/houba/commit/c3201790552a85985e47daa215cbd4d001e0b737))
+* **audit:** digest on every coverage outcome + observational --sbom tier ([#143](https://github.com/trivoallan/houba/issues/143)) ([522b764](https://github.com/trivoallan/houba/commit/522b764ce5251daf886cd488657e28b1e71b2173))
+* **deploy:** default argocd-prod policy to the bundled busybox example ([014cb95](https://github.com/trivoallan/houba/commit/014cb95be45b8c69658b3c3ea2fd88c4012da62b))
+* **deploy:** default overlays/prod policy to the busybox example ([#87](https://github.com/trivoallan/houba/issues/87)) ([208bd85](https://github.com/trivoallan/houba/commit/208bd85562c7382c3d7aec18eea48025963a43b7))
+* **deploy:** Dependency-Track consumer + XZ (CVE-2024-3094) incident demo for package-level blast-radius ([#136](https://github.com/trivoallan/houba/issues/136)) ([b1b2034](https://github.com/trivoallan/houba/commit/b1b203464003db725445c0962b63e2f74b4b486c))
+* **deploy:** make argocd-prod + argocd-seed (bring up the full prod App-of-Apps on kind) ([59b69f2](https://github.com/trivoallan/houba/commit/59b69f2eb1c2466dfc8c9e81715ffb594c0933d8))
+* **deploy:** make argocd-prod a complete end-to-end mirror on kind ([76ac75b](https://github.com/trivoallan/houba/commit/76ac75be6b9618dcf5cb54db40728a1fa508949c))
+* **deploy:** weekly houba-gc CronJob in the reference deployment ([#107](https://github.com/trivoallan/houba/issues/107)) ([a06d171](https://github.com/trivoallan/houba/commit/a06d171e102f77933730b9ad487e1f8b91267978))
+* **deploy:** Zot demo registry with built-in UI; text logs in Jobs ([#92](https://github.com/trivoallan/houba/issues/92)) ([21dc7bd](https://github.com/trivoallan/houba/commit/21dc7bdf4ac1a1c5a2842142ac26fc65ac749163))
+* **domain:** stamp OCI image.title and configurable vendor ([#134](https://github.com/trivoallan/houba/issues/134)) ([1253d70](https://github.com/trivoallan/houba/commit/1253d703902ae7a208f47c5b49d5d73492f209db))
+* finding-type-aware SARIF mapper (rule evaluations ≠ vulnerabilities) ([#102](https://github.com/trivoallan/houba/issues/102)) ([3aee05b](https://github.com/trivoallan/houba/commit/3aee05be6e5d5ba9d537c6f62548904bbcfae14a))
+* houba attach --fail-on &lt;severity&gt; CI gate ([#86](https://github.com/trivoallan/houba/issues/86)) ([f0cf0bc](https://github.com/trivoallan/houba/commit/f0cf0bcd2a7389a421789ce192d676eecf9e8275))
+* multi-owner ownership (io.houba.owners) ([#100](https://github.com/trivoallan/houba/issues/100)) ([139f7b1](https://github.com/trivoallan/houba/commit/139f7b11f26fc3bff5ac717bac499970a08a50c2))
+* SBOM generation on the rebuild path (package-level blast-radius) ([#128](https://github.com/trivoallan/houba/issues/128)) ([003f0b8](https://github.com/trivoallan/houba/commit/003f0b85bded244cc3621ea0da55d779dfd6f391))
+* scan-referrer garbage collection (houba gc) ([#105](https://github.com/trivoallan/houba/issues/105)) ([b9892d6](https://github.com/trivoallan/houba/commit/b9892d626b24e867496332fe7f15dfcef0019991))
+* sign the SBOM under houba's identity (trust tier) ([#144](https://github.com/trivoallan/houba/issues/144)) ([f2fec80](https://github.com/trivoallan/houba/commit/f2fec80ff2c1aa23ec3417e677aac46abc99ee96))
+* signed-coverage audit tier (houba audit --signed) ([#98](https://github.com/trivoallan/houba/issues/98)) ([3e4336d](https://github.com/trivoallan/houba/commit/3e4336d4347704652821a2583f45fc3246c3fd07))
+* unify SBOM generation on syft — both paths, SPDX + CycloneDX ([#140](https://github.com/trivoallan/houba/issues/140)) ([eec9aa2](https://github.com/trivoallan/houba/commit/eec9aa2caa07437fc7297dd2599d6051041f188a))
+
+
+### Bug Fixes
+
+* **.claude:** point superpowers at its own marketplace so it loads in ephemeral sessions ([#94](https://github.com/trivoallan/houba/issues/94)) ([578601d](https://github.com/trivoallan/houba/commit/578601d53a95fa8abf6b7239e1582c93363e73c2))
+* **adapters:** honor tls_verify on the BuildKit push path ([#127](https://github.com/trivoallan/houba/issues/127)) ([118ec54](https://github.com/trivoallan/houba/commit/118ec548e226e53afc3323a974bf3cd206c05b74))
+* **ci:** update the manifests job for the single Argo app set ([#91](https://github.com/trivoallan/houba/issues/91)) ([ee1cad9](https://github.com/trivoallan/houba/commit/ee1cad904b7d7c7c4c1790aa761750f042a2ac90))
+* **cli:** render failed policy with only operation errors ([#126](https://github.com/trivoallan/houba/issues/126)) ([36efafd](https://github.com/trivoallan/houba/commit/36efafd6919e490e4ef8522786786441ee64c170))
+* demo reference policy/rebuild — busybox tag selection + arch-robust inspect ([#139](https://github.com/trivoallan/houba/issues/139)) ([51e8bc1](https://github.com/trivoallan/houba/commit/51e8bc1fd6baab748cc85841efd8693485ed5b27))
+* **deploy:** select the OpenBao server pod by name, not a chart label ([#88](https://github.com/trivoallan/houba/issues/88)) ([16d4c56](https://github.com/trivoallan/houba/commit/16d4c56c8f8d94e5aab605eee71b7ad7fe784348))
+* **deps:** clear docs-site high/uuid CVEs — bump Docusaurus + pin transitives ([a5a9c20](https://github.com/trivoallan/houba/commit/a5a9c20074acdf45cb1a5b87a3c40cde3eb12047))
+* **deps:** update react monorepo to v19 ([#138](https://github.com/trivoallan/houba/issues/138)) ([1d78def](https://github.com/trivoallan/houba/commit/1d78defd8c67a4615d27d20c361bc5098c59ef3a))
+
+
+### Documentation
+
+* add "Why houba" argument page ([#104](https://github.com/trivoallan/houba/issues/104)) ([0dbffb9](https://github.com/trivoallan/houba/commit/0dbffb97682c7fe06b1300b9ff28214e36bdc779))
+* add the CLI command reference to the reference section ([#125](https://github.com/trivoallan/houba/issues/125)) ([786b412](https://github.com/trivoallan/houba/commit/786b412b775c1a6adac86ad8b483c39472892554))
+* **docs:** mark Now items delivered; renumber signed-coverage ADR to 0026 ([#99](https://github.com/trivoallan/houba/issues/99)) ([ff5fdea](https://github.com/trivoallan/houba/commit/ff5fdea279d899e5856ed902c6f8401f026ae539))
+* fix the generated reference's in-page TOC anchors ([#121](https://github.com/trivoallan/houba/issues/121)) ([3cf1ffb](https://github.com/trivoallan/houba/commit/3cf1ffbbb09345a4c427d57ab93defc30b6d12d8))
+* generate how-to & explanation section indexes from page front-matter ([#147](https://github.com/trivoallan/houba/issues/147)) ([b88f452](https://github.com/trivoallan/houba/commit/b88f4526251bb93047f220e869aeb13074be05b0))
+* generate policy + config reference from the Pydantic schemas ([#108](https://github.com/trivoallan/houba/issues/108)) ([f8e52b7](https://github.com/trivoallan/houba/commit/f8e52b7bd6234d1aa2d199d26909343974547180))
+* generate policy + config reference from the Pydantic schemas ([#109](https://github.com/trivoallan/houba/issues/109)) ([28651c2](https://github.com/trivoallan/houba/commit/28651c28581774990b5e25ad80b28f0b08eefb1d))
+* order the Reference sidebar — mirror-policy before config ([#120](https://github.com/trivoallan/houba/issues/120)) ([cb35be0](https://github.com/trivoallan/houba/commit/cb35be0977677dd193b6774dd32c46ac835977ea))
+* order, label, and flatten the docs-site sidebar ([#118](https://github.com/trivoallan/houba/issues/118)) ([f7cb370](https://github.com/trivoallan/houba/commit/f7cb370188cc43c12f973549cf2ae3f058c42e0b))
+* prepare 0.7.0 release — stamp roadmap + getting-started version ([2daebf9](https://github.com/trivoallan/houba/commit/2daebf9679ba2c04fe5e3499c9b8a9d4c19e3c1b))
+* promote the local walkthrough to a top-level Getting started ([#106](https://github.com/trivoallan/houba/issues/106)) ([ba91bf9](https://github.com/trivoallan/houba/commit/ba91bf901dbdbd9c83a86666df8847683dd0c50b))
+* publish the docs site with Docusaurus on GitHub Pages ([#115](https://github.com/trivoallan/houba/issues/115)) ([3e5eba3](https://github.com/trivoallan/houba/commit/3e5eba3d6c47ec4d357a8ac08fff6d34e86e8359))
+* record the Dependency-Track boundary (attach = scan provenance, not a store) ([#135](https://github.com/trivoallan/houba/issues/135)) ([28af8a4](https://github.com/trivoallan/houba/commit/28af8a47f5099fab4d3a5a2f4d726356a4e7f5e8))
+* refresh README for the delivered mandate, gc, and the docs site ([#110](https://github.com/trivoallan/houba/issues/110)) ([10a92cb](https://github.com/trivoallan/houba/commit/10a92cbc9b221cc71ff834d89caef739663c3dd6))
+* renumber duplicate ADR 0026 → 0030 (multi-owner ownership) ([#122](https://github.com/trivoallan/houba/issues/122)) ([cab739c](https://github.com/trivoallan/houba/commit/cab739c4f607e9e199421cdbe6a589f1a7390801))
+* restructure docs into Diátaxis sections (step 1 — folders + moves) ([#111](https://github.com/trivoallan/houba/issues/111)) ([1009b72](https://github.com/trivoallan/houba/commit/1009b72f1f64b18826724cc422b0eb0e3a099f01))
+* restructure docs into Diátaxis sections (step 1) ([#112](https://github.com/trivoallan/houba/issues/112)) ([c0c52cd](https://github.com/trivoallan/houba/commit/c0c52cd004fd1b4c263a01eed073a01fa66e69c0))
+* roadmap — add docs-site item, cut deferred bets, proxycache out of scope ([#103](https://github.com/trivoallan/houba/issues/103)) ([5685732](https://github.com/trivoallan/houba/commit/5685732c1c8cffe8cdb90efab252e4725efc399b))
+* **roadmap:** sync Now/Next/Later — the mandate is delivered ([#90](https://github.com/trivoallan/houba/issues/90)) ([e3de9ad](https://github.com/trivoallan/houba/commit/e3de9ad769a381ad6f55350e9ea24ba4b181b68b))
+* scan attestation max-age freshness contract (admission gate) ([#137](https://github.com/trivoallan/houba/issues/137)) ([5fc046b](https://github.com/trivoallan/houba/commit/5fc046bff8320fe318c0c68524dc0b7424f7f2f8))
+* spec — Docusaurus docs site published to GitHub Pages ([#114](https://github.com/trivoallan/houba/issues/114)) ([335d459](https://github.com/trivoallan/houba/commit/335d459c7ebe96aa39e27874cdad38349b2cf250))
+* split the examples mega-doc into how-to + explanation (step 2) ([#113](https://github.com/trivoallan/houba/issues/113)) ([fbf7db8](https://github.com/trivoallan/houba/commit/fbf7db8225d2038d5a2c7db1a2296ae4cec7c5ad))
+* sync getting-started + architecture overview with shipped state ([#101](https://github.com/trivoallan/houba/issues/101)) ([04f0669](https://github.com/trivoallan/houba/commit/04f0669b02c248b2e85c0c5962ea173b3383fdd9))
+* sync README/roadmap/design with shipped SBOM, gc, and docs site ([#146](https://github.com/trivoallan/houba/issues/146)) ([8e3fc88](https://github.com/trivoallan/houba/commit/8e3fc88cfc271e1083e912450d6aa9c0a2c727f6))
+
 ## [0.6.0](https://github.com/trivoallan/houba/compare/v0.5.0...v0.6.0) (2026-06-15)
 
 
