@@ -41,3 +41,22 @@ As a CI gate, `--fail-on-unsigned` exits non-zero when any stamped image is unsi
 ```bash
 uv run houba audit --fail-on-unsigned    # exit 1 if unsigned > 0
 ```
+
+## The SBOM tier
+
+For the SBOM tier, add `--sbom`: for each *stamped* image it also probes for a package SBOM
+referrer (a present SPDX or CycloneDX referrer ⇒ with SBOM; no content verification), distinguishing
+*with SBOM* from *merely stamped*:
+
+```bash
+uv run houba audit --sbom
+# NO-SBOM  localhost:5001/demo/legacy-image:latest
+# audit  scanned=13 covered=12 uncovered=1 with_sbom=11 without_sbom=1 errored=0
+```
+
+`--sbom` is observational only (no `--fail-on-no-sbom` gate exists). It can be combined with
+`--signed` to check both tiers in a single pass:
+
+```bash
+uv run houba audit --signed --sbom
+```
