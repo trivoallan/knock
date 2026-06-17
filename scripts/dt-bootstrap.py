@@ -1,31 +1,43 @@
 #!/usr/bin/env python3
-"""dt-bootstrap — read DT's default Automation API key and write it to the dt-api-key Secret.
+"""dt-bootstrap — give the publish Job a working Dependency-Track API key.
 
-DT's Automation team ships with BOM_UPLOAD + PROJECT_CREATION and a pre-generated key. This
-waits for the API, logs in as the default admin (admin/admin — DT 4.x accepts it at the API and
-only prompts for a change in the UI), reads the Automation key, and PUTs it into a k8s Secret via
-the in-cluster API using the pod's ServiceAccount token. No kubectl, no curl — stdlib only
-(the houba image has python3). The admin human password is left at the DT default so `make dt-ui`
-can document it deterministically; the Automation key (not the admin password) drives uploads.
+DT ships with admin/admin but FORCES a password change before the API is usable (login returns
+401 until the default password is changed), and the default Automation team has no API key until
+one is generated. This handles both, idempotently across reruns:
+
+  1. ensure the admin password is NEW_PW — log in if it already is, else force-change the default
+     admin/admin first (a fresh DT requires it),
+  2. log in as admin for a JWT,
+  3. find the Automation team (ships with BOM_UPLOAD + PROJECT_CREATION) and reuse its API key,
+     generating one if none exists,
+  4. write the key into the dt-api-key Secret via the in-cluster k8s API.
+
+stdlib only — the houba image has python3, no kubectl/curl. Every step logs so a failure in the
+DT auth dance is diagnosable from `kubectl logs job/houba-dt-bootstrap`.
 """
-import json, os, ssl, time, urllib.parse, urllib.request
+import json, os, ssl, time, urllib.error, urllib.parse, urllib.request
 
 DT = os.environ.get("DT_URL", "http://dependency-track-apiserver:8080")
 NS = os.environ.get("POD_NAMESPACE", "houba")
+NEW_PW = os.environ.get("DT_ADMIN_PASSWORD", "houba-demo-admin")
 SA = "/var/run/secrets/kubernetes.io/serviceaccount"
 
 
-def _post_form(path, **fields):
-    data = urllib.parse.urlencode(fields).encode()
-    req = urllib.request.Request(DT + path, data=data, method="POST")
-    req.add_header("Content-Type", "application/x-www-form-urlencoded")
-    return urllib.request.urlopen(req, timeout=15)  # noqa: S310
+def _req(method, path, *, jwt=None, form=None):
+    data, headers = None, {}
+    if form is not None:
+        data = urllib.parse.urlencode(form).encode()
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    if jwt:
+        headers["Authorization"] = f"Bearer {jwt}"
+    req = urllib.request.Request(DT + path, data=data, method=method, headers=headers)
+    return urllib.request.urlopen(req, timeout=20)  # noqa: S310
 
 
 def wait_api():
     for i in range(60):
         try:
-            urllib.request.urlopen(DT + "/api/version", timeout=5)  # noqa: S310
+            _req("GET", "/api/version")
             return
         except Exception:
             print(f"» waiting for DT API ({i}) ...", flush=True)
@@ -33,42 +45,60 @@ def wait_api():
     raise SystemExit("DT API never became ready")
 
 
-def login():
-    # admin/admin is DT's default and works at the API (the forced change is UI-only). If a DT
-    # build ever rejects it at the API, this raises and the Job fails loudly — better than
-    # silently diverging the admin password from what `make dt-ui` advertises.
-    return _post_form("/api/v1/user/login", username="admin", password="admin").read().decode()
+def jwt_token():
+    # Idempotent: if the password is already NEW_PW, just log in; otherwise force-change the
+    # default admin/admin (a fresh DT requires it before the API is usable), then log in.
+    try:
+        tok = _req("POST", "/api/v1/user/login", form={"username": "admin", "password": NEW_PW}).read().decode()
+        print("» logged in (password already set)", flush=True)
+        return tok
+    except urllib.error.HTTPError as e:
+        if e.code != 401:
+            raise
+    print("» forcing the default admin password change ...", flush=True)
+    try:
+        _req("POST", "/api/v1/user/forceChangePassword",
+             form={"username": "admin", "password": "admin", "newPassword": NEW_PW, "confirmPassword": NEW_PW})
+    except urllib.error.HTTPError as e:
+        # already changed (or rejected) — fall through and let the login below be the real check
+        print(f"» forceChangePassword returned {e.code}, continuing to login ...", flush=True)
+    tok = _req("POST", "/api/v1/user/login", form={"username": "admin", "password": NEW_PW}).read().decode()
+    print("» logged in", flush=True)
+    return tok
 
 
 def automation_key(jwt):
-    req = urllib.request.Request(DT + "/api/v1/team", headers={"Authorization": f"Bearer {jwt}"})
-    teams = json.load(urllib.request.urlopen(req, timeout=15))  # noqa: S310
-    for t in teams:
-        if t.get("name") == "Automation":
-            for k in t.get("apiKeys") or []:
-                return k["key"]
-    raise SystemExit("no Automation API key found in DT")
+    teams = json.load(_req("GET", "/api/v1/team", jwt=jwt))
+    auto = next((t for t in teams if t.get("name") == "Automation"), None)
+    if auto is None:
+        raise SystemExit("no Automation team in DT")
+    for k in auto.get("apiKeys") or []:
+        print("» reusing the Automation team's API key", flush=True)
+        return k["key"]
+    print("» generating an Automation API key ...", flush=True)
+    created = json.load(_req("PUT", f"/api/v1/team/{auto['uuid']}/key", jwt=jwt))
+    return created["key"]
 
 
 def write_secret(key):
     token = open(f"{SA}/token").read().strip()
     api = f"https://{os.environ['KUBERNETES_SERVICE_HOST']}:{os.environ['KUBERNETES_SERVICE_PORT']}"
     ctx = ssl.create_default_context(cafile=f"{SA}/ca.crt")
-    body = json.dumps({
+    data = json.dumps({
         "apiVersion": "v1", "kind": "Secret", "metadata": {"name": "dt-api-key"},
         "stringData": {"DT_API_KEY": key},
     }).encode()
     hdr = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     url = f"{api}/api/v1/namespaces/{NS}/secrets"
     try:
-        urllib.request.urlopen(urllib.request.Request(url, data=body, headers=hdr, method="POST"), context=ctx, timeout=15)  # noqa: S310
+        urllib.request.urlopen(urllib.request.Request(url, data=data, headers=hdr, method="POST"), context=ctx, timeout=15)  # noqa: S310
     except urllib.error.HTTPError as e:
         if e.code != 409:
             raise
-        urllib.request.urlopen(urllib.request.Request(f"{url}/dt-api-key", data=body, headers=hdr, method="PUT"), context=ctx, timeout=15)  # noqa: S310
+        urllib.request.urlopen(urllib.request.Request(f"{url}/dt-api-key", data=data, headers=hdr, method="PUT"), context=ctx, timeout=15)  # noqa: S310
     print("» dt-api-key Secret written", flush=True)
 
 
 if __name__ == "__main__":
     wait_api()
-    write_secret(automation_key(login()))
+    write_secret(automation_key(jwt_token()))
