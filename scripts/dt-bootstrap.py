@@ -8,8 +8,8 @@ one is generated. This handles both, idempotently across reruns:
   1. ensure the admin password is NEW_PW — log in if it already is, else force-change the default
      admin/admin first (a fresh DT requires it),
   2. log in as admin for a JWT,
-  3. find the Automation team (ships with BOM_UPLOAD + PROJECT_CREATION) and reuse its API key,
-     generating one if none exists,
+  3. find the Automation team, ensure it has BOM_UPLOAD + PROJECT_CREATION_UPLOAD, and mint a
+     fresh API key for it,
   4. write the key into the dt-api-key Secret via the in-cluster k8s API.
 
 stdlib only — the houba image has python3, no kubectl/curl. Every step logs so a failure in the
@@ -75,7 +75,7 @@ def automation_key(jwt):
     uuid = auto["uuid"]
     # Ensure the team can upload + auto-create projects (the default set varies by DT version);
     # granting an already-held permission is a harmless no-op.
-    for perm in ("BOM_UPLOAD", "PROJECT_CREATION", "VIEW_PORTFOLIO"):
+    for perm in ("BOM_UPLOAD", "PROJECT_CREATION_UPLOAD", "VIEW_PORTFOLIO"):
         try:
             _req("POST", f"/api/v1/permission/{perm}/team/{uuid}", jwt=jwt)
             print(f"» granted {perm} to Automation", flush=True)
