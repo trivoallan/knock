@@ -8,6 +8,8 @@ Understanding-oriented background — the *why* behind houba's design.
   (usage-gated) instead of hard-deleting.
 - **[Transforms & signed attestations](attestations.md)** — the hardening primitives and the
   SLSA / in-toto signing model.
+- **[Package-level SBOM](sbom.md)** — the inventory houba attaches to every placed image (copy and
+  rebuild) so a CVE becomes one query, and why presence precedes signing.
 - **[Roadmap & product thesis](https://github.com/trivoallan/houba/blob/main/docs/roadmap.md)** — "the label is the product", "coverage gates
   value", and what is built versus planned.
 - **[Architecture decision records](https://github.com/trivoallan/houba/tree/main/docs/architecture/decisions)** — the design decisions, one ADR each.

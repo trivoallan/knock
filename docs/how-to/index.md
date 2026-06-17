@@ -10,6 +10,8 @@ Task-oriented guides — each solves one concrete problem against a running houb
   usage-gated and hard-deleted (`houba purge`), and how to wire your own usage oracle.
 - **[Audit coverage](audit-coverage.md)** — find images that lack the stamp (`houba audit`),
   and gate CI on coverage / signing.
+- **[Inspect an image's SBOM](inspect-sbom.md)** — find and fetch the SBOM referrer attached to a
+  placed image, and enable CycloneDX alongside SPDX.
 - **[Run the reference deployment](reference-deployment.md)** — houba as a Kubernetes CronJob
   (the kind demo *and* the production blueprint): git-synced policies, rootless buildkitd, a
   blast-radius consumer, optional KEDA autoscaling.
