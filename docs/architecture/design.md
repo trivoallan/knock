@@ -108,9 +108,9 @@ spec:
       owners:
         - group:default/platform   # stamped (comma-joined) as io.houba.owners
       tags:
-        includeRegex: "^1\\.3[67]\\."
+        includeRegex: "^1\\.3[78]\\.\\d+$"   # $-anchored: skip the -glibc/-musl variants
         aliases:
-          - "{major}.{minor}"     # 1.36 → highest 1.36.z
+          - "{major}.{minor}"     # 1.37 → highest 1.37.z
           - "latest"              # → highest overall
       destinations:
         - project: demo

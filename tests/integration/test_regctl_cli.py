@@ -43,6 +43,33 @@ def test_inspect_no_annotations(fake_bin_path: Path, monkeypatch: pytest.MonkeyP
     assert info.annotations == {}
 
 
+def test_inspect_index_pins_concrete_platform(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # `image config` on an index defaults to the host's platform; that fails when the
+    # image lacks it (a single-platform rebuild read on a different-arch node). inspect
+    # must pin a platform the index actually has — skipping the unknown/unknown
+    # attestation entry. Surfaced by `make local` on arm64 reading an amd64 rebuild.
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "index-amd64")
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().inspect("registry/demo/debian:bookworm-slim-eu")
+    text = log.read_text()
+    assert "image config" in text
+    assert "--platform linux/amd64" in text
+
+
+def test_inspect_plain_manifest_omits_platform_flag(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # A plain (non-index) manifest has no platform list; regctl reads its single config
+    # directly, so inspect must not invent a --platform that doesn't apply.
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "default")
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().inspect("harbor.corp/lib/redis:7.2.0")
+    config_line = next(ln for ln in log.read_text().splitlines() if ln.startswith("image config"))
+    assert "--platform" not in config_line
+
+
 def test_read_failure_raises_regctl_error(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -52,6 +52,11 @@ case "$cmd" in
             printf '[]\n'
         elif [ "$scenario" = "mirror-stamped" ]; then
             printf '{"annotations":{"org.opencontainers.image.base.digest":"sha256:src999"}}\n'
+        elif [ "$scenario" = "index-amd64" ]; then
+            # An OCI index (e.g. a single-platform buildkit rebuild) whose host arch
+            # may be absent. The unknown/unknown attestation entry comes first to prove
+            # inspect skips it and pins the concrete linux/amd64.
+            printf '{"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[{"platform":{"os":"unknown","architecture":"unknown"}},{"platform":{"os":"linux","architecture":"amd64"}}]}\n'
         elif [ "$scenario" = "coverage-covered" ]; then
             printf '{"annotations":{"io.houba.policy":"redis"}}\n'
         elif [ "$scenario" = "coverage-signed" ]; then

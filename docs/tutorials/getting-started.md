@@ -73,7 +73,7 @@ The mirrored tags + the derived aliases:
 
 ```bash
 regctl tag ls localhost:5001/demo/busybox
-# 1.36  1.36.0  1.36.1 …  1.37  1.37.0 …  latest
+# 1.37  1.37.0  1.38  1.38.0  latest
 ```
 
 The provenance stamp on a mirrored artifact (the OCI annotations a scanner reads — note

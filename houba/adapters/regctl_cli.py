@@ -59,7 +59,14 @@ class RegctlAdapter:
     def inspect(self, image_ref: str) -> ImageInfo:
         digest = self._run(["image", "digest", image_ref]).strip()
         manifest = self._json(["manifest", "get", image_ref, "--format", "{{json .}}"])
-        config = self._json(["image", "config", image_ref, "--format", "{{json .}}"])
+        # `image config` on an index defaults to regctl's host platform, which fails when
+        # the image lacks that arch (a single-platform rebuild read on a different-arch
+        # node). Pin a platform the index actually carries.
+        config_args = ["image", "config", image_ref, "--format", "{{json .}}"]
+        platform = self._first_platform(manifest)
+        if platform:
+            config_args += ["--platform", platform]
+        config = self._json(config_args)
         raw_annotations = manifest.get("annotations")
         annotations = dict(raw_annotations) if isinstance(raw_annotations, dict) else {}
         cfg = config.get("config")
@@ -91,6 +98,26 @@ class RegctlAdapter:
 
     def delete_tag(self, image_ref: str) -> None:
         self._run(["tag", "rm", image_ref])
+
+    @staticmethod
+    def _first_platform(manifest: dict[str, object]) -> str | None:
+        """First concrete os/arch in an index manifest; None for a plain manifest.
+
+        Skips the unknown/unknown attestation entries buildkit interleaves.
+        """
+        entries = manifest.get("manifests")
+        if not isinstance(entries, list):
+            return None
+        for entry in entries:
+            plat = entry.get("platform") if isinstance(entry, dict) else None
+            if not isinstance(plat, dict):
+                continue
+            os_, arch = plat.get("os"), plat.get("architecture")
+            if not os_ or not arch or "unknown" in (os_, arch):
+                continue
+            variant = plat.get("variant")
+            return f"{os_}/{arch}/{variant}" if variant else f"{os_}/{arch}"
+        return None
 
     def _parse_time(self, value: str) -> datetime | None:
         try:
