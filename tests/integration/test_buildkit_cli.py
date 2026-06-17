@@ -124,5 +124,3 @@ def test_build_omits_registry_insecure_by_default(
         BuildRequest(dockerfile_path=df, context_dir=tmp_path, image_ref="reg/x:1")
     )
     assert "registry.insecure" not in log.read_text()
-
-
