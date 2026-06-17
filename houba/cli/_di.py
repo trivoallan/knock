@@ -12,6 +12,7 @@ from houba.adapters.command_usage import CommandUsageAdapter
 from houba.adapters.cosign_cli import CosignAdapter
 from houba.adapters.regctl_cli import RegctlAdapter
 from houba.adapters.structlog_reporter import StructlogReporter
+from houba.adapters.syft_cli import SyftAdapter
 from houba.adapters.system_clock import SystemClock
 from houba.config import Settings
 from houba.errors import ConfigError
@@ -27,6 +28,7 @@ class Container:
     clock: SystemClock
     reporter: StructlogReporter
     attestor: AttestorPort | None
+    sbom_generator: SyftAdapter
 
 
 def build_container(settings: Settings | None = None) -> Container:
@@ -39,6 +41,7 @@ def build_container(settings: Settings | None = None) -> Container:
         clock=SystemClock(),
         reporter=StructlogReporter(),
         attestor=attestor,
+        sbom_generator=SyftAdapter(),
     )
 
 

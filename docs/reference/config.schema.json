@@ -281,6 +281,14 @@
       "title": "Build Platform",
       "type": "string"
     },
+    "sbom_formats": {
+      "description": "SBOM formats syft emits on every placed image (copy and rebuild), as a JSON list. Allowed: spdx-json, cyclonedx-json. Non-empty \u2014 the knob chooses which formats, never whether (always-on coverage).",
+      "items": {
+        "type": "string"
+      },
+      "title": "Sbom Formats",
+      "type": "array"
+    },
     "max_concurrency": {
       "default": 4,
       "description": "Max parallel tag operations per run (`1` = sequential).",

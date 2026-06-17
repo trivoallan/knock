@@ -45,6 +45,7 @@ from houba.domain.reconcile import (
     reconcile_import,
 )
 from houba.domain.retention import resolve_archive
+from houba.domain.sbom import build_sbom_annotations
 from houba.domain.sharding import owns
 from houba.domain.stamp import build_stamp_annotations
 from houba.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
@@ -55,6 +56,7 @@ from houba.ports.attestor import AttestorPort
 from houba.ports.image_builder import BuildRequest, ImageBuilderPort
 from houba.ports.registry import ImageInfo, Referrer, RegistryPort
 from houba.ports.reporter import Counts, ErrorInfo, OperationEvent, OperationKind, Reporter
+from houba.ports.sbom import SbomGeneratorPort
 from houba.use_cases.registry_session import ensure_registry_session
 from houba.use_cases.report import (
     Operation,
@@ -180,7 +182,6 @@ def _build_variant(
                 platform=platform,
                 provenance=provenance,
                 tls_verify=tls_verify,
-                sbom=True,  # always-on: every rebuild carries an SBOM (coverage gates value)
             )
         )
 
@@ -304,6 +305,8 @@ def _apply_plan(
     executor: ThreadPoolExecutor | None,
     attestor: AttestorPort | None,
     attest_builder_id: str,
+    sbom_generator: SbomGeneratorPort | None,
+    sbom_formats: list[str],
     retention_global: Archive | None = None,
 ) -> TargetReport:
     src_repo = _source_repo(plan.policy)
@@ -450,6 +453,39 @@ def _apply_plan(
                         transform_version_value=transform_versions.get(w.vplan.name),
                     ),
                 )
+                # SBOM (both paths): scan the placed digest, attach one referrer per
+                # configured format. Inside the try => a generation/attach failure fails
+                # the op (no silently-uncovered image), like signing. Empty formats =>
+                # skip (lib/test affordance; HOUBA_SBOM_FORMATS guarantees >=1 in prod).
+                if sbom_formats and out_digest is not None:
+                    assert sbom_generator is not None  # caller guards: formats set => wired
+                    placed = f"{plan.dest_repo}@{out_digest}"
+                    for d in sbom_generator.generate(
+                        placed,
+                        sbom_formats,
+                        tls_verify=plan.config.tls_verify,
+                        username=plan.config.username,
+                        password=(
+                            plan.config.password.get_secret_value()
+                            if plan.config.password
+                            else None
+                        ),
+                        ca_cert=plan.config.ca_cert,
+                    ):
+                        registry.put_referrer(
+                            placed,
+                            d.media_type,  # artifactType == media type (discoverable)
+                            build_sbom_annotations(
+                                prefix=label_prefix,
+                                subject_digest=out_digest,
+                                fmt=d.format,
+                                tool="syft",
+                                tool_version=d.tool_version,
+                                timestamp=now,
+                            ),
+                            blob=d.content,
+                            media_type=d.media_type,
+                        )
                 # Sign houba's predicate over the stamped output digest — rebuild AND copy
                 # (the label is the product: every placed image is signed). Inside the try =>
                 # a signing failure fails the operation rather than leaving a silent gap.
@@ -762,9 +798,12 @@ def reconcile_policies(
     shard_count: int = 1,
     attestor: AttestorPort | None = None,
     attest_builder_id: str = "",
+    sbom_generator: SbomGeneratorPort | None = None,
+    sbom_formats: list[str] | None = None,
     retention_global: Archive | None = None,
 ) -> RunReport:
     mode: RunMode = "dry-run" if (dry_run_tags or dry_run_deletions) else "apply"
+    sbom_formats = sbom_formats or []
 
     # --- Ownership invariant over ALL policies (pure, no I/O), then shard filter. ---
     # Every pod sees the full policy set (git-synced) and enforces one-owner-per-repo
@@ -857,6 +896,8 @@ def reconcile_policies(
                             executor=executor,
                             attestor=attestor,
                             attest_builder_id=attest_builder_id,
+                            sbom_generator=sbom_generator,
+                            sbom_formats=sbom_formats,
                             retention_global=retention_global,
                         )
                     )

@@ -19,6 +19,9 @@ COPY --from=regclient/regctl:v0.11.5 /regctl /usr/bin/regctl
 # cosign signs the in-toto attestations on the rebuild path (HOUBA_ATTEST_*).
 COPY --from=ghcr.io/sigstore/cosign/cosign:v3.1.1 /ko-app/cosign /usr/bin/cosign
 
+# syft generates the package-level SBOM on both paths (HOUBA_SBOM_FORMATS).
+COPY --from=anchore/syft:v1.20.0 /syft /usr/bin/syft
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*

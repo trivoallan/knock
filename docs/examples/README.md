@@ -70,8 +70,8 @@ capability, runnable on its own with `uv run houba …` (not part of the bundled
 The discursive background and the command walkthroughs for these capabilities now live with the
 rest of the docs:
 
-- **How-to** — [Purge unused tags](../how-to/purge-unused-tags.md) · [Audit coverage](../how-to/audit-coverage.md)
-- **Explanation** — [Deletion & retention](../explanation/deletion-and-retention.md) · [Transforms & signed attestations](../explanation/attestations.md)
+- **How-to** — [Purge unused tags](../how-to/purge-unused-tags.md) · [Audit coverage](../how-to/audit-coverage.md) · [Inspect an image's SBOM](../how-to/inspect-sbom.md)
+- **Explanation** — [Deletion & retention](../explanation/deletion-and-retention.md) · [Transforms & signed attestations](../explanation/attestations.md) · [Package-level SBOM](../explanation/sbom.md)
 
 ## Notes
 

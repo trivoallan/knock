@@ -53,19 +53,21 @@ sidebar_position: 2
       - [11.1.2.1. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apk > anyOf > item 0`](#transform_package_mirrors_additionalProperties_apk_anyOf_i0)
       - [11.1.2.2. Property `houba configuration (HOUBA_*) > transform_package_mirrors > PackageMirror > apk > anyOf > item 1`](#transform_package_mirrors_additionalProperties_apk_anyOf_i1)
 - [12. Property `houba configuration (HOUBA_*) > build_platform`](#build_platform)
-- [13. Property `houba configuration (HOUBA_*) > max_concurrency`](#max_concurrency)
-- [14. Property `houba configuration (HOUBA_*) > attest_signer`](#attest_signer)
-- [15. Property `houba configuration (HOUBA_*) > attest_key_ref`](#attest_key_ref)
-- [16. Property `houba configuration (HOUBA_*) > attest_fulcio_url`](#attest_fulcio_url)
-- [17. Property `houba configuration (HOUBA_*) > attest_rekor_url`](#attest_rekor_url)
-- [18. Property `houba configuration (HOUBA_*) > attest_builder_id`](#attest_builder_id)
-- [19. Property `houba configuration (HOUBA_*) > usage_oracle_cmd`](#usage_oracle_cmd)
-  - [19.1. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 0`](#usage_oracle_cmd_anyOf_i0)
-  - [19.2. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 1`](#usage_oracle_cmd_anyOf_i1)
-- [20. Property `houba configuration (HOUBA_*) > usage_oracle_timeout`](#usage_oracle_timeout)
-- [21. Property `houba configuration (HOUBA_*) > purge_min_idle_days`](#purge_min_idle_days)
-  - [21.1. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 0`](#purge_min_idle_days_anyOf_i0)
-  - [21.2. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 1`](#purge_min_idle_days_anyOf_i1)
+- [13. Property `houba configuration (HOUBA_*) > sbom_formats`](#sbom_formats)
+  - [13.1. houba configuration (HOUBA_*) > sbom_formats > sbom_formats items](#sbom_formats_items)
+- [14. Property `houba configuration (HOUBA_*) > max_concurrency`](#max_concurrency)
+- [15. Property `houba configuration (HOUBA_*) > attest_signer`](#attest_signer)
+- [16. Property `houba configuration (HOUBA_*) > attest_key_ref`](#attest_key_ref)
+- [17. Property `houba configuration (HOUBA_*) > attest_fulcio_url`](#attest_fulcio_url)
+- [18. Property `houba configuration (HOUBA_*) > attest_rekor_url`](#attest_rekor_url)
+- [19. Property `houba configuration (HOUBA_*) > attest_builder_id`](#attest_builder_id)
+- [20. Property `houba configuration (HOUBA_*) > usage_oracle_cmd`](#usage_oracle_cmd)
+  - [20.1. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 0`](#usage_oracle_cmd_anyOf_i0)
+  - [20.2. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 1`](#usage_oracle_cmd_anyOf_i1)
+- [21. Property `houba configuration (HOUBA_*) > usage_oracle_timeout`](#usage_oracle_timeout)
+- [22. Property `houba configuration (HOUBA_*) > purge_min_idle_days`](#purge_min_idle_days)
+  - [22.1. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 0`](#purge_min_idle_days_anyOf_i0)
+  - [22.2. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 1`](#purge_min_idle_days_anyOf_i1)
 
 **Title:** houba configuration (HOUBA_*)
 
@@ -89,6 +91,7 @@ sidebar_position: 2
 | - [transform_ca_certs](#transform_ca_certs )               | No      | object           | No         | -                       | Transform Ca Certs                                                                           |
 | - [transform_package_mirrors](#transform_package_mirrors ) | No      | object           | No         | -                       | Transform Package Mirrors                                                                    |
 | - [build_platform](#build_platform )                       | No      | string           | No         | -                       | Build Platform                                                                               |
+| - [sbom_formats](#sbom_formats )                           | No      | array of string  | No         | -                       | Sbom Formats                                                                                 |
 | - [max_concurrency](#max_concurrency )                     | No      | integer          | No         | -                       | Max Concurrency                                                                              |
 | - [attest_signer](#attest_signer )                         | No      | enum (of string) | No         | -                       | Attest Signer                                                                                |
 | - [attest_key_ref](#attest_key_ref )                       | No      | string           | No         | -                       | Attest Key Ref                                                                               |
@@ -706,7 +709,37 @@ Must be one of:
 
 **Description:** Platform for the rebuild path (single-platform).
 
-## 13. Property `houba configuration (HOUBA_*) > max_concurrency` {#max_concurrency}
+## 13. Property `houba configuration (HOUBA_*) > sbom_formats` {#sbom_formats}
+
+**Title:** Sbom Formats
+
+|              |                   |
+| ------------ | ----------------- |
+| **Type**     | `array of string` |
+| **Required** | No                |
+
+**Description:** SBOM formats syft emits on every placed image (copy and rebuild), as a JSON list. Allowed: spdx-json, cyclonedx-json. Non-empty — the knob chooses which formats, never whether (always-on coverage).
+
+|                      | Array restrictions |
+| -------------------- | ------------------ |
+| **Min items**        | N/A                |
+| **Max items**        | N/A                |
+| **Items unicity**    | False              |
+| **Additional items** | False              |
+| **Tuple validation** | See below          |
+
+| Each item of this array must be           | Description |
+| ----------------------------------------- | ----------- |
+| [sbom_formats items](#sbom_formats_items) | -           |
+
+### 13.1. houba configuration (HOUBA_*) > sbom_formats > sbom_formats items {#sbom_formats_items}
+
+|              |          |
+| ------------ | -------- |
+| **Type**     | `string` |
+| **Required** | No       |
+
+## 14. Property `houba configuration (HOUBA_*) > max_concurrency` {#max_concurrency}
 
 **Title:** Max Concurrency
 
@@ -722,7 +755,7 @@ Must be one of:
 | ------------ | ------ |
 | **Minimum**  | &ge; 1 |
 
-## 14. Property `houba configuration (HOUBA_*) > attest_signer` {#attest_signer}
+## 15. Property `houba configuration (HOUBA_*) > attest_signer` {#attest_signer}
 
 **Title:** Attest Signer
 
@@ -740,7 +773,7 @@ Must be one of:
 * "kms"
 * "key"
 
-## 15. Property `houba configuration (HOUBA_*) > attest_key_ref` {#attest_key_ref}
+## 16. Property `houba configuration (HOUBA_*) > attest_key_ref` {#attest_key_ref}
 
 **Title:** Attest Key Ref
 
@@ -752,7 +785,7 @@ Must be one of:
 
 **Description:** KMS URI (`kms`) or key path (`key`).
 
-## 16. Property `houba configuration (HOUBA_*) > attest_fulcio_url` {#attest_fulcio_url}
+## 17. Property `houba configuration (HOUBA_*) > attest_fulcio_url` {#attest_fulcio_url}
 
 **Title:** Attest Fulcio Url
 
@@ -764,7 +797,7 @@ Must be one of:
 
 **Description:** Keyless CA URL; blank ⇒ public Fulcio.
 
-## 17. Property `houba configuration (HOUBA_*) > attest_rekor_url` {#attest_rekor_url}
+## 18. Property `houba configuration (HOUBA_*) > attest_rekor_url` {#attest_rekor_url}
 
 **Title:** Attest Rekor Url
 
@@ -776,7 +809,7 @@ Must be one of:
 
 **Description:** Transparency-log URL; blank ⇒ no log entry.
 
-## 18. Property `houba configuration (HOUBA_*) > attest_builder_id` {#attest_builder_id}
+## 19. Property `houba configuration (HOUBA_*) > attest_builder_id` {#attest_builder_id}
 
 **Title:** Attest Builder Id
 
@@ -788,7 +821,7 @@ Must be one of:
 
 **Description:** URI identifying this houba builder.
 
-## 19. Property `houba configuration (HOUBA_*) > usage_oracle_cmd` {#usage_oracle_cmd}
+## 20. Property `houba configuration (HOUBA_*) > usage_oracle_cmd` {#usage_oracle_cmd}
 
 **Title:** Usage Oracle Cmd
 
@@ -806,21 +839,21 @@ Must be one of:
 | [item 0](#usage_oracle_cmd_anyOf_i0) |
 | [item 1](#usage_oracle_cmd_anyOf_i1) |
 
-### 19.1. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 0` {#usage_oracle_cmd_anyOf_i0}
+### 20.1. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 0` {#usage_oracle_cmd_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-### 19.2. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 1` {#usage_oracle_cmd_anyOf_i1}
+### 20.2. Property `houba configuration (HOUBA_*) > usage_oracle_cmd > anyOf > item 1` {#usage_oracle_cmd_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-## 20. Property `houba configuration (HOUBA_*) > usage_oracle_timeout` {#usage_oracle_timeout}
+## 21. Property `houba configuration (HOUBA_*) > usage_oracle_timeout` {#usage_oracle_timeout}
 
 **Title:** Usage Oracle Timeout
 
@@ -836,7 +869,7 @@ Must be one of:
 | ------------ | ------ |
 | **Minimum**  | &ge; 1 |
 
-## 21. Property `houba configuration (HOUBA_*) > purge_min_idle_days` {#purge_min_idle_days}
+## 22. Property `houba configuration (HOUBA_*) > purge_min_idle_days` {#purge_min_idle_days}
 
 **Title:** Purge Min Idle Days
 
@@ -854,7 +887,7 @@ Must be one of:
 | [item 0](#purge_min_idle_days_anyOf_i0) |
 | [item 1](#purge_min_idle_days_anyOf_i1) |
 
-### 21.1. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 0` {#purge_min_idle_days_anyOf_i0}
+### 22.1. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 0` {#purge_min_idle_days_anyOf_i0}
 
 |              |           |
 | ------------ | --------- |
@@ -865,7 +898,7 @@ Must be one of:
 | ------------ | ------ |
 | **Minimum**  | &ge; 1 |
 
-### 21.2. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 1` {#purge_min_idle_days_anyOf_i1}
+### 22.2. Property `houba configuration (HOUBA_*) > purge_min_idle_days > anyOf > item 1` {#purge_min_idle_days_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |

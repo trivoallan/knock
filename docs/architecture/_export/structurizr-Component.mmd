@@ -35,7 +35,7 @@ graph LR
 
           32("<div style='font-weight: bold'>RegctlAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: regctl]</div><div style='font-size: 80%; margin-top:10px'>Drives the regctl CLI via<br />subprocess.</div>")
           style 32 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
-          33("<div style='font-weight: bold'>BuildkitAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: buildctl]</div><div style='font-size: 80%; margin-top:10px'>Drives buildctl against<br />buildkitd via subprocess.</div>")
+          33("<div style='font-weight: bold'>BuildkitAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: buildctl]</div><div style='font-size: 80%; margin-top:10px'>Drives buildctl against<br />buildkitd via subprocess<br />(provenance attestation; no<br />SBOM — superseded by<br />SyftAdapter).</div>")
           style 33 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
           34("<div style='font-weight: bold'>StructlogReporter</div><div style='font-size: 70%; margin-top: 0px'>[Component: structlog]</div><div style='font-size: 80%; margin-top:10px'>Writes the event journal to<br />stderr.</div>")
           style 34 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
@@ -45,6 +45,8 @@ graph LR
           style 36 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
           37("<div style='font-weight: bold'>CosignAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: cosign]</div><div style='font-size: 80%; margin-top:10px'>Drives the cosign CLI via<br />subprocess (keyless | kms |<br />key).</div>")
           style 37 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
+          58("<div style='font-weight: bold'>SyftAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: syft]</div><div style='font-size: 80%; margin-top:10px'>Drives the syft CLI via<br />subprocess; config-file<br />auth/TLS; lazy binary<br />resolution.</div>")
+          style 58 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
         end
 
         subgraph group2 ["CLI"]
@@ -85,6 +87,8 @@ graph LR
           style 24 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
           25("<div style='font-weight: bold'>scan ingestion</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Detects the scan-report<br />format, parses it (e.g.<br />SARIF), and summarizes it<br />into stamp annotations.</div>")
           style 25 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
+          59("<div style='font-weight: bold'>SBOM facts</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>SBOM format media-types and<br />referrer annotation builder<br />(domain/sbom.py).</div>")
+          style 59 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
         end
 
         subgraph group4 ["Ports"]
@@ -102,6 +106,8 @@ graph LR
           style 30 fill:#e9d8fd,stroke:#a397b1,color:#322659
           31("<div style='font-weight: bold'>AttestorPort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Sign an in-toto Statement<br />(DSSE) + attach it as an OCI<br />referrer.</div>")
           style 31 fill:#e9d8fd,stroke:#a397b1,color:#322659
+          57("<div style='font-weight: bold'>SbomGeneratorPort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Generate package-level<br />SBOM(s) for a placed image<br />by digest; returns one<br />document per format.</div>")
+          style 57 fill:#e9d8fd,stroke:#a397b1,color:#322659
         end
 
         subgraph group5 ["Use cases"]
@@ -160,6 +166,11 @@ graph LR
     37-. "<div>Implements</div><div style='font-size: 70%'>[Protocol]</div>" .->31
     37-. "<div>Signs attestations (DSSE)</div><div style='font-size: 70%'>[cosign]</div>" .->51
     37-. "<div>Records the signature<br />(optional)</div><div style='font-size: 70%'>[cosign / rekor]</div>" .->52
+    12-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->58
+    58-. "<div>Implements</div><div style='font-size: 70%'>[Protocol]</div>" .->57
+    14-. "<div>Generates SBOM(s) after<br />placing each image (both<br />paths)</div><div style='font-size: 70%'>[Protocol]</div>" .->57
+    14-. "<div>Builds SBOM referrer<br />annotations (both paths)</div><div style='font-size: 70%'>[Python]</div>" .->59
+    58-. "<div>Scans the placed image<br />by digest</div><div style='font-size: 70%'>[syft]</div>" .->45
     2-. "<div>Pulls the hardened images</div><div style='font-size: 70%'>[docker pull (OCI)]</div>" .->45
     1-. "<div>Configures policy + roster,<br />runs / schedules reconcile</div><div style='font-size: 70%'>[CLI]</div>" .->7
     2-. "<div>Provides MirrorPolicy files</div><div style='font-size: 70%'>[YAML]</div>" .->13
