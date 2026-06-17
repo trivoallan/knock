@@ -20,6 +20,7 @@ from houba.use_cases.registry_session import ensure_registry_session
 
 class CoverageOutcome(BaseModel):
     image_ref: str
+    digest: str | None = None  # manifest digest — the portal's stable join key; None on read error
     covered: bool = False
     signed: bool | None = None  # None = not probed; set only for covered images when check_signed
     policy: str | None = None  # {prefix}.policy when covered & present (audit context)
@@ -68,13 +69,15 @@ def _classify(
     image_ref: str, *, registry: RegistryPort, label_prefix: str, check_signed: bool
 ) -> CoverageOutcome:
     try:
-        annotations = registry.get_annotations(image_ref)
+        digest, annotations = registry.get_annotations(image_ref)
         covered = is_stamped(annotations, prefix=label_prefix)
         policy = annotations.get(f"{label_prefix}.policy") if (covered and label_prefix) else None
         signed: bool | None = None
         if check_signed and covered:
             signed = bool(registry.list_referrers(image_ref, COSIGN_ATTESTATION_ARTIFACT_TYPE))
-        return CoverageOutcome(image_ref=image_ref, covered=covered, signed=signed, policy=policy)
+        return CoverageOutcome(
+            image_ref=image_ref, digest=digest, covered=covered, signed=signed, policy=policy
+        )
     except HoubaError as exc:
         return CoverageOutcome(image_ref=image_ref, error=_err(exc))
 

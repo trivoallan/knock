@@ -173,3 +173,23 @@ def test_read_error_dominates_unsigned_gate() -> None:
     )
     # AdapterError -> 2 wins over the unsigned gate's 1
     assert audit_exit_code(report, fail_on_uncovered=False, fail_on_unsigned=True) == 2
+
+
+def test_outcomes_carry_the_digest() -> None:
+    reg = _reg(digests={f"{_REPO}:7.1": "sha256:d71", f"{_REPO}:7.2": "sha256:d72"})
+    report = audit_coverage(
+        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+    )
+    by = {o.image_ref: o for o in report.outcomes}
+    assert by[f"{_REPO}:7.1"].digest == "sha256:d71"  # covered carries it
+    assert by[f"{_REPO}:7.2"].digest == "sha256:d72"  # uncovered carries it too
+
+
+def test_read_error_leaves_digest_none() -> None:
+    reg = _reg(fail_get={f"{_REPO}:7.1"})
+    report = audit_coverage(
+        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+    )
+    by = {o.image_ref: o for o in report.outcomes}
+    assert by[f"{_REPO}:7.1"].error is not None
+    assert by[f"{_REPO}:7.1"].digest is None
