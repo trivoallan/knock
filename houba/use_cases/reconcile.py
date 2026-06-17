@@ -46,7 +46,7 @@ from houba.domain.reconcile import (
     reconcile_import,
 )
 from houba.domain.retention import resolve_archive
-from houba.domain.sbom import build_sbom_annotations
+from houba.domain.sbom import build_sbom_annotations, build_sbom_statement
 from houba.domain.sharding import owns
 from houba.domain.stamp import build_stamp_annotations
 from houba.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
@@ -487,6 +487,16 @@ def _apply_plan(
                             blob=d.content,
                             media_type=d.media_type,
                         )
+                        if attestor is not None:
+                            attestor.attest(
+                                placed,
+                                build_sbom_statement(
+                                    subject_name=f"{plan.dest_repo}:{w.out_tag}",
+                                    subject_digest=out_digest,
+                                    fmt=d.format,
+                                    content=d.content,
+                                ),
+                            )
                 # Sign houba's predicate over the stamped output digest — rebuild AND copy
                 # (the label is the product: every placed image is signed). Inside the try =>
                 # a signing failure fails the operation rather than leaving a silent gap.
