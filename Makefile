@@ -146,7 +146,7 @@ publish-sbom: ## Convert each rebuilt image's SBOM to CycloneDX and upload it to
 	$(KUBECTL) -n $(NS) logs job/houba-publish-sbom
 
 dt-ui: ## Open the Dependency-Track UI (frontend on :8080, apiserver on :8081 — both needed)
-	@echo ">> DT UI at http://localhost:8080  (login admin / $${DT_ADMIN_PASSWORD:-houba-demo-admin}). Ctrl-C to stop."
+	@echo ">> DT UI at http://localhost:8080  (login admin / admin — DT prompts for a new password on first login). Ctrl-C to stop."
 	$(KUBECTL) -n $(NS) port-forward svc/dependency-track-apiserver 8081:8080 & \
 	  $(KUBECTL) -n $(NS) port-forward svc/dependency-track-frontend 8080:8080
 

@@ -2,15 +2,16 @@
 """dt-bootstrap — read DT's default Automation API key and write it to the dt-api-key Secret.
 
 DT's Automation team ships with BOM_UPLOAD + PROJECT_CREATION and a pre-generated key. This
-waits for the API, logs in as the default admin (handling the forced first-login password
-change), reads the Automation key, and PUTs it into a k8s Secret via the in-cluster API using
-the pod's ServiceAccount token. No kubectl, no curl — stdlib only (the houba image has python3).
+waits for the API, logs in as the default admin (admin/admin — DT 4.x accepts it at the API and
+only prompts for a change in the UI), reads the Automation key, and PUTs it into a k8s Secret via
+the in-cluster API using the pod's ServiceAccount token. No kubectl, no curl — stdlib only
+(the houba image has python3). The admin human password is left at the DT default so `make dt-ui`
+can document it deterministically; the Automation key (not the admin password) drives uploads.
 """
 import json, os, ssl, time, urllib.parse, urllib.request
 
 DT = os.environ.get("DT_URL", "http://dependency-track-apiserver:8080")
 NS = os.environ.get("POD_NAMESPACE", "houba")
-NEW_PW = os.environ.get("DT_ADMIN_PASSWORD", "houba-demo-admin")
 SA = "/var/run/secrets/kubernetes.io/serviceaccount"
 
 
@@ -33,13 +34,10 @@ def wait_api():
 
 
 def login():
-    try:
-        return _post_form("/api/v1/user/login", username="admin", password="admin").read().decode()
-    except urllib.error.HTTPError:
-        # forced password change on first login
-        _post_form("/api/v1/user/forceChangePassword", username="admin", password="admin",
-                   newPassword=NEW_PW, confirmPassword=NEW_PW)
-        return _post_form("/api/v1/user/login", username="admin", password=NEW_PW).read().decode()
+    # admin/admin is DT's default and works at the API (the forced change is UI-only). If a DT
+    # build ever rejects it at the API, this raises and the Job fails loudly — better than
+    # silently diverging the admin password from what `make dt-ui` advertises.
+    return _post_form("/api/v1/user/login", username="admin", password="admin").read().decode()
 
 
 def automation_key(jwt):
