@@ -1,10 +1,13 @@
 # houba — Roadmap
 
-*Format: Now / Deferred / Later. Status as of **0.6.0** (2026-06). The core loop is delivered, and the
+*Format: Now / Deferred / Later. Status as of **0.7.0** (2026-06). The core loop is delivered, and the
 single-front-door mandate is now **enforceable and trustworthy** — complete attestation coverage, a
-`--fail-on` CI gate, and a frozen provenance contract have all shipped. Scan signal is now correct
-across finding types (vulns vs. posture). The active frontier narrows to **scale hygiene**; the
-remaining feature bets were deliberately cut or deferred (see *Deferred* / *Out of scope*).*
+`--fail-on` CI gate, and a frozen provenance contract have all shipped. Blast-radius now reaches
+**package** granularity: every placed image carries a syft-generated SBOM (signed under houba's
+identity when a signer is configured), and `houba audit --sbom` reports the has-SBOM coverage
+dimension. The adoption surface (a published docs site) is live. The active frontier narrows to a
+single coverage lever — the `--fail-on-no-sbom` gate; the remaining feature bets were deliberately
+cut or deferred (see *Deferred* / *Out of scope*).*
 
 ## Product thesis
 
