@@ -1,4 +1,8 @@
-# Purge unused tags
+---
+title: "Purge unused tags"
+description: "The reference reaper: how marked tags get usage-gated and hard-deleted with houba purge, and how to wire your own usage oracle."
+sidebar_position: 3
+---
 
 `houba purge` is the shipped reference implementation of the reaper role introduced by
 [delegated tag deletion (ADR 0012)](https://github.com/trivoallan/houba/blob/main/docs/architecture/decisions/0012-delegated-tag-deletion.md).

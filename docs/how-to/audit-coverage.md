@@ -1,4 +1,8 @@
-# Audit coverage
+---
+title: "Audit coverage"
+description: "Find images that lack the stamp with houba audit, and gate CI on coverage, signing, or SBOM presence."
+sidebar_position: 4
+---
 
 Once images are flowing through houba, **`houba audit`** answers the coverage-gate question:
 *which images in the registry do NOT carry houba's provenance stamp?* It walks the configured

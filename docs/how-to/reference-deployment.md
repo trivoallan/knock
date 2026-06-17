@@ -1,4 +1,8 @@
-# Runbook — the reference deployment
+---
+title: "Run the reference deployment"
+description: "Run houba as a Kubernetes CronJob — the kind demo and the production blueprint: git-synced policies, rootless buildkitd, a blast-radius consumer, and optional KEDA autoscaling."
+sidebar_position: 6
+---
 
 The blessed way to run houba: a Kubernetes **CronJob** that `houba reconcile`s a
 git-sync'd policy repo. There are **two** entry points, and they share the same `deploy/base`:
