@@ -257,7 +257,11 @@ configured format (`HOUBA_SBOM_FORMATS`, default `["spdx-json"]`, also accepts
 blast-radius from base-image granularity (the `.base.digest` annotation) to **package** granularity
 — package inventory down to nested application dependencies (a `log4j-core` shaded in a fat-JAR is
 caught). Always-on on **both** paths; `HOUBA_SBOM_FORMATS` is validated non-empty so the knob
-chooses format, never whether. See the SBOM-generation spec and ADRs 0029 + 0034.
+chooses format, never whether. See the SBOM-generation spec and ADRs 0029 + 0034. Downstream, the
+SBOM referrer is the input to **Dependency-Track** (the blast-radius query, productized) and a
+**Backstage** portal surfaces per-service coverage at the consumption point — where the stamp
+survives Harbor's fan-out but the SBOM/signature referrers may not — both designed, not yet wired
+(ADR 0035).
 
 Fulcio/Rekor are passed to cosign via a generated **signing-config** file (cosign v3 enables the
 signing-config by default and rejects the older `--fulcio-url`/`--rekor-url`/`--tlog-upload` flags);
