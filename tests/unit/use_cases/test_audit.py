@@ -211,8 +211,11 @@ def test_check_sbom_off_leaves_sbom_none() -> None:
 def test_check_sbom_probes_only_covered() -> None:
     reg = _reg(referrers={f"{_REPO}:7.1": [_sbom_ref(f"{_REPO}:7.1")]})
     report = audit_coverage(
-        registry=reg, roster=_ROSTER, only_registry=None,
-        label_prefix="io.houba", check_sbom=True,
+        registry=reg,
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.houba",
+        check_sbom=True,
     )
     by = {o.image_ref: o for o in report.outcomes}
     assert by[f"{_REPO}:7.1"].sbom is True
@@ -223,8 +226,11 @@ def test_check_sbom_probes_only_covered() -> None:
 
 def test_check_sbom_covered_without_referrer_is_without_sbom() -> None:
     report = audit_coverage(
-        registry=_reg(), roster=_ROSTER, only_registry=None,
-        label_prefix="io.houba", check_sbom=True,
+        registry=_reg(),
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.houba",
+        check_sbom=True,
     )
     by = {o.image_ref: o for o in report.outcomes}
     assert by[f"{_REPO}:7.1"].sbom is False
@@ -236,8 +242,11 @@ def test_check_sbom_matches_cyclonedx_too() -> None:
     cdx_ref = _sbom_ref(f"{_REPO}:7.1", "application/vnd.cyclonedx+json")
     reg = _reg(referrers={f"{_REPO}:7.1": [cdx_ref]})
     report = audit_coverage(
-        registry=reg, roster=_ROSTER, only_registry=None,
-        label_prefix="io.houba", check_sbom=True,
+        registry=reg,
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.houba",
+        check_sbom=True,
     )
     by = {o.image_ref: o for o in report.outcomes}
     assert by[f"{_REPO}:7.1"].sbom is True

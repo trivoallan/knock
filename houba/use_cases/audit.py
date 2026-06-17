@@ -88,7 +88,11 @@ def _classify(
         if check_sbom and covered:
             sbom = any(registry.list_referrers(image_ref, mt) for mt in FORMAT_MEDIA_TYPES.values())
         return CoverageOutcome(
-            image_ref=image_ref, digest=digest, covered=covered, signed=signed, sbom=sbom,
+            image_ref=image_ref,
+            digest=digest,
+            covered=covered,
+            signed=signed,
+            sbom=sbom,
             policy=policy,
         )
     except HoubaError as exc:
