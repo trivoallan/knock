@@ -15,7 +15,7 @@ provenance stamp in about ten minutes. The examples below build on that same loc
 demonstrates **copy *and* rebuild** in a single, self-contained pass (no Harbor, no org config):
 
 - **[`reference/busybox/`](https://github.com/trivoallan/houba/blob/main/docs/examples/reference/busybox/busybox.yml)** — the **copy path**: select
-  `1.36.x`/`1.37.x`, alias `{major}.{minor}` + `latest`, mirror into `demo/busybox`. The smallest,
+  `1.37.x`/`1.38.x`, alias `{major}.{minor}` + `latest`, mirror into `demo/busybox`. The smallest,
   fastest case, and the one [Getting started](../tutorials/getting-started.md) runs.
 - **[`reference/debian-tz/`](https://github.com/trivoallan/houba/blob/main/docs/examples/reference/debian-tz/debian-tz.yml)** — the **rebuild path, runnable
   self-contained**: rebuild `debian:bookworm-slim` through `setTimezone` (the one built-in step that
