@@ -1,0 +1,40 @@
+#!/usr/bin/env sh
+# Fake syft for integration tests.
+# Scenario via FAKE_SYFT_SCENARIO; every call's argv is appended to FAKE_SYFT_LOG.
+# When FAKE_SYFT_CONFIG is set, the `-c <file>` config content is copied there
+# (the file is a tempdir the caller deletes after we return).
+# Each `-o <fmt>=<path>` writes a stub SBOM to <path>, so the adapter can read it back.
+set -e
+
+[ -n "${FAKE_SYFT_LOG:-}" ] && echo "$@" >> "$FAKE_SYFT_LOG"
+
+prev=""
+for arg in "$@"; do
+    case "$prev" in
+        -c|--config)
+            [ -n "${FAKE_SYFT_CONFIG:-}" ] && cp "$arg" "$FAKE_SYFT_CONFIG"
+            ;;
+        -o|--output)
+            fmt="${arg%%=*}"
+            path="${arg#*=}"
+            if [ "$fmt" != "$path" ]; then
+                printf '{"sbom":"%s"}\n' "$fmt" > "$path"
+            fi
+            ;;
+    esac
+    prev="$arg"
+done
+
+case "${FAKE_SYFT_SCENARIO:-success}" in
+    success)
+        echo "fake syft ok" >&2
+        ;;
+    fail)
+        echo "syft: simulated failure" >&2
+        exit 1
+        ;;
+    *)
+        echo "fake-syft: unknown scenario ${FAKE_SYFT_SCENARIO}" >&2
+        exit 99
+        ;;
+esac
