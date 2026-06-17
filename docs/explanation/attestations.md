@@ -30,3 +30,10 @@ ingested scan result is attached *both* as the raw SARIF referrer *and* as a sig
 attestation (`https://houba.dev/predicate/scan/v1`) over the image digest — so a downstream
 admission controller can *require* a signed scan, not merely read an annotation. Pure copies (no
 rebuild, no scan) stay at the annotation layer.
+
+The **same signer** also covers the **SBOM** on every placed image: with `HOUBA_ATTEST_SIGNER` set,
+each attached SBOM is *also* emitted as a signed in-toto attestation over the image digest, with the
+canonical predicate type (`https://spdx.dev/Document` / `https://cyclonedx.org/bom`) — so a downstream
+gate can `cosign verify-attestation --type spdxjson` and require a trustworthy SBOM, not merely read
+the raw referrer. Presence is unconditional; this signed twin is the trust tier. See
+[Package-level SBOM](sbom.md#presence-then-trust).

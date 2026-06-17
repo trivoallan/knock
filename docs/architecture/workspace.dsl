@@ -184,7 +184,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         adUsageOracle -> usageOracle "Queries prod usage (HOUBA_USAGE_ORACLE_CMD)" "subprocess (stdin/stdout JSON)"
 
         ucReconcile -> domAttestation "Builds the transform Statement (rebuild path)" "Python"
-        ucReconcile -> portAttestor "Signs the transform predicate (rebuild path)" "Protocol"
+        ucReconcile -> portAttestor "Signs the transform + SBOM predicates (both paths)" "Protocol"
         ucReconcile -> domSbom "Builds SBOM referrer annotations (both paths)" "Python"
         cliDi -> adCosign "Wires" "DI"
         adCosign -> portAttestor "Implements" "Protocol"

@@ -177,7 +177,7 @@ graph LR
     38-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->52
     41-. "<div>Queries prod usage<br />(HOUBA_USAGE_ORACLE_CMD)</div><div style='font-size: 70%'>[subprocess (stdin/stdout JSON)]</div>" .->56
     15-. "<div>Builds the transform<br />Statement (rebuild path)</div><div style='font-size: 70%'>[Python]</div>" .->27
-    15-. "<div>Signs the transform predicate<br />(rebuild path)</div><div style='font-size: 70%'>[Protocol]</div>" .->35
+    15-. "<div>Signs the transform + SBOM predicates<br />(both paths)</div><div style='font-size: 70%'>[Protocol]</div>" .->35
     15-. "<div>Builds SBOM referrer<br />annotations (both paths)</div><div style='font-size: 70%'>[Python]</div>" .->29
     13-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->42
     42-. "<div>Implements</div><div style='font-size: 70%'>[Protocol]</div>" .->35

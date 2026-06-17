@@ -105,6 +105,11 @@ format(s), not whether. *(ADRs 0029 + 0034)*
 The demo now *reproduces* a real incident (XZ / CVE-2024-3094) end to end — the package-level query
 lights up on a recognizable CVE, with a bypass image as the durable coverage blind spot.
 
+**Signed SBOM (trust tier).** With `HOUBA_ATTEST_SIGNER` set, every placed SBOM is *also* a signed
+in-toto attestation under houba's identity (canonical `spdxjson` / `cyclonedx` predicate type),
+verifiable with stock `cosign verify-attestation`. Presence → trust, sequenced like stamp-then-sign;
+reuses the existing signer (no new knob). *(ADR 0029)*
+
 ## Now — finish the SBOM tiers + adoption
 
 > Theme: the mandate is enforceable and trustworthy (see *Delivered*), and SBOM generation just
@@ -115,9 +120,6 @@ lights up on a recognizable CVE, with a bypass image as the durable coverage bli
   `--fail-on-no-sbom` gate — extending the verifiable front door to stamped → signed → has-SBOM.
   The SBOM is now an OCI referrer (ADR 0034), so this is a standard `list_referrers` probe — simpler
   than the index-inspection path previously needed. *(ADR 0029, P0.5)*
-- **Sign the SBOM** under houba's identity (cosign) — the trust tier, sequenced like stamp-then-sign.
-  *(ADR 0029, P1)*
-
 - **User documentation site.** Create and publish a user-facing docs site — getting-started,
   policy/config reference, the CLI verbs, and the provenance-stamp contract — built from the existing
   in-repo material (`README`, `docs/examples/`, the policy/scan schemas) and published on every merge

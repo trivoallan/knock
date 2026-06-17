@@ -59,3 +59,13 @@ already-mirrored images; the blast-radius query engine / CVE matching / runtime 
 
 Full design spec:
 [2026-06-16-sbom-generation-design.md](../../superpowers/specs/2026-06-16-sbom-generation-design.md)
+
+## Update (2026-06-17) — the SBOM signing trust tier
+
+The SBOM is now attached on both paths (ADR 0034). Its *presence* answers blast-radius; signing it is
+the trust tier, sequenced like stamp-then-sign. When `HOUBA_ATTEST_SIGNER` is set, the reconcile use
+case signs each placed SBOM as an in-toto attestation (canonical predicate type
+`https://spdx.dev/Document` / `https://cyclonedx.org/bom`) over the image digest, reusing the existing
+`AttestorPort`/cosign path — no new port, adapter, or config knob. Placement-time only; backfill and a
+signed-SBOM audit tier are deferred. Spec:
+`docs/superpowers/specs/2026-06-17-sign-sbom-design.md`.
