@@ -134,13 +134,12 @@ openbao-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (place
 seed-incident: ## Build the xz fixture, push it as the pretend-upstream + the bypass blind-spot
 	docker build -t $(FIXTURE_IMAGE) -f deploy/incidents/debian-xz.Dockerfile deploy/incidents
 	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=120s
-	$(KUBECTL) -n $(NS) port-forward svc/registry 5000:5000 & \
-	  PF=$$!; sleep 3; \
-	  docker tag $(FIXTURE_IMAGE) localhost:5000/upstream/debian-xz:5.6.1; \
-	  docker push localhost:5000/upstream/debian-xz:5.6.1; \
-	  docker tag $(FIXTURE_IMAGE) localhost:5000/bypassed/debian-xz:5.6.1; \
-	  docker push localhost:5000/bypassed/debian-xz:5.6.1; \
-	  kill $$PF
+	$(KUBECTL) -n $(NS) port-forward --address 127.0.0.1 svc/registry 5000:5000 & \
+	  PF=$$!; trap "kill $$PF" EXIT; sleep 3; \
+	  docker tag $(FIXTURE_IMAGE) 127.0.0.1:5000/upstream/debian-xz:5.6.1 && \
+	  docker push 127.0.0.1:5000/upstream/debian-xz:5.6.1 && \
+	  docker tag $(FIXTURE_IMAGE) 127.0.0.1:5000/bypassed/debian-xz:5.6.1 && \
+	  docker push 127.0.0.1:5000/bypassed/debian-xz:5.6.1
 	@echo ">> seeded upstream/debian-xz:5.6.1 (houba will rebuild it) + bypassed/debian-xz:5.6.1 (never through houba)."
 
 blast-radius: ## (Re)run the blast-radius consumer and print its report
