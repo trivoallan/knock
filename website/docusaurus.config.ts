@@ -58,15 +58,25 @@ const config: Config = {
       title: 'houba',
       items: [
         {type: 'doc', docId: 'tutorials/getting-started', label: 'Tutorials', position: 'left'},
-        {type: 'doc', docId: 'how-to/index', label: 'How-to', position: 'left'},
+        {to: '/how-to', label: 'How-to', position: 'left'},
         {type: 'doc', docId: 'reference/mirror-policy', label: 'Reference', position: 'left'},
-        {type: 'doc', docId: 'explanation/index', label: 'Explanation', position: 'left'},
+        {to: '/explanation', label: 'Explanation', position: 'left'},
         {href: GH, label: 'GitHub', position: 'right'},
       ],
     },
     footer: {
       style: 'dark',
-      links: [],
+      links: [
+        {
+          title: 'Deep dives',
+          items: [
+            {label: 'Architecture & design', href: `${GH}/blob/main/docs/architecture/design.md`},
+            {label: 'Roadmap & product thesis', href: `${GH}/blob/main/docs/roadmap.md`},
+            {label: 'Decision records', href: `${GH}/tree/main/docs/architecture/decisions`},
+            {label: 'GitHub', href: GH},
+          ],
+        },
+      ],
       copyright: `Copyright © ${new Date().getFullYear()} Tristan Rivoallan and contributors. Apache-2.0.`,
     },
   } satisfies Preset.ThemeConfig,

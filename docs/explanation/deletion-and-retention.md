@@ -1,4 +1,8 @@
-# Deletion & retention
+---
+title: "Deletion & retention"
+description: "The two removal axes, and why houba marks (usage-gated) instead of hard-deleting."
+sidebar_position: 1
+---
 
 houba removes tags along two distinct axes, and **never hard-deletes a tag without it first
 passing a usage gate**. This page explains the model; for the runnable steps, see

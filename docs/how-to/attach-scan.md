@@ -1,4 +1,8 @@
-# Attaching a scan result (`houba attach`)
+---
+title: "Attach a scan result"
+description: "Ingest an upstream SARIF report as a signed OCI referrer with houba attach, using --fail-on as a severity CI gate."
+sidebar_position: 1
+---
 
 houba does not run scanners. A scan is produced **upstream** (your CI, a registry-native
 scanner, or a scan service); houba ingests its report and stamps it as a portable OCI

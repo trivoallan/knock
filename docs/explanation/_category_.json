@@ -2,5 +2,10 @@
   "label": "Explanation",
   "position": 4,
   "collapsed": true,
-  "link": { "type": "doc", "id": "explanation/index" }
+  "link": {
+    "type": "generated-index",
+    "slug": "/explanation",
+    "title": "Explanation",
+    "description": "Understanding-oriented background — the why behind houba's design. The architecture deep-dive, roadmap, and decision records are linked in the site footer."
+  }
 }
