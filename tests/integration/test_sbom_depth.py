@@ -1,8 +1,11 @@
-"""Acceptance gate: the real buildkit-syft-scanner must surface every incident class at the
-right granularity. Permanent guard against silent scanner-depth regression.
+"""Acceptance gate: standalone syft (houba's runtime SBOM scanner) must surface every
+incident class at the right granularity. Permanent guard against silent scanner-depth
+regression.
 
-Heavyweight (docker + buildx + network for apt). Skipped unless docker buildx is available;
-run locally / nightly. Mirrors the empirical matrix in the SBOM-generation spec (ADR 0029).
+Heavyweight (docker to build the fixture + syft + network for apt/Maven). Skipped unless
+both docker and syft are available; run locally / nightly. Mirrors the empirical matrix in
+the SBOM-generation spec (ADR 0029); re-pointed from buildkit-syft-scanner to standalone
+syft when SBOM generation unified on syft (2026-06-17 spec).
 """
 
 from __future__ import annotations
@@ -10,7 +13,6 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-import tarfile
 import urllib.error
 import urllib.request
 import zipfile
@@ -19,16 +21,12 @@ from pathlib import Path
 import pytest
 
 
-def _has_buildx() -> bool:
-    if not shutil.which("docker"):
-        return False
-    return subprocess.run(["docker", "buildx", "version"], capture_output=True).returncode == 0
+def _has_tools() -> bool:
+    return bool(shutil.which("docker")) and bool(shutil.which("syft"))
 
 
-pytestmark = pytest.mark.skipif(not _has_buildx(), reason="needs docker buildx")
+pytestmark = pytest.mark.skipif(not _has_tools(), reason="needs docker + syft")
 
-# Real vulnerable log4j-core 2.14.1 (the Log4Shell version), from Maven Central. A fabricated
-# stub jar is NOT reliably cataloged through nesting — the real artifact is what the scanner reads.
 _LOG4J_URL = (
     "https://repo1.maven.org/maven2/org/apache/logging/log4j/log4j-core/2.14.1/"
     "log4j-core-2.14.1.jar"
@@ -48,28 +46,17 @@ def _make_nested_log4j_jar(dst: Path) -> None:
         z.write(inner, "BOOT-INF/lib/log4j-core-2.14.1.jar")
 
 
-def _spdx_package_names(oci_tar: Path) -> set[str]:
-    names: set[str] = set()
-    with tarfile.open(oci_tar) as tar:
-        for m in tar.getmembers():
-            if not m.isfile() or "blobs/sha256/" not in m.name:
-                continue
-            f = tar.extractfile(m)
-            if f is None:
-                continue
-            try:
-                obj = json.loads(f.read())
-            except (ValueError, UnicodeDecodeError):
-                continue
-            if "spdx" in obj.get("predicateType", "").lower():
-                doc = obj.get("predicate", obj)
-            elif obj.get("spdxVersion"):
-                doc = obj
-            else:
-                continue
-            for p in doc.get("packages", []):
-                names.add(p.get("name", ""))
-    return names
+def _syft_package_names(image: str) -> set[str]:
+    r = subprocess.run(
+        ["syft", "scan", f"docker:{image}", "-o", "spdx-json"],
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    if r.returncode != 0:
+        pytest.fail(f"syft scan failed:\n{r.stderr}")
+    doc = json.loads(r.stdout)
+    return {p.get("name", "") for p in doc.get("packages", [])}
 
 
 def test_sbom_depth_incident_matrix(tmp_path: Path) -> None:
@@ -83,34 +70,19 @@ def test_sbom_depth_incident_matrix(tmp_path: Path) -> None:
         " && rm -rf /var/lib/apt/lists/*\n"
         "RUN cp /bin/true /usr/local/bin/mongod && chmod +x /usr/local/bin/mongod\n"
     )
-    out = tmp_path / "img.tar"
-    r = subprocess.run(
-        [
-            "docker",
-            "buildx",
-            "build",
-            "--sbom=true",
-            "--provenance=false",
-            "-o",
-            f"type=oci,dest={out}",
-            str(ctx),
-        ],
+    image = "houba-sbom-depth-fixture:test"
+    build = subprocess.run(
+        ["docker", "build", "-t", image, str(ctx)],
         capture_output=True,
         text=True,
-        timeout=600,
+        timeout=900,
     )
-    if r.returncode != 0:
-        # The plain `docker` buildx driver (default on CI runners) cannot emit attestations;
-        # this gate needs the docker-container driver or the containerd image store. Skip rather
-        # than fail there — it is a local/nightly depth guard, not a per-PR CI check. Any OTHER
-        # build error is a real failure.
-        if (
-            "is not supported for the docker driver" in r.stderr
-            or "Attestation is not supported" in r.stderr
-        ):
-            pytest.skip(f"buildx driver lacks attestation support: {r.stderr.strip()}")
-        pytest.fail(f"buildx build failed:\n{r.stderr}")
-    names = _spdx_package_names(out)
+    if build.returncode != 0:
+        pytest.fail(f"docker build failed:\n{build.stderr}")
+    try:
+        names = _syft_package_names(image)
+    finally:
+        subprocess.run(["docker", "rmi", "-f", image], capture_output=True)
 
     # Present — each incident class captured at the right layer
     assert "log4j-core" in names, "Log4Shell: nested fat-JAR dependency not captured"
