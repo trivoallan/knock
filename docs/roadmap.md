@@ -110,21 +110,30 @@ in-toto attestation under houba's identity (canonical `spdxjson` / `cyclonedx` p
 verifiable with stock `cosign verify-attestation`. Presence → trust, sequenced like stamp-then-sign;
 reuses the existing signer (no new knob). *(ADR 0029)*
 
-## Now — finish the SBOM tiers + adoption
+## Delivered — adoption surface + the has-SBOM probe (2026-06)
 
-> Theme: the mandate is enforceable and trustworthy (see *Delivered*), and SBOM generation just
-> lifted blast-radius to package level. The active frontier: finish the SBOM's coverage and trust
-> tiers, and **adoption** — lowering the barrier to becoming the mandated front door.
+Two of the former *Now* items shipped:
 
-- **`audit` "has SBOM" coverage dimension.** Report images that lack an SBOM, with a
-  `--fail-on-no-sbom` gate — extending the verifiable front door to stamped → signed → has-SBOM.
-  The SBOM is now an OCI referrer (ADR 0034), so this is a standard `list_referrers` probe — simpler
-  than the index-inspection path previously needed. *(ADR 0029, P0.5)*
-- **User documentation site.** Create and publish a user-facing docs site — getting-started,
-  policy/config reference, the CLI verbs, and the provenance-stamp contract — built from the existing
-  in-repo material (`README`, `docs/examples/`, the policy/scan schemas) and published on every merge
-  to `main`. *The label is the product*, and a mandated front door only gets adopted if its users can
-  self-serve; today that knowledge is scattered across the repo. The highest-leverage adoption item.
+- **User documentation site.** A Docusaurus site — Why houba, getting-started, the Diátaxis
+  how-to / explanation / reference sections, the generated policy/config/CLI reference, and the
+  provenance-stamp contract — is built from the in-repo material and **published to GitHub Pages on
+  every merge to `main`** (<https://trivoallan.github.io/houba/>). *The label is the product*, and a
+  mandated front door only gets adopted if its users can self-serve. *(closed #114 / #115)*
+- **`audit` "has SBOM" coverage dimension — observational tier.** `houba audit --sbom` probes each
+  stamped image for a package-SBOM referrer (a standard `list_referrers` probe, no content read) and
+  reports `with_sbom` / `without_sbom`. The coverage ladder is now four rungs:
+  `uncovered < stamped < signed < has-SBOM`. *(ADR 0029; closed #143)*
+
+## Now — close the has-SBOM gate
+
+> Theme: the mandate is enforceable and trustworthy, blast-radius reaches package level, and both
+> the adoption surface (docs site) and the observational has-SBOM audit have shipped (see
+> *Delivered*). One coverage lever remains.
+
+- **`audit --fail-on-no-sbom` gate.** The observational `--sbom` tier already reports SBOM presence;
+  the remaining step is the CI gate that *fails* the build when a stamped image lacks an SBOM —
+  completing the enforcement ladder `--fail-on-uncovered` → `--fail-on-unsigned` → `--fail-on-no-sbom`.
+  *(ADR 0029, P0.5)*
 
 ## Deferred — revisit only on a real signal (YAGNI until then)
 

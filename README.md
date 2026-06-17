@@ -5,12 +5,13 @@
 > **Status — young but functional (`v0.6`).** Delivered: the full hexagon; both the copy and the
 > rebuild / derive-and-stamp paths; the pluggable transform engine; the OCI provenance stamp **plus
 > signed SLSA / in-toto attestations** (rebuild *and* ingested scan results); a **package-level SBOM
-> (SPDX and/or CycloneDX) on every placed image** — copy and rebuild alike; the
+> (SPDX and/or CycloneDX) on every placed image** — copy and rebuild alike, signed under houba's
+> identity when a signer is configured; the
 > `reconcile` / `purge` / `attach` / `audit` / `gc` commands; retention-driven soft-delete; concurrent +
 > shardable reconcile; and optional KEDA autoscaling of the build path. The single-front-door mandate
 > is **enforceable** (`attach --fail-on`, `audit --fail-on-uncovered`) and **trustworthy**
-> (`audit --signed`), and the provenance contract is frozen. Next: the `audit` has-SBOM coverage
-> dimension and cosign-signing the SBOM ([roadmap](docs/roadmap.md)). Not yet battle-hardened for production.
+> (`audit --signed`, `audit --sbom`), and the provenance contract is frozen. Next: a `--fail-on-no-sbom`
+> gate to complete the has-SBOM coverage tier ([roadmap](docs/roadmap.md)). Not yet battle-hardened for production.
 
 Every public image that enters your registry passes through houba: it is mirrored — or, when you
 declare a hardening policy, rebuilt with internal CA certificates and internal package mirrors —
@@ -69,7 +70,8 @@ Beyond `reconcile`, the CLI offers:
 
 - **`houba audit`** — a coverage-gap report: walk the registry and list images that do **not** carry
   houba's stamp (`--fail-on-uncovered` makes it a CI gate); `--signed` adds a *signed*-vs-merely-stamped
-  tier (`--fail-on-unsigned`). This is what makes the front door *verifiable* and *trustworthy*.
+  tier (`--fail-on-unsigned`), and `--sbom` a *has-SBOM*-vs-merely-stamped tier (observational). This
+  is what makes the front door *verifiable* and *trustworthy*.
 - **`houba purge`** — the reference reaper: hard-delete tags marked `pending-deletion` (by either
   the selection axis or retention) that a usage oracle confirms are unused (gated by
   `HOUBA_PURGE_MIN_IDLE_DAYS`; dry-run unless `--apply`).
