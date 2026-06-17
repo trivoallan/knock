@@ -15,7 +15,14 @@ one is generated. This handles both, idempotently across reruns:
 stdlib only — the houba image has python3, no kubectl/curl. Every step logs so a failure in the
 DT auth dance is diagnosable from `kubectl logs job/houba-dt-bootstrap`.
 """
-import json, os, ssl, time, urllib.error, urllib.parse, urllib.request
+
+import json
+import os
+import ssl
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 DT = os.environ.get("DT_URL", "http://dependency-track-apiserver:8080")
 NS = os.environ.get("POD_NAMESPACE", "houba")
@@ -31,7 +38,7 @@ def _req(method, path, *, jwt=None, form=None):
     if jwt:
         headers["Authorization"] = f"Bearer {jwt}"
     req = urllib.request.Request(DT + path, data=data, method=method, headers=headers)
-    return urllib.request.urlopen(req, timeout=20)  # noqa: S310
+    return urllib.request.urlopen(req, timeout=20)
 
 
 def wait_api():
@@ -49,7 +56,11 @@ def jwt_token():
     # Idempotent: if the password is already NEW_PW, just log in; otherwise force-change the
     # default admin/admin (a fresh DT requires it before the API is usable), then log in.
     try:
-        tok = _req("POST", "/api/v1/user/login", form={"username": "admin", "password": NEW_PW}).read().decode()
+        tok = (
+            _req("POST", "/api/v1/user/login", form={"username": "admin", "password": NEW_PW})
+            .read()
+            .decode()
+        )
         print("» logged in (password already set)", flush=True)
         return tok
     except urllib.error.HTTPError as e:
@@ -57,12 +68,24 @@ def jwt_token():
             raise
     print("» forcing the default admin password change ...", flush=True)
     try:
-        _req("POST", "/api/v1/user/forceChangePassword",
-             form={"username": "admin", "password": "admin", "newPassword": NEW_PW, "confirmPassword": NEW_PW})
+        _req(
+            "POST",
+            "/api/v1/user/forceChangePassword",
+            form={
+                "username": "admin",
+                "password": "admin",
+                "newPassword": NEW_PW,
+                "confirmPassword": NEW_PW,
+            },
+        )
     except urllib.error.HTTPError as e:
         # already changed (or rejected) — fall through and let the login below be the real check
         print(f"» forceChangePassword returned {e.code}, continuing to login ...", flush=True)
-    tok = _req("POST", "/api/v1/user/login", form={"username": "admin", "password": NEW_PW}).read().decode()
+    tok = (
+        _req("POST", "/api/v1/user/login", form={"username": "admin", "password": NEW_PW})
+        .read()
+        .decode()
+    )
     print("» logged in", flush=True)
     return tok
 
@@ -92,18 +115,30 @@ def write_secret(key):
     token = open(f"{SA}/token").read().strip()
     api = f"https://{os.environ['KUBERNETES_SERVICE_HOST']}:{os.environ['KUBERNETES_SERVICE_PORT']}"
     ctx = ssl.create_default_context(cafile=f"{SA}/ca.crt")
-    data = json.dumps({
-        "apiVersion": "v1", "kind": "Secret", "metadata": {"name": "dt-api-key"},
-        "stringData": {"DT_API_KEY": key},
-    }).encode()
+    data = json.dumps(
+        {
+            "apiVersion": "v1",
+            "kind": "Secret",
+            "metadata": {"name": "dt-api-key"},
+            "stringData": {"DT_API_KEY": key},
+        }
+    ).encode()
     hdr = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     url = f"{api}/api/v1/namespaces/{NS}/secrets"
     try:
-        urllib.request.urlopen(urllib.request.Request(url, data=data, headers=hdr, method="POST"), context=ctx, timeout=15)  # noqa: S310
+        urllib.request.urlopen(
+            urllib.request.Request(url, data=data, headers=hdr, method="POST"),
+            context=ctx,
+            timeout=15,
+        )
     except urllib.error.HTTPError as e:
         if e.code != 409:
             raise
-        urllib.request.urlopen(urllib.request.Request(f"{url}/dt-api-key", data=data, headers=hdr, method="PUT"), context=ctx, timeout=15)  # noqa: S310
+        urllib.request.urlopen(
+            urllib.request.Request(f"{url}/dt-api-key", data=data, headers=hdr, method="PUT"),
+            context=ctx,
+            timeout=15,
+        )
     print("» dt-api-key Secret written", flush=True)
 
 
