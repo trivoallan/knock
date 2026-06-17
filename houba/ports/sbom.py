@@ -16,6 +16,7 @@ class SbomDocument:
     format: str  # syft output name, e.g. "spdx-json" / "cyclonedx-json"
     media_type: str  # OCI media type, e.g. "application/spdx+json"
     content: bytes  # the serialized SBOM
+    tool_version: str = ""  # producing syft version, e.g. "1.20.0" ("" if unknown)
 
 
 class SbomGeneratorPort(Protocol):

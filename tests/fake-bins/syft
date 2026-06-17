@@ -8,6 +8,12 @@ set -e
 
 [ -n "${FAKE_SYFT_LOG:-}" ] && echo "$@" >> "$FAKE_SYFT_LOG"
 
+# `syft version -o json` → emit a stub version document (the adapter parses .version).
+if [ "$1" = "version" ]; then
+    printf '{"application":"syft","version":"9.9.9-fake"}\n'
+    exit 0
+fi
+
 prev=""
 for arg in "$@"; do
     case "$prev" in

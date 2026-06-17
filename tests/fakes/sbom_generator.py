@@ -4,6 +4,8 @@ from houba.domain.sbom import media_type_for
 from houba.errors import SyftError
 from houba.ports.sbom import SbomDocument
 
+FAKE_SYFT_VERSION = "9.9.9-fake"
+
 
 class FakeSbomGenerator:
     def __init__(self, *, fail: bool = False) -> None:
@@ -29,6 +31,7 @@ class FakeSbomGenerator:
                 format=f,
                 media_type=media_type_for(f),
                 content=f'{{"sbom":"{f}"}}'.encode(),
+                tool_version=FAKE_SYFT_VERSION,
             )
             for f in formats
         ]

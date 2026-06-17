@@ -23,6 +23,7 @@ from houba.ports.sbom import SbomDocument
 
 class SyftAdapter:
     def __init__(self, binary: str | None = None) -> None:
+        self._version: str | None = None  # cached syft version (best-effort, resolved on first use)
         if binary is not None:
             if not Path(binary).is_file():
                 raise SyftError(f"syft binary not found: {binary}")
@@ -38,6 +39,26 @@ class SyftAdapter:
             raise SyftError("syft binary not found in PATH")
         self._bin = resolved
         return self._bin
+
+    def _tool_version(self) -> str:
+        # Best-effort, cached: a missing/unparseable version must not fail SBOM generation
+        # (the SBOM itself is the product; the version is a provenance nicety).
+        if self._version is not None:
+            return self._version
+        self._version = ""
+        try:
+            r = subprocess.run(  # noqa: S603
+                [self._resolve(), "version", "-o", "json"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if r.returncode == 0:
+                self._version = str(json.loads(r.stdout).get("version", ""))
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            self._version = ""
+        return self._version
 
     def _registry_config(
         self,
@@ -108,7 +129,13 @@ class SyftAdapter:
                 raise SyftError(str(e)) from e
             if r.returncode != 0:
                 raise SyftError(f"syft {' '.join(args)} failed: {r.stderr.strip()}")
+            version = self._tool_version()
             return [
-                SbomDocument(format=fmt, media_type=media_types[fmt], content=path.read_bytes())
+                SbomDocument(
+                    format=fmt,
+                    media_type=media_types[fmt],
+                    content=path.read_bytes(),
+                    tool_version=version,
+                )
                 for fmt, path in outputs
             ]

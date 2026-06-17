@@ -31,6 +31,18 @@ def test_generate_emits_one_output_per_format(
     assert f"registry:{DIGEST_REF}" in text
 
 
+def test_generate_captures_tool_version(
+    fake_bin_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    log = tmp_path / "syft.log"
+    monkeypatch.setenv("FAKE_SYFT_LOG", str(log))
+
+    docs = SyftAdapter().generate(DIGEST_REF, ["spdx-json"])
+
+    assert docs[0].tool_version == "9.9.9-fake"  # from the fake-bin's `syft version -o json`
+    assert "version -o json" in log.read_text()  # the adapter queried syft for its version
+
+
 def test_generate_writes_auth_and_insecure_into_config(
     fake_bin_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
