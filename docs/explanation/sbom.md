@@ -43,5 +43,6 @@ a raw binary.
 
 houba produces the queryable inventory; it never runs the query. CVE matching (`version → CVE-xxxx`)
 and fleet-wide blast-radius live downstream in the org's observability stack — houba's standing
-non-goal. For the mechanism rationale, see [Architecture & design](../architecture/design.md) and
-[ADR 0034](../architecture/decisions/0034-unify-sbom-on-syft.md).
+non-goal. For the mechanism rationale, see
+[Architecture & design](https://github.com/trivoallan/houba/blob/main/docs/architecture/design.md)
+and [ADR 0034](https://github.com/trivoallan/houba/blob/main/docs/architecture/decisions/0034-unify-sbom-on-syft.md).
