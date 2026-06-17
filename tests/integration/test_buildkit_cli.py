@@ -33,6 +33,18 @@ def test_build_and_push_success(
     assert "VERSION=1.36" in args
 
 
+def test_build_pushes_oci_mediatypes(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # OCI-native registries (e.g. Zot) reject buildkit's default Docker schema2 manifest with
+    # 415; push OCI mediatypes so the manifest is accepted everywhere.
+    log = tmp_path / "buildctl.log"
+    monkeypatch.setenv("FAKE_BUILDCTL_LOG", str(log))
+    monkeypatch.setenv("FAKE_BUILDCTL_SCENARIO", "success")
+    BuildkitAdapter().build_and_push(_request(tmp_path))
+    assert "oci-mediatypes=true" in log.read_text()
+
+
 def test_build_and_push_failure_raises_buildkit_error(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
