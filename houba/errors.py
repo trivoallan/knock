@@ -16,6 +16,7 @@ __all__ = [
     "PolicyValidationError",
     "RegctlError",
     "ScanReportError",
+    "SyftError",
     "UnknownFormatError",
     "UsageOracleError",
     "exit_code_for",
@@ -56,6 +57,10 @@ class BuildkitError(AdapterError):
 
 class CosignError(AdapterError):
     """`cosign` invocation error (attest / sign DSSE attestations)."""
+
+
+class SyftError(AdapterError):
+    """`syft` invocation error (SBOM generation on copy and rebuild paths)."""
 
 
 class UsageOracleError(AdapterError):
