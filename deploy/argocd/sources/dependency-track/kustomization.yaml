@@ -1,5 +1,5 @@
 # Dependency-Track as its own additive ArgoCD app: the worked-example "observability stack"
-# consumer (ADR 0033). References the SAME component manifests components/dependency-track ships.
+# consumer (ADR 0035). References the SAME component manifests components/dependency-track ships.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 

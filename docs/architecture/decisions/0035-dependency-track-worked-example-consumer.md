@@ -1,4 +1,4 @@
-# 33. Dependency-Track is the reference deployment's worked-example SBOM consumer
+# 35. Dependency-Track is the reference deployment's worked-example SBOM consumer
 
 Date: 2026-06-16
 

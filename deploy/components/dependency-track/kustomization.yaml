@@ -1,5 +1,5 @@
 # Worked-example SBOM consumer add-on: apiserver + frontend (embedded H2, demo footprint).
-# Pulled into BOTH the local overlay and the Argo source as a Component (ADR 0033), the same
+# Pulled into BOTH the local overlay and the Argo source as a Component (ADR 0035), the same
 # dual-use shape as components/buildkitd — one source of truth, deployed in make local + make demo.
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component

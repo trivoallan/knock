@@ -37,7 +37,7 @@ glue** — it is *not* a houba feature.
 3. **The portable-stamp thesis (ADR 0032).** DT must never be modeled as an abstract
    external system in the Context/Container/Landscape C4 views. It *may* appear in the
    **Deployment** views — those are worked examples and already name concrete tools (kind,
-   openbao, eso). ADR 0033 records this refinement.
+   openbao, eso). ADR 0035 records this refinement.
 4. **No houba core change** ⇒ no Pydantic model change ⇒ no `make reference` regen, no
    coverage-gate impact. The entire change lives in `deploy/`, `scripts/`, `docs/`.
 
@@ -152,7 +152,7 @@ unaffected.
 
 Landed in the same change:
 
-- **ADR 0033** — "Dependency-Track is the worked-example currency consumer." Refines ADR
+- **ADR 0035** — "Dependency-Track is the worked-example currency consumer." Refines ADR
   0032: DT may be named in **Deployment** views (worked examples); the abstract
   Context/Container model stays generic.
 - `docs/architecture/workspace.dsl` — add the DT instance + the publish Job to the
@@ -174,7 +174,7 @@ New:
 - `deploy/argocd/apps/dependency-track.yaml`
 - `deploy/base/{job-publish-sbom,job-dt-bootstrap}.yaml` (+ RBAC for the bootstrap SA)
 - `scripts/{publish-sbom.sh,dt-bootstrap.sh}`
-- `docs/architecture/decisions/0033-dependency-track-worked-example-consumer.md`
+- `docs/architecture/decisions/0035-dependency-track-worked-example-consumer.md`
 
 The App-of-Apps `root.yaml` points at `deploy/argocd/apps` and auto-discovers Application
 manifests there, so the new DT app is registered just by adding the file — `root.yaml` is

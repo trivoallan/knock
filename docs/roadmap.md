@@ -152,5 +152,5 @@ These are not refused on principle — they are waiting for a concrete trigger t
   feeds; that *currency* is the org's SBOM/vuln platform's job (e.g. Dependency-Track). The referrer
   is provenance, not a competing store — collapsing it into a store reopens the overlap. *(ADR 0032)*
   The reference deployment now *demonstrates* this loop with an off-the-shelf Dependency-Track
-  (ADR 0033) — houba still does not own currency; the demo wires a third-party consumer.
+  (ADR 0035) — houba still does not own currency; the demo wires a third-party consumer.
 - **End-of-life awareness.** Carried by a sibling tool (`regis`).
