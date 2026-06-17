@@ -17,6 +17,10 @@ spec:
             matchLabels:
               app.kubernetes.io/name: houba
               app.kubernetes.io/component: reconcile
+        - podSelector:                       # the XZ incident fixture build also drives buildkitd
+            matchLabels:
+              app.kubernetes.io/name: houba
+              app.kubernetes.io/component: seed-incident
       ports:
         - protocol: TCP
           port: 1234

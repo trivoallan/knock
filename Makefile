@@ -5,11 +5,10 @@
 #                buildkitd + the reference policy + registry + reconcile + report)
 #   make local   the inner-loop escape hatch (kubectl apply -k, no Argo/operators)
 
-CLUSTER        ?= houba-demo
-IMAGE          ?= houba:dev
-GLUE_IMAGE     ?= houba-glue:dev
-FIXTURE_IMAGE  ?= houba-fixture-debian-xz:5.6.1
-NS             ?= houba
+CLUSTER     ?= houba-demo
+IMAGE       ?= houba:dev
+GLUE_IMAGE  ?= houba-glue:dev
+NS          ?= houba
 
 # The blast-radius script lives outside the base dir (canonical scripts/), so the
 # configMapGenerator needs the relaxed load restrictor. `kubectl apply -k` can't pass
@@ -131,16 +130,13 @@ openbao-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (place
 	$(KUBECTL) -n openbao exec -i $(OPENBAO_POD) -- sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/houba/registries HOUBA_REGISTRIES='\''{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'\'''
 
 # ---- consumer / ops ------------------------------------------------------
-seed-incident: ## Build the xz fixture, push it as the pretend-upstream + the bypass blind-spot
-	docker build -t $(FIXTURE_IMAGE) -f deploy/incidents/debian-xz.Dockerfile deploy/incidents
+seed-incident: ## Build the xz fixture IN-CLUSTER (buildkitd) → upstream/ + bypassed/ repos in the Zot
+	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
 	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=120s
-	$(KUBECTL) -n $(NS) port-forward --address 127.0.0.1 svc/registry 5000:5000 & \
-	  PF=$$!; trap "kill $$PF" EXIT; sleep 3; \
-	  docker tag $(FIXTURE_IMAGE) 127.0.0.1:5000/upstream/debian-xz:5.6.1 && \
-	  docker push 127.0.0.1:5000/upstream/debian-xz:5.6.1 && \
-	  docker tag $(FIXTURE_IMAGE) 127.0.0.1:5000/bypassed/debian-xz:5.6.1 && \
-	  docker push 127.0.0.1:5000/bypassed/debian-xz:5.6.1
-	@echo ">> seeded upstream/debian-xz:5.6.1 (houba will rebuild it) + bypassed/debian-xz:5.6.1 (never through houba)."
+	-$(KUBECTL) -n $(NS) delete job houba-seed-incident --ignore-not-found
+	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-seed-incident --timeout=600s
+	$(KUBECTL) -n $(NS) logs job/houba-seed-incident
 
 blast-radius: ## (Re)run the blast-radius consumer and print its report
 	-$(KUBECTL) -n $(NS) delete job houba-blast-radius --ignore-not-found

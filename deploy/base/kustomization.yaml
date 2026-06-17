@@ -19,6 +19,7 @@ resources:
   - rbac-dt-bootstrap.yaml
   - job-dt-bootstrap.yaml
   - job-publish-sbom.yaml
+  - job-seed-incident.yaml
 
 # Stable, predictable resource names (no content-hash suffix) so the on-demand
 # blast-radius Job and the CronJob reference config/script by fixed name.
@@ -62,6 +63,12 @@ configMapGenerator:
   - name: houba-publish-sbom
     files:
       - publish-sbom.sh=../../scripts/publish-sbom.sh
+  # The XZ incident seed: the build script + the fixture Dockerfile (buildctl's context),
+  # mounted together at /ctx so buildkitd builds the deliberately-vulnerable fixture in-cluster.
+  - name: houba-seed-incident
+    files:
+      - seed-incident.sh=../../scripts/seed-incident.sh
+      - debian-xz.Dockerfile=../incidents/debian-xz.Dockerfile
       - extract_sbom.py=../../scripts/extract_sbom.py
 
 # Container image is rewritten per overlay (houba:dev loaded into kind for the
