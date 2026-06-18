@@ -1,0 +1,21 @@
+# Read-only access for the blast-radius consumer to list pods across namespaces —
+# the runtime "where does this digest run?" leg of the join. Pods only, get+list,
+# no write. Bound to the `houba` SA the blast-radius Job already runs as.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: houba-blast-radius-pod-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: houba-blast-radius-pod-reader
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: houba-blast-radius-pod-reader }
+subjects:
+  - kind: ServiceAccount
+    name: houba
+    namespace: houba

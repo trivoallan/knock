@@ -249,6 +249,9 @@ workspace "houba" "Single front door / stamper for external container images." {
                     rfGc = infrastructureNode "CronJob: houba-gc" "Weekly houba gc --apply — collects superseded scan referrers (keep=2/older-than=30d). No git-sync/policies; walks the roster only." "Kubernetes CronJob"
                     rfDt = infrastructureNode "Deployment: dependency-track (own app)" "Worked-example SBOM consumer (apiserver + frontend, embedded H2) — its own ArgoCD Application (ADR 0035). Currency layer: package-level blast-radius. Fed the CycloneDX SBOM referrer houba attaches (HOUBA_SBOM_FORMATS), uploaded by publish-sbom." "Kubernetes Deployment"
                     rfPublishSbom = infrastructureNode "Job: houba-publish-sbom" "Fetches the CycloneDX SBOM referrer houba attaches to each placed image and uploads it to DT. regctl + python, no conversion. Twin of the blast-radius consumer." "Kubernetes Job"
+                    rfMarkedWorkloads = deploymentNode "marked workloads (team-a/b/c)" "pause pods annotated with the placed/bypass digest — the runtime stand-in (namespaces-as-clusters)" "Kubernetes Deployment" {
+                        rfPausePods = infrastructureNode "pause pods" "One pod per namespace (team-a/b/c), annotated with the placed/bypass digest; queried by blast-radius via kube API." "Kubernetes Pod"
+                    }
                 }
                 deploymentNode "namespace: external-secrets" "ESO operator (wave 0)" "Namespace" {
                     rfEso = infrastructureNode "External Secrets Operator" "Helm child; materializes the registry roster Secret" "ESO"
@@ -270,6 +273,7 @@ workspace "houba" "Single front door / stamper for external container images." {
             rfEsObj -> rfEso "Requests the roster Secret" "ESO"
             rfGit -> rfPolicyRepo "Pulls policies" "git"
             rfBlast -> rfDest "Reads provenance stamps" "regctl" "DataCoupling"
+            rfBlast -> rfPausePods "Lists pods, joins digest -> cluster (kube API)" "kubectl / kube API"
             rfGc -> rfDest "Collects superseded scan referrers" "regctl" "DataCoupling"
         }
 
@@ -294,6 +298,9 @@ workspace "houba" "Single front door / stamper for external container images." {
                         loGc = infrastructureNode "CronJob: houba-gc" "Suspended (like reconcile); fired on demand. houba gc --apply over the roster." "Kubernetes CronJob"
                         loDt = infrastructureNode "Deployment: dependency-track (own app)" "Worked-example SBOM consumer (apiserver + frontend, embedded H2) — (ADR 0035). Currency layer: package-level blast-radius. Fed the CycloneDX SBOM referrer houba attaches (HOUBA_SBOM_FORMATS), uploaded by publish-sbom." "Kubernetes Deployment"
                         loPublishSbom = infrastructureNode "Job: houba-publish-sbom" "Fetches the CycloneDX SBOM referrer houba attaches to each placed image and uploads it to DT. regctl + python, no conversion. Twin of the blast-radius consumer." "Kubernetes Job"
+                        loMarkedWorkloads = deploymentNode "marked workloads (team-a/b/c)" "pause pods annotated with the placed/bypass digest — the runtime stand-in (namespaces-as-clusters)" "Kubernetes Deployment" {
+                            loPausePods = infrastructureNode "pause pods" "One pod per namespace (team-a/b/c), annotated with the placed/bypass digest; queried by blast-radius via kube API." "Kubernetes Pod"
+                        }
                     }
                     deploymentNode "namespace: registry" "Throwaway Zot — plain HTTP; copied + rebuilt images pushed here; built-in web UI (make registry-ui)" "Namespace" {
                         loDest = softwareSystemInstance destRegistries
@@ -305,6 +312,7 @@ workspace "houba" "Single front door / stamper for external container images." {
             }
             loGit -> loRepo "Pulls policies" "git"
             loBlast -> loDest "Reads provenance stamps" "regctl" "DataCoupling"
+            loBlast -> loPausePods "Lists pods, joins digest -> cluster (kube API)" "kubectl / kube API"
             loGc -> loDest "Collects superseded scan referrers" "regctl" "DataCoupling"
         }
     }

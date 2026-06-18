@@ -149,12 +149,9 @@ Two of the former *Now* items shipped:
   per-team fan-out a replication setup gives you is already a policy `destinations` list, so houba
   *replaces* registry replication rather than chaining behind them — and because replication strips
   OCI referrers, that is what keeps the SBOM/signature alive in every team copy.
-- **Docs polish pass — raise the self-serve surface.** The docs site is live; the next lift is quality
-  so users onboard without us:
-  - an **architecture presentation** — a narrative overview of the hexagon (from the C4 model), not just the reference;
-  - a **richer examples section** — broaden and deepen the worked `MirrorPolicy` walkthroughs;
-  - **diagrams** woven into the prose (the committed Mermaid C4 exports, inline where they explain);
-  - **fenced, runnable code blocks** throughout — copy-pasteable commands and policy snippets.
+- **Docs polish pass — shipped (#155).** The architecture-narrative page (with inline C4 diagrams),
+  the `rebuild-and-harden` how-to (richer worked examples), and site-wide fenced code blocks all
+  landed. One docs-polish lever remains:
 - **Schema rendering — readable generated reference (tooling, carries risk).** The generated
   `MirrorPolicy`, config `HOUBA_*`, and scan-predicate `/scan/v1` reference each render as a deep, noisy
   `anyOf > item N` tree (json-schema-for-humans default). Make them readable — collapse the union noise,
