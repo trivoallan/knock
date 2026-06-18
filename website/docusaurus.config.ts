@@ -50,6 +50,7 @@ export default async function createConfig(): Promise<Config> {
           exclude: [
             'architecture/**',
             'superpowers/**',
+            'examples/**', // runnable .yml fixtures; the doc pages live in reference/examples/
             'roadmap.md',
             '**/_export/**',
           ],
