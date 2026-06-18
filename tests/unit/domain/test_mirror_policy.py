@@ -19,6 +19,7 @@ from houba.domain.mirror_policy import (
     mirror_policy_json_schema,
     parse_mirror_policy,
 )
+from houba.domain.scan.summary import Severity
 from houba.errors import PolicyValidationError
 
 
@@ -387,3 +388,22 @@ def test_malformed_owner_rejected() -> None:
             "  source: {registry: docker.io, repository: library/redis}\n"
             "  imports: [{name: v, tags: {}, owners: ['bad owner!']}]\n"
         )
+
+
+# --- Destination scan gate thresholds (Task 6) ---
+
+
+def test_destination_accepts_gate_thresholds() -> None:
+    d = Destination(project="p", repository="r", enforceFrom="critical", auditFrom="high")
+    assert d.enforce_from is Severity.critical
+    assert d.audit_from is Severity.high
+
+
+def test_destination_defaults_no_gate() -> None:
+    d = Destination(project="p", repository="r")
+    assert d.enforce_from is None and d.audit_from is None
+
+
+def test_enforce_must_be_at_least_as_strict_as_audit() -> None:
+    with pytest.raises((PolicyValidationError, ValueError)):
+        Destination(project="p", repository="r", enforceFrom="high", auditFrom="critical")

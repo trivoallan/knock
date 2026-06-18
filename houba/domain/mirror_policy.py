@@ -15,6 +15,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationErr
 from pydantic.alias_generators import to_camel
 
 from houba.domain.deletion_mode import DeletionMode
+from houba.domain.scan.summary import Severity
 from houba.errors import PolicyValidationError
 
 
@@ -45,6 +46,24 @@ class Destination(_CamelModel):
     )
     project: str = Field(description="Destination project / namespace.")
     repository: str = Field(description="Destination repository.")
+    enforce_from: Severity | None = Field(
+        default=None,
+        description="Block publish to this destination if any finding is at or above this "
+        "severity (Kyverno Enforce). Requires HOUBA_SCAN_EVALUATOR_CMD.",
+    )
+    audit_from: Severity | None = Field(
+        default=None,
+        description="Publish but flag a warning if any finding is at or above this severity "
+        "(Kyverno Audit). Requires HOUBA_SCAN_EVALUATOR_CMD.",
+    )
+
+    @model_validator(mode="after")
+    def _enforce_at_least_as_strict_as_audit(self) -> Destination:
+        if self.enforce_from is not None and self.audit_from is not None:
+            ranks = list(Severity)
+            if ranks.index(self.enforce_from) > ranks.index(self.audit_from):
+                raise ValueError("enforceFrom must be at least as strict as auditFrom")
+        return self
 
 
 class TagSelection(_CamelModel):
