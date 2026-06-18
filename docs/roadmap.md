@@ -5,9 +5,11 @@ single-front-door mandate is now **enforceable and trustworthy** — complete at
 `--fail-on` CI gate, and a frozen provenance contract have all shipped. Blast-radius now reaches
 **package** granularity: every placed image carries a syft-generated SBOM (signed under houba's
 identity when a signer is configured), and `houba audit --sbom` reports the has-SBOM coverage
-dimension. The adoption surface (a published docs site) is live. The active frontier narrows to a
-single coverage lever — the `--fail-on-no-sbom` gate; the remaining feature bets were deliberately
-cut or deferred (see *Deferred* / *Out of scope*).*
+dimension. The adoption surface (a published docs site) is live. The active frontier is no longer a
+feature but **adoption** — making the mandate *demonstrable* to a target organization so it moves from
+"we would mandate this" to a live rollout. Forward direction lives in *Now / Deferred / Later* **by
+direction, never by version**: a version is cut when a real increment lands, but this roadmap always
+shows the heading, decoupled from release tags.*
 
 ## Product thesis
 
@@ -127,16 +129,27 @@ Two of the former *Now* items shipped:
   reports `with_sbom` / `without_sbom`. The coverage ladder is now four rungs:
   `uncovered < stamped < signed < has-SBOM`. *(ADR 0029; closed #143)*
 
-## Now — close the has-SBOM gate
+## Now — make the mandate demonstrable (adoption)
 
-> Theme: the mandate is enforceable and trustworthy, blast-radius reaches package level, and both
-> the adoption surface (docs site) and the observational has-SBOM audit have shipped (see
-> *Delivered*). One coverage lever remains.
+> Theme: the core loop, the enforceable/trustworthy mandate, and package-level blast-radius are all
+> delivered (see *Delivered*). The frontier is no longer a feature — it is **adoption**: proving, to a
+> target organization, that houba is a drop-in for its existing intake (e.g. a CI pipeline +
+> registry-replication fan-out) **and** that a CVE-to-owner blast-radius query lands in the tools it
+> already runs. This is enablement on already-shipped capability, **not tied to a version**.
 
-- **`audit --fail-on-no-sbom` gate.** The observational `--sbom` tier already reports SBOM presence;
-  the remaining step is the CI gate that *fails* the build when a stamped image lacks an SBOM —
-  completing the enforcement ladder `--fail-on-uncovered` → `--fail-on-unsigned` → `--fail-on-no-sbom`.
-  *(ADR 0029, P0.5)*
+- **Adoption proof — the demonstrable mandate.** Wire the end-to-end story on the reference
+  deployment: houba places + stamps + SBOMs (copy *and* rebuild) → an SBOM/vuln consumer answers
+  *"which images ship the vulnerable package?"* → the stamp's `owners` answer *"who do we contact?"* →
+  a runtime source answers *"where does it run?"*, all joined on the image digest. The reproduced XZ
+  (CVE-2024-3094) incident and the bypass-image coverage blind spot already ship (the loop is built);
+  what remains is the owner/runtime join and the migration-parity narrative. houba is **one leg** of
+  the join — it produces the facts; the org's tools run the query. A side note on placement: the
+  per-team fan-out a replication setup gives you is already a policy `destinations` list, so houba
+  *replaces* registry replication rather than chaining behind them — and because replication strips
+  OCI referrers, that is what keeps the SBOM/signature alive in every team copy.
+- **`audit --fail-on-no-sbom` — minor (backfill guard).** Since SBOMs now generate on **both** paths,
+  every freshly-placed image already carries one, so this gate only catches pre-unification backfill
+  and regressions — a small completeness item, no longer a headline. *(ADR 0029)*
 
 ## Deferred — revisit only on a real signal (YAGNI until then)
 
@@ -150,7 +163,13 @@ These are not refused on principle — they are waiting for a concrete trigger t
 
 ## Later — directional
 
-*(empty — the standing bets are either delivered, deferred above, or out of scope below.)*
+- **Developer coverage portal (consumption surface).** A developer-scoped Backstage (TechInsights)
+  view that scores per-service provenance coverage off the houba stamp, with vuln posture surfaced via
+  an off-the-shelf SBOM/vuln platform (e.g. Dependency-Track). Design is captured (spec + ADR);
+  implementation is *Later*. Stays true to the thesis — **houba stamps, the portal consumes**: it reads
+  the stamp / SBOM referrers, it does not turn houba into a query engine or a fleet inventory. This is
+  the consumption end of *coverage gates value* — the surface that makes coverage legible to the
+  developers who own the gaps.
 
 ## Explicitly out of scope
 
