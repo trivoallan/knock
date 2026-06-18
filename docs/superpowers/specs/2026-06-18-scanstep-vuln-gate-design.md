@@ -108,6 +108,48 @@ Per destination, against the scan `facts`:
 In every published case the SARIF is attached as an OCI referrer and the `scan/v1` predicate signed
 (when `HOUBA_ATTEST_SIGNER` is set) — exactly the existing SBOM / attach machinery.
 
+### Sequence — stage → scan → promote
+
+The behavioural companion to the structural C4 views (the gated path; the no-gate path keeps today's
+`place → SBOM` flow unchanged):
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant R as reconcile (use case)
+    participant Reg as Registry (regctl)
+    participant S as SBOM gen (syft)
+    participant E as Vuln scanner (HOUBA_SCAN_EVALUATOR_CMD)
+    participant A as Attestor (cosign)
+
+    Note over R,Reg: stage — to a non-consumable tag
+    R->>Reg: build / copy → a .houba-staging tag
+    R->>Reg: annotate staging (provenance stamp) → out_digest
+
+    Note over R,E: scan — on the staged digest (no re-pull)
+    R->>S: generate SBOM for the staged digest
+    S-->>R: SBOM documents
+    R->>E: evaluate the SBOM (subprocess)
+    E-->>R: SARIF
+    R->>R: summarize to facts then decide the gate
+
+    alt Enforce breached → block
+        R->>Reg: delete the staging tag
+        Note over R: op failed — ScanGateBlocked — never promoted
+    else clean / Audit
+        Note over R,Reg: promote — consumable only now
+        R->>Reg: copy staging → the consumable tag
+        R->>Reg: put SBOM + SARIF referrers on the digest
+        opt signer configured
+            R->>A: sign the scan + transform predicates
+        end
+        R->>Reg: delete the staging tag
+        opt action is Audit
+            Note over R: op applied — audit_breached = true (warning)
+        end
+    end
+```
+
 ### What gets stamped
 
 Reuse `build_scan_annotations` + `build_scan_statement` unchanged: scanner name/version come from
