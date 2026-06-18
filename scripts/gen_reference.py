@@ -176,7 +176,7 @@ def _write_config_table(out_dir: Path) -> None:
         "[`config.schema.json`](config.schema.json)."
     )
 
-    content = f"---\nsidebar_position: 2\n---\n\n# Configuration (HOUBA_*)\n\n{intro}\n\n{table}\n"
+    content = f"---\nsidebar_position: 2\n---\n\n# Configuration\n\n{intro}\n\n{table}\n"
     (out_dir / "configuration.md").write_text(content)
     print("wrote configuration.md")
 

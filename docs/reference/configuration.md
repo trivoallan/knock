@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-# Configuration (HOUBA_*)
+# Configuration
 
 Each field is set as `HOUBA_<FIELD>` (the property name upper-cased). JSON-typed fields (`registries`, `transform_ca_certs`, `transform_package_mirrors`, `retention`) take a JSON value whose shape is documented in the [schemas](schemas/) section. The machine-readable contract is [`config.schema.json`](config.schema.json).
 
