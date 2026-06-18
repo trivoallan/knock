@@ -8,7 +8,7 @@ houba's vocabulary is precise: words like *stamp*, *front door*, and *blast-radi
 
 ### alias
 
-A destination tag that tracks a moving target — for example, `{major}.{minor}` always resolves to the highest patch release in that minor, and `latest` always resolves to the highest overall release. houba maintains aliases as the tag selection changes, repointing them after each reconcile. See [redis example](../examples/redis.md).
+A destination tag that tracks a moving target — for example, `{major}.{minor}` always resolves to the highest patch release in that minor, and `latest` always resolves to the highest overall release. houba maintains aliases as the tag selection changes, repointing them after each reconcile. See [redis example](examples/redis.md).
 
 ### attach (scan)
 

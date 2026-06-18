@@ -4,12 +4,12 @@ description: "The reference policy the demo reconciles: copy (busybox) and rebui
 sidebar_position: 1
 ---
 
-The reference policy that both `make demo` (the Argo App-of-Apps) and `make local` (the inner-loop overlay) reconcile. One pass demonstrates the **copy path** (busybox) and the **rebuild path** (debian-tz with timezone variants) in a single, self-contained run — no Harbor, no org config required. See the [Getting started](../tutorials/getting-started.md) tutorial for a guided walkthrough of the copy half.
+The reference policy that both `make demo` (the Argo App-of-Apps) and `make local` (the inner-loop overlay) reconcile. One pass demonstrates the **copy path** (busybox) and the **rebuild path** (debian-tz with timezone variants) in a single, self-contained run — no Harbor, no org config required. See the [Getting started](../../tutorials/getting-started.md) tutorial for a guided walkthrough of the copy half.
 
-```yaml title="docs/examples/reference/busybox/busybox.yml" file=./reference/busybox/busybox.yml
+```yaml title="docs/examples/reference/busybox/busybox.yml" file=../../examples/reference/busybox/busybox.yml
 ```
 
-```yaml title="docs/examples/reference/debian-tz/debian-tz.yml" file=./reference/debian-tz/debian-tz.yml
+```yaml title="docs/examples/reference/debian-tz/debian-tz.yml" file=../../examples/reference/debian-tz/debian-tz.yml
 ```
 
 Run it: `uv run houba reconcile docs/examples/reference/busybox` (copy path, no extra deps) or `uv run houba reconcile docs/examples/reference/debian-tz` (rebuild path, needs a BuildKit daemon on `PATH`).
