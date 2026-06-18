@@ -170,6 +170,14 @@ These are not refused on principle — they are waiting for a concrete trigger t
   `regis` mapper was likewise rejected in favor of `regis`-via-SARIF.
 - **Declaration scaffolding (⑥) — `product_init` / `product_delete`.** CRUD ergonomics around the
   policy declaration. Build only when authoring friction is demonstrably the bottleneck.
+- **`MirrorPolicy` as a Kubernetes CRD (visible in ArgoCD).** A CRD with no controller is ceremony;
+  a CRD *with* a controller is an operator (see *Runtime presence / fleet inventory*, out of scope).
+  The GitOps reflex it answers is already covered: policies live as YAML in the Argo App-of-Apps
+  (in Git, synced, drift-detected) and a `reconcile`/`audit` Job surfaces green/red health for free —
+  no CRD needed. Revisit only when someone names a decision they would take on a per-policy `.status`
+  (e.g. `coverage: 87%` red) that they cannot already take from the observability stack — and note
+  that even then the value-surface is likely observability or Backstage (owners already live there),
+  not ArgoCD.
 
 ## Later — directional
 
