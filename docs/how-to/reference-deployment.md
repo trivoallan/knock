@@ -40,7 +40,8 @@ make demo             # kind up → install argo-cd → apply root → sync from
                       #   → Zot out-of-band → reconcile → report
 make demo-run         # another one-shot reconcile from the synced CronJob
 make blast-radius     # re-read the stamp and print blast radius
-make registry-ui      # port-forward Zot's built-in UI to http://localhost:8080
+make registry-ui      # port-forward Zot's built-in UI to http://localhost:8082
+make argocd-ui        # ArgoCD UI (admin creds printed) at https://localhost:8083
 make logs             # tail the reconcile logs
 make down             # tear down the cluster
 ```
@@ -57,7 +58,7 @@ end-to-end**:
 4. waits for the secret + CronJob, fires a one-shot reconcile, and runs blast-radius.
 
 Zot ships a **built-in web UI** (the `search` + `ui` extensions), so after a reconcile
-`make registry-ui` port-forwards it to <http://localhost:8080>, where you can browse the mirrored
+`make registry-ui` port-forwards it to <http://localhost:8082>, where you can browse the mirrored
 repos/tags and read the provenance annotations on each manifest — the stamp, made visible. The UI is
 served by the registry itself (no second component, no CORS plumbing); it is demo-only — a real
 cluster browses its own Harbor/Zot console. The reconcile/blast-radius Jobs log in **human-readable

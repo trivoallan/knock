@@ -36,7 +36,7 @@ houba pushed — browse the mirrored repos/tags and the provenance annotations o
 manifest, the stamp made visible:
 
 ```bash
-make registry-ui   # port-forward svc/registry → http://localhost:8080
+make registry-ui   # port-forward svc/registry → http://localhost:8082
 ```
 
 The UI is served by the registry itself (no second component, no CORS plumbing) on the
