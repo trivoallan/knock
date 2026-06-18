@@ -64,7 +64,7 @@ export default async function createConfig(): Promise<Config> {
       items: [
         {type: 'doc', docId: 'tutorials/getting-started', label: 'Tutorials', position: 'left'},
         {to: '/how-to', label: 'How-to', position: 'left'},
-        {type: 'doc', docId: 'reference/mirror-policy', label: 'Reference', position: 'left'},
+        {to: '/reference', label: 'Reference', position: 'left'},
         {to: '/explanation', label: 'Explanation', position: 'left'},
         {href: GH, label: 'GitHub', position: 'right'},
       ],

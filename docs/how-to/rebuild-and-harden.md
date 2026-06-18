@@ -82,4 +82,4 @@ houba reconcile docs/examples/attested
 `cosign` must be on `PATH`. Off by default: with no `HOUBA_ATTEST_SIGNER`, the rebuild is stamped but
 unsigned. To verify the result and the attached SBOM, see
 [Inspect an image's SBOM](inspect-sbom.md). For every signer knob, see the
-[configuration reference](../reference/config.md).
+[configuration reference](../reference/configuration.md).

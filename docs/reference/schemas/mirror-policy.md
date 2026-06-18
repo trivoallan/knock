@@ -4,115 +4,115 @@ sidebar_position: 1
 
 # MirrorPolicy
 
-- [1. Property `MirrorPolicy > apiVersion`](#apiVersion)
-- [2. Property `MirrorPolicy > kind`](#kind)
-- [3. Property `MirrorPolicy > metadata`](#metadata)
-  - [3.1. Property `MirrorPolicy > metadata > name`](#metadata_name)
-  - [3.2. Property `MirrorPolicy > metadata > labels`](#metadata_labels)
-    - [3.2.1. Property `MirrorPolicy > metadata > labels > additionalProperties`](#metadata_labels_additionalProperties)
-- [4. Property `MirrorPolicy > spec`](#spec)
-  - [4.1. Property `MirrorPolicy > spec > artifactType`](#spec_artifactType)
-  - [4.2. Property `MirrorPolicy > spec > source`](#spec_source)
-    - [4.2.1. Property `MirrorPolicy > spec > source > registry`](#spec_source_registry)
-    - [4.2.2. Property `MirrorPolicy > spec > source > repository`](#spec_source_repository)
-  - [4.3. Property `MirrorPolicy > spec > deletionMode`](#spec_deletionMode)
-    - [4.3.1. Property `MirrorPolicy > spec > deletionMode > anyOf > DeletionMode`](#spec_deletionMode_anyOf_i0)
-    - [4.3.2. Property `MirrorPolicy > spec > deletionMode > anyOf > item 1`](#spec_deletionMode_anyOf_i1)
-  - [4.4. Property `MirrorPolicy > spec > defaults`](#spec_defaults)
-    - [4.4.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults`](#spec_defaults_anyOf_i0)
-      - [4.4.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations`](#spec_defaults_anyOf_i0_destinations)
-        - [4.4.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0`](#spec_defaults_anyOf_i0_destinations_anyOf_i0)
-          - [4.4.1.1.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items)
-            - [4.4.1.1.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination > registry`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry)
-              - [4.4.1.1.1.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination > registry > anyOf > item 0`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i0)
-              - [4.4.1.1.1.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination > registry > anyOf > item 1`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i1)
-            - [4.4.1.1.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination > project`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_project)
-            - [4.4.1.1.1.1.3. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination > repository`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_repository)
-        - [4.4.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 1`](#spec_defaults_anyOf_i0_destinations_anyOf_i1)
-      - [4.4.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform`](#spec_defaults_anyOf_i0_transform)
-        - [4.4.1.2.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0`](#spec_defaults_anyOf_i0_transform_anyOf_i0)
-          - [4.4.1.2.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > TransformStep](#spec_defaults_anyOf_i0_transform_anyOf_i0_items)
-            - [4.4.1.2.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 0`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0)
-              - [4.4.1.2.1.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 0 > injectCA`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA)
-                - [4.4.1.2.1.1.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 0 > injectCA > certs`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA_certs)
-                  - [4.4.1.2.1.1.1.1.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 0 > injectCA > certs > certs items](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA_certs_items)
-            - [4.4.1.2.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 1`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1)
-              - [4.4.1.2.1.1.2.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 1 > rewritePackageSources`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1_rewritePackageSources)
-                - [4.4.1.2.1.1.2.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 1 > rewritePackageSources > mirror`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1_rewritePackageSources_mirror)
-            - [4.4.1.2.1.1.3. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 2`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2)
-              - [4.4.1.2.1.1.3.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 2 > setTimezone`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone)
-                - [4.4.1.2.1.1.3.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 2 > setTimezone > zone`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone_zone)
-        - [4.4.1.2.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 1`](#spec_defaults_anyOf_i0_transform_anyOf_i1)
-      - [4.4.1.3. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive`](#spec_defaults_anyOf_i0_archive)
-        - [4.4.1.3.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive`](#spec_defaults_anyOf_i0_archive_anyOf_i0)
-          - [4.4.1.3.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > keep`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep)
-            - [4.4.1.3.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > keep > anyOf > item 0`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i0)
-            - [4.4.1.3.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > keep > anyOf > item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i1)
-          - [4.4.1.3.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > olderThanDays`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays)
-            - [4.4.1.3.1.2.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > olderThanDays > anyOf > item 0`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i0)
-            - [4.4.1.3.1.2.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > olderThanDays > anyOf > item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i1)
-        - [4.4.1.3.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i1)
-      - [4.4.1.4. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags`](#spec_defaults_anyOf_i0_tags)
-        - [4.4.1.4.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection`](#spec_defaults_anyOf_i0_tags_anyOf_i0)
-          - [4.4.1.4.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > includeRegex`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex)
-            - [4.4.1.4.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > includeRegex > anyOf > item 0`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i0)
-            - [4.4.1.4.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > includeRegex > anyOf > item 1`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i1)
-          - [4.4.1.4.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > excludeRegex`](#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex)
-            - [4.4.1.4.1.2.1. MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > excludeRegex > excludeRegex items](#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex_items)
-          - [4.4.1.4.1.3. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > semverOnly`](#spec_defaults_anyOf_i0_tags_anyOf_i0_semverOnly)
-          - [4.4.1.4.1.4. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > names`](#spec_defaults_anyOf_i0_tags_anyOf_i0_names)
-            - [4.4.1.4.1.4.1. MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > names > names items](#spec_defaults_anyOf_i0_tags_anyOf_i0_names_items)
-          - [4.4.1.4.1.5. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > aliases`](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases)
-            - [4.4.1.4.1.5.1. MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > aliases > aliases items](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items)
-        - [4.4.1.4.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > item 1`](#spec_defaults_anyOf_i0_tags_anyOf_i1)
-      - [4.4.1.5. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > platforms`](#spec_defaults_anyOf_i0_platforms)
-        - [4.4.1.5.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > platforms > anyOf > item 0`](#spec_defaults_anyOf_i0_platforms_anyOf_i0)
-          - [4.4.1.5.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > platforms > anyOf > item 0 > item 0 items](#spec_defaults_anyOf_i0_platforms_anyOf_i0_items)
-        - [4.4.1.5.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > platforms > anyOf > item 1`](#spec_defaults_anyOf_i0_platforms_anyOf_i1)
-      - [4.4.1.6. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > owners`](#spec_defaults_anyOf_i0_owners)
-        - [4.4.1.6.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > owners > anyOf > item 0`](#spec_defaults_anyOf_i0_owners_anyOf_i0)
-          - [4.4.1.6.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > owners > anyOf > item 0 > item 0 items](#spec_defaults_anyOf_i0_owners_anyOf_i0_items)
-        - [4.4.1.6.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > owners > anyOf > item 1`](#spec_defaults_anyOf_i0_owners_anyOf_i1)
-      - [4.4.1.7. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor`](#spec_defaults_anyOf_i0_vendor)
-        - [4.4.1.7.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor > anyOf > item 0`](#spec_defaults_anyOf_i0_vendor_anyOf_i0)
-        - [4.4.1.7.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor > anyOf > item 1`](#spec_defaults_anyOf_i0_vendor_anyOf_i1)
-    - [4.4.2. Property `MirrorPolicy > spec > defaults > anyOf > item 1`](#spec_defaults_anyOf_i1)
-  - [4.5. Property `MirrorPolicy > spec > imports`](#spec_imports)
-    - [4.5.1. MirrorPolicy > spec > imports > ImportProfile](#spec_imports_items)
-      - [4.5.1.1. Property `MirrorPolicy > spec > imports > ImportProfile > name`](#spec_imports_items_name)
-      - [4.5.1.2. Property `MirrorPolicy > spec > imports > ImportProfile > tags`](#spec_imports_items_tags)
-      - [4.5.1.3. Property `MirrorPolicy > spec > imports > ImportProfile > destinations`](#spec_imports_items_destinations)
-        - [4.5.1.3.1. Property `MirrorPolicy > spec > imports > ImportProfile > destinations > anyOf > item 0`](#spec_imports_items_destinations_anyOf_i0)
-          - [4.5.1.3.1.1. MirrorPolicy > spec > imports > ImportProfile > destinations > anyOf > item 0 > Destination](#spec_imports_items_destinations_anyOf_i0_items)
-        - [4.5.1.3.2. Property `MirrorPolicy > spec > imports > ImportProfile > destinations > anyOf > item 1`](#spec_imports_items_destinations_anyOf_i1)
-      - [4.5.1.4. Property `MirrorPolicy > spec > imports > ImportProfile > transform`](#spec_imports_items_transform)
-        - [4.5.1.4.1. Property `MirrorPolicy > spec > imports > ImportProfile > transform > anyOf > item 0`](#spec_imports_items_transform_anyOf_i0)
-          - [4.5.1.4.1.1. MirrorPolicy > spec > imports > ImportProfile > transform > anyOf > item 0 > TransformStep](#spec_imports_items_transform_anyOf_i0_items)
-        - [4.5.1.4.2. Property `MirrorPolicy > spec > imports > ImportProfile > transform > anyOf > item 1`](#spec_imports_items_transform_anyOf_i1)
-      - [4.5.1.5. Property `MirrorPolicy > spec > imports > ImportProfile > archive`](#spec_imports_items_archive)
-        - [4.5.1.5.1. Property `MirrorPolicy > spec > imports > ImportProfile > archive > anyOf > Archive`](#spec_imports_items_archive_anyOf_i0)
-        - [4.5.1.5.2. Property `MirrorPolicy > spec > imports > ImportProfile > archive > anyOf > item 1`](#spec_imports_items_archive_anyOf_i1)
-      - [4.5.1.6. Property `MirrorPolicy > spec > imports > ImportProfile > platforms`](#spec_imports_items_platforms)
-        - [4.5.1.6.1. Property `MirrorPolicy > spec > imports > ImportProfile > platforms > anyOf > item 0`](#spec_imports_items_platforms_anyOf_i0)
-          - [4.5.1.6.1.1. MirrorPolicy > spec > imports > ImportProfile > platforms > anyOf > item 0 > item 0 items](#spec_imports_items_platforms_anyOf_i0_items)
-        - [4.5.1.6.2. Property `MirrorPolicy > spec > imports > ImportProfile > platforms > anyOf > item 1`](#spec_imports_items_platforms_anyOf_i1)
-      - [4.5.1.7. Property `MirrorPolicy > spec > imports > ImportProfile > variants`](#spec_imports_items_variants)
-        - [4.5.1.7.1. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0`](#spec_imports_items_variants_anyOf_i0)
-          - [4.5.1.7.1.1. MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant](#spec_imports_items_variants_anyOf_i0_items)
-            - [4.5.1.7.1.1.1. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > name`](#spec_imports_items_variants_anyOf_i0_items_name)
-            - [4.5.1.7.1.1.2. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > suffix`](#spec_imports_items_variants_anyOf_i0_items_suffix)
-            - [4.5.1.7.1.1.3. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > transform`](#spec_imports_items_variants_anyOf_i0_items_transform)
-              - [4.5.1.7.1.1.3.1. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > transform > anyOf > item 0`](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0)
-                - [4.5.1.7.1.1.3.1.1. MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > transform > anyOf > item 0 > TransformStep](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0_items)
-              - [4.5.1.7.1.1.3.2. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > transform > anyOf > item 1`](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i1)
-        - [4.5.1.7.2. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 1`](#spec_imports_items_variants_anyOf_i1)
-      - [4.5.1.8. Property `MirrorPolicy > spec > imports > ImportProfile > owners`](#spec_imports_items_owners)
-        - [4.5.1.8.1. Property `MirrorPolicy > spec > imports > ImportProfile > owners > anyOf > item 0`](#spec_imports_items_owners_anyOf_i0)
-          - [4.5.1.8.1.1. MirrorPolicy > spec > imports > ImportProfile > owners > anyOf > item 0 > item 0 items](#spec_imports_items_owners_anyOf_i0_items)
-        - [4.5.1.8.2. Property `MirrorPolicy > spec > imports > ImportProfile > owners > anyOf > item 1`](#spec_imports_items_owners_anyOf_i1)
-      - [4.5.1.9. Property `MirrorPolicy > spec > imports > ImportProfile > vendor`](#spec_imports_items_vendor)
-        - [4.5.1.9.1. Property `MirrorPolicy > spec > imports > ImportProfile > vendor > anyOf > item 0`](#spec_imports_items_vendor_anyOf_i0)
-        - [4.5.1.9.2. Property `MirrorPolicy > spec > imports > ImportProfile > vendor > anyOf > item 1`](#spec_imports_items_vendor_anyOf_i1)
+- [1. Property `apiVersion`](#apiVersion)
+- [2. Property `kind`](#kind)
+- [3. Property `metadata`](#metadata)
+  - [3.1. Property `name`](#metadata_name)
+  - [3.2. Property `labels`](#metadata_labels)
+    - [3.2.1. Property `additionalProperties`](#metadata_labels_additionalProperties)
+- [4. Property `spec`](#spec)
+  - [4.1. Property `artifactType`](#spec_artifactType)
+  - [4.2. Property `source`](#spec_source)
+    - [4.2.1. Property `registry`](#spec_source_registry)
+    - [4.2.2. Property `repository`](#spec_source_repository)
+  - [4.3. Property `deletionMode`](#spec_deletionMode)
+    - [4.3.1. Property `DeletionMode`](#spec_deletionMode_anyOf_i0)
+    - [4.3.2. Property `item 1`](#spec_deletionMode_anyOf_i1)
+  - [4.4. Property `defaults`](#spec_defaults)
+    - [4.4.1. Property `Defaults`](#spec_defaults_anyOf_i0)
+      - [4.4.1.1. Property `destinations`](#spec_defaults_anyOf_i0_destinations)
+        - [4.4.1.1.1. Property `item 0`](#spec_defaults_anyOf_i0_destinations_anyOf_i0)
+          - [4.4.1.1.1.1. Destination](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items)
+            - [4.4.1.1.1.1.1. Property `registry`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry)
+              - [4.4.1.1.1.1.1.1. Property `item 0`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i0)
+              - [4.4.1.1.1.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i1)
+            - [4.4.1.1.1.1.2. Property `project`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_project)
+            - [4.4.1.1.1.1.3. Property `repository`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_repository)
+        - [4.4.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_destinations_anyOf_i1)
+      - [4.4.1.2. Property `transform`](#spec_defaults_anyOf_i0_transform)
+        - [4.4.1.2.1. Property `item 0`](#spec_defaults_anyOf_i0_transform_anyOf_i0)
+          - [4.4.1.2.1.1. TransformStep](#spec_defaults_anyOf_i0_transform_anyOf_i0_items)
+            - [4.4.1.2.1.1.1. Property `item 0`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0)
+              - [4.4.1.2.1.1.1.1. Property `injectCA`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA)
+                - [4.4.1.2.1.1.1.1.1. Property `certs`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA_certs)
+                  - [4.4.1.2.1.1.1.1.1.1. certs items](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA_certs_items)
+            - [4.4.1.2.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1)
+              - [4.4.1.2.1.1.2.1. Property `rewritePackageSources`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1_rewritePackageSources)
+                - [4.4.1.2.1.1.2.1.1. Property `mirror`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1_rewritePackageSources_mirror)
+            - [4.4.1.2.1.1.3. Property `item 2`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2)
+              - [4.4.1.2.1.1.3.1. Property `setTimezone`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone)
+                - [4.4.1.2.1.1.3.1.1. Property `zone`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone_zone)
+        - [4.4.1.2.2. Property `item 1`](#spec_defaults_anyOf_i0_transform_anyOf_i1)
+      - [4.4.1.3. Property `archive`](#spec_defaults_anyOf_i0_archive)
+        - [4.4.1.3.1. Property `Archive`](#spec_defaults_anyOf_i0_archive_anyOf_i0)
+          - [4.4.1.3.1.1. Property `keep`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep)
+            - [4.4.1.3.1.1.1. Property `item 0`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i0)
+            - [4.4.1.3.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i1)
+          - [4.4.1.3.1.2. Property `olderThanDays`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays)
+            - [4.4.1.3.1.2.1. Property `item 0`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i0)
+            - [4.4.1.3.1.2.2. Property `item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i1)
+        - [4.4.1.3.2. Property `item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i1)
+      - [4.4.1.4. Property `tags`](#spec_defaults_anyOf_i0_tags)
+        - [4.4.1.4.1. Property `TagSelection`](#spec_defaults_anyOf_i0_tags_anyOf_i0)
+          - [4.4.1.4.1.1. Property `includeRegex`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex)
+            - [4.4.1.4.1.1.1. Property `item 0`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i0)
+            - [4.4.1.4.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i1)
+          - [4.4.1.4.1.2. Property `excludeRegex`](#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex)
+            - [4.4.1.4.1.2.1. excludeRegex items](#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex_items)
+          - [4.4.1.4.1.3. Property `semverOnly`](#spec_defaults_anyOf_i0_tags_anyOf_i0_semverOnly)
+          - [4.4.1.4.1.4. Property `names`](#spec_defaults_anyOf_i0_tags_anyOf_i0_names)
+            - [4.4.1.4.1.4.1. names items](#spec_defaults_anyOf_i0_tags_anyOf_i0_names_items)
+          - [4.4.1.4.1.5. Property `aliases`](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases)
+            - [4.4.1.4.1.5.1. aliases items](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items)
+        - [4.4.1.4.2. Property `item 1`](#spec_defaults_anyOf_i0_tags_anyOf_i1)
+      - [4.4.1.5. Property `platforms`](#spec_defaults_anyOf_i0_platforms)
+        - [4.4.1.5.1. Property `item 0`](#spec_defaults_anyOf_i0_platforms_anyOf_i0)
+          - [4.4.1.5.1.1. item 0 items](#spec_defaults_anyOf_i0_platforms_anyOf_i0_items)
+        - [4.4.1.5.2. Property `item 1`](#spec_defaults_anyOf_i0_platforms_anyOf_i1)
+      - [4.4.1.6. Property `owners`](#spec_defaults_anyOf_i0_owners)
+        - [4.4.1.6.1. Property `item 0`](#spec_defaults_anyOf_i0_owners_anyOf_i0)
+          - [4.4.1.6.1.1. item 0 items](#spec_defaults_anyOf_i0_owners_anyOf_i0_items)
+        - [4.4.1.6.2. Property `item 1`](#spec_defaults_anyOf_i0_owners_anyOf_i1)
+      - [4.4.1.7. Property `vendor`](#spec_defaults_anyOf_i0_vendor)
+        - [4.4.1.7.1. Property `item 0`](#spec_defaults_anyOf_i0_vendor_anyOf_i0)
+        - [4.4.1.7.2. Property `item 1`](#spec_defaults_anyOf_i0_vendor_anyOf_i1)
+    - [4.4.2. Property `item 1`](#spec_defaults_anyOf_i1)
+  - [4.5. Property `imports`](#spec_imports)
+    - [4.5.1. ImportProfile](#spec_imports_items)
+      - [4.5.1.1. Property `name`](#spec_imports_items_name)
+      - [4.5.1.2. Property `tags`](#spec_imports_items_tags)
+      - [4.5.1.3. Property `destinations`](#spec_imports_items_destinations)
+        - [4.5.1.3.1. Property `item 0`](#spec_imports_items_destinations_anyOf_i0)
+          - [4.5.1.3.1.1. Destination](#spec_imports_items_destinations_anyOf_i0_items)
+        - [4.5.1.3.2. Property `item 1`](#spec_imports_items_destinations_anyOf_i1)
+      - [4.5.1.4. Property `transform`](#spec_imports_items_transform)
+        - [4.5.1.4.1. Property `item 0`](#spec_imports_items_transform_anyOf_i0)
+          - [4.5.1.4.1.1. TransformStep](#spec_imports_items_transform_anyOf_i0_items)
+        - [4.5.1.4.2. Property `item 1`](#spec_imports_items_transform_anyOf_i1)
+      - [4.5.1.5. Property `archive`](#spec_imports_items_archive)
+        - [4.5.1.5.1. Property `Archive`](#spec_imports_items_archive_anyOf_i0)
+        - [4.5.1.5.2. Property `item 1`](#spec_imports_items_archive_anyOf_i1)
+      - [4.5.1.6. Property `platforms`](#spec_imports_items_platforms)
+        - [4.5.1.6.1. Property `item 0`](#spec_imports_items_platforms_anyOf_i0)
+          - [4.5.1.6.1.1. item 0 items](#spec_imports_items_platforms_anyOf_i0_items)
+        - [4.5.1.6.2. Property `item 1`](#spec_imports_items_platforms_anyOf_i1)
+      - [4.5.1.7. Property `variants`](#spec_imports_items_variants)
+        - [4.5.1.7.1. Property `item 0`](#spec_imports_items_variants_anyOf_i0)
+          - [4.5.1.7.1.1. Variant](#spec_imports_items_variants_anyOf_i0_items)
+            - [4.5.1.7.1.1.1. Property `name`](#spec_imports_items_variants_anyOf_i0_items_name)
+            - [4.5.1.7.1.1.2. Property `suffix`](#spec_imports_items_variants_anyOf_i0_items_suffix)
+            - [4.5.1.7.1.1.3. Property `transform`](#spec_imports_items_variants_anyOf_i0_items_transform)
+              - [4.5.1.7.1.1.3.1. Property `item 0`](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0)
+                - [4.5.1.7.1.1.3.1.1. TransformStep](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0_items)
+              - [4.5.1.7.1.1.3.2. Property `item 1`](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i1)
+        - [4.5.1.7.2. Property `item 1`](#spec_imports_items_variants_anyOf_i1)
+      - [4.5.1.8. Property `owners`](#spec_imports_items_owners)
+        - [4.5.1.8.1. Property `item 0`](#spec_imports_items_owners_anyOf_i0)
+          - [4.5.1.8.1.1. item 0 items](#spec_imports_items_owners_anyOf_i0_items)
+        - [4.5.1.8.2. Property `item 1`](#spec_imports_items_owners_anyOf_i1)
+      - [4.5.1.9. Property `vendor`](#spec_imports_items_vendor)
+        - [4.5.1.9.1. Property `item 0`](#spec_imports_items_vendor_anyOf_i0)
+        - [4.5.1.9.2. Property `item 1`](#spec_imports_items_vendor_anyOf_i1)
 
 **Title:** MirrorPolicy
 
@@ -129,7 +129,7 @@ sidebar_position: 1
 | + [metadata](#metadata )     | No      | object | No         | In #/$defs/Metadata | Metadata          |
 | + [spec](#spec )             | No      | object | No         | In #/$defs/Spec     | Spec              |
 
-## 1. Property `MirrorPolicy > apiVersion` {#apiVersion}
+## 1. Property `apiVersion` {#apiVersion}
 
 **Title:** Apiversion
 
@@ -142,7 +142,7 @@ sidebar_position: 1
 
 Specific value: `"houba.io/v1alpha1"`
 
-## 2. Property `MirrorPolicy > kind` {#kind}
+## 2. Property `kind` {#kind}
 
 **Title:** Kind
 
@@ -155,7 +155,7 @@ Specific value: `"houba.io/v1alpha1"`
 
 Specific value: `"MirrorPolicy"`
 
-## 3. Property `MirrorPolicy > metadata` {#metadata}
+## 3. Property `metadata` {#metadata}
 
 **Title:** Metadata
 
@@ -173,7 +173,7 @@ Specific value: `"MirrorPolicy"`
 | + [name](#metadata_name )     | No      | string | No         | -          | Name              |
 | - [labels](#metadata_labels ) | No      | object | No         | -          | Labels            |
 
-### 3.1. Property `MirrorPolicy > metadata > name` {#metadata_name}
+### 3.1. Property `name` {#metadata_name}
 
 **Title:** Name
 
@@ -184,7 +184,7 @@ Specific value: `"MirrorPolicy"`
 
 **Description:** Policy name; stamped as `io.houba.policy` and used for collision checks.
 
-### 3.2. Property `MirrorPolicy > metadata > labels` {#metadata_labels}
+### 3.2. Property `labels` {#metadata_labels}
 
 **Title:** Labels
 
@@ -200,14 +200,14 @@ Specific value: `"MirrorPolicy"`
 | -------------------------------------------- | ------- | ------ | ---------- | ---------- | ----------------- |
 | - [](#metadata_labels_additionalProperties ) | No      | string | No         | -          | -                 |
 
-#### 3.2.1. Property `MirrorPolicy > metadata > labels > additionalProperties` {#metadata_labels_additionalProperties}
+#### 3.2.1. Property `additionalProperties` {#metadata_labels_additionalProperties}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-## 4. Property `MirrorPolicy > spec` {#spec}
+## 4. Property `spec` {#spec}
 
 **Title:** Spec
 
@@ -228,7 +228,7 @@ Specific value: `"MirrorPolicy"`
 | - [defaults](#spec_defaults )         | No      | Combination      | No         | -                       | Defaults inherited by every import.                                             |
 | + [imports](#spec_imports )           | No      | array            | No         | -                       | Imports                                                                         |
 
-### 4.1. Property `MirrorPolicy > spec > artifactType` {#spec_artifactType}
+### 4.1. Property `artifactType` {#spec_artifactType}
 
 **Title:** ArtifactType
 
@@ -245,7 +245,7 @@ Must be one of:
 * "helmChart"
 * "generic"
 
-### 4.2. Property `MirrorPolicy > spec > source` {#spec_source}
+### 4.2. Property `source` {#spec_source}
 
 **Title:** Source
 
@@ -263,7 +263,7 @@ Must be one of:
 | + [registry](#spec_source_registry )     | No      | string | No         | -          | Registry          |
 | + [repository](#spec_source_repository ) | No      | string | No         | -          | Repository        |
 
-#### 4.2.1. Property `MirrorPolicy > spec > source > registry` {#spec_source_registry}
+#### 4.2.1. Property `registry` {#spec_source_registry}
 
 **Title:** Registry
 
@@ -274,7 +274,7 @@ Must be one of:
 
 **Description:** Source registry host, e.g. `docker.io`.
 
-#### 4.2.2. Property `MirrorPolicy > spec > source > repository` {#spec_source_repository}
+#### 4.2.2. Property `repository` {#spec_source_repository}
 
 **Title:** Repository
 
@@ -285,7 +285,7 @@ Must be one of:
 
 **Description:** Source repository, e.g. `library/redis`.
 
-### 4.3. Property `MirrorPolicy > spec > deletionMode` {#spec_deletionMode}
+### 4.3. Property `deletionMode` {#spec_deletionMode}
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -301,7 +301,7 @@ Must be one of:
 | [DeletionMode](#spec_deletionMode_anyOf_i0) |
 | [item 1](#spec_deletionMode_anyOf_i1)       |
 
-#### 4.3.1. Property `MirrorPolicy > spec > deletionMode > anyOf > DeletionMode` {#spec_deletionMode_anyOf_i0}
+#### 4.3.1. Property `DeletionMode` {#spec_deletionMode_anyOf_i0}
 
 **Title:** DeletionMode
 
@@ -315,14 +315,14 @@ Must be one of:
 * "purge"
 * "mark"
 
-#### 4.3.2. Property `MirrorPolicy > spec > deletionMode > anyOf > item 1` {#spec_deletionMode_anyOf_i1}
+#### 4.3.2. Property `item 1` {#spec_deletionMode_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-### 4.4. Property `MirrorPolicy > spec > defaults` {#spec_defaults}
+### 4.4. Property `defaults` {#spec_defaults}
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -338,7 +338,7 @@ Must be one of:
 | [Defaults](#spec_defaults_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i1)   |
 
-#### 4.4.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults` {#spec_defaults_anyOf_i0}
+#### 4.4.1. Property `Defaults` {#spec_defaults_anyOf_i0}
 
 **Title:** Defaults
 
@@ -359,7 +359,7 @@ Must be one of:
 | - [owners](#spec_defaults_anyOf_i0_owners )             | No      | Combination | No         | -          | Owners                                        |
 | - [vendor](#spec_defaults_anyOf_i0_vendor )             | No      | Combination | No         | -          | Vendor                                        |
 
-##### 4.4.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations` {#spec_defaults_anyOf_i0_destinations}
+##### 4.4.1.1. Property `destinations` {#spec_defaults_anyOf_i0_destinations}
 
 **Title:** Destinations
 
@@ -377,7 +377,7 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_destinations_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_destinations_anyOf_i1) |
 
-###### 4.4.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0` {#spec_defaults_anyOf_i0_destinations_anyOf_i0}
+###### 4.4.1.1.1. Property `item 0` {#spec_defaults_anyOf_i0_destinations_anyOf_i0}
 
 |              |         |
 | ------------ | ------- |
@@ -396,7 +396,7 @@ Must be one of:
 | ------------------------------------------------------------------ | ----------- |
 | [Destination](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items) | -           |
 
-###### 4.4.1.1.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items}
+###### 4.4.1.1.1.1. Destination {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items}
 
 **Title:** Destination
 
@@ -413,7 +413,7 @@ Must be one of:
 | + [project](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_project )       | No      | string      | No         | -          | Project           |
 | + [repository](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_repository ) | No      | string      | No         | -          | Repository        |
 
-###### 4.4.1.1.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination > registry` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry}
+###### 4.4.1.1.1.1.1. Property `registry` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry}
 
 **Title:** Registry
 
@@ -431,21 +431,21 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i1) |
 
-###### 4.4.1.1.1.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination > registry > anyOf > item 0` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i0}
+###### 4.4.1.1.1.1.1.1. Property `item 0` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.4.1.1.1.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination > registry > anyOf > item 1` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i1}
+###### 4.4.1.1.1.1.1.2. Property `item 1` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-###### 4.4.1.1.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination > project` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_project}
+###### 4.4.1.1.1.1.2. Property `project` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_project}
 
 **Title:** Project
 
@@ -456,7 +456,7 @@ Must be one of:
 
 **Description:** Destination project / namespace.
 
-###### 4.4.1.1.1.1.3. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 0 > Destination > repository` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_repository}
+###### 4.4.1.1.1.1.3. Property `repository` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_repository}
 
 **Title:** Repository
 
@@ -467,14 +467,14 @@ Must be one of:
 
 **Description:** Destination repository.
 
-###### 4.4.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > destinations > anyOf > item 1` {#spec_defaults_anyOf_i0_destinations_anyOf_i1}
+###### 4.4.1.1.2. Property `item 1` {#spec_defaults_anyOf_i0_destinations_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.4.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform` {#spec_defaults_anyOf_i0_transform}
+##### 4.4.1.2. Property `transform` {#spec_defaults_anyOf_i0_transform}
 
 **Title:** Transform
 
@@ -492,7 +492,7 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_transform_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_transform_anyOf_i1) |
 
-###### 4.4.1.2.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0` {#spec_defaults_anyOf_i0_transform_anyOf_i0}
+###### 4.4.1.2.1. Property `item 0` {#spec_defaults_anyOf_i0_transform_anyOf_i0}
 
 |              |         |
 | ------------ | ------- |
@@ -511,7 +511,7 @@ Must be one of:
 | ----------------------------------------------------------------- | ----------- |
 | [TransformStep](#spec_defaults_anyOf_i0_transform_anyOf_i0_items) | -           |
 
-###### 4.4.1.2.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > TransformStep {#spec_defaults_anyOf_i0_transform_anyOf_i0_items}
+###### 4.4.1.2.1.1. TransformStep {#spec_defaults_anyOf_i0_transform_anyOf_i0_items}
 
 |                           |                       |
 | ------------------------- | --------------------- |
@@ -526,7 +526,7 @@ Must be one of:
 | [item 1](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1) |
 | [item 2](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2) |
 
-###### 4.4.1.2.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 0` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0}
+###### 4.4.1.2.1.1.1. Property `item 0` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0}
 
 |                           |             |
 | ------------------------- | ----------- |
@@ -538,7 +538,7 @@ Must be one of:
 | --------------------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ----------------- |
 | + [injectCA](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA ) | No      | object | No         | -          | _InjectCAParams   |
 
-###### 4.4.1.2.1.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 0 > injectCA` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA}
+###### 4.4.1.2.1.1.1.1. Property `injectCA` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA}
 
 **Title:** _InjectCAParams
 
@@ -552,7 +552,7 @@ Must be one of:
 | ------------------------------------------------------------------------------------ | ------- | --------------- | ---------- | ---------- | ----------------- |
 | + [certs](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA_certs ) | No      | array of string | No         | -          | Certs             |
 
-###### 4.4.1.2.1.1.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 0 > injectCA > certs` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA_certs}
+###### 4.4.1.2.1.1.1.1.1. Property `certs` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA_certs}
 
 **Title:** Certs
 
@@ -573,14 +573,14 @@ Must be one of:
 | --------------------------------------------------------------------------------------------- | ----------- |
 | [certs items](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA_certs_items) | -           |
 
-###### 4.4.1.2.1.1.1.1.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 0 > injectCA > certs > certs items {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA_certs_items}
+###### 4.4.1.2.1.1.1.1.1.1. certs items {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0_injectCA_certs_items}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.4.1.2.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 1` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1}
+###### 4.4.1.2.1.1.2. Property `item 1` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1}
 
 |                           |             |
 | ------------------------- | ----------- |
@@ -592,7 +592,7 @@ Must be one of:
 | ----------------------------------------------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ---------------------------- |
 | + [rewritePackageSources](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1_rewritePackageSources ) | No      | object | No         | -          | _RewritePackageSourcesParams |
 
-###### 4.4.1.2.1.1.2.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 1 > rewritePackageSources` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1_rewritePackageSources}
+###### 4.4.1.2.1.1.2.1. Property `rewritePackageSources` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1_rewritePackageSources}
 
 **Title:** _RewritePackageSourcesParams
 
@@ -606,7 +606,7 @@ Must be one of:
 | --------------------------------------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ----------------- |
 | + [mirror](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1_rewritePackageSources_mirror ) | No      | string | No         | -          | Mirror            |
 
-###### 4.4.1.2.1.1.2.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 1 > rewritePackageSources > mirror` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1_rewritePackageSources_mirror}
+###### 4.4.1.2.1.1.2.1.1. Property `mirror` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1_rewritePackageSources_mirror}
 
 **Title:** Mirror
 
@@ -619,7 +619,7 @@ Must be one of:
 | -------------- | - |
 | **Min length** | 1 |
 
-###### 4.4.1.2.1.1.3. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 2` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2}
+###### 4.4.1.2.1.1.3. Property `item 2` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2}
 
 |                           |             |
 | ------------------------- | ----------- |
@@ -631,7 +631,7 @@ Must be one of:
 | --------------------------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ------------------ |
 | + [setTimezone](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone ) | No      | object | No         | -          | _SetTimezoneParams |
 
-###### 4.4.1.2.1.1.3.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 2 > setTimezone` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone}
+###### 4.4.1.2.1.1.3.1. Property `setTimezone` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone}
 
 **Title:** _SetTimezoneParams
 
@@ -645,7 +645,7 @@ Must be one of:
 | ------------------------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ----------------- |
 | + [zone](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone_zone ) | No      | string | No         | -          | Zone              |
 
-###### 4.4.1.2.1.1.3.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 0 > item 0 items > oneOf > item 2 > setTimezone > zone` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone_zone}
+###### 4.4.1.2.1.1.3.1.1. Property `zone` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone_zone}
 
 **Title:** Zone
 
@@ -658,14 +658,14 @@ Must be one of:
 | -------------- | - |
 | **Min length** | 1 |
 
-###### 4.4.1.2.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > transform > anyOf > item 1` {#spec_defaults_anyOf_i0_transform_anyOf_i1}
+###### 4.4.1.2.2. Property `item 1` {#spec_defaults_anyOf_i0_transform_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.4.1.3. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive` {#spec_defaults_anyOf_i0_archive}
+##### 4.4.1.3. Property `archive` {#spec_defaults_anyOf_i0_archive}
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -681,7 +681,7 @@ Must be one of:
 | [Archive](#spec_defaults_anyOf_i0_archive_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_archive_anyOf_i1)  |
 
-###### 4.4.1.3.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive` {#spec_defaults_anyOf_i0_archive_anyOf_i0}
+###### 4.4.1.3.1. Property `Archive` {#spec_defaults_anyOf_i0_archive_anyOf_i0}
 
 **Title:** Archive
 
@@ -697,7 +697,7 @@ Must be one of:
 | - [keep](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep )                   | No      | Combination | No         | -          | Keep              |
 | - [olderThanDays](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays ) | No      | Combination | No         | -          | Olderthandays     |
 
-###### 4.4.1.3.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > keep` {#spec_defaults_anyOf_i0_archive_anyOf_i0_keep}
+###### 4.4.1.3.1.1. Property `keep` {#spec_defaults_anyOf_i0_archive_anyOf_i0_keep}
 
 **Title:** Keep
 
@@ -715,21 +715,21 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i1) |
 
-###### 4.4.1.3.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > keep > anyOf > item 0` {#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i0}
+###### 4.4.1.3.1.1.1. Property `item 0` {#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i0}
 
 |              |           |
 | ------------ | --------- |
 | **Type**     | `integer` |
 | **Required** | No        |
 
-###### 4.4.1.3.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > keep > anyOf > item 1` {#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i1}
+###### 4.4.1.3.1.1.2. Property `item 1` {#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-###### 4.4.1.3.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > olderThanDays` {#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays}
+###### 4.4.1.3.1.2. Property `olderThanDays` {#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays}
 
 **Title:** Olderthandays
 
@@ -747,28 +747,28 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i1) |
 
-###### 4.4.1.3.1.2.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > olderThanDays > anyOf > item 0` {#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i0}
+###### 4.4.1.3.1.2.1. Property `item 0` {#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i0}
 
 |              |           |
 | ------------ | --------- |
 | **Type**     | `integer` |
 | **Required** | No        |
 
-###### 4.4.1.3.1.2.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > Archive > olderThanDays > anyOf > item 1` {#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i1}
+###### 4.4.1.3.1.2.2. Property `item 1` {#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-###### 4.4.1.3.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > archive > anyOf > item 1` {#spec_defaults_anyOf_i0_archive_anyOf_i1}
+###### 4.4.1.3.2. Property `item 1` {#spec_defaults_anyOf_i0_archive_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.4.1.4. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags` {#spec_defaults_anyOf_i0_tags}
+##### 4.4.1.4. Property `tags` {#spec_defaults_anyOf_i0_tags}
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -784,7 +784,7 @@ Must be one of:
 | [TagSelection](#spec_defaults_anyOf_i0_tags_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_tags_anyOf_i1)       |
 
-###### 4.4.1.4.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection` {#spec_defaults_anyOf_i0_tags_anyOf_i0}
+###### 4.4.1.4.1. Property `TagSelection` {#spec_defaults_anyOf_i0_tags_anyOf_i0}
 
 **Title:** TagSelection
 
@@ -803,7 +803,7 @@ Must be one of:
 | - [names](#spec_defaults_anyOf_i0_tags_anyOf_i0_names )               | No      | array of string | No         | -          | Names             |
 | - [aliases](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases )           | No      | array of string | No         | -          | Aliases           |
 
-###### 4.4.1.4.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > includeRegex` {#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex}
+###### 4.4.1.4.1.1. Property `includeRegex` {#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex}
 
 **Title:** Includeregex
 
@@ -821,21 +821,21 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i1) |
 
-###### 4.4.1.4.1.1.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > includeRegex > anyOf > item 0` {#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i0}
+###### 4.4.1.4.1.1.1. Property `item 0` {#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.4.1.4.1.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > includeRegex > anyOf > item 1` {#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i1}
+###### 4.4.1.4.1.1.2. Property `item 1` {#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-###### 4.4.1.4.1.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > excludeRegex` {#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex}
+###### 4.4.1.4.1.2. Property `excludeRegex` {#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex}
 
 **Title:** Excluderegex
 
@@ -858,14 +858,14 @@ Must be one of:
 | ------------------------------------------------------------------------------ | ----------- |
 | [excludeRegex items](#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex_items) | -           |
 
-###### 4.4.1.4.1.2.1. MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > excludeRegex > excludeRegex items {#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex_items}
+###### 4.4.1.4.1.2.1. excludeRegex items {#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex_items}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.4.1.4.1.3. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > semverOnly` {#spec_defaults_anyOf_i0_tags_anyOf_i0_semverOnly}
+###### 4.4.1.4.1.3. Property `semverOnly` {#spec_defaults_anyOf_i0_tags_anyOf_i0_semverOnly}
 
 **Title:** Semveronly
 
@@ -877,7 +877,7 @@ Must be one of:
 
 **Description:** Keep only tags parseable as semver (drops `latest`, date tags, …).
 
-###### 4.4.1.4.1.4. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > names` {#spec_defaults_anyOf_i0_tags_anyOf_i0_names}
+###### 4.4.1.4.1.4. Property `names` {#spec_defaults_anyOf_i0_tags_anyOf_i0_names}
 
 **Title:** Names
 
@@ -900,14 +900,14 @@ Must be one of:
 | ---------------------------------------------------------------- | ----------- |
 | [names items](#spec_defaults_anyOf_i0_tags_anyOf_i0_names_items) | -           |
 
-###### 4.4.1.4.1.4.1. MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > names > names items {#spec_defaults_anyOf_i0_tags_anyOf_i0_names_items}
+###### 4.4.1.4.1.4.1. names items {#spec_defaults_anyOf_i0_tags_anyOf_i0_names_items}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.4.1.4.1.5. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > aliases` {#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases}
+###### 4.4.1.4.1.5. Property `aliases` {#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases}
 
 **Title:** Aliases
 
@@ -930,21 +930,21 @@ Must be one of:
 | -------------------------------------------------------------------- | ----------- |
 | [aliases items](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items) | -           |
 
-###### 4.4.1.4.1.5.1. MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > TagSelection > aliases > aliases items {#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items}
+###### 4.4.1.4.1.5.1. aliases items {#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.4.1.4.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > tags > anyOf > item 1` {#spec_defaults_anyOf_i0_tags_anyOf_i1}
+###### 4.4.1.4.2. Property `item 1` {#spec_defaults_anyOf_i0_tags_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.4.1.5. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > platforms` {#spec_defaults_anyOf_i0_platforms}
+##### 4.4.1.5. Property `platforms` {#spec_defaults_anyOf_i0_platforms}
 
 **Title:** Platforms
 
@@ -962,7 +962,7 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_platforms_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_platforms_anyOf_i1) |
 
-###### 4.4.1.5.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > platforms > anyOf > item 0` {#spec_defaults_anyOf_i0_platforms_anyOf_i0}
+###### 4.4.1.5.1. Property `item 0` {#spec_defaults_anyOf_i0_platforms_anyOf_i0}
 
 |              |                   |
 | ------------ | ----------------- |
@@ -981,21 +981,21 @@ Must be one of:
 | ---------------------------------------------------------------- | ----------- |
 | [item 0 items](#spec_defaults_anyOf_i0_platforms_anyOf_i0_items) | -           |
 
-###### 4.4.1.5.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > platforms > anyOf > item 0 > item 0 items {#spec_defaults_anyOf_i0_platforms_anyOf_i0_items}
+###### 4.4.1.5.1.1. item 0 items {#spec_defaults_anyOf_i0_platforms_anyOf_i0_items}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.4.1.5.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > platforms > anyOf > item 1` {#spec_defaults_anyOf_i0_platforms_anyOf_i1}
+###### 4.4.1.5.2. Property `item 1` {#spec_defaults_anyOf_i0_platforms_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.4.1.6. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > owners` {#spec_defaults_anyOf_i0_owners}
+##### 4.4.1.6. Property `owners` {#spec_defaults_anyOf_i0_owners}
 
 **Title:** Owners
 
@@ -1013,7 +1013,7 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_owners_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_owners_anyOf_i1) |
 
-###### 4.4.1.6.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > owners > anyOf > item 0` {#spec_defaults_anyOf_i0_owners_anyOf_i0}
+###### 4.4.1.6.1. Property `item 0` {#spec_defaults_anyOf_i0_owners_anyOf_i0}
 
 |              |                   |
 | ------------ | ----------------- |
@@ -1032,21 +1032,21 @@ Must be one of:
 | ------------------------------------------------------------- | ----------- |
 | [item 0 items](#spec_defaults_anyOf_i0_owners_anyOf_i0_items) | -           |
 
-###### 4.4.1.6.1.1. MirrorPolicy > spec > defaults > anyOf > Defaults > owners > anyOf > item 0 > item 0 items {#spec_defaults_anyOf_i0_owners_anyOf_i0_items}
+###### 4.4.1.6.1.1. item 0 items {#spec_defaults_anyOf_i0_owners_anyOf_i0_items}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.4.1.6.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > owners > anyOf > item 1` {#spec_defaults_anyOf_i0_owners_anyOf_i1}
+###### 4.4.1.6.2. Property `item 1` {#spec_defaults_anyOf_i0_owners_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.4.1.7. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor` {#spec_defaults_anyOf_i0_vendor}
+##### 4.4.1.7. Property `vendor` {#spec_defaults_anyOf_i0_vendor}
 
 **Title:** Vendor
 
@@ -1064,28 +1064,28 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_vendor_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_vendor_anyOf_i1) |
 
-###### 4.4.1.7.1. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor > anyOf > item 0` {#spec_defaults_anyOf_i0_vendor_anyOf_i0}
+###### 4.4.1.7.1. Property `item 0` {#spec_defaults_anyOf_i0_vendor_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.4.1.7.2. Property `MirrorPolicy > spec > defaults > anyOf > Defaults > vendor > anyOf > item 1` {#spec_defaults_anyOf_i0_vendor_anyOf_i1}
+###### 4.4.1.7.2. Property `item 1` {#spec_defaults_anyOf_i0_vendor_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### 4.4.2. Property `MirrorPolicy > spec > defaults > anyOf > item 1` {#spec_defaults_anyOf_i1}
+#### 4.4.2. Property `item 1` {#spec_defaults_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-### 4.5. Property `MirrorPolicy > spec > imports` {#spec_imports}
+### 4.5. Property `imports` {#spec_imports}
 
 **Title:** Imports
 
@@ -1108,7 +1108,7 @@ Must be one of:
 | ------------------------------------ | ----------- |
 | [ImportProfile](#spec_imports_items) | -           |
 
-#### 4.5.1. MirrorPolicy > spec > imports > ImportProfile {#spec_imports_items}
+#### 4.5.1. ImportProfile {#spec_imports_items}
 
 **Title:** ImportProfile
 
@@ -1131,7 +1131,7 @@ Must be one of:
 | - [owners](#spec_imports_items_owners )             | No      | Combination | No         | -                                                              | Owners                                 |
 | - [vendor](#spec_imports_items_vendor )             | No      | Combination | No         | -                                                              | Vendor                                 |
 
-##### 4.5.1.1. Property `MirrorPolicy > spec > imports > ImportProfile > name` {#spec_imports_items_name}
+##### 4.5.1.1. Property `name` {#spec_imports_items_name}
 
 **Title:** Name
 
@@ -1142,7 +1142,7 @@ Must be one of:
 
 **Description:** Import name; part of the three-level policy/import/variant identity in the stamp.
 
-##### 4.5.1.2. Property `MirrorPolicy > spec > imports > ImportProfile > tags` {#spec_imports_items_tags}
+##### 4.5.1.2. Property `tags` {#spec_imports_items_tags}
 
 **Title:** TagSelection
 
@@ -1155,7 +1155,7 @@ Must be one of:
 
 **Description:** Tag-selection rules for this import.
 
-##### 4.5.1.3. Property `MirrorPolicy > spec > imports > ImportProfile > destinations` {#spec_imports_items_destinations}
+##### 4.5.1.3. Property `destinations` {#spec_imports_items_destinations}
 
 **Title:** Destinations
 
@@ -1173,7 +1173,7 @@ Must be one of:
 | [item 0](#spec_imports_items_destinations_anyOf_i0) |
 | [item 1](#spec_imports_items_destinations_anyOf_i1) |
 
-###### 4.5.1.3.1. Property `MirrorPolicy > spec > imports > ImportProfile > destinations > anyOf > item 0` {#spec_imports_items_destinations_anyOf_i0}
+###### 4.5.1.3.1. Property `item 0` {#spec_imports_items_destinations_anyOf_i0}
 
 |              |         |
 | ------------ | ------- |
@@ -1192,7 +1192,7 @@ Must be one of:
 | -------------------------------------------------------------- | ----------- |
 | [Destination](#spec_imports_items_destinations_anyOf_i0_items) | -           |
 
-###### 4.5.1.3.1.1. MirrorPolicy > spec > imports > ImportProfile > destinations > anyOf > item 0 > Destination {#spec_imports_items_destinations_anyOf_i0_items}
+###### 4.5.1.3.1.1. Destination {#spec_imports_items_destinations_anyOf_i0_items}
 
 **Title:** Destination
 
@@ -1203,14 +1203,14 @@ Must be one of:
 | **Additional properties** | Not allowed                                                        |
 | **Same definition as**    | [Destination](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items) |
 
-###### 4.5.1.3.2. Property `MirrorPolicy > spec > imports > ImportProfile > destinations > anyOf > item 1` {#spec_imports_items_destinations_anyOf_i1}
+###### 4.5.1.3.2. Property `item 1` {#spec_imports_items_destinations_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.5.1.4. Property `MirrorPolicy > spec > imports > ImportProfile > transform` {#spec_imports_items_transform}
+##### 4.5.1.4. Property `transform` {#spec_imports_items_transform}
 
 **Title:** Transform
 
@@ -1228,7 +1228,7 @@ Must be one of:
 | [item 0](#spec_imports_items_transform_anyOf_i0) |
 | [item 1](#spec_imports_items_transform_anyOf_i1) |
 
-###### 4.5.1.4.1. Property `MirrorPolicy > spec > imports > ImportProfile > transform > anyOf > item 0` {#spec_imports_items_transform_anyOf_i0}
+###### 4.5.1.4.1. Property `item 0` {#spec_imports_items_transform_anyOf_i0}
 
 |              |         |
 | ------------ | ------- |
@@ -1247,7 +1247,7 @@ Must be one of:
 | ------------------------------------------------------------- | ----------- |
 | [TransformStep](#spec_imports_items_transform_anyOf_i0_items) | -           |
 
-###### 4.5.1.4.1.1. MirrorPolicy > spec > imports > ImportProfile > transform > anyOf > item 0 > TransformStep {#spec_imports_items_transform_anyOf_i0_items}
+###### 4.5.1.4.1.1. TransformStep {#spec_imports_items_transform_anyOf_i0_items}
 
 |                           |                                                                                                     |
 | ------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -1256,14 +1256,14 @@ Must be one of:
 | **Additional properties** | Any type allowed                                                                                    |
 | **Same definition as**    | [spec_defaults_anyOf_i0_transform_anyOf_i0_items](#spec_defaults_anyOf_i0_transform_anyOf_i0_items) |
 
-###### 4.5.1.4.2. Property `MirrorPolicy > spec > imports > ImportProfile > transform > anyOf > item 1` {#spec_imports_items_transform_anyOf_i1}
+###### 4.5.1.4.2. Property `item 1` {#spec_imports_items_transform_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.5.1.5. Property `MirrorPolicy > spec > imports > ImportProfile > archive` {#spec_imports_items_archive}
+##### 4.5.1.5. Property `archive` {#spec_imports_items_archive}
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -1279,7 +1279,7 @@ Must be one of:
 | [Archive](#spec_imports_items_archive_anyOf_i0) |
 | [item 1](#spec_imports_items_archive_anyOf_i1)  |
 
-###### 4.5.1.5.1. Property `MirrorPolicy > spec > imports > ImportProfile > archive > anyOf > Archive` {#spec_imports_items_archive_anyOf_i0}
+###### 4.5.1.5.1. Property `Archive` {#spec_imports_items_archive_anyOf_i0}
 
 **Title:** Archive
 
@@ -1290,14 +1290,14 @@ Must be one of:
 | **Additional properties** | Not allowed                                         |
 | **Same definition as**    | [Archive](#spec_defaults_anyOf_i0_archive_anyOf_i0) |
 
-###### 4.5.1.5.2. Property `MirrorPolicy > spec > imports > ImportProfile > archive > anyOf > item 1` {#spec_imports_items_archive_anyOf_i1}
+###### 4.5.1.5.2. Property `item 1` {#spec_imports_items_archive_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.5.1.6. Property `MirrorPolicy > spec > imports > ImportProfile > platforms` {#spec_imports_items_platforms}
+##### 4.5.1.6. Property `platforms` {#spec_imports_items_platforms}
 
 **Title:** Platforms
 
@@ -1315,7 +1315,7 @@ Must be one of:
 | [item 0](#spec_imports_items_platforms_anyOf_i0) |
 | [item 1](#spec_imports_items_platforms_anyOf_i1) |
 
-###### 4.5.1.6.1. Property `MirrorPolicy > spec > imports > ImportProfile > platforms > anyOf > item 0` {#spec_imports_items_platforms_anyOf_i0}
+###### 4.5.1.6.1. Property `item 0` {#spec_imports_items_platforms_anyOf_i0}
 
 |              |                   |
 | ------------ | ----------------- |
@@ -1334,21 +1334,21 @@ Must be one of:
 | ------------------------------------------------------------ | ----------- |
 | [item 0 items](#spec_imports_items_platforms_anyOf_i0_items) | -           |
 
-###### 4.5.1.6.1.1. MirrorPolicy > spec > imports > ImportProfile > platforms > anyOf > item 0 > item 0 items {#spec_imports_items_platforms_anyOf_i0_items}
+###### 4.5.1.6.1.1. item 0 items {#spec_imports_items_platforms_anyOf_i0_items}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.5.1.6.2. Property `MirrorPolicy > spec > imports > ImportProfile > platforms > anyOf > item 1` {#spec_imports_items_platforms_anyOf_i1}
+###### 4.5.1.6.2. Property `item 1` {#spec_imports_items_platforms_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.5.1.7. Property `MirrorPolicy > spec > imports > ImportProfile > variants` {#spec_imports_items_variants}
+##### 4.5.1.7. Property `variants` {#spec_imports_items_variants}
 
 **Title:** Variants
 
@@ -1366,7 +1366,7 @@ Must be one of:
 | [item 0](#spec_imports_items_variants_anyOf_i0) |
 | [item 1](#spec_imports_items_variants_anyOf_i1) |
 
-###### 4.5.1.7.1. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0` {#spec_imports_items_variants_anyOf_i0}
+###### 4.5.1.7.1. Property `item 0` {#spec_imports_items_variants_anyOf_i0}
 
 |              |         |
 | ------------ | ------- |
@@ -1385,7 +1385,7 @@ Must be one of:
 | ------------------------------------------------------ | ----------- |
 | [Variant](#spec_imports_items_variants_anyOf_i0_items) | -           |
 
-###### 4.5.1.7.1.1. MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant {#spec_imports_items_variants_anyOf_i0_items}
+###### 4.5.1.7.1.1. Variant {#spec_imports_items_variants_anyOf_i0_items}
 
 **Title:** Variant
 
@@ -1402,7 +1402,7 @@ Must be one of:
 | - [suffix](#spec_imports_items_variants_anyOf_i0_items_suffix )       | No      | string      | No         | -          | Suffix            |
 | - [transform](#spec_imports_items_variants_anyOf_i0_items_transform ) | No      | Combination | No         | -          | Transform         |
 
-###### 4.5.1.7.1.1.1. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > name` {#spec_imports_items_variants_anyOf_i0_items_name}
+###### 4.5.1.7.1.1.1. Property `name` {#spec_imports_items_variants_anyOf_i0_items_name}
 
 **Title:** Name
 
@@ -1413,7 +1413,7 @@ Must be one of:
 
 **Description:** Variant name.
 
-###### 4.5.1.7.1.1.2. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > suffix` {#spec_imports_items_variants_anyOf_i0_items_suffix}
+###### 4.5.1.7.1.1.2. Property `suffix` {#spec_imports_items_variants_anyOf_i0_items_suffix}
 
 **Title:** Suffix
 
@@ -1425,7 +1425,7 @@ Must be one of:
 
 **Description:** Tag suffix appended for this variant, e.g. `-eu`.
 
-###### 4.5.1.7.1.1.3. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > transform` {#spec_imports_items_variants_anyOf_i0_items_transform}
+###### 4.5.1.7.1.1.3. Property `transform` {#spec_imports_items_variants_anyOf_i0_items_transform}
 
 **Title:** Transform
 
@@ -1443,7 +1443,7 @@ Must be one of:
 | [item 0](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0) |
 | [item 1](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i1) |
 
-###### 4.5.1.7.1.1.3.1. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > transform > anyOf > item 0` {#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0}
+###### 4.5.1.7.1.1.3.1. Property `item 0` {#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0}
 
 |              |         |
 | ------------ | ------- |
@@ -1462,7 +1462,7 @@ Must be one of:
 | ------------------------------------------------------------------------------------- | ----------- |
 | [TransformStep](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0_items) | -           |
 
-###### 4.5.1.7.1.1.3.1.1. MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > transform > anyOf > item 0 > TransformStep {#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0_items}
+###### 4.5.1.7.1.1.3.1.1. TransformStep {#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0_items}
 
 |                           |                                                                                                     |
 | ------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -1471,21 +1471,21 @@ Must be one of:
 | **Additional properties** | Any type allowed                                                                                    |
 | **Same definition as**    | [spec_defaults_anyOf_i0_transform_anyOf_i0_items](#spec_defaults_anyOf_i0_transform_anyOf_i0_items) |
 
-###### 4.5.1.7.1.1.3.2. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 0 > Variant > transform > anyOf > item 1` {#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i1}
+###### 4.5.1.7.1.1.3.2. Property `item 1` {#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-###### 4.5.1.7.2. Property `MirrorPolicy > spec > imports > ImportProfile > variants > anyOf > item 1` {#spec_imports_items_variants_anyOf_i1}
+###### 4.5.1.7.2. Property `item 1` {#spec_imports_items_variants_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.5.1.8. Property `MirrorPolicy > spec > imports > ImportProfile > owners` {#spec_imports_items_owners}
+##### 4.5.1.8. Property `owners` {#spec_imports_items_owners}
 
 **Title:** Owners
 
@@ -1503,7 +1503,7 @@ Must be one of:
 | [item 0](#spec_imports_items_owners_anyOf_i0) |
 | [item 1](#spec_imports_items_owners_anyOf_i1) |
 
-###### 4.5.1.8.1. Property `MirrorPolicy > spec > imports > ImportProfile > owners > anyOf > item 0` {#spec_imports_items_owners_anyOf_i0}
+###### 4.5.1.8.1. Property `item 0` {#spec_imports_items_owners_anyOf_i0}
 
 |              |                   |
 | ------------ | ----------------- |
@@ -1522,21 +1522,21 @@ Must be one of:
 | --------------------------------------------------------- | ----------- |
 | [item 0 items](#spec_imports_items_owners_anyOf_i0_items) | -           |
 
-###### 4.5.1.8.1.1. MirrorPolicy > spec > imports > ImportProfile > owners > anyOf > item 0 > item 0 items {#spec_imports_items_owners_anyOf_i0_items}
+###### 4.5.1.8.1.1. item 0 items {#spec_imports_items_owners_anyOf_i0_items}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.5.1.8.2. Property `MirrorPolicy > spec > imports > ImportProfile > owners > anyOf > item 1` {#spec_imports_items_owners_anyOf_i1}
+###### 4.5.1.8.2. Property `item 1` {#spec_imports_items_owners_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### 4.5.1.9. Property `MirrorPolicy > spec > imports > ImportProfile > vendor` {#spec_imports_items_vendor}
+##### 4.5.1.9. Property `vendor` {#spec_imports_items_vendor}
 
 **Title:** Vendor
 
@@ -1554,14 +1554,14 @@ Must be one of:
 | [item 0](#spec_imports_items_vendor_anyOf_i0) |
 | [item 1](#spec_imports_items_vendor_anyOf_i1) |
 
-###### 4.5.1.9.1. Property `MirrorPolicy > spec > imports > ImportProfile > vendor > anyOf > item 0` {#spec_imports_items_vendor_anyOf_i0}
+###### 4.5.1.9.1. Property `item 0` {#spec_imports_items_vendor_anyOf_i0}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### 4.5.1.9.2. Property `MirrorPolicy > spec > imports > ImportProfile > vendor > anyOf > item 1` {#spec_imports_items_vendor_anyOf_i1}
+###### 4.5.1.9.2. Property `item 1` {#spec_imports_items_vendor_anyOf_i1}
 
 |              |        |
 | ------------ | ------ |

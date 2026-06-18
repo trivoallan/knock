@@ -121,5 +121,5 @@ outlives the tool that wrote it.
 ---
 
 *Convinced, or want to see it run? → [Getting started](tutorials/getting-started.md)
-· [Example policies](/examples) · [Reference](reference/mirror-policy.md)
+· [Example policies](/examples) · [Reference](reference/schemas/mirror-policy.md)
 · [The provenance contract](https://github.com/trivoallan/houba/blob/main/docs/architecture/design.md)*

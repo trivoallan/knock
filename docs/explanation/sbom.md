@@ -24,7 +24,7 @@ is what *coverage gates value* demands.
 Generation is **always-on**, governed by `HOUBA_SBOM_FORMATS` — a global operator setting, never a
 per-policy field. It chooses *which* formats (SPDX by default; CycloneDX alongside or instead), never
 *whether*. To enable CycloneDX see [Inspect an image's SBOM](../how-to/inspect-sbom.md); for the
-variable itself, the [configuration reference](../reference/config.md).
+variable itself, the [configuration reference](../reference/configuration.md).
 
 ## Presence, then trust
 

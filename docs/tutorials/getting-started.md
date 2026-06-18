@@ -128,5 +128,5 @@ docker rm -f houba-demo-registry
 **Next:** the [example policies](/examples) catalog — semver selection, the
 [rebuild/hardening path](../how-to/rebuild-and-harden.md), retention, delegated deletion, `houba purge`, scan ingestion, and the
 coverage audit, each a runnable `MirrorPolicy` demonstrating one capability. For every field and
-every `HOUBA_*` variable, see the generated [policy](../reference/mirror-policy.md) and
-[config](../reference/config.md) reference.
+every `HOUBA_*` variable, see the generated [policy](../reference/schemas/mirror-policy.md) and
+[config](../reference/configuration.md) reference.

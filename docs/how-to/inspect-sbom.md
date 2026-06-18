@@ -37,7 +37,7 @@ operator setting. One `syft` scan produces one referrer per format:
 HOUBA_SBOM_FORMATS='["spdx-json","cyclonedx-json"]' uv run houba reconcile docs/examples/reference
 ```
 
-See the [configuration reference](../reference/config.md) for the variable.
+See the [configuration reference](../reference/configuration.md) for the variable.
 
 ## Verify the signed SBOM
 
