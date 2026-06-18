@@ -135,7 +135,9 @@ Two of the former *Now* items shipped:
 > delivered (see *Delivered*). The frontier is no longer a feature — it is **adoption**: proving, to a
 > target organization, that houba is a drop-in for its existing intake (e.g. a CI pipeline +
 > registry-replication fan-out) **and** that a CVE-to-owner blast-radius query lands in the tools it
-> already runs. This is enablement on already-shipped capability, **not tied to a version**.
+> already runs. Adoption has two faces — a *demonstrable* end-to-end story **and** a *self-serve* docs
+> surface good enough to onboard without us — both enablement on already-shipped capability, **not tied
+> to a version**.
 
 - **Adoption proof — the demonstrable mandate.** Wire the end-to-end story on the reference
   deployment: houba places + stamps + SBOMs (copy *and* rebuild) → an SBOM/vuln consumer answers
@@ -147,6 +149,17 @@ Two of the former *Now* items shipped:
   per-team fan-out a replication setup gives you is already a policy `destinations` list, so houba
   *replaces* registry replication rather than chaining behind them — and because replication strips
   OCI referrers, that is what keeps the SBOM/signature alive in every team copy.
+- **Docs polish pass — raise the self-serve surface.** The docs site is live; the next lift is quality
+  so users onboard without us:
+  - an **architecture presentation** — a narrative overview of the hexagon (from the C4 model), not just the reference;
+  - a **richer examples section** — broaden and deepen the worked `MirrorPolicy` walkthroughs;
+  - **diagrams** woven into the prose (the committed Mermaid C4 exports, inline where they explain);
+  - **fenced, runnable code blocks** throughout — copy-pasteable commands and policy snippets.
+- **Schema rendering — readable generated reference (tooling, carries risk).** The generated
+  `MirrorPolicy`, config `HOUBA_*`, and scan-predicate `/scan/v1` reference each render as a deep, noisy
+  `anyOf > item N` tree (json-schema-for-humans default). Make them readable — collapse the union noise,
+  friendlier property paths, or a different renderer. Distinct line: the renderer swap/config is real
+  work, not free polish.
 - **`audit --fail-on-no-sbom` — minor (backfill guard).** Since SBOMs now generate on **both** paths,
   every freshly-placed image already carries one, so this gate only catches pre-unification backfill
   and regressions — a small completeness item, no longer a headline. *(ADR 0029)*
