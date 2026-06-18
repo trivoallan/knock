@@ -332,6 +332,26 @@
       "title": "Attest Builder Id",
       "type": "string"
     },
+    "scan_evaluator_cmd": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Command template (containing `{sbom}`) that consumes an SBOM and emits SARIF on stdout, e.g. `grype sbom:{sbom} -o sarif`. Unset \u21d2 no scanstep. Any SARIF-producing tool works (grype, trivy, regis-with-SARIF).",
+      "title": "Scan Evaluator Cmd"
+    },
+    "scan_evaluator_timeout": {
+      "default": 600,
+      "description": "Per-image timeout (seconds) for the vuln evaluator.",
+      "minimum": 1,
+      "title": "Scan Evaluator Timeout",
+      "type": "integer"
+    },
     "usage_oracle_cmd": {
       "anyOf": [
         {

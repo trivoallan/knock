@@ -27,6 +27,8 @@ Each field is set as `HOUBA_<FIELD>` (the property name upper-cased). JSON-typed
 | `HOUBA_ATTEST_FULCIO_URL` | string | `(empty)` | Keyless CA URL; blank ⇒ public Fulcio. |
 | `HOUBA_ATTEST_REKOR_URL` | string | `(empty)` | Transparency-log URL; blank ⇒ no log entry. |
 | `HOUBA_ATTEST_BUILDER_ID` | string | `(empty)` | URI identifying this houba builder. |
+| `HOUBA_SCAN_EVALUATOR_CMD` | string | `(unset)` | Command template (containing `{sbom}`) that consumes an SBOM and emits SARIF on stdout, e.g. `grype sbom:{sbom} -o sarif`. Unset ⇒ no scanstep. Any SARIF-producing tool works (grype, trivy, regis-with-SARIF). |
+| `HOUBA_SCAN_EVALUATOR_TIMEOUT` | integer | `600` | Per-image timeout (seconds) for the vuln evaluator. |
 | `HOUBA_USAGE_ORACLE_CMD` | string | `(unset)` | Executable speaking the usage-oracle contract; required to run `houba purge`. |
 | `HOUBA_USAGE_ORACLE_TIMEOUT` | integer | `30` | Per-query timeout (seconds) for the usage oracle. |
 | `HOUBA_PURGE_MIN_IDLE_DAYS` | integer | `(unset)` | Idle window `houba purge` requires before reaping a marked tag. |

@@ -183,6 +183,30 @@
           "description": "Destination repository.",
           "title": "Repository",
           "type": "string"
+        },
+        "enforceFrom": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Severity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Block publish to this destination if any finding is at or above this severity (Kyverno Enforce). Requires HOUBA_SCAN_EVALUATOR_CMD."
+        },
+        "auditFrom": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Severity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Publish but flag a warning if any finding is at or above this severity (Kyverno Audit). Requires HOUBA_SCAN_EVALUATOR_CMD."
         }
       },
       "required": [
@@ -339,6 +363,18 @@
       ],
       "title": "Metadata",
       "type": "object"
+    },
+    "Severity": {
+      "description": "Vuln severity, declared highest \u2192 lowest (definition order IS the rank).",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "unknown"
+      ],
+      "title": "Severity",
+      "type": "string"
     },
     "Source": {
       "additionalProperties": false,

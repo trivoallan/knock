@@ -28,6 +28,12 @@ sidebar_position: 1
               - [4.4.1.1.1.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry_anyOf_i1)
             - [4.4.1.1.1.1.2. Property `project`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_project)
             - [4.4.1.1.1.1.3. Property `repository`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_repository)
+            - [4.4.1.1.1.1.4. Property `enforceFrom`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_enforceFrom)
+              - [4.4.1.1.1.1.4.1. Property `Severity`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_enforceFrom_anyOf_i0)
+              - [4.4.1.1.1.1.4.2. Property `item 1`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_enforceFrom_anyOf_i1)
+            - [4.4.1.1.1.1.5. Property `auditFrom`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_auditFrom)
+              - [4.4.1.1.1.1.5.1. Property `Severity`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_auditFrom_anyOf_i0)
+              - [4.4.1.1.1.1.5.2. Property `item 1`](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_auditFrom_anyOf_i1)
         - [4.4.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_destinations_anyOf_i1)
       - [4.4.1.2. Property `transform`](#spec_defaults_anyOf_i0_transform)
         - [4.4.1.2.1. Property `item 0`](#spec_defaults_anyOf_i0_transform_anyOf_i0)
@@ -407,11 +413,13 @@ Must be one of:
 | **Additional properties** | Not allowed         |
 | **Defined in**            | #/$defs/Destination |
 
-| Property                                                                        | Pattern | Type        | Deprecated | Definition | Title/Description |
-| ------------------------------------------------------------------------------- | ------- | ----------- | ---------- | ---------- | ----------------- |
-| - [registry](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry )     | No      | Combination | No         | -          | Registry          |
-| + [project](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_project )       | No      | string      | No         | -          | Project           |
-| + [repository](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_repository ) | No      | string      | No         | -          | Repository        |
+| Property                                                                          | Pattern | Type        | Deprecated | Definition | Title/Description                                                                                                                   |
+| --------------------------------------------------------------------------------- | ------- | ----------- | ---------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| - [registry](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry )       | No      | Combination | No         | -          | Registry                                                                                                                            |
+| + [project](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_project )         | No      | string      | No         | -          | Project                                                                                                                             |
+| + [repository](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_repository )   | No      | string      | No         | -          | Repository                                                                                                                          |
+| - [enforceFrom](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_enforceFrom ) | No      | Combination | No         | -          | Block publish to this destination if any finding is at or above this severity (Kyverno Enforce). Requires HOUBA_SCAN_EVALUATOR_CMD. |
+| - [auditFrom](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_auditFrom )     | No      | Combination | No         | -          | Publish but flag a warning if any finding is at or above this severity (Kyverno Audit). Requires HOUBA_SCAN_EVALUATOR_CMD.          |
 
 ###### 4.4.1.1.1.1.1. Property `registry` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_registry}
 
@@ -466,6 +474,83 @@ Must be one of:
 | **Required** | Yes      |
 
 **Description:** Destination repository.
+
+###### 4.4.1.1.1.1.4. Property `enforceFrom` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_enforceFrom}
+
+|                           |                  |
+| ------------------------- | ---------------- |
+| **Type**                  | `combining`      |
+| **Required**              | No               |
+| **Additional properties** | Any type allowed |
+| **Default**               | `null`           |
+
+**Description:** Block publish to this destination if any finding is at or above this severity (Kyverno Enforce). Requires HOUBA_SCAN_EVALUATOR_CMD.
+
+| Any of(Option)                                                                       |
+| ------------------------------------------------------------------------------------ |
+| [Severity](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_enforceFrom_anyOf_i0) |
+| [item 1](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_enforceFrom_anyOf_i1)   |
+
+###### 4.4.1.1.1.1.4.1. Property `Severity` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_enforceFrom_anyOf_i0}
+
+**Title:** Severity
+
+|                |                    |
+| -------------- | ------------------ |
+| **Type**       | `enum (of string)` |
+| **Required**   | No                 |
+| **Defined in** | #/$defs/Severity   |
+
+**Description:** Vuln severity, declared highest → lowest (definition order IS the rank).
+
+Must be one of:
+* "critical"
+* "high"
+* "medium"
+* "low"
+* "unknown"
+
+###### 4.4.1.1.1.1.4.2. Property `item 1` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_enforceFrom_anyOf_i1}
+
+|              |        |
+| ------------ | ------ |
+| **Type**     | `null` |
+| **Required** | No     |
+
+###### 4.4.1.1.1.1.5. Property `auditFrom` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_auditFrom}
+
+|                           |                  |
+| ------------------------- | ---------------- |
+| **Type**                  | `combining`      |
+| **Required**              | No               |
+| **Additional properties** | Any type allowed |
+| **Default**               | `null`           |
+
+**Description:** Publish but flag a warning if any finding is at or above this severity (Kyverno Audit). Requires HOUBA_SCAN_EVALUATOR_CMD.
+
+| Any of(Option)                                                                     |
+| ---------------------------------------------------------------------------------- |
+| [Severity](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_auditFrom_anyOf_i0) |
+| [item 1](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_auditFrom_anyOf_i1)   |
+
+###### 4.4.1.1.1.1.5.1. Property `Severity` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_auditFrom_anyOf_i0}
+
+**Title:** Severity
+
+|                        |                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| **Type**               | `enum (of string)`                                                                   |
+| **Required**           | No                                                                                   |
+| **Same definition as** | [Severity](#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_enforceFrom_anyOf_i0) |
+
+**Description:** Vuln severity, declared highest → lowest (definition order IS the rank).
+
+###### 4.4.1.1.1.1.5.2. Property `item 1` {#spec_defaults_anyOf_i0_destinations_anyOf_i0_items_auditFrom_anyOf_i1}
+
+|              |        |
+| ------------ | ------ |
+| **Type**     | `null` |
+| **Required** | No     |
 
 ###### 4.4.1.1.2. Property `item 1` {#spec_defaults_anyOf_i0_destinations_anyOf_i1}
 
