@@ -17,6 +17,7 @@ resources:
   - cronjob-gc.yaml
   - job-blast-radius.yaml
   - rbac-dt-bootstrap.yaml
+  - rbac-blast-radius.yaml
   - job-dt-bootstrap.yaml
   - job-publish-sbom.yaml
   - job-seed-incident.yaml
