@@ -21,7 +21,7 @@ graph LR
     style 59 fill:#69707a,stroke:#494e55,color:#ffffff
     60("<div style='font-weight: bold'>Transparency log (Rekor)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Optional append-only<br />signature log; blank in<br />air-gapped orgs. houba can<br />point at one but never<br />deploys it.</div>")
     style 60 fill:#0f766e,stroke:#0a524d,color:#ffffff
-    61("<div style='font-weight: bold'>Upstream Scanner</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces vulnerability / EOL<br />scan reports (CI pipeline,<br />registry-native scanner, or<br />scan service). houba ingests<br />the report; it never calls<br />the scanner.</div>")
+    61("<div style='font-weight: bold'>Vulnerability scanner</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Emits SARIF vulnerability<br />reports. houba relates to it<br />two ways: it INGESTS a report<br />produced in CI / a scan<br />service (attach), and INVOKES<br />a configured one on the SBOM<br />at admission (scanstep gate,<br />HOUBA_SCAN_EVALUATOR_CMD).<br />houba owns neither the tool<br />nor its CVE database.</div>")
     style 61 fill:#69707a,stroke:#494e55,color:#ffffff
 
     subgraph 4 ["houba"]
@@ -141,6 +141,7 @@ graph LR
 
     end
 
+    18-. "<div>Configures TLS/CA + login per<br />registry (host-match or<br />--registry override)</div><div style='font-size: 70%'>[Python]</div>" .->21
     8-. "<div>Builds the composition root</div><div style='font-size: 70%'>[Python]</div>" .->13
     8-. "<div>Runs the purge</div><div style='font-size: 70%'>[Python]</div>" .->16
     8-. "<div>Reads now()</div><div style='font-size: 70%'>[Protocol]</div>" .->33
@@ -182,6 +183,7 @@ graph LR
     38-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->53
     39-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->54
     42-. "<div>Queries prod usage<br />(HOUBA_USAGE_ORACLE_CMD)</div><div style='font-size: 70%'>[subprocess (stdin/stdout JSON)]</div>" .->58
+    45-. "<div>Invokes the configured<br />evaluator on the SBOM</div><div style='font-size: 70%'>[subprocess (HOUBA_SCAN_EVALUATOR_CMD)]</div>" .->61
     15-. "<div>Builds the transform<br />Statement (rebuild path)</div><div style='font-size: 70%'>[Python]</div>" .->27
     15-. "<div>Signs the transform + SBOM<br />predicates (both paths)</div><div style='font-size: 70%'>[Protocol]</div>" .->35
     15-. "<div>Builds SBOM referrer<br />annotations (both paths)</div><div style='font-size: 70%'>[Python]</div>" .->29
@@ -210,10 +212,9 @@ graph LR
     17-. "<div>Configures TLS/CA + login per<br />registry</div><div style='font-size: 70%'>[Python]</div>" .->21
     10-. "<div>Builds the composition root</div><div style='font-size: 70%'>[Python]</div>" .->13
     10-. "<div>Runs the ingest</div><div style='font-size: 70%'>[Python]</div>" .->18
-    61-. "<div>Provides scan reports</div><div style='font-size: 70%'>[SARIF / file]</div>" .->18
+    61-. "<div>Provides scan reports<br />(attach)</div><div style='font-size: 70%'>[SARIF / file]</div>" .->18
     18-. "<div>Detects format, parses &<br />summarizes the report</div><div style='font-size: 70%'>[Python]</div>" .->28
     18-. "<div>Resolves the subject digest +<br />puts the scan referrer</div><div style='font-size: 70%'>[Protocol]</div>" .->30
     18-. "<div>Reads now()</div><div style='font-size: 70%'>[Protocol]</div>" .->33
-    18-. "<div>Configures TLS/CA + login per<br />registry (host-match or<br />--registry override)</div><div style='font-size: 70%'>[Python]</div>" .->21
 
   end

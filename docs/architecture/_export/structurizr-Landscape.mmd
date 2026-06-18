@@ -30,7 +30,7 @@ graph LR
     style 59 fill:#69707a,stroke:#494e55,color:#ffffff
     60("<div style='font-weight: bold'>Transparency log (Rekor)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Optional append-only<br />signature log; blank in<br />air-gapped orgs. houba can<br />point at one but never<br />deploys it.</div>")
     style 60 fill:#0f766e,stroke:#0a524d,color:#ffffff
-    61("<div style='font-weight: bold'>Upstream Scanner</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces vulnerability / EOL<br />scan reports (CI pipeline,<br />registry-native scanner, or<br />scan service). houba ingests<br />the report; it never calls<br />the scanner.</div>")
+    61("<div style='font-weight: bold'>Vulnerability scanner</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Emits SARIF vulnerability<br />reports. houba relates to it<br />two ways: it INGESTS a report<br />produced in CI / a scan<br />service (attach), and INVOKES<br />a configured one on the SBOM<br />at admission (scanstep gate,<br />HOUBA_SCAN_EVALUATOR_CMD).<br />houba owns neither the tool<br />nor its CVE database.</div>")
     style 61 fill:#69707a,stroke:#494e55,color:#ffffff
     62("<div style='font-weight: bold'>ArgoCD</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>GitOps controller: the<br />App-of-Apps that syncs the<br />houba install from git. This<br />IS the reference deployment —<br />and the demo on kind. The<br />kubectl apply -k<br />overlays/local path is the<br />inner-loop escape hatch, not<br />a separate blueprint.</div>")
     style 62 fill:#69707a,stroke:#494e55,color:#ffffff
@@ -48,7 +48,8 @@ graph LR
     4-. "<div>Queries prod usage at purge<br />time (houba purge)</div><div style='font-size: 70%'>[subprocess (HOUBA_USAGE_ORACLE_CMD)]</div>" .->58
     4-. "<div>Signs in-toto attestations<br />(DSSE)</div><div style='font-size: 70%'>[cosign]</div>" .->59
     4-. "<div>Records the signature<br />(optional; blank => skipped)</div><div style='font-size: 70%'>[cosign / rekor]</div>" .->60
-    61-. "<div>Produces scan reports<br />ingested by</div><div style='font-size: 70%'>[SARIF / file]</div>" .->4
+    61-. "<div>Produces scan reports,<br />ingested by attach</div><div style='font-size: 70%'>[SARIF / file]</div>" .->4
+    4-. "<div>Invokes on the SBOM at<br />admission (scanstep gate)</div><div style='font-size: 70%'>[subprocess (HOUBA_SCAN_EVALUATOR_CMD)]</div>" .->61
     62-. "<div>Syncs the install manifests<br />from git into the cluster<br />(App-of-Apps reference)</div><div style='font-size: 70%'>[GitOps]</div>" .->4
 
   end

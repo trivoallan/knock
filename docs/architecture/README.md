@@ -49,10 +49,12 @@ specs — see the [maintenance contract](#maintenance-contract)). The Container,
 Component views document houba's internal structure **as built**; keep them in step with the code when the
 layering, ports, or adapters change.
 
-The **Upstream Scanner** system (CI pipeline, registry-native scanner, or scan service) is
-modelled as an external producer: it generates the scan report and hands it to houba via
-`houba attach`. The relationship is explicitly scanner → houba (ingest-only); houba never
-calls or discovers the scanner, keeping the coupling to a file hand-off at the boundary.
+The **Vulnerability scanner** system (a SARIF-emitting tool — CI pipeline, registry-native
+scanner, or scan service) is modelled as one external system with **two** relations: it
+produces a report houba *ingests* via `houba attach` (scanner → houba), and houba *invokes* a
+configured one on the SBOM at admission via the reconcile scanstep gate (houba → scanner,
+`subprocess (HOUBA_SCAN_EVALUATOR_CMD)`). houba owns neither the tool nor its CVE database —
+the same deployment-supplied, interchangeable shell-out pattern as the usage oracle (see ADR 0039).
 The houba→Signing service edge (introduced for the rebuild path in #49) now also covers
 `houba attach` signing the scan referrer (`https://houba.dev/predicate/scan/v1`) — no new
 model element; the same Signing service and Transparency log systems are reused.

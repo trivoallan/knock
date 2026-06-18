@@ -4,76 +4,76 @@ graph LR
   subgraph diagram ["Deployment View: houba - Local — inner-loop overlay (make local)"]
     style diagram fill:#ffffff,stroke:#ffffff
 
-    subgraph 215 ["Operator host"]
-      style 215 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 218 ["Operator host"]
+      style 218 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      216("<div style='font-weight: bold'>Policy repo</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git / GitOps]</div><div style='font-size: 80%; margin-top:10px'>docs/examples/reference —<br />busybox copy + debian rebuild<br />(git-sync'd)</div>")
-      style 216 fill:#8a94a0,stroke:#606770,color:#ffffff
-      subgraph 217 ["kind cluster"]
-        style 217 fill:#ffffff,stroke:#444444,color:#ffffff
+      219("<div style='font-weight: bold'>Policy repo</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git / GitOps]</div><div style='font-size: 80%; margin-top:10px'>docs/examples/reference —<br />busybox copy + debian rebuild<br />(git-sync'd)</div>")
+      style 219 fill:#8a94a0,stroke:#606770,color:#ffffff
+      subgraph 220 ["kind cluster"]
+        style 220 fill:#ffffff,stroke:#444444,color:#ffffff
 
-        subgraph 218 ["namespace: houba"]
-          style 218 fill:#ffffff,stroke:#444444,color:#ffffff
+        subgraph 221 ["namespace: houba"]
+          style 221 fill:#ffffff,stroke:#444444,color:#ffffff
 
-          subgraph 219 ["CronJob: houba-reconcile"]
-            style 219 fill:#ffffff,stroke:#444444,color:#ffffff
-
-            220("<div style='font-weight: bold'>houba CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
-            style 220 fill:#2563c9,stroke:#19458c,color:#ffffff
-            221("<div style='font-weight: bold'>git-sync sidecar</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git-sync]</div><div style='font-size: 80%; margin-top:10px'>Clones the policy repo into<br />/policies</div>")
-            style 221 fill:#8a94a0,stroke:#606770,color:#ffffff
-          end
-
-          subgraph 222 ["Deployment: buildkitd"]
+          subgraph 222 ["CronJob: houba-reconcile"]
             style 222 fill:#ffffff,stroke:#444444,color:#ffffff
 
-            223("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
-            style 223 fill:#69707a,stroke:#494e55,color:#ffffff
+            223("<div style='font-weight: bold'>houba CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
+            style 223 fill:#2563c9,stroke:#19458c,color:#ffffff
+            224("<div style='font-weight: bold'>git-sync sidecar</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git-sync]</div><div style='font-size: 80%; margin-top:10px'>Clones the policy repo into<br />/policies</div>")
+            style 224 fill:#8a94a0,stroke:#606770,color:#ffffff
           end
 
-          225("<div style='font-weight: bold'>Secret: houba-registries</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Secret]</div><div style='font-size: 80%; margin-top:10px'>Plain secret roster (no<br />operators) — the inner-loop<br />escape hatch</div>")
-          style 225 fill:#8a94a0,stroke:#606770,color:#ffffff
-          226("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>BLAST_REPOS=demo/busybox<br />demo/debian</div>")
-          style 226 fill:#8a94a0,stroke:#606770,color:#ffffff
-          227("<div style='font-weight: bold'>CronJob: houba-gc</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes CronJob]</div><div style='font-size: 80%; margin-top:10px'>Suspended (like reconcile);<br />fired on demand. houba gc<br />--apply over the roster.</div>")
-          style 227 fill:#8a94a0,stroke:#606770,color:#ffffff
-          228("<div style='font-weight: bold'>Deployment: dependency-track (own app)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Deployment]</div><div style='font-size: 80%; margin-top:10px'>Worked-example SBOM consumer<br />(apiserver + frontend,<br />embedded H2) — (ADR 0035).<br />Currency layer: package-level<br />blast-radius. Fed the<br />CycloneDX SBOM referrer houba<br />attaches<br />(HOUBA_SBOM_FORMATS),<br />uploaded by publish-sbom.</div>")
-          style 228 fill:#8a94a0,stroke:#606770,color:#ffffff
-          229("<div style='font-weight: bold'>Job: houba-publish-sbom</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Job]</div><div style='font-size: 80%; margin-top:10px'>Fetches the CycloneDX SBOM<br />referrer houba attaches to<br />each placed image and uploads<br />it to DT. regctl + python, no<br />conversion. Twin of the<br />blast-radius consumer.</div>")
-          style 229 fill:#8a94a0,stroke:#606770,color:#ffffff
-          subgraph 230 ["marked workloads (team-a/b/c)"]
-            style 230 fill:#ffffff,stroke:#444444,color:#ffffff
+          subgraph 225 ["Deployment: buildkitd"]
+            style 225 fill:#ffffff,stroke:#444444,color:#ffffff
 
-            231("<div style='font-weight: bold'>pause pods</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Pod]</div><div style='font-size: 80%; margin-top:10px'>One pod per namespace<br />(team-a/b/c), annotated with<br />the placed/bypass digest;<br />queried by blast-radius via<br />kube API.</div>")
-            style 231 fill:#8a94a0,stroke:#606770,color:#ffffff
+            226("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
+            style 226 fill:#69707a,stroke:#494e55,color:#ffffff
+          end
+
+          228("<div style='font-weight: bold'>Secret: houba-registries</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Secret]</div><div style='font-size: 80%; margin-top:10px'>Plain secret roster (no<br />operators) — the inner-loop<br />escape hatch</div>")
+          style 228 fill:#8a94a0,stroke:#606770,color:#ffffff
+          229("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>BLAST_REPOS=demo/busybox<br />demo/debian</div>")
+          style 229 fill:#8a94a0,stroke:#606770,color:#ffffff
+          230("<div style='font-weight: bold'>CronJob: houba-gc</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes CronJob]</div><div style='font-size: 80%; margin-top:10px'>Suspended (like reconcile);<br />fired on demand. houba gc<br />--apply over the roster.</div>")
+          style 230 fill:#8a94a0,stroke:#606770,color:#ffffff
+          231("<div style='font-weight: bold'>Deployment: dependency-track (own app)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Deployment]</div><div style='font-size: 80%; margin-top:10px'>Worked-example SBOM consumer<br />(apiserver + frontend,<br />embedded H2) — (ADR 0035).<br />Currency layer: package-level<br />blast-radius. Fed the<br />CycloneDX SBOM referrer houba<br />attaches<br />(HOUBA_SBOM_FORMATS),<br />uploaded by publish-sbom.</div>")
+          style 231 fill:#8a94a0,stroke:#606770,color:#ffffff
+          232("<div style='font-weight: bold'>Job: houba-publish-sbom</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Job]</div><div style='font-size: 80%; margin-top:10px'>Fetches the CycloneDX SBOM<br />referrer houba attaches to<br />each placed image and uploads<br />it to DT. regctl + python, no<br />conversion. Twin of the<br />blast-radius consumer.</div>")
+          style 232 fill:#8a94a0,stroke:#606770,color:#ffffff
+          subgraph 233 ["marked workloads (team-a/b/c)"]
+            style 233 fill:#ffffff,stroke:#444444,color:#ffffff
+
+            234("<div style='font-weight: bold'>pause pods</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Pod]</div><div style='font-size: 80%; margin-top:10px'>One pod per namespace<br />(team-a/b/c), annotated with<br />the placed/bypass digest;<br />queried by blast-radius via<br />kube API.</div>")
+            style 234 fill:#8a94a0,stroke:#606770,color:#ffffff
           end
 
         end
 
-        subgraph 232 ["namespace: registry"]
-          style 232 fill:#ffffff,stroke:#444444,color:#ffffff
+        subgraph 235 ["namespace: registry"]
+          style 235 fill:#ffffff,stroke:#444444,color:#ffffff
 
-          233("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
-          style 233 fill:#69707a,stroke:#494e55,color:#ffffff
+          236("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
+          style 236 fill:#69707a,stroke:#494e55,color:#ffffff
         end
 
       end
 
     end
 
-    subgraph 235 ["Internet"]
-      style 235 fill:#ffffff,stroke:#444444,color:#ffffff
+    subgraph 238 ["Internet"]
+      style 238 fill:#ffffff,stroke:#444444,color:#ffffff
 
-      236("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
-      style 236 fill:#69707a,stroke:#494e55,color:#ffffff
+      239("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
+      style 239 fill:#69707a,stroke:#494e55,color:#ffffff
     end
 
-    220-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->223
-    220-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->233
-    220-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->236
-    221-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->216
-    226-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl]</div>" .->233
-    226-. "<div>Lists pods, joins digest -><br />cluster (kube API)</div><div style='font-size: 70%'>[kubectl / kube API]</div>" .->231
-    227-. "<div>Collects superseded scan<br />referrers</div><div style='font-size: 70%'>[regctl]</div>" .->233
+    223-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->226
+    223-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->236
+    223-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->239
+    224-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->219
+    229-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl]</div>" .->236
+    229-. "<div>Lists pods, joins digest -><br />cluster (kube API)</div><div style='font-size: 70%'>[kubectl / kube API]</div>" .->234
+    230-. "<div>Collects superseded scan<br />referrers</div><div style='font-size: 70%'>[regctl]</div>" .->236
 
   end

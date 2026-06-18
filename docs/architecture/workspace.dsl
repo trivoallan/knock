@@ -95,7 +95,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         usageOracle = softwareSystem "Usage oracle / observability" "Answers 'was this image's content seen in production lately?' (e.g. Datadog). Queried point-in-time by houba purge; never owned by houba." "External"
         signingService = softwareSystem "Signing / Key service" "KMS or Fulcio (keyless CA) that houba's attestor uses to sign in-toto attestations (DSSE). Trust is org configuration, not baked in." "External"
         transparencyLog = softwareSystem "Transparency log (Rekor)" "Optional append-only signature log; blank in air-gapped orgs. houba can point at one but never deploys it." "External,Downstream"
-        upstreamScanner = softwareSystem "Upstream Scanner" "Produces vulnerability / EOL scan reports (CI pipeline, registry-native scanner, or scan service). houba ingests the report; it never calls the scanner." "External"
+        vulnScanner = softwareSystem "Vulnerability scanner" "Emits SARIF vulnerability reports. houba relates to it two ways: it INGESTS a report produced in CI / a scan service (attach), and INVOKES a configured one on the SBOM at admission (scanstep gate, HOUBA_SCAN_EVALUATOR_CMD). houba owns neither the tool nor its CVE database." "External"
         argocd = softwareSystem "ArgoCD" "GitOps controller: the App-of-Apps that syncs the houba install from git. This IS the reference deployment — and the demo on kind. The kubectl apply -k overlays/local path is the inner-loop escape hatch, not a separate blueprint." "External"
 
         platformEng -> houba "Configures the hardening policy + registry roster, runs / schedules reconcile" "CLI"
@@ -111,7 +111,8 @@ workspace "houba" "Single front door / stamper for external container images." {
         houba -> usageOracle "Queries prod usage at purge time (houba purge)" "subprocess (HOUBA_USAGE_ORACLE_CMD)"
         houba -> signingService "Signs in-toto attestations (DSSE)" "cosign"
         houba -> transparencyLog "Records the signature (optional; blank => skipped)" "cosign / rekor"
-        upstreamScanner -> houba "Produces scan reports ingested by" "SARIF / file"
+        vulnScanner -> houba "Produces scan reports, ingested by attach" "SARIF / file"
+        houba -> vulnScanner "Invokes on the SBOM at admission (scanstep gate)" "subprocess (HOUBA_SCAN_EVALUATOR_CMD)"
         argocd -> houba "Syncs the install manifests from git into the cluster (App-of-Apps reference)" "GitOps"
 
         # Component-level relationships — the source of truth for the Component view.
@@ -132,7 +133,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         ucAudit -> ucRegistrySession "Configures TLS/CA + login per registry" "Python"
         cliAttach -> cliDi "Builds the composition root" "Python"
         cliAttach -> ucAttach "Runs the ingest" "Python"
-        upstreamScanner -> ucAttach "Provides scan reports" "SARIF / file"
+        vulnScanner -> ucAttach "Provides scan reports (attach)" "SARIF / file"
         ucAttach -> domScan "Detects format, parses & summarizes the report" "Python"
         ucAttach -> portRegistry "Resolves the subject digest + puts the scan referrer" "Protocol"
         ucAttach -> portClock "Reads now()" "Protocol"
@@ -184,6 +185,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         adRegctl -> destRegistries "Reads mirror state; copies, stamps, retags, deletes" "regctl (dist-spec)"
         adBuildkit -> buildkit "Submits the hardening rebuild (internal CA trust, package mirror)" "buildctl"
         adUsageOracle -> usageOracle "Queries prod usage (HOUBA_USAGE_ORACLE_CMD)" "subprocess (stdin/stdout JSON)"
+        adScan -> vulnScanner "Invokes the configured evaluator on the SBOM" "subprocess (HOUBA_SCAN_EVALUATOR_CMD)"
 
         ucReconcile -> domAttestation "Builds the transform Statement (rebuild path)" "Python"
         ucReconcile -> portAttestor "Signs the transform + SBOM predicates (both paths)" "Protocol"

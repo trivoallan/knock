@@ -64,3 +64,14 @@ Staleness, if closed at admission, is closed only by a provenance-shaped **max-a
   abstract "observability stack" consumer. Naming it in `workspace.dsl` would betray the
   *portable, tool-agnostic stamp* thesis — DT stays the worked-example consumer, not a modeled
   external system.
+
+## Related
+
+[ADR 0039](0039-scanstep-runs-the-scanner-gates-at-admission.md) extends this boundary: the reconcile
+**scanstep** *invokes* an evaluator and gates placement on severity **at scan time** (the
+reconcile-path analog of `attach --fail-on`, ADR 0021) — point-in-time, then recorded as provenance.
+It does **not** make the referrer a vuln store, and does **not** have the admission controller
+correlate severity (the guardrail above stands — the deploy-time gate remains a provenance-shaped
+max-age check); *currency* stays Dependency-Track's. The C4 `vulnScanner` external system (one box,
+two relations — ingested via attach, invoked via the scanstep) supersedes the old `upstreamScanner`
+and the "houba never calls the scanner" wording.
