@@ -66,6 +66,34 @@ flowchart TD
 
 houba selects the path from the policy itself: with no `transform` declared, the image is copied byte-for-byte via `regctl` and stamped; when a `transform` is present, houba rebuilds it through BuildKit (inject CA, rewrite package sources) and stamps the result. Both paths receive a syft SBOM attached as an OCI referrer; both can be signed with cosign.
 
+A `MirrorPolicy` is the single declarative artifact: it names an upstream `source`, the tags to admit, and where to place them. The optional `transform` is the switch that flips an import from copy to rebuild:
+
+```yaml
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/redis          # the external image to admit
+  imports:
+    - name: v7
+      owners:
+        - group:default/data-platform  # stamped as io.houba.owners
+      tags:
+        includeRegex: "^7\.2\."         # which upstream tags to admit
+      # transform:                       # ← omit → copy path; declare → rebuild path
+      #   - injectCA: { certs: [corp] }
+      #   - rewritePackageSources: { mirror: corp }
+      destinations:
+        - project: mirror
+          repository: redis
+```
+
+For the full schema see the [MirrorPolicy reference](../reference/mirror-policy.md); for runnable examples, the [example policy catalog](../examples/README.md).
+
 ```mermaid
 flowchart TD
     pol[MirrorPolicy] --> dec{transform<br/>declared?}
