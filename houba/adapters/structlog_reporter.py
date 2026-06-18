@@ -24,12 +24,15 @@ class StructlogReporter:
 
     def operation_applied(self, ev: OperationEvent) -> None:
         # transform_steps/out_digest are only meaningful on applied imported/updated ops;
-        # omit them otherwise so copy/skip/alias lines stay terse.
+        # omit them otherwise so copy/skip/alias lines stay terse. audit_breached is omitted
+        # when False so clean-gate lines stay terse.
         extra: dict[str, object] = {}
         if ev.transform_steps is not None:
             extra["transform_steps"] = list(ev.transform_steps)
         if ev.out_digest is not None:
             extra["out_digest"] = ev.out_digest
+        if ev.audit_breached:
+            extra["audit_breached"] = True
         with self._lock:
             self._log.info(
                 "operation",

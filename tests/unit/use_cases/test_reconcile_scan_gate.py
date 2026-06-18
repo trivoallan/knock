@@ -145,10 +145,12 @@ def test_audit_breached_promotes_with_breach_surfaced(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     registry = _registry()
+    reporter = FakeReporter()
     with caplog.at_level("WARNING"):
         report = _run(
             _policy(audit="high"),
             registry,
+            reporter=reporter,
             vuln_evaluator=FakeVulnEvaluatorPort(sarif=SARIF_HIGH),
         )
 
@@ -160,16 +162,21 @@ def test_audit_breached_promotes_with_breach_surfaced(
     assert (SCAN_RESULT_ARTIFACT_TYPE, SARIF_MEDIA) in _scan_referrers(registry, subject)
     # Staging tag cleaned up after promotion.
     assert f"{DEST}:{STAGING}" in registry.deleted
-    # Breach surfaced as a warning (visible, but the op still applied).
+    # Breach surfaced as a warning (human-facing log stays).
     assert any("audit" in r.message.lower() for r in caplog.records)
+    # Breach is also visible in the structured OperationEvent (queryable run report).
+    assert len(reporter.operations) == 1
+    assert reporter.operations[0].audit_breached is True
 
 
 def test_clean_promotes_and_signs_scan_predicate() -> None:
     registry = _registry()
     attestor = FakeAttestor()
+    reporter = FakeReporter()
     report = _run(
         _policy(enforce="critical"),
         registry,
+        reporter=reporter,
         attestor=attestor,
         attest_builder_id="houba://test",
         vuln_evaluator=FakeVulnEvaluatorPort(sarif=SARIF_CLEAN),
@@ -185,6 +192,9 @@ def test_clean_promotes_and_signs_scan_predicate() -> None:
     ]
     assert len(scan_preds) == 1
     assert scan_preds[0]["subject"][0]["name"] == f"{DEST}:{OUT_TAG}"
+    # Clean gate: audit_breached must be False in the structured event.
+    assert len(reporter.operations) == 1
+    assert reporter.operations[0].audit_breached is False
 
 
 def test_gate_without_sbom_formats_fails_the_op() -> None:

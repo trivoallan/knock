@@ -29,6 +29,7 @@ class Operation(BaseModel):
     error: ErrorInfo | None = None  # set => this operation failed
     transform_steps: list[str] | None = None  # applied step names (rebuild); None on a copy
     out_digest: str | None = None  # produced (post-annotate) digest; None unless applied
+    audit_breached: bool = False  # True when auditFrom gate was breached but image promoted
 
 
 class VariantReport(BaseModel):

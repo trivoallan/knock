@@ -209,9 +209,9 @@ class _Plan:
     expanded: ExpandedImport
     dest_repo: str
     config: RegistryConfig
-    transforms: dict[str, _ResolvedTransform]
+    transforms: dict[str, _ResolvedTransform]  # variant name → resolved transform
     enforce_from: Severity | None = None
-    audit_from: Severity | None = None  # variant name → resolved transform
+    audit_from: Severity | None = None
 
 
 def _source_repo(policy: MirrorPolicy) -> str:
@@ -395,6 +395,7 @@ def _apply_plan(
                 applied=op.applied,
                 transform_steps=tuple(op.transform_steps) if op.transform_steps else None,
                 out_digest=op.out_digest,
+                audit_breached=op.audit_breached,
             )
         )
 
@@ -518,8 +519,9 @@ def _apply_plan(
         scan_active = plan.enforce_from is not None or plan.audit_from is not None
         try:
             out_digest: str | None = None
+            audit_breached = False
             if scan_active and not dry_run_tags:
-                out_digest = _do_import_gated(w)
+                out_digest, audit_breached = _do_import_gated(w)
             elif not dry_run_tags:
                 out_digest = _place(w, w.out_tag)
                 # SBOM (both paths): scan the placed digest, attach one referrer per
@@ -547,6 +549,7 @@ def _apply_plan(
                 applied=not dry_run_tags,
                 transform_steps=steps,
                 out_digest=out_digest,
+                audit_breached=audit_breached,
             )
             emit_applied(op, w.variant)
             return op
@@ -566,8 +569,8 @@ def _apply_plan(
             emit_failed(op, w.variant, info)
             return op
 
-    def _do_import_gated(w: _ImportWork) -> str:
-        """Stage -> scan -> promote. Returns the placed digest on promote; raises on block.
+    def _do_import_gated(w: _ImportWork) -> tuple[str, bool]:
+        """Stage -> scan -> promote. Returns (placed digest, audit_breached); raises on block.
 
         Build/copy to a staging tag, generate the SBOM there, evaluate it, and only when the
         gate is not breached at enforce level promote staging -> public out_tag and attach the
@@ -631,14 +634,15 @@ def _apply_plan(
                     out_tag=w.out_tag,
                     source_digest=source[w.src_tag].digest,
                 )
-            if action is GateAction.audit:
+            audit_breached = action is GateAction.audit
+            if audit_breached:
                 logger.warning(
                     "scan gate audit breach: %s:%s breached auditFrom=%s (published)",
                     plan.dest_repo,
                     w.out_tag,
                     plan.audit_from,
                 )
-            return out_digest
+            return out_digest, audit_breached
         finally:
             # Best-effort cleanup so no orphan staging tag survives any failure path
             # (build/SBOM/scan errors), guarding against the double-delete in the block path.

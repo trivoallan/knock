@@ -48,6 +48,7 @@ class OperationEvent:
     applied: bool
     transform_steps: tuple[str, ...] | None = None  # applied step names (rebuild); None on a copy
     out_digest: str | None = None  # produced (post-annotate) digest; None unless applied
+    audit_breached: bool = False  # True when auditFrom gate was breached but image promoted
 
 
 class Reporter(Protocol):
