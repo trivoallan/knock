@@ -15,6 +15,7 @@ __all__ = [
     "InternalError",
     "PolicyValidationError",
     "RegctlError",
+    "ScanEvaluatorError",
     "ScanReportError",
     "SyftError",
     "UnknownFormatError",
@@ -49,6 +50,10 @@ class AdapterError(HoubaError):
 
 class RegctlError(AdapterError):
     """`regctl` invocation error (tag ls, inspect, copy, mod, rm)."""
+
+
+class ScanEvaluatorError(AdapterError):
+    """Vulnerability-evaluator command error (unreachable, non-zero exit, or non-SARIF output)."""
 
 
 class BuildkitError(AdapterError):
