@@ -18,6 +18,53 @@ is what you reach for to iterate on a local branch. Design rationale:
 [the spec](https://github.com/trivoallan/houba/blob/main/docs/superpowers/specs/2026-06-11-reference-deployment-design.md) and the C4
 [Deployment view](https://github.com/trivoallan/houba/blob/main/docs/architecture/workspace.dsl).
 
+Rendered, the reference stack `make demo` brings up on kind (the production blueprint, minus the optional add-ons) looks like this:
+
+```mermaid
+flowchart LR
+  subgraph git["Git host"]
+    manifests["Manifests repo<br/>root.yaml · apps/ · sources/"]
+    policy["Policy repo<br/>POLICY_DIR=docs/examples/reference"]
+  end
+
+  subgraph cluster["Kubernetes cluster"]
+    subgraph nsargo["ns: argocd"]
+      root["houba-root<br/>App-of-Apps"]
+    end
+    subgraph nshouba["ns: houba"]
+      cron["CronJob: houba-reconcile<br/>houba CLI + git-sync sidecar"]:::houba
+      bk["buildkitd"]
+      es["ExternalSecret"]
+      blast["Job: blast-radius"]
+    end
+    subgraph nseso["ns: external-secrets"]
+      eso["External Secrets Operator"]
+    end
+    subgraph nsbao["ns: openbao"]
+      bao["OpenBao"]
+    end
+    subgraph nsreg["ns: registry"]
+      dest["Destination registries"]:::ext
+    end
+  end
+
+  src["Source registries<br/>Docker Hub · Quay · GHCR"]:::ext
+
+  root -->|App-of-Apps| manifests
+  root -->|syncs| cron
+  root -->|syncs| bk
+  cron -->|git-sync| policy
+  es -->|roster| eso
+  eso -->|reads| bao
+  cron -->|buildctl| bk
+  cron -->|pull| src
+  cron -->|copy · stamp · SBOM| dest
+  blast -->|reads stamps| dest
+
+  classDef houba fill:#1f6feb,stroke:#154da4,color:#fff;
+  classDef ext fill:#eef1f5,stroke:#69707a,color:#1f2933;
+```
+
 ```
 deploy/
   base/                       CronJob(houba) + git-sync + blast-radius Job + config
