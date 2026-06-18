@@ -1,0 +1,98 @@
+# Runtime STAND-IN for the blast-radius demo. NOT real placed images: the in-cluster Zot is not
+# node-pullable, and the cluster leg is a stand-in regardless (namespaces-as-clusters). Each pod runs
+# a node-pullable pause image and is MARKED with the placed/bypass digest (annotation) + its cluster
+# (label). The consumer (scripts/blast-radius.sh) lists these pods and joins digest -> cluster.
+# Digests are substituted by `make incident-deploy`. Upgrade path: the org's real runtime inventory
+# reports the genuinely-running digest — same join, same key.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-a
+  labels: { houba.io/cluster: team-a }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-b
+  labels: { houba.io/cluster: team-b }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-c
+  labels: { houba.io/cluster: team-c }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debian-xz
+  namespace: team-a
+  labels: { app.kubernetes.io/name: debian-xz, houba.io/cluster: team-a }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: debian-xz } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: debian-xz, houba.io/cluster: team-a }
+      annotations: { houba.io/image-digest: "${PLACED_DIGEST}" }
+    spec:
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+            seccompProfile: { type: RuntimeDefault }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debian-xz
+  namespace: team-b
+  labels: { app.kubernetes.io/name: debian-xz, houba.io/cluster: team-b }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: debian-xz } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: debian-xz, houba.io/cluster: team-b }
+      annotations: { houba.io/image-digest: "${PLACED_DIGEST}" }
+    spec:
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+            seccompProfile: { type: RuntimeDefault }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debian-xz-bypassed
+  namespace: team-c
+  labels: { app.kubernetes.io/name: debian-xz-bypassed, houba.io/cluster: team-c }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: debian-xz-bypassed } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: debian-xz-bypassed, houba.io/cluster: team-c }
+      annotations: { houba.io/image-digest: "${BYPASS_DIGEST}" }
+    spec:
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+            seccompProfile: { type: RuntimeDefault }
