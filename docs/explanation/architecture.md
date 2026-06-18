@@ -83,6 +83,8 @@ flowchart TD
     class copy,rebuild path;
 ```
 
+To walk the rebuild path step by step, see [Rebuild & harden an image](../how-to/rebuild-and-harden.md).
+
 ## Why the label is the product
 
 The value lands at incident time, not placement time. The provenance stamp carries lineage and owners; the SBOM carries the package inventory; both ride the image digest as OCI referrers so they travel with every copy. When a CVE drops, "which images ship package P, and who owns them?" becomes one query in the org's own observability stack. houba produces the facts — it never runs the query itself.
