@@ -16,6 +16,10 @@ Run it: `uv run houba reconcile docs/examples/reference/busybox` (copy path, no 
 
 ---
 
-**One repository per policy.** Each destination repository must be owned by exactly one `MirrorPolicy` — two policies writing the same repo is rejected at load time (they would mutually delete each other's tags). This is also what makes horizontal sharding safe (one writer per repo).
+:::warning One repository per policy
+Each destination repository must be owned by exactly one `MirrorPolicy` — two policies writing the same repo is rejected at load time (they would mutually delete each other's tags). This is also what makes horizontal sharding safe (one writer per repo).
+:::
 
-**Copy-path examples leave `registry` off destinations** (resolved to the single configured `local` registry), so they stay portable — the same policy file works against any registry roster.
+:::note
+Copy-path examples leave `registry` off destinations (resolved to the single configured `local` registry), so they stay portable — the same policy file works against any registry roster.
+:::

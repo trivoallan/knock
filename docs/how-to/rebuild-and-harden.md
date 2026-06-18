@@ -50,8 +50,9 @@ houba reconcile docs/examples/hardened
 #   base.digest=sha256:src…  transform=injectCA,rewritePackageSources
 ```
 
-`buildctl` must be on `PATH` (the runtime image bundles it). Without a `transform`, this same command
-would copy instead of rebuild.
+:::note
+`buildctl` must be on `PATH` (the runtime image bundles it). Without a `transform`, this same command would copy instead of rebuild.
+:::
 
 ## 4. Inspect the stamp
 
@@ -79,7 +80,10 @@ houba reconcile docs/examples/attested
 #   signed: https://slsa.dev/provenance/v1 (buildkit) → sha256:att…
 ```
 
-`cosign` must be on `PATH`. Off by default: with no `HOUBA_ATTEST_SIGNER`, the rebuild is stamped but
-unsigned. To verify the result and the attached SBOM, see
+:::note
+`cosign` must be on `PATH`. Off by default: with no `HOUBA_ATTEST_SIGNER`, the rebuild is stamped but unsigned.
+:::
+
+To verify the result and the attached SBOM, see
 [Inspect an image's SBOM](inspect-sbom.md). For every signer knob, see the
 [configuration reference](../reference/configuration.md).

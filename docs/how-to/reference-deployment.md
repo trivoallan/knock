@@ -82,10 +82,9 @@ by `base.digest` and by `owners`, and to flag any artifact carrying no stamp as 
 **coverage gap** (run `make blast-radius` *before* the first reconcile to see the gap, then again
 after to see it close — coverage gates the value).
 
-> **Branch ceiling.** ArgoCD reads the child Applications **from git**, so the demo reflects what is
-> *pushed*, not local edits. To demo your branch, push it to your fork and run
-> `ARGOCD_REPO_URL=https://github.com/you/houba ARGOCD_REPO_REF=your-branch make demo`. To iterate on
-> **uncommitted** changes, use `make local` instead.
+:::note Branch ceiling
+ArgoCD reads the child Applications **from git**, so the demo reflects what is *pushed*, not local edits. To demo your branch, push it to your fork and run `ARGOCD_REPO_URL=https://github.com/you/houba ARGOCD_REPO_REF=your-branch make demo`. To iterate on **uncommitted** changes, use `make local` instead.
+:::
 
 ## The inner-loop escape hatch — `make local` (`kubectl apply -k`)
 
@@ -100,10 +99,9 @@ demand. It uses **no operators** (no ESO, no OpenBao) and renders your **local, 
 manifests, so it is the fast path for iterating on a branch. It reconciles the same reference
 policy (copy + rebuild) as `make demo`.
 
-> `make local` renders with `kubectl kustomize --load-restrictor LoadRestrictionsNone` (then
-> `apply -f -`) because the blast-radius `configMapGenerator` references the canonical
-> `scripts/blast-radius.sh`, kept outside `deploy/` so it is also runnable standalone against the
-> examples. `kubectl apply -k` cannot pass the flag, so render-then-apply.
+:::note
+`make local` renders with `kubectl kustomize --load-restrictor LoadRestrictionsNone` (then `apply -f -`) because the blast-radius `configMapGenerator` references the canonical `scripts/blast-radius.sh`, kept outside `deploy/` so it is also runnable standalone against the examples. `kubectl apply -k` cannot pass the flag, so render-then-apply.
+:::
 
 ## Adopting it in real prod
 
@@ -190,7 +188,9 @@ houba's no-retry first connection always lands).
 > registers on completion; autoscaling targets the multi-build bursts, with the warm floor covering the
 > lone-build case.
 
-> **Security:** more replicas widen the `buildkitd` surface — see the mTLS note below.
+:::warning Security
+More replicas widen the `buildkitd` surface — see the mTLS note below.
+:::
 
 ## Security posture (read before prod)
 
