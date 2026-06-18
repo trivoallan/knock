@@ -1,7 +1,7 @@
 ---
 title: "Architecture at a glance"
 description: "The hexagon, the two placement paths, and why the stamp + SBOM is the product — a narrative overview of how houba is built."
-sidebar_position: 4
+sidebar_position: 1
 ---
 
 houba is the single front door for external images: it places them (copy or rebuild-and-harden), stamps portable provenance, and attaches a package-level SBOM. This page tells the story of how it's built; for the full rationale and the C4 model, see the deep-dive links at the foot.
@@ -65,6 +65,34 @@ flowchart TD
 ## The two placement paths
 
 houba selects the path from the policy itself: with no `transform` declared, the image is copied byte-for-byte via `regctl` and stamped; when a `transform` is present, houba rebuilds it through BuildKit (inject CA, rewrite package sources) and stamps the result. Both paths receive a syft SBOM attached as an OCI referrer; both can be signed with cosign.
+
+A `MirrorPolicy` is the single declarative artifact: it names an upstream `source`, the tags to admit, and where to place them. The optional `transform` is the switch that flips an import from copy to rebuild:
+
+```yaml
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/redis          # the external image to admit
+  imports:
+    - name: v7
+      owners:
+        - group:default/data-platform  # stamped as io.houba.owners
+      tags:
+        includeRegex: "^7\.2\."         # which upstream tags to admit
+      # transform:                       # ← omit → copy path; declare → rebuild path
+      #   - injectCA: { certs: [corp] }
+      #   - rewritePackageSources: { mirror: corp }
+      destinations:
+        - project: mirror
+          repository: redis
+```
+
+For the full schema see the [MirrorPolicy reference](../reference/schemas/mirror-policy.md); for runnable examples, the [example policy catalog](/examples).
 
 ```mermaid
 flowchart TD

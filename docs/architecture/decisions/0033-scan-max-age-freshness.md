@@ -25,7 +25,7 @@ boundary — is a provenance-shaped **max-age** ("scanned recently"), never vuln
   `/scan/v1` schema is unchanged. Semantics: *"houba (re)attached a scan at T."* Rejected: a scanner
   report-time field (format-dependent, often absent, and a frozen-API mutation for marginal gain).
 - **Make the contract explicit and published.** A field description on `attested_at`, and the
-  predicate schema is now rendered to `docs/reference/scan-predicate.md` (it was derivable but never
+  predicate schema is now rendered to `docs/reference/schemas/scan-predicate.md` (it was derivable but never
   published), bringing it under the CI drift gate.
 - **Precondition:** enforcement requires `HOUBA_ATTEST_SIGNER`; admission reads the *signed*
   `attested_at`, never the unsigned `io.houba.scan.timestamp` annotation (which stays, for `gc`).

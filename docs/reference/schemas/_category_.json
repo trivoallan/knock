@@ -1,0 +1,11 @@
+{
+  "label": "Schemas",
+  "position": 1,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "slug": "/reference/schemas",
+    "title": "Published schemas",
+    "description": "The machine-readable contracts houba publishes, rendered for humans. Each page has a matching .schema.json for editor/CI validation."
+  }
+}

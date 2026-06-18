@@ -3,7 +3,11 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const GH = 'https://github.com/trivoallan/houba';
 
-const config: Config = {
+export default async function createConfig(): Promise<Config> {
+  // remark-code-import is ESM-only; dynamic import is the Docusaurus 3 workaround.
+  const {default: codeImport} = await import('remark-code-import');
+
+  return {
   title: 'houba',
   tagline: 'The single front door for external container images',
   url: 'https://trivoallan.github.io',
@@ -20,7 +24,18 @@ const config: Config = {
     format: 'detect',
     mermaid: true,
   },
-  themes: ['@docusaurus/theme-mermaid'],
+  themes: [
+    '@docusaurus/theme-mermaid',
+    [
+      '@easyops-cn/docusaurus-search-local',
+      {
+        hashed: true,
+        indexBlog: false,
+        docsRouteBasePath: '/',
+        highlightSearchTermsOnTargetPage: true,
+      },
+    ],
+  ],
 
   presets: [
     [
@@ -35,9 +50,11 @@ const config: Config = {
           exclude: [
             'architecture/**',
             'superpowers/**',
+            'examples/**', // runnable .yml fixtures; the doc pages live in reference/examples/
             'roadmap.md',
             '**/_export/**',
           ],
+          remarkPlugins: [[codeImport, {allowImportingFromOutside: true}]],
         },
         blog: false,
         theme: {
@@ -47,7 +64,24 @@ const config: Config = {
     ],
   ],
 
+  plugins: [
+    [
+      'docusaurus-plugin-llms',
+      {
+        generateLLMsTxt: true,
+        generateLLMsFullTxt: true,
+        title: 'houba',
+        description: 'The single front door for external container images',
+        docsDir: '../docs',
+        // index.md (docs root) is dropped: the plugin mis-maps the root index URL when
+        // docsDir lives outside website/ (emits .../../docs.md). Its content is the intro.
+        ignoreFiles: ['architecture/**', 'superpowers/**', 'examples/**', 'index.md', 'roadmap.md', '**/_export/**'],
+      },
+    ],
+  ],
+
   themeConfig: {
+    image: 'img/social-card.png',
     // The generated reference nests headings 5–6 levels deep; cap the on-page TOC at 3
     // so the right rail stays navigable.
     tableOfContents: {
@@ -59,7 +93,7 @@ const config: Config = {
       items: [
         {type: 'doc', docId: 'tutorials/getting-started', label: 'Tutorials', position: 'left'},
         {to: '/how-to', label: 'How-to', position: 'left'},
-        {type: 'doc', docId: 'reference/mirror-policy', label: 'Reference', position: 'left'},
+        {to: '/reference', label: 'Reference', position: 'left'},
         {to: '/explanation', label: 'Explanation', position: 'left'},
         {href: GH, label: 'GitHub', position: 'right'},
       ],
@@ -80,6 +114,5 @@ const config: Config = {
       copyright: `Copyright © ${new Date().getFullYear()} Tristan Rivoallan and contributors. Apache-2.0.`,
     },
   } satisfies Preset.ThemeConfig,
-};
-
-export default config;
+  };
+}

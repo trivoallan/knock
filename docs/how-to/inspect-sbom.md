@@ -1,7 +1,7 @@
 ---
 title: "Inspect an image's SBOM"
 description: "Find and fetch the SBOM referrer attached to a placed image, and enable CycloneDX alongside SPDX."
-sidebar_position: 5
+sidebar_position: 3
 ---
 
 Every image `houba reconcile` places carries a package-level SBOM attached as an OCI referrer (for the
@@ -37,7 +37,7 @@ operator setting. One `syft` scan produces one referrer per format:
 HOUBA_SBOM_FORMATS='["spdx-json","cyclonedx-json"]' uv run houba reconcile docs/examples/reference
 ```
 
-See the [configuration reference](../reference/config.md) for the variable.
+See the [configuration reference](../reference/configuration.md) for the variable.
 
 ## Verify the signed SBOM
 

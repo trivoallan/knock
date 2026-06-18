@@ -2,7 +2,7 @@
 
 Run `houba reconcile` end-to-end against a **local registry** in about ten minutes — from
 nothing to a stamped image you can inspect. This is the **copy path** (mirror + stamp; the
-BuildKit hardening/rebuild path is shown in the [examples](../examples/README.md)).
+BuildKit hardening/rebuild path is shown in the [examples](/examples)).
 
 What you'll see: houba selects tags from a public source, copies them into your local
 registry, sets the derived moving-tag **aliases** (`1.37`, `latest`, …), and writes a
@@ -15,11 +15,9 @@ idempotent — unchanged tags are skipped via the recorded `base.digest`.
 - **[regctl](https://github.com/regclient/regclient/blob/main/docs/install.md)** on your `PATH` — houba shells out to it for all registry operations.
 - **Docker** (or Podman) — to run a throwaway local registry.
 
-> **Docker Hub rate limits.** Pulls from `docker.io` are rate-limited when anonymous. If a
-> reconcile fails with `429 / toomanyrequests`, authenticate: in the kind demo run
-> `DOCKER_USER=<user> DOCKER_PASS=<token> make docker-auth` to seed the optional
-> `houba-docker-config` secret with an inline-auth Docker config — both the copy (regctl) and
-> rebuild (buildctl) paths then pull authenticated.
+:::warning Docker Hub rate limits
+Pulls from `docker.io` are rate-limited when anonymous. If a reconcile fails with `429 / toomanyrequests`, authenticate: in the kind demo run `DOCKER_USER=<user> DOCKER_PASS=<token> make docker-auth` to seed the optional `houba-docker-config` secret with an inline-auth Docker config — both the copy (regctl) and rebuild (buildctl) paths then pull authenticated.
+:::
 
 ## 1. Start a local destination registry
 
@@ -125,8 +123,8 @@ docker rm -f houba-demo-registry
 
 ---
 
-**Next:** the [example policies](../examples/README.md) catalog — semver selection, the
+**Next:** the [example policies](/examples) catalog — semver selection, the
 [rebuild/hardening path](../how-to/rebuild-and-harden.md), retention, delegated deletion, `houba purge`, scan ingestion, and the
 coverage audit, each a runnable `MirrorPolicy` demonstrating one capability. For every field and
-every `HOUBA_*` variable, see the generated [policy](../reference/mirror-policy.md) and
-[config](../reference/config.md) reference.
+every `HOUBA_*` variable, see the generated [policy](../reference/schemas/mirror-policy.md) and
+[config](../reference/configuration.md) reference.

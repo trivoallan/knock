@@ -1,0 +1,11 @@
+{
+  "label": "Example policies",
+  "position": 5,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "slug": "/examples",
+    "title": "Example policies",
+    "description": "A catalog of runnable MirrorPolicy files, each demonstrating one houba capability against a local registry. New to houba? Start with Getting started, which walks the smallest copy-path example end to end."
+  }
+}

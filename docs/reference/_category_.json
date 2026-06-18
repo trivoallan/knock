@@ -1,5 +1,11 @@
 {
   "label": "Reference",
   "position": 3,
-  "collapsed": true
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "slug": "/reference",
+    "title": "Reference",
+    "description": "Generated reference for houba's published contracts: the policy and scan-attestation schemas, the HOUBA_* configuration, and the command-line interface."
+  }
 }

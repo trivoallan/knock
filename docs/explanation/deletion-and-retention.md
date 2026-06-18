@@ -1,7 +1,7 @@
 ---
 title: "Deletion & retention"
 description: "The two removal axes, and why houba marks (usage-gated) instead of hard-deleting."
-sidebar_position: 1
+sidebar_position: 4
 ---
 
 houba removes tags along two distinct axes, and **never hard-deletes a tag without it first
@@ -45,10 +45,9 @@ stamp, `org.opencontainers.image.created`), keeps the `keep` newest, and attache
 conditions must hold (`keep` **and** `olderThanDays`). Alias targets (e.g. whatever `latest` points
 at) are never marked, and a mark clears automatically if the tag stops being excess on a later run.
 
-Retention **only ever marks** — it never hard-deletes, even under `deletionMode: purge`: removing a
-*valid* tag must always pass the usage gate. So retention presupposes a scheduled
-[**`houba purge`**](../how-to/purge-unused-tags.md); without one, marks accumulate harmlessly and
-the tags stay fully pullable.
+:::warning
+Retention **only ever marks** — it never hard-deletes, even under `deletionMode: purge`: removing a *valid* tag must always pass the usage gate. So retention presupposes a scheduled [**`houba purge`**](../how-to/purge-unused-tags.md); without one, marks accumulate harmlessly and the tags stay fully pullable.
+:::
 
 Thresholds cascade **global ← policy**, per field: a fleet-wide default in `HOUBA_RETENTION`
 (a JSON `Archive` object) is refined by a policy's `archive:`. With neither set, retention is off

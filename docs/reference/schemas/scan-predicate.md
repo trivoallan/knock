@@ -1,18 +1,18 @@
 ---
-sidebar_position: 4
+sidebar_position: 2
 ---
 
 # Scan attestation predicate (/scan/v1)
 
-- [1. Property `Scan attestation predicate (/scan/v1) > scanner`](#scanner)
-  - [1.1. Property `Scan attestation predicate (/scan/v1) > scanner > name`](#scanner_name)
-  - [1.2. Property `Scan attestation predicate (/scan/v1) > scanner > version`](#scanner_version)
-- [2. Property `Scan attestation predicate (/scan/v1) > format`](#format)
-- [3. Property `Scan attestation predicate (/scan/v1) > summary`](#summary)
-  - [3.1. Property `Scan attestation predicate (/scan/v1) > summary > additionalProperties`](#summary_additionalProperties)
-- [4. Property `Scan attestation predicate (/scan/v1) > report_digest`](#report_digest)
-- [5. Property `Scan attestation predicate (/scan/v1) > attested_at`](#attested_at)
-- [6. Property `Scan attestation predicate (/scan/v1) > builder_id`](#builder_id)
+- [1. Property `scanner`](#scanner)
+  - [1.1. Property `name`](#scanner_name)
+  - [1.2. Property `version`](#scanner_version)
+- [2. Property `format`](#format)
+- [3. Property `summary`](#summary)
+  - [3.1. Property `additionalProperties`](#summary_additionalProperties)
+- [4. Property `report_digest`](#report_digest)
+- [5. Property `attested_at`](#attested_at)
+- [6. Property `builder_id`](#builder_id)
 
 **Title:** Scan attestation predicate (/scan/v1)
 
@@ -33,7 +33,7 @@ sidebar_position: 4
 | + [attested_at](#attested_at )     | No      | string | No         | -                  | Attested At       |
 | + [builder_id](#builder_id )       | No      | string | No         | -                  | Builder Id        |
 
-## 1. Property `Scan attestation predicate (/scan/v1) > scanner` {#scanner}
+## 1. Property `scanner` {#scanner}
 
 **Title:** Scanner
 
@@ -51,7 +51,7 @@ sidebar_position: 4
 | + [name](#scanner_name )       | No      | string | No         | -          | Name              |
 | + [version](#scanner_version ) | No      | string | No         | -          | Version           |
 
-### 1.1. Property `Scan attestation predicate (/scan/v1) > scanner > name` {#scanner_name}
+### 1.1. Property `name` {#scanner_name}
 
 **Title:** Name
 
@@ -60,7 +60,7 @@ sidebar_position: 4
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-### 1.2. Property `Scan attestation predicate (/scan/v1) > scanner > version` {#scanner_version}
+### 1.2. Property `version` {#scanner_version}
 
 **Title:** Version
 
@@ -69,7 +69,7 @@ sidebar_position: 4
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-## 2. Property `Scan attestation predicate (/scan/v1) > format` {#format}
+## 2. Property `format` {#format}
 
 **Title:** Format
 
@@ -78,7 +78,7 @@ sidebar_position: 4
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-## 3. Property `Scan attestation predicate (/scan/v1) > summary` {#summary}
+## 3. Property `summary` {#summary}
 
 **Title:** Summary
 
@@ -92,14 +92,14 @@ sidebar_position: 4
 | ------------------------------------ | ------- | ------ | ---------- | ---------- | ----------------- |
 | - [](#summary_additionalProperties ) | No      | string | No         | -          | -                 |
 
-### 3.1. Property `Scan attestation predicate (/scan/v1) > summary > additionalProperties` {#summary_additionalProperties}
+### 3.1. Property `additionalProperties` {#summary_additionalProperties}
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-## 4. Property `Scan attestation predicate (/scan/v1) > report_digest` {#report_digest}
+## 4. Property `report_digest` {#report_digest}
 
 **Title:** Report Digest
 
@@ -108,7 +108,7 @@ sidebar_position: 4
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-## 5. Property `Scan attestation predicate (/scan/v1) > attested_at` {#attested_at}
+## 5. Property `attested_at` {#attested_at}
 
 **Title:** Attested At
 
@@ -119,7 +119,7 @@ sidebar_position: 4
 
 **Description:** ISO-8601 timestamp of when houba attached and signed this scan. The freshness clock: an admission controller enforces a max-age policy against it (admit only if now - attested_at <= max-age). This signed field is the only trustworthy freshness source — not the unsigned scan-timestamp annotation (the HOUBA_LABEL_PREFIX-prefixed key, e.g. io.houba.scan.timestamp), which exists only for gc.
 
-## 6. Property `Scan attestation predicate (/scan/v1) > builder_id` {#builder_id}
+## 6. Property `builder_id` {#builder_id}
 
 **Title:** Builder Id
 
