@@ -73,7 +73,9 @@ export default async function createConfig(): Promise<Config> {
         title: 'houba',
         description: 'The single front door for external container images',
         docsDir: '../docs',
-        ignoreFiles: ['architecture/**', 'superpowers/**', 'roadmap.md', '**/_export/**'],
+        // index.md (docs root) is dropped: the plugin mis-maps the root index URL when
+        // docsDir lives outside website/ (emits .../../docs.md). Its content is the intro.
+        ignoreFiles: ['architecture/**', 'superpowers/**', 'examples/**', 'index.md', 'roadmap.md', '**/_export/**'],
       },
     ],
   ],
