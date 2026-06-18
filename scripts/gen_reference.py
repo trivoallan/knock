@@ -22,8 +22,6 @@ from typing import Any
 
 import typer
 import typer.main
-from json_schema_for_humans.generate import generate_from_filename
-from json_schema_for_humans.generation_configuration import GenerationConfiguration
 from typer.cli import get_docs_for_click
 
 from houba.cli.main import app as cli_app
@@ -40,19 +38,6 @@ SCHEMAS: dict[str, tuple[Any, str, int]] = {
     "scan-predicate": (scan_predicate_json_schema, "Scan attestation predicate (/scan/v1)", 2),
 }
 
-# with_footer=False drops the "Generated on <date>" line, so the Markdown is a
-# pure function of the schema (deterministic => the CI drift check is meaningful).
-# show_breadcrumbs=False and collapse_long_descriptions=True reduce the noisy
-# "anyOf > item N" breadcrumb tree in the rendered output.
-CONFIG = GenerationConfiguration(
-    template_name="md",
-    with_footer=False,
-    show_toc=True,
-    deprecated_from_description=True,
-    show_breadcrumbs=False,
-    collapse_long_descriptions=True,
-)
-
 # json-schema-for-humans marks headings with HTML anchors (`## <a name="x"></a>Title`)
 # and links its TOC to `#x`. Docusaurus derives heading ids from the *text* instead, so
 # those `#x` links break. Rewrite each into a Docusaurus explicit heading id
@@ -66,6 +51,25 @@ def _docusaurus_heading_ids(md: str) -> str:
 
 def _write_schemas() -> None:
     """Render mirror-policy and scan-predicate schemas into docs/reference/schemas/."""
+    # json-schema-for-humans is a docs-only dependency; import it lazily so the rest of
+    # this module (the config-table generator) imports fine without it — the CI test job
+    # syncs without the `docs` group, and tests import `_write_config_table` directly.
+    from json_schema_for_humans.generate import generate_from_filename
+    from json_schema_for_humans.generation_configuration import GenerationConfiguration
+
+    # with_footer=False drops the "Generated on <date>" line, so the Markdown is a pure
+    # function of the schema (deterministic => the CI drift check is meaningful).
+    # show_breadcrumbs=False + collapse_long_descriptions=True cut the noisy
+    # "anyOf > item N" breadcrumb tree in the rendered output.
+    config = GenerationConfiguration(
+        template_name="md",
+        with_footer=False,
+        show_toc=True,
+        deprecated_from_description=True,
+        show_breadcrumbs=False,
+        collapse_long_descriptions=True,
+    )
+
     SCHEMAS_OUT.mkdir(parents=True, exist_ok=True)
     for slug, (schema_fn, title, position) in SCHEMAS.items():
         schema = schema_fn()
@@ -73,7 +77,7 @@ def _write_schemas() -> None:
         json_path = SCHEMAS_OUT / f"{slug}.schema.json"
         json_path.write_text(json.dumps(schema, indent=2) + "\n")
         md_path = SCHEMAS_OUT / f"{slug}.md"
-        generate_from_filename(json_path, str(md_path), config=CONFIG)
+        generate_from_filename(json_path, str(md_path), config=config)
         body = _docusaurus_heading_ids(md_path.read_text())
         # json-schema-for-humans has no front-matter hook, so prepend the Docusaurus
         # sidebar position after rendering (front matter is honored in CommonMark too).
@@ -172,14 +176,7 @@ def _write_config_table(out_dir: Path) -> None:
         "[`config.schema.json`](config.schema.json)."
     )
 
-    content = (
-        "---\n"
-        "sidebar_position: 2\n"
-        "---\n\n"
-        "# Configuration (HOUBA_*)\n\n"
-        f"{intro}\n\n"
-        f"{table}\n"
-    )
+    content = f"---\nsidebar_position: 2\n---\n\n# Configuration (HOUBA_*)\n\n{intro}\n\n{table}\n"
     (out_dir / "configuration.md").write_text(content)
     print("wrote configuration.md")
 

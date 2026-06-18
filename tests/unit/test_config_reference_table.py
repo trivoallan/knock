@@ -6,7 +6,6 @@ expected rows for well-known fields, without touching the committed docs/.
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -49,5 +48,6 @@ def test_config_schema_json_written(tmp_out: Path) -> None:
     schema_path = tmp_out.parent / "config.schema.json"
     assert schema_path.exists()
     import json
+
     schema = json.loads(schema_path.read_text())
     assert "properties" in schema
