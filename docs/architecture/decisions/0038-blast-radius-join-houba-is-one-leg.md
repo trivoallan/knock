@@ -1,4 +1,4 @@
-# 37. Closing the incident loop end-to-end does not make houba own runtime presence
+# 38. Closing the incident loop end-to-end does not make houba own runtime presence
 
 Date: 2026-06-18
 

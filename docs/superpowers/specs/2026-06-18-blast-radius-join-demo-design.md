@@ -90,7 +90,7 @@ the kube API in the sandbox.
   core is untouched. Context / Container / Component / Hexagon views do not move.
 - Refresh the committed Mermaid exports (`docs/architecture/_export/structurizr-DeployReference.mmd`,
   `…-DeployLocal.mmd`) via the cached `structurizr/structurizr` image.
-- Mirror this design as a thin ADR (0037) per the house rule.
+- Mirror this design as a thin ADR (0038) per the house rule.
 
 ## Deliberate simplifications (`ponytail:`)
 
