@@ -64,6 +64,20 @@ export default async function createConfig(): Promise<Config> {
     ],
   ],
 
+  plugins: [
+    [
+      'docusaurus-plugin-llms',
+      {
+        generateLLMsTxt: true,
+        generateLLMsFullTxt: true,
+        title: 'houba',
+        description: 'The single front door for external container images',
+        docsDir: '../docs',
+        ignoreFiles: ['architecture/**', 'superpowers/**', 'roadmap.md', '**/_export/**'],
+      },
+    ],
+  ],
+
   themeConfig: {
     image: 'img/social-card.png',
     // The generated reference nests headings 5–6 levels deep; cap the on-page TOC at 3
