@@ -33,7 +33,7 @@ ARGOCD_VERSION  ?= v2.12.4
 OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+$$' | head -1)
 
 .PHONY: help reference docs-serve cluster image up-local local local-run \
-        argocd demo demo-run openbao-seed seed-incident \
+        argocd demo demo-run openbao-seed seed-incident incident-deploy \
         blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui docker-auth logs down
 
 help: ## List targets
@@ -132,6 +132,32 @@ seed-incident: ## Build the xz fixture IN-CLUSTER (buildkitd) → upstream/ + by
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-seed-incident --timeout=600s
 	$(KUBECTL) -n $(NS) logs job/houba-seed-incident
+
+incident-deploy: ## Run the marked runtime stand-in (pause pods carrying the placed/bypass digest)
+	@echo ">> resolving placed + bypass digests from the in-cluster Zot ..."
+	$(KUBECTL) -n $(NS) port-forward svc/registry 5000:5000 >/dev/null 2>&1 & \
+	  PF_PID=$$!; \
+	  trap 'kill $$PF_PID 2>/dev/null' EXIT; \
+	  for i in $$(seq 1 20); do curl -fsS http://localhost:5000/v2/ >/dev/null 2>&1 && break; sleep 0.5; done; \
+	  PLACED_DIGEST=$$(curl -s -o /dev/null -D - \
+	      -H 'Accept: application/vnd.oci.image.index.v1+json' \
+	      -H 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' \
+	      http://localhost:5000/v2/demo/debian-xz/manifests/5.6.1 \
+	    | tr -d '\r' | awk -F': ' 'tolower($$1)=="docker-content-digest"{print $$2}'); \
+	  BYPASS_DIGEST=$$(curl -s -o /dev/null -D - \
+	      -H 'Accept: application/vnd.oci.image.index.v1+json' \
+	      -H 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' \
+	      http://localhost:5000/v2/bypassed/debian-xz/manifests/5.6.1 \
+	    | tr -d '\r' | awk -F': ' 'tolower($$1)=="docker-content-digest"{print $$2}'); \
+	  test -n "$$PLACED_DIGEST" || { echo "ERROR: could not resolve demo/debian-xz:5.6.1 — run 'make seed-incident' + a reconcile first"; exit 1; }; \
+	  test -n "$$BYPASS_DIGEST" || { echo "ERROR: could not resolve bypassed/debian-xz:5.6.1 — run 'make seed-incident' first"; exit 1; }; \
+	  echo ">> placed=$$PLACED_DIGEST  bypass=$$BYPASS_DIGEST"; \
+	  sed -e "s|\$${PLACED_DIGEST}|$$PLACED_DIGEST|g" -e "s|\$${BYPASS_DIGEST}|$$BYPASS_DIGEST|g" \
+	      deploy/incidents/incident-workloads.yaml.tmpl | $(KUBECTL) apply -f -
+	$(KUBECTL) -n team-a rollout status deploy/debian-xz --timeout=120s
+	$(KUBECTL) -n team-b rollout status deploy/debian-xz --timeout=120s
+	$(KUBECTL) -n team-c rollout status deploy/debian-xz-bypassed --timeout=120s
+	@echo ">> marked workloads running. Re-run 'make blast-radius' to see the RUNNING IN column."
 
 blast-radius: ## (Re)run the blast-radius consumer and print its report
 	-$(KUBECTL) -n $(NS) delete job houba-blast-radius --ignore-not-found
