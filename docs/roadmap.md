@@ -131,7 +131,7 @@ Two of the former *Now* items shipped:
 
 > Theme: the mandate is enforceable and trustworthy, blast-radius reaches package level, and both
 > the adoption surface (docs site) and the observational has-SBOM audit have shipped in 0.7.0 (see
-> *Delivered*). **0.8 commits to one coverage lever** — and nothing else; the Deferred bets stay
+> *Delivered*). **0.8 commits to one coverage lever plus a docs polish pass**; the Deferred bets stay
 > deferred until a concrete signal lands.
 
 - **`audit --fail-on-no-sbom` gate** — *the* 0.8 deliverable. The observational `--sbom` tier already
@@ -139,6 +139,12 @@ Two of the former *Now* items shipped:
   the remaining step is the CI gate that *fails* the build when a stamped image lacks an SBOM —
   completing the enforcement ladder `--fail-on-uncovered` → `--fail-on-unsigned` → `--fail-on-no-sbom`.
   *(ADR 0029, P0.5)*
+
+- **Docs polish pass.** The docs site shipped in 0.7.0; 0.8 raises its quality bar:
+  - an **architecture presentation** — a narrative overview of the hexagon (sourced from the C4 model), not just the reference;
+  - a **richer examples section** — broaden and deepen the worked `MirrorPolicy` walkthroughs;
+  - **diagrams** woven into the prose (the committed Mermaid C4 exports, inline where they explain);
+  - **fenced code blocks** throughout — runnable, copy-pasteable commands and policy snippets.
 
 ## Deferred — revisit only on a real signal (YAGNI until then)
 
