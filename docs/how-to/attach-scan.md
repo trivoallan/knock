@@ -10,8 +10,8 @@ scanner, or a scan service); houba ingests its report and stamps it as a portabl
 referrers query at incident time.
 
 > **SBOM vs scan — both provenance, different artifacts.** Don't confuse this with the **SBOM**
-> houba *generates* on the rebuild path: the SBOM is the package **inventory** (what's inside),
-> produced by houba at build time; a scan is a **vulnerability assessment** (what's wrong with those
+> houba *generates* on every image it places — copy and rebuild alike: the SBOM is the package **inventory** (what's inside),
+> produced by houba after placement; a scan is a **vulnerability assessment** (what's wrong with those
 > packages), produced by a scanner houba does not run and merely ingests here. Building an inventory
 > is not scanning.
 
