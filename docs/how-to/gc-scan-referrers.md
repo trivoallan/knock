@@ -1,7 +1,7 @@
 ---
 title: "GC superseded scan referrers"
 description: "Reap stale scan referrers with houba gc, keeping the newest per (tool, format)."
-sidebar_position: 2
+sidebar_position: 6
 ---
 
 `houba attach` writes one scan-result referrer per scan. Over time, repeat scans of the same image

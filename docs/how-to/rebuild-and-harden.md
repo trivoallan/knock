@@ -1,7 +1,7 @@
 ---
 title: "Rebuild & harden an image"
 description: "Place an image through the rebuild path: inject internal CA certs, rewrite package sources to an internal mirror, stamp the result, and optionally sign it."
-sidebar_position: 7
+sidebar_position: 1
 ---
 
 A policy with **no** `transform` is copied byte-for-byte and stamped (see

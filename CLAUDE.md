@@ -73,6 +73,11 @@ When adding a new external dependency, the pattern is always: **port (Protocol +
 
 **Examples stay in sync with specs.** When a spec designs or changes a user-facing feature, update `docs/examples/` **in the same change** — add or revise an example (a `MirrorPolicy` + the README walkthrough) demonstrating it. If the feature isn't implemented yet, add the example marked as such: it documents the design now and becomes runnable when the feature lands. Examples must never drift from the specs.
 
+**Docs sidebar order.** Within each Diátaxis section the pages are ordered by reading
+principle — foundational / most-common first (e.g. Explanation leads with the architecture
+overview; How-to leads with the core rebuild task) — via per-page `sidebar_position`. When
+inserting a page, renumber the section to keep that order rather than appending at the end.
+
 **Architecture philosophy.**
 - Prefer declarative specs over imperative code paths — the product policy is the Pydantic `MirrorPolicy` schema; extend that schema before adding ad-hoc Python branching.
 - **JSON Schema, systematically, wherever a declarative contract exists** (config, the policy schema, structured payloads). Derive it from the Pydantic models (`model_json_schema()`) — never hand-write it; publish it so policy files get editor/CI validation, and validate inputs against it. Extend the schema before adding imperative parsing.

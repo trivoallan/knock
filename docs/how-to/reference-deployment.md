@@ -1,7 +1,7 @@
 ---
 title: "Run the reference deployment"
 description: "Run houba as a Kubernetes CronJob — the kind demo and the production blueprint: git-synced policies, rootless buildkitd, a blast-radius consumer, and optional KEDA autoscaling."
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 The blessed way to run houba: a Kubernetes **CronJob** that `houba reconcile`s a

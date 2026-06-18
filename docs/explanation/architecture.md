@@ -1,7 +1,7 @@
 ---
 title: "Architecture at a glance"
 description: "The hexagon, the two placement paths, and why the stamp + SBOM is the product — a narrative overview of how houba is built."
-sidebar_position: 4
+sidebar_position: 1
 ---
 
 houba is the single front door for external images: it places them (copy or rebuild-and-harden), stamps portable provenance, and attaches a package-level SBOM. This page tells the story of how it's built; for the full rationale and the C4 model, see the deep-dive links at the foot.
