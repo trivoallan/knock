@@ -3,7 +3,11 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const GH = 'https://github.com/trivoallan/houba';
 
-const config: Config = {
+export default async function createConfig(): Promise<Config> {
+  // remark-code-import is ESM-only; dynamic import is the Docusaurus 3 workaround.
+  const {default: codeImport} = await import('remark-code-import');
+
+  return {
   title: 'houba',
   tagline: 'The single front door for external container images',
   url: 'https://trivoallan.github.io',
@@ -38,6 +42,7 @@ const config: Config = {
             'roadmap.md',
             '**/_export/**',
           ],
+          remarkPlugins: [[codeImport, {allowImportingFromOutside: true}]],
         },
         blog: false,
         theme: {
@@ -80,6 +85,5 @@ const config: Config = {
       copyright: `Copyright © ${new Date().getFullYear()} Tristan Rivoallan and contributors. Apache-2.0.`,
     },
   } satisfies Preset.ThemeConfig,
-};
-
-export default config;
+  };
+}

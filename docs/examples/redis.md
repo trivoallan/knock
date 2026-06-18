@@ -6,37 +6,7 @@ sidebar_position: 2
 
 Shows how `{major}.{minor}` aliases track the highest patch within each minor stream, and `latest` tracks the highest overall. Redis layers are larger than busybox, so the first copy takes a little longer.
 
-```yaml title="docs/examples/redis/redis.yml"
-# Semver selection over a real image. Shows how aliases track versions:
-#   {major}.{minor} → the highest patch within each minor (e.g. 7.2 → 7.2.z)
-#   latest          → the highest version overall
-# Redis layers are larger than busybox, so the first copy takes a little longer.
-#
-# Heavier variant — drop it into the same dir and reconcile, or point houba at a
-# single file's directory.
-#
-apiVersion: houba.io/v1alpha1
-kind: MirrorPolicy
-metadata:
-  name: redis
-spec:
-  artifactType: image
-  source:
-    registry: docker.io
-    repository: library/redis
-  imports:
-    - name: v7
-      owners:
-        - group:default/data-platform     # stamped as io.houba.owners
-      tags:
-        includeRegex: "^7\\.2\\."       # just the 7.2.x line, to keep the demo quick
-        # semverOnly is true by default → non-semver tags (e.g. "latest", "alpine") are dropped
-        aliases:
-          - "{major}.{minor}"           # 7.2 → highest 7.2.z
-          - "latest"                    # → highest selected
-      destinations:
-        - project: demo
-          repository: redis
+```yaml title="docs/examples/redis/redis.yml" file=./redis/redis.yml
 ```
 
 Run it: `uv run houba reconcile docs/examples/redis`

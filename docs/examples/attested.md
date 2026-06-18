@@ -6,52 +6,7 @@ sidebar_position: 4
 
 The same hardening rebuild as [`hardened/`](hardened.md), but with attestation enabled: the output carries two signed in-toto attestations — BuildKit's `slsa.dev/provenance/v1` and houba's `https://houba.dev/predicate/transform/v1` — attached as OCI referrers to the digest. See [Transforms & signed attestations](../explanation/attestations.md) for the full walkthrough, and [Rebuild and harden](../how-to/rebuild-and-harden.md) for step-by-step instructions.
 
-```yaml title="docs/examples/attested/redis.yml"
-# Attested rebuild (SLSA / in-toto) — REQUIRES THE ATTESTATION PATH.
-#
-# Same rebuild as ../hardened/redis.yml (inject internal CA + rewrite package
-# sources), but with signing turned on so the output carries TWO attestations:
-#   1. BuildKit's slsa.dev/provenance/v1 (the build facts), and
-#   2. houba's https://houba.dev/predicate/transform/v1 (the hardening lineage),
-# signed by the configured signer and attached as OCI referrers to the digest.
-#
-# Attestation is off by default; enable it with the signer config (the policy file
-# itself stays portable — signing is org configuration, not policy):
-#
-#   export HOUBA_ATTEST_SIGNER=keyless                       # or: kms | key
-#   export HOUBA_ATTEST_BUILDER_ID=https://houba.example/builders/main
-#   # keyless: optional internal CA + transparency log (blank rekor => no log entry)
-#   export HOUBA_ATTEST_FULCIO_URL=https://fulcio.corp
-#   export HOUBA_ATTEST_REKOR_URL=https://rekor.corp
-#   # kms/key instead: export HOUBA_ATTEST_KEY_REF=awskms://alias/houba (or a key path)
-#
-# Plus the rebuild config from the hardened example:
-#   HOUBA_TRANSFORM_CA_CERTS='{"corp": {"path": "/etc/houba/certs/corp-root.pem"}}'
-#   HOUBA_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian"}}'
-#
-# Run it with `houba reconcile docs/examples/attested` (needs buildctl + cosign on PATH).
-#
-apiVersion: houba.io/v1alpha1
-kind: MirrorPolicy
-metadata:
-  name: redis-attested
-spec:
-  artifactType: image
-  source:
-    registry: docker.io
-    repository: library/redis
-  imports:
-    - name: v7
-      owners:
-        - group:default/data-platform     # stamped as io.houba.owners
-      tags:
-        includeRegex: "^7\\.2\\."
-      transform:
-        - injectCA: { certs: [corp] }
-        - rewritePackageSources: { mirror: corp }
-      destinations:
-        - project: attested
-          repository: redis
+```yaml title="docs/examples/attested/redis.yml" file=./attested/redis.yml
 ```
 
 Run it: `uv run houba reconcile docs/examples/attested` — needs `buildctl` + `cosign` on `PATH`, `HOUBA_ATTEST_SIGNER` set, and the rebuild config from the [hardened example](hardened.md).
