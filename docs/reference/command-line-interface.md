@@ -2,7 +2,7 @@
 sidebar_position: 3
 ---
 
-# houba CLI
+# Command Line Interface
 
 **Usage**:
 

@@ -190,7 +190,7 @@ def _write_cli() -> None:
     """
     command = typer.main.get_command(cli_app)
     ctx = typer.Context(command, info_name="houba")
-    body = get_docs_for_click(obj=command, ctx=ctx, name="houba", title="houba CLI")
+    body = get_docs_for_click(obj=command, ctx=ctx, name="houba", title="Command Line Interface")
     (OUT / "command-line-interface.md").write_text(
         f"---\nsidebar_position: 3\n---\n\n{body.strip()}\n"
     )
