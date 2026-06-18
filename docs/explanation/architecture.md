@@ -92,7 +92,7 @@ spec:
           repository: redis
 ```
 
-For the full schema see the [MirrorPolicy reference](../reference/mirror-policy.md); for runnable examples, the [example policy catalog](../examples/README.md).
+For the full schema see the [MirrorPolicy reference](../reference/mirror-policy.md); for runnable examples, the [example policy catalog](/examples).
 
 ```mermaid
 flowchart TD
