@@ -64,6 +64,7 @@ export default async function createConfig(): Promise<Config> {
   ],
 
   themeConfig: {
+    image: 'img/social-card.png',
     // The generated reference nests headings 5–6 levels deep; cap the on-page TOC at 3
     // so the right rail stays navigable.
     tableOfContents: {
