@@ -1,0 +1,29 @@
+# Scan gate (design — see ADR 0039, not yet implemented).
+# reconcile scans the SBOM it generates and gates publication PER DESTINATION,
+# before the image is made consumable. Requires the deployment to configure a
+# SARIF-producing evaluator: HOUBA_SCAN_EVALUATOR_CMD (e.g. `grype sbom:{sbom} -o sarif`).
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis-scan-gated
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/redis
+  imports:
+    - name: stable
+      tags:
+        semverOnly: true
+      destinations:
+        # prod: block publish on any CRITICAL finding; publish HIGHs with a warning.
+        - registry: prod
+          project: library
+          repository: redis
+          enforceFrom: critical
+          auditFrom: high
+        # staging: observe only — warn on criticals, never blocked.
+        - registry: staging
+          project: library
+          repository: redis
+          auditFrom: critical
