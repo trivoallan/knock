@@ -235,6 +235,17 @@ class Settings(BaseSettings):
             )
         return self
 
+    # Scan evaluator — optional vuln-scan step (copy and rebuild paths).
+    scan_evaluator_cmd: str | None = Field(
+        default=None,
+        description="Command template (containing `{sbom}`) that consumes an SBOM and emits "
+        "SARIF on stdout, e.g. `grype sbom:{sbom} -o sarif`. Unset ⇒ no scanstep. Any "
+        "SARIF-producing tool works (grype, trivy, regis-with-SARIF).",
+    )
+    scan_evaluator_timeout: int = Field(
+        default=600, ge=1, description="Per-image timeout (seconds) for the vuln evaluator."
+    )
+
     # houba purge (the reference reaper) — unused by reconcile.
     usage_oracle_cmd: str | None = Field(
         default=None,
