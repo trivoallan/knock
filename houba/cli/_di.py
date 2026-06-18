@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from houba.adapters.buildkit_cli import BuildkitAdapter
+from houba.adapters.command_scan import CommandScanAdapter
 from houba.adapters.command_usage import CommandUsageAdapter
 from houba.adapters.cosign_cli import CosignAdapter
 from houba.adapters.regctl_cli import RegctlAdapter
@@ -18,6 +19,7 @@ from houba.config import Settings
 from houba.errors import ConfigError
 from houba.ports.attestor import AttestorPort
 from houba.ports.usage_oracle import UsageOraclePort
+from houba.ports.vuln import VulnEvaluatorPort
 
 
 @dataclass(frozen=True)
@@ -29,11 +31,17 @@ class Container:
     reporter: StructlogReporter
     attestor: AttestorPort | None
     sbom_generator: SyftAdapter
+    vuln_evaluator: VulnEvaluatorPort | None
 
 
 def build_container(settings: Settings | None = None) -> Container:
     settings = settings or Settings()
     attestor = CosignAdapter(settings.attest) if settings.attest_signer else None
+    vuln_evaluator = (
+        CommandScanAdapter(settings.scan_evaluator_cmd, settings.scan_evaluator_timeout)
+        if settings.scan_evaluator_cmd
+        else None
+    )
     return Container(
         settings=settings,
         registry=RegctlAdapter(),
@@ -42,6 +50,7 @@ def build_container(settings: Settings | None = None) -> Container:
         reporter=StructlogReporter(),
         attestor=attestor,
         sbom_generator=SyftAdapter(),
+        vuln_evaluator=vuln_evaluator,
     )
 
 

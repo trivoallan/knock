@@ -80,6 +80,7 @@ def reconcile(
         attest_builder_id=container.settings.attest_builder_id,
         sbom_generator=container.sbom_generator,
         sbom_formats=container.settings.sbom_formats,
+        vuln_evaluator=container.vuln_evaluator,
     )
     render_report(report, fmt=container.settings.log_format, verbose=verbose, stream=sys.stdout)
     raise typer.Exit(report_exit_code(report))
