@@ -34,7 +34,7 @@ OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+
 
 .PHONY: help reference docs-serve cluster image up-local local local-run \
         argocd demo demo-run openbao-seed seed-incident incident-deploy \
-        blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui docker-auth logs down
+        blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui argocd-ui docker-auth logs down
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -84,6 +84,13 @@ argocd: ## Install argo-cd into the kind cluster + relax the kustomize load rest
 	$(KUBECTL) -n argocd rollout status deploy/argocd-repo-server --timeout=180s
 	$(KUBECTL) -n argocd rollout status deploy/argocd-server --timeout=180s
 
+argocd-ui: ## Open the ArgoCD UI (port-forward svc/argocd-server; prints admin creds)
+	@PW=$$($(KUBECTL) -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null \
+	      | python3 -c 'import base64,sys; sys.stdout.write(base64.b64decode(sys.stdin.read()).decode())'); \
+	  test -n "$$PW" || { echo "ERROR: argocd-initial-admin-secret not found — run 'make demo' (or 'make argocd') first"; exit 1; }; \
+	  echo ">> ArgoCD UI at https://localhost:8083  (login admin / $$PW — self-signed cert, accept the warning). Ctrl-C to stop."
+	$(KUBECTL) -n argocd port-forward svc/argocd-server 8083:443
+
 demo: cluster image argocd ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
 	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) \
 	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
@@ -114,6 +121,7 @@ demo: cluster image argocd ## The single Argo reference on kind, end-to-end (ope
 	@echo ">>       policy (busybox copy + debian rebuild), and the registry destination."
 	@echo ">>       For a REAL cluster: pin your published image, point sources/houba at your"
 	@echo ">>       policy repo and vault, and use your registry (not this demo registry:2)."
+	@echo ">> Browse the ArgoCD UI with 'make argocd-ui' (admin creds printed)."
 
 demo-run: ## Fire a one-shot reconcile from the ArgoCD-synced CronJob
 	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
@@ -197,9 +205,9 @@ docker-auth: ## Seed source-registry creds (set DOCKER_USER + DOCKER_PASS) so pu
 	  | $(KUBECTL) -n $(NS) create secret generic houba-docker-config \
 	      --from-file=config.json=/dev/stdin --dry-run=client -o yaml | $(KUBECTL) apply -f -
 
-registry-ui: ## Open Zot's built-in registry UI (port-forward svc/registry to localhost:8080)
-	@echo ">> Browse the mirrored images at http://localhost:8080 (Ctrl-C to stop)."
-	$(KUBECTL) -n $(NS) port-forward svc/registry 8080:5000
+registry-ui: ## Open Zot's built-in registry UI (port-forward svc/registry to localhost:8082)
+	@echo ">> Browse the mirrored images at http://localhost:8082 (Ctrl-C to stop)."
+	$(KUBECTL) -n $(NS) port-forward svc/registry 8082:5000
 
 logs: ## Tail the last reconcile run's logs
 	$(KUBECTL) -n $(NS) logs job/houba-reconcile-run -f
