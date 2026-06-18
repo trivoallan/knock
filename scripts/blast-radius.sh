@@ -61,9 +61,25 @@ PODS_FILE=$(mktemp)
 trap 'rm -f "${ROWS_FILE}" "${PODS_FILE}"' EXIT
 SA_DIR=/var/run/secrets/kubernetes.io/serviceaccount
 if [ -f "${SA_DIR}/token" ]; then
-  curl -s --cacert "${SA_DIR}/ca.crt" -H "Authorization: Bearer $(cat "${SA_DIR}/token")" \
-    "https://kubernetes.default.svc/api/v1/pods" >"${PODS_FILE}" 2>/dev/null || echo '{}' >"${PODS_FILE}"
-  echo "» runtime: queried the kube API for marked pods (digest → cluster)" >&2
+  # Query the kube API with python3 — the runtime image has no curl, and python is the same
+  # interpreter the join below uses (regctl + python3, no extra deps). SA token + CA authenticate.
+  if SA_DIR="${SA_DIR}" python3 - >"${PODS_FILE}" 2>/dev/null <<'PY'
+import os, ssl, sys, urllib.request
+sa = os.environ["SA_DIR"]
+token = open(sa + "/token").read().strip()
+ctx = ssl.create_default_context(cafile=sa + "/ca.crt")
+req = urllib.request.Request(
+    "https://kubernetes.default.svc/api/v1/pods",
+    headers={"Authorization": "Bearer " + token},
+)
+sys.stdout.write(urllib.request.urlopen(req, context=ctx, timeout=10).read().decode())
+PY
+  then
+    echo "» runtime: queried the kube API for marked pods (digest → cluster)" >&2
+  else
+    echo '{}' >"${PODS_FILE}"
+    echo "» runtime: kube API query failed — RUNNING IN will show '-'" >&2
+  fi
 else
   echo '{}' >"${PODS_FILE}"
   echo "» runtime: no in-cluster API token — RUNNING IN will show '-'" >&2
