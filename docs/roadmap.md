@@ -144,7 +144,10 @@ Two of the former *Now* items shipped:
   - an **architecture presentation** — a narrative overview of the hexagon (sourced from the C4 model), not just the reference;
   - a **richer examples section** — broaden and deepen the worked `MirrorPolicy` walkthroughs;
   - **diagrams** woven into the prose (the committed Mermaid C4 exports, inline where they explain);
-  - **fenced code blocks** throughout — runnable, copy-pasteable commands and policy snippets.
+  - **fenced code blocks** throughout — runnable, copy-pasteable commands and policy snippets;
+  - **better schema rendering** — the generated `MirrorPolicy` / config reference is currently a deep,
+    noisy `anyOf > item N` tree (json-schema-for-humans default); make it readable (collapse the union
+    noise, friendlier property paths, or a different renderer).
 
 ## Deferred — revisit only on a real signal (YAGNI until then)
 
