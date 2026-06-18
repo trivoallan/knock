@@ -3,7 +3,7 @@
 # *see* what houba pushed — browse the mirrored repos/tags and the provenance
 # annotations on each manifest, the stamp made visible — with no second component and
 # no CORS plumbing. Reach it with:
-#   kubectl -n houba port-forward svc/registry 8080:5000   # then open http://localhost:8080
+#   kubectl -n houba port-forward svc/registry 8082:5000   # then open http://localhost:8082
 # Real deployments point at their own registry (Harbor/Zot) with its own console — see
 # the full/prod overlays. Same Service name + port (registry:5000) the roster's
 # `tls_verify=false` already drives — for both the copy (regctl `--tls disabled`) and
