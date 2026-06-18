@@ -61,6 +61,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     portUsageOracle = component "UsageOraclePort" "Was this image digest seen in prod since a given timestamp? (stateless, point-in-time query)." "typing.Protocol" "Port"
                     portAttestor = component "AttestorPort" "Sign an in-toto Statement (DSSE) + attach it as an OCI referrer." "typing.Protocol" "Port"
                     portSbomGenerator = component "SbomGeneratorPort" "Generate package-level SBOM(s) for a placed image by digest; returns one document per format." "typing.Protocol" "Port"
+                    portVulnEvaluator = component "VulnEvaluatorPort" "Evaluate an SBOM for vulnerabilities; return SARIF." "typing.Protocol" "Port"
                 }
                 group "Adapters" {
                     adRegctl = component "RegctlAdapter" "Drives the regctl CLI via subprocess." "regctl" "Adapter"
@@ -70,6 +71,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     adUsageOracle = component "CommandUsageAdapter" "Shells out to HOUBA_USAGE_ORACLE_CMD; passes digest + idle window via stdin (JSON); expects {last_seen} on stdout." "subprocess" "Adapter"
                     adCosign = component "CosignAdapter" "Drives the cosign CLI via subprocess (keyless | kms | key)." "cosign" "Adapter"
                     adSyft = component "SyftAdapter" "Drives the syft CLI via subprocess; config-file auth/TLS; lazy binary resolution." "syft" "Adapter"
+                    adScan = component "CommandScanAdapter" "Shells HOUBA_SCAN_EVALUATOR_CMD (e.g. grype sbom:{} -o sarif); SBOM in, SARIF out; lazy resolution." "grype" "Adapter"
                 }
                 config = component "config" "Reads HOUBA_* settings + roster resolvers — the only os.environ reader." "Pydantic Settings"
 
@@ -195,6 +197,10 @@ workspace "houba" "Single front door / stamper for external container images." {
         adSyft -> portSbomGenerator "Implements" "Protocol"
         ucReconcile -> portSbomGenerator "Generates SBOM(s) after placing each image (both paths)" "Protocol"
         adSyft -> destRegistries "Scans the placed image by digest" "syft"
+
+        cliDi -> adScan "Wires" "DI"
+        adScan -> portVulnEvaluator "Implements" "Protocol"
+        layUc -> portVulnEvaluator "Depends on" "Protocol"
 
         # Coarse hexagon relationships — rendered only in the synthetic "Hexagon" view.
         platformEng -> layCli "Runs / schedules reconcile" "CLI"
