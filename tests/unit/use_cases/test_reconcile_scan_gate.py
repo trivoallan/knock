@@ -9,7 +9,6 @@ tag never outlives the operation.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pytest
 
@@ -117,21 +116,29 @@ def _scan_referrers(registry: FakeRegistryPort, subject: str) -> list[tuple[str,
 
 def test_enforce_breached_does_not_promote() -> None:
     registry = _registry()
+    reporter = FakeReporter()
     report = _run(
         _policy(enforce="high"),
         registry,
+        reporter=reporter,
         vuln_evaluator=FakeVulnEvaluatorPort(sarif=SARIF_CRITICAL),
     )
 
     # Staging copy happened, but the public out_tag was never promoted.
     assert (f"{SRC}:{OUT_TAG}", f"{DEST}:{STAGING}") in registry.copied
     assert (f"{DEST}:{STAGING}", f"{DEST}:{OUT_TAG}") not in registry.copied
-    # Staging tag was cleaned up.
-    assert f"{DEST}:{STAGING}" in registry.deleted
-    # The op was recorded as failed (gate blocked).
+    # Staging tag was cleaned up exactly once (no double-delete on the block path).
+    assert registry.deleted.count(f"{DEST}:{STAGING}") == 1
+    # No SBOM/SARIF referrer ever published for a blocked image.
+    assert registry.artifact_referrers == []
+    # The op was recorded as failed (gate blocked) with the precise ErrorInfo contract.
     assert report.totals.imported == 0
     assert report.totals.failed == 1
     assert report.status != "ok"
+    (_ev, err) = reporter.operation_failures[0]
+    assert err.type == "ScanGateBlocked"
+    assert err.exit_code == 1
+    assert err.message == "blocked: scan breached enforceFrom=high"
 
 
 def test_audit_breached_promotes_with_breach_surfaced(
@@ -174,12 +181,42 @@ def test_clean_promotes_and_signs_scan_predicate() -> None:
     assert (SCAN_RESULT_ARTIFACT_TYPE, SARIF_MEDIA) in _scan_referrers(registry, subject)
     # The scan predicate was signed (in-toto statement with the scan predicateType).
     scan_preds = [
-        st
-        for _ref, st in attestor.attested
-        if "scan" in str(st.get("predicateType", "")).lower()
+        st for _ref, st in attestor.attested if "scan" in str(st.get("predicateType", "")).lower()
     ]
     assert len(scan_preds) == 1
     assert scan_preds[0]["subject"][0]["name"] == f"{DEST}:{OUT_TAG}"
+
+
+def test_gate_without_sbom_formats_fails_the_op() -> None:
+    # A scan gate needs an SBOM to evaluate; no formats => the op fails (not a silent skip).
+    registry = _registry()
+    report = _run(
+        _policy(enforce="high"),
+        registry,
+        sbom_formats=[],
+        vuln_evaluator=FakeVulnEvaluatorPort(sarif=SARIF_CLEAN),
+    )
+
+    assert report.totals.imported == 0
+    assert report.totals.failed == 1
+    # Nothing promoted; staging cleaned up.
+    assert (f"{DEST}:{STAGING}", f"{DEST}:{OUT_TAG}") not in registry.copied
+    assert f"{DEST}:{STAGING}" in registry.deleted
+
+
+def test_evaluator_failure_fails_op_and_cleans_staging() -> None:
+    # A fail-closed evaluator error must fail the op and leave no orphan staging tag.
+    registry = _registry()
+    report = _run(
+        _policy(enforce="high"),
+        registry,
+        vuln_evaluator=FakeVulnEvaluatorPort(fail=True),
+    )
+
+    assert report.totals.imported == 0
+    assert report.totals.failed == 1
+    assert (f"{DEST}:{STAGING}", f"{DEST}:{OUT_TAG}") not in registry.copied
+    assert f"{DEST}:{STAGING}" in registry.deleted
 
 
 def test_gate_without_evaluator_raises_config_error() -> None:

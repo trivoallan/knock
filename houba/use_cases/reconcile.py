@@ -6,6 +6,7 @@ events through the Reporter port. Depends only on ports.
 
 from __future__ import annotations
 
+import logging
 import tempfile
 from collections import defaultdict
 from collections.abc import Callable
@@ -47,17 +48,29 @@ from houba.domain.reconcile import (
 )
 from houba.domain.retention import resolve_archive
 from houba.domain.sbom import build_sbom_annotations, build_sbom_statement
+from houba.domain.scan.attestation import build_scan_statement
+from houba.domain.scan.constants import SCAN_RESULT_ARTIFACT_TYPE
+from houba.domain.scan.formats.sarif import SarifMapper
+from houba.domain.scan.gate import GateAction, decide_gate
+from houba.domain.scan.summary import Severity, build_scan_annotations
 from houba.domain.sharding import owns
 from houba.domain.stamp import build_stamp_annotations
 from houba.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
 from houba.domain.transforms.registry import DEFAULT_REGISTRY
 from houba.domain.transforms.render import render, transform_version, validate_transform_steps
-from houba.errors import ConfigError, InternalError, exit_code_for
+from houba.errors import (
+    ConfigError,
+    InternalError,
+    ScanEvaluatorError,
+    ScanGateBlocked,
+    exit_code_for,
+)
 from houba.ports.attestor import AttestorPort
 from houba.ports.image_builder import BuildRequest, ImageBuilderPort
 from houba.ports.registry import ImageInfo, Referrer, RegistryPort
 from houba.ports.reporter import Counts, ErrorInfo, OperationEvent, OperationKind, Reporter
-from houba.ports.sbom import SbomGeneratorPort
+from houba.ports.sbom import SbomDocument, SbomGeneratorPort
+from houba.ports.vuln import VulnEvaluatorPort
 from houba.use_cases.registry_session import ensure_registry_session
 from houba.use_cases.report import (
     Operation,
@@ -72,6 +85,9 @@ from houba.use_cases.report import (
 BASE_DIGEST_KEY = "org.opencontainers.image.base.digest"
 CREATED_KEY = "org.opencontainers.image.created"
 _REVISION_KEY = "org.opencontainers.image.revision"
+_STAGING_SUFFIX = ".houba-staging"
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_created(value: str | None) -> datetime | None:
@@ -193,7 +209,9 @@ class _Plan:
     expanded: ExpandedImport
     dest_repo: str
     config: RegistryConfig
-    transforms: dict[str, _ResolvedTransform]  # variant name → resolved transform
+    transforms: dict[str, _ResolvedTransform]
+    enforce_from: Severity | None = None
+    audit_from: Severity | None = None  # variant name → resolved transform
 
 
 def _source_repo(policy: MirrorPolicy) -> str:
@@ -308,6 +326,7 @@ def _apply_plan(
     attest_builder_id: str,
     sbom_generator: SbomGeneratorPort | None,
     sbom_formats: list[str],
+    vuln_evaluator: VulnEvaluatorPort | None = None,
     retention_global: Archive | None = None,
 ) -> TargetReport:
     src_repo = _source_repo(plan.policy)
@@ -416,91 +435,103 @@ def _apply_plan(
             ),
         )
 
-    def _do_import(w: _ImportWork) -> Operation:
+    def _place(w: _ImportWork, out_tag: str) -> str:
+        """Build/copy the variant to `dest_repo:out_tag`, stamp it, return the digest."""
         steps = [s.name for s in w.vplan.transform] or None  # applied steps; None on a copy
-        try:
-            out_digest: str | None = None
-            if not dry_run_tags:
-                if w.vplan.transform:
-                    _build_variant(
-                        builder=builder,
-                        source_ref=f"{src_repo}@{source[w.src_tag].digest}",
-                        dest_ref=f"{plan.dest_repo}:{w.out_tag}",
-                        resolved=plan.transforms[w.vplan.name],
-                        platform=build_platform,
-                        work_dir=work_dir,
-                        provenance=attestor is not None,
-                        tls_verify=plan.config.tls_verify,
-                    )
-                else:
-                    registry.copy(f"{src_repo}:{w.src_tag}", f"{plan.dest_repo}:{w.out_tag}")
-                out_digest = registry.annotate(
-                    f"{plan.dest_repo}:{w.out_tag}",
-                    build_stamp_annotations(
-                        prefix=label_prefix,
-                        source_registry=plan.policy.spec.source.registry,
-                        source_repository=plan.policy.spec.source.repository,
-                        source_tag=w.src_tag,
-                        source_digest=source[w.src_tag].digest,
-                        source_revision=source[w.src_tag].revision,
-                        created=now,
-                        owners=plan.expanded.owners,
-                        vendor=plan.expanded.vendor,
-                        artifact_type=plan.policy.spec.artifact_type.value,
-                        policy=plan.policy.metadata.name,
-                        import_name=plan.expanded.name,
-                        variant=w.variant,
-                        transform_steps=steps,
-                        transform_version_value=transform_versions.get(w.vplan.name),
+        if w.vplan.transform:
+            _build_variant(
+                builder=builder,
+                source_ref=f"{src_repo}@{source[w.src_tag].digest}",
+                dest_ref=f"{plan.dest_repo}:{out_tag}",
+                resolved=plan.transforms[w.vplan.name],
+                platform=build_platform,
+                work_dir=work_dir,
+                provenance=attestor is not None,
+                tls_verify=plan.config.tls_verify,
+            )
+        else:
+            registry.copy(f"{src_repo}:{w.src_tag}", f"{plan.dest_repo}:{out_tag}")
+        return registry.annotate(
+            f"{plan.dest_repo}:{out_tag}",
+            build_stamp_annotations(
+                prefix=label_prefix,
+                source_registry=plan.policy.spec.source.registry,
+                source_repository=plan.policy.spec.source.repository,
+                source_tag=w.src_tag,
+                source_digest=source[w.src_tag].digest,
+                source_revision=source[w.src_tag].revision,
+                created=now,
+                owners=plan.expanded.owners,
+                vendor=plan.expanded.vendor,
+                artifact_type=plan.policy.spec.artifact_type.value,
+                policy=plan.policy.metadata.name,
+                import_name=plan.expanded.name,
+                variant=w.variant,
+                transform_steps=steps,
+                transform_version_value=transform_versions.get(w.vplan.name),
+            ),
+        )
+
+    def _gen_sbom_docs(out_digest: str) -> list[SbomDocument]:
+        """Generate the SBOM doc(s) for the placed digest (no attach yet)."""
+        assert sbom_generator is not None  # caller guards: formats set => wired
+        return sbom_generator.generate(
+            f"{plan.dest_repo}@{out_digest}",
+            sbom_formats,
+            tls_verify=plan.config.tls_verify,
+            username=plan.config.username,
+            password=(plan.config.password.get_secret_value() if plan.config.password else None),
+            ca_cert=plan.config.ca_cert,
+        )
+
+    def _attach_sbom_docs(w: _ImportWork, out_digest: str, docs: list[SbomDocument]) -> None:
+        """Attach one referrer per SBOM doc on the placed digest; sign each when configured."""
+        placed = f"{plan.dest_repo}@{out_digest}"
+        for d in docs:
+            registry.put_referrer(
+                placed,
+                d.media_type,  # artifactType == media type (discoverable)
+                build_sbom_annotations(
+                    prefix=label_prefix,
+                    subject_digest=out_digest,
+                    fmt=d.format,
+                    tool="syft",
+                    tool_version=d.tool_version,
+                    timestamp=now,
+                ),
+                blob=d.content,
+                media_type=d.media_type,
+            )
+            if attestor is not None:
+                attestor.attest(
+                    placed,
+                    build_sbom_statement(
+                        subject_name=f"{plan.dest_repo}:{w.out_tag}",
+                        subject_digest=out_digest,
+                        fmt=d.format,
+                        content=d.content,
                     ),
                 )
+
+    def _do_import(w: _ImportWork) -> Operation:
+        steps = [s.name for s in w.vplan.transform] or None  # applied steps; None on a copy
+        scan_active = plan.enforce_from is not None or plan.audit_from is not None
+        try:
+            out_digest: str | None = None
+            if scan_active and not dry_run_tags:
+                out_digest = _do_import_gated(w)
+            elif not dry_run_tags:
+                out_digest = _place(w, w.out_tag)
                 # SBOM (both paths): scan the placed digest, attach one referrer per
                 # configured format. Inside the try => a generation/attach failure fails
                 # the op (no silently-uncovered image), like signing. Empty formats =>
                 # skip (lib/test affordance; HOUBA_SBOM_FORMATS guarantees >=1 in prod).
-                if sbom_formats and out_digest is not None:
-                    assert sbom_generator is not None  # caller guards: formats set => wired
-                    placed = f"{plan.dest_repo}@{out_digest}"
-                    for d in sbom_generator.generate(
-                        placed,
-                        sbom_formats,
-                        tls_verify=plan.config.tls_verify,
-                        username=plan.config.username,
-                        password=(
-                            plan.config.password.get_secret_value()
-                            if plan.config.password
-                            else None
-                        ),
-                        ca_cert=plan.config.ca_cert,
-                    ):
-                        registry.put_referrer(
-                            placed,
-                            d.media_type,  # artifactType == media type (discoverable)
-                            build_sbom_annotations(
-                                prefix=label_prefix,
-                                subject_digest=out_digest,
-                                fmt=d.format,
-                                tool="syft",
-                                tool_version=d.tool_version,
-                                timestamp=now,
-                            ),
-                            blob=d.content,
-                            media_type=d.media_type,
-                        )
-                        if attestor is not None:
-                            attestor.attest(
-                                placed,
-                                build_sbom_statement(
-                                    subject_name=f"{plan.dest_repo}:{w.out_tag}",
-                                    subject_digest=out_digest,
-                                    fmt=d.format,
-                                    content=d.content,
-                                ),
-                            )
+                if sbom_formats:
+                    _attach_sbom_docs(w, out_digest, _gen_sbom_docs(out_digest))
                 # Sign houba's predicate over the stamped output digest — rebuild AND copy
                 # (the label is the product: every placed image is signed). Inside the try =>
                 # a signing failure fails the operation rather than leaving a silent gap.
-                if attestor is not None and out_digest is not None:
+                if attestor is not None:
                     _attest(
                         out_digest,
                         variant=w.variant,
@@ -534,6 +565,88 @@ def _apply_plan(
             )
             emit_failed(op, w.variant, info)
             return op
+
+    def _do_import_gated(w: _ImportWork) -> str:
+        """Stage -> scan -> promote. Returns the placed digest on promote; raises on block.
+
+        Build/copy to a staging tag, generate the SBOM there, evaluate it, and only when the
+        gate is not breached at enforce level promote staging -> public out_tag and attach the
+        SBOM + SARIF referrers (and sign). The staging tag is always cleaned up (`finally`).
+        """
+        assert vuln_evaluator is not None  # fail-fast in reconcile_policies guarantees this
+        staging = f"{w.out_tag}{_STAGING_SUFFIX}"
+        staging_ref = f"{plan.dest_repo}:{staging}"
+        deleted_staging = False
+        try:
+            out_digest = _place(w, staging)
+            if not sbom_formats:
+                raise ScanEvaluatorError("scan gate requires an SBOM; set HOUBA_SBOM_FORMATS")
+            docs = _gen_sbom_docs(out_digest)
+            result = vuln_evaluator.evaluate(docs[0])
+            summary = SarifMapper().summarize(result.sarif)
+            action = decide_gate(
+                summary.facts, enforce_from=plan.enforce_from, audit_from=plan.audit_from
+            )
+            if action is GateAction.block:
+                registry.delete_tag(staging_ref)
+                deleted_staging = True
+                raise ScanGateBlocked(f"blocked: scan breached enforceFrom={plan.enforce_from}")
+
+            # Promote staging -> public out_tag, then attach SBOM + SARIF on the placed digest.
+            registry.copy(staging_ref, f"{plan.dest_repo}:{w.out_tag}")
+            _attach_sbom_docs(w, out_digest, docs)
+            placed = f"{plan.dest_repo}@{out_digest}"
+            referrer = registry.put_referrer(
+                placed,
+                SCAN_RESULT_ARTIFACT_TYPE,
+                build_scan_annotations(
+                    summary,
+                    prefix=label_prefix,
+                    subject_digest=out_digest,
+                    fmt="sarif",
+                    timestamp=now,
+                ),
+                blob=result.sarif,
+                media_type="application/sarif+json",
+            )
+            if attestor is not None:
+                attestor.attest(
+                    placed,
+                    build_scan_statement(
+                        subject_name=f"{plan.dest_repo}:{w.out_tag}",
+                        subject_digest=out_digest,
+                        scanner_name=summary.tool,
+                        scanner_version=summary.tool_version,
+                        fmt="sarif",
+                        summary=summary.facts,
+                        report_digest=referrer,
+                        attested_at=now.isoformat(),
+                        builder_id=attest_builder_id,
+                    ),
+                )
+                _attest(
+                    out_digest,
+                    variant=w.variant,
+                    vplan=w.vplan,
+                    out_tag=w.out_tag,
+                    source_digest=source[w.src_tag].digest,
+                )
+            if action is GateAction.audit:
+                logger.warning(
+                    "scan gate audit breach: %s:%s breached auditFrom=%s (published)",
+                    plan.dest_repo,
+                    w.out_tag,
+                    plan.audit_from,
+                )
+            return out_digest
+        finally:
+            # Best-effort cleanup so no orphan staging tag survives any failure path
+            # (build/SBOM/scan errors), guarding against the double-delete in the block path.
+            if not deleted_staging:
+                try:
+                    registry.delete_tag(staging_ref)
+                except Exception:  # noqa: S110 — best-effort cleanup
+                    pass
 
     def _do_sign(w: _SignWork) -> Operation:
         src_digest = source[w.src_tag].digest
@@ -811,6 +924,7 @@ def reconcile_policies(
     attest_builder_id: str = "",
     sbom_generator: SbomGeneratorPort | None = None,
     sbom_formats: list[str] | None = None,
+    vuln_evaluator: VulnEvaluatorPort | None = None,
     retention_global: Archive | None = None,
 ) -> RunReport:
     mode: RunMode = "dry-run" if (dry_run_tags or dry_run_deletions) else "apply"
@@ -859,6 +973,15 @@ def reconcile_policies(
             for dest in resolved.destinations or []:
                 _name, cfg = resolve_registry(dest.registry, roster)
                 dest_repo = f"{cfg.host}/{dest.project}/{dest.repository}"
+                # Fail fast (before ANY mutation): a declared scan gate without an
+                # evaluator wired is a config error, not a silent no-op.
+                if (
+                    dest.enforce_from is not None or dest.audit_from is not None
+                ) and vuln_evaluator is None:
+                    raise ConfigError(
+                        f"destination {dest_repo} declares a scan gate but no vuln "
+                        "evaluator is configured (set HOUBA_SCAN_EVALUATOR_CMD)"
+                    )
                 policy_plans.append(
                     _Plan(
                         policy=policy,
@@ -866,6 +989,8 @@ def reconcile_policies(
                         dest_repo=dest_repo,
                         config=cfg,
                         transforms=transforms,
+                        enforce_from=dest.enforce_from,
+                        audit_from=dest.audit_from,
                     )
                 )
                 for variant in expanded.variants:
@@ -916,6 +1041,7 @@ def reconcile_policies(
                             attest_builder_id=attest_builder_id,
                             sbom_generator=sbom_generator,
                             sbom_formats=sbom_formats,
+                            vuln_evaluator=vuln_evaluator,
                             retention_global=retention_global,
                         )
                     )

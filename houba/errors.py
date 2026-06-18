@@ -16,6 +16,7 @@ __all__ = [
     "PolicyValidationError",
     "RegctlError",
     "ScanEvaluatorError",
+    "ScanGateBlocked",
     "ScanReportError",
     "SyftError",
     "UnknownFormatError",
@@ -42,6 +43,10 @@ class ScanReportError(DomainError):
 
 class UnknownFormatError(DomainError):
     """The scan report format could not be detected and no valid --format was supplied."""
+
+
+class ScanGateBlocked(DomainError):
+    """A destination's vuln gate (enforceFrom) was breached — publication blocked (exit 1)."""
 
 
 class AdapterError(HoubaError):
