@@ -14,6 +14,7 @@ spec:
         app.kubernetes.io/component: blast-radius
     spec:
       serviceAccountName: houba
+      automountServiceAccountToken: true   # the blast-radius consumer calls the kube API (digest -> cluster)
       restartPolicy: Never
       securityContext:
         runAsNonRoot: true

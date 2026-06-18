@@ -53,7 +53,21 @@ fi
 # reading the annotations off the top-level manifest (the index for multi-arch).
 REPOS=${BLAST_REPOS//,/ }
 ROWS_FILE=$(mktemp)
-trap 'rm -f "${ROWS_FILE}"' EXIT
+
+# Runtime leg: list pods via the in-cluster kube API (gated on the SA token so standalone use
+# still works). Each marked pod carries houba.io/image-digest (annotation) + houba.io/cluster
+# (label); we join those to each image's digest below. No kubectl binary needed.
+PODS_FILE=$(mktemp)
+trap 'rm -f "${ROWS_FILE}" "${PODS_FILE}"' EXIT
+SA_DIR=/var/run/secrets/kubernetes.io/serviceaccount
+if [ -f "${SA_DIR}/token" ]; then
+  curl -s --cacert "${SA_DIR}/ca.crt" -H "Authorization: Bearer $(cat "${SA_DIR}/token")" \
+    "https://kubernetes.default.svc/api/v1/pods" >"${PODS_FILE}" 2>/dev/null || echo '{}' >"${PODS_FILE}"
+  echo "» runtime: queried the kube API for marked pods (digest → cluster)" >&2
+else
+  echo '{}' >"${PODS_FILE}"
+  echo "» runtime: no in-cluster API token — RUNNING IN will show '-'" >&2
+fi
 
 for repo in ${REPOS}; do
   ref_base="${HOST}/${repo}"
@@ -61,25 +75,38 @@ for repo in ${REPOS}; do
     # Read the top-level manifest (the index for multi-arch) as JSON and pull the
     # annotations from it — same shape the examples README documents.
     manifest=$(regctl manifest get "${ref_base}:${tag}" --format '{{json .}}' 2>/dev/null || echo '{}')
-    REF="${repo}:${tag}" python3 - "${manifest}" >>"${ROWS_FILE}" <<'PY'
+    digest=$(regctl image digest "${ref_base}:${tag}" 2>/dev/null || echo '-')
+    REF="${repo}:${tag}" DIGEST="${digest}" python3 - "${manifest}" >>"${ROWS_FILE}" <<'PY'
 import json, os, sys
 ann = (json.loads(sys.argv[1] or "{}") or {}).get("annotations", {}) or {}
 base = ann.get("org.opencontainers.image.base.digest", "-")
 owners = ann.get("io.houba.owners", "-")
 policy = ann.get("io.houba.policy", "-")
-print("\t".join([os.environ["REF"], base, owners, policy]))
+print("\t".join([os.environ["REF"], base, owners, policy, os.environ["DIGEST"]]))
 PY
   done
 done
 
-# Render the inventory and the two blast-radius rollups (optionally filtered).
+# Render the inventory (now with the runtime column) and the rollups (optionally filtered).
 BLAST_BASE_DIGEST="${BLAST_BASE_DIGEST:-}" BLAST_OWNER="${BLAST_OWNER:-}" \
-  python3 - "${ROWS_FILE}" <<'PY'
-import os, sys
+  python3 - "${ROWS_FILE}" "${PODS_FILE}" <<'PY'
+import json, os, sys
+
+# digest -> sorted set of cluster labels, from the marked pods.
+pods = json.load(open(sys.argv[2])) if os.path.getsize(sys.argv[2]) else {}
+digest_clusters = {}
+for item in pods.get("items", []) or []:
+    meta = item.get("metadata", {})
+    d = (meta.get("annotations", {}) or {}).get("houba.io/image-digest")
+    c = (meta.get("labels", {}) or {}).get("houba.io/cluster")
+    if d and c:
+        digest_clusters.setdefault(d, set()).add(c)
+
 rows = []
 for line in open(sys.argv[1]):
-    ref, base, owners, policy = (line.rstrip("\n").split("\t") + ["-", "-", "-", "-"])[:4]
-    rows.append(dict(ref=ref, base=base, owners=owners, policy=policy))
+    ref, base, owners, policy, digest = (line.rstrip("\n").split("\t") + ["-"] * 5)[:5]
+    clusters = ",".join(sorted(digest_clusters.get(digest, []))) or "-"
+    rows.append(dict(ref=ref, base=base, owners=owners, policy=policy, digest=digest, clusters=clusters))
 
 fb, fo = os.environ.get("BLAST_BASE_DIGEST", ""), os.environ.get("BLAST_OWNER", "")
 def owns(row, owner):
@@ -87,9 +114,9 @@ def owns(row, owner):
 sel = [r for r in rows if (not fb or r["base"] == fb) and (not fo or owns(r, fo))]
 
 print(f"\n=== inventory ({len(sel)}/{len(rows)} artifacts) ===")
-print(f"{'REF':40} {'OWNERS':36} {'POLICY':12} BASE.DIGEST")
+print(f"{'REF':40} {'OWNERS':30} {'RUNNING IN':18} BASE.DIGEST")
 for r in sorted(sel, key=lambda r: r["ref"]):
-    print(f"{r['ref']:40} {r['owners']:36} {r['policy']:12} {r['base']}")
+    print(f"{r['ref']:40} {r['owners']:30} {r['clusters']:18} {r['base']}")
 
 def rollup(key, title):
     groups = {}
@@ -99,17 +126,18 @@ def rollup(key, title):
     for k, refs in sorted(groups.items()):
         print(f"{k}  →  {len(refs)} image(s): {', '.join(sorted(refs))}")
 
-def rollup_owners(title):
+def rollup_multi(key, title, empty="-"):
     groups = {}
     for r in sel:
-        for owner in (r["owners"].split(",") if r["owners"] != "-" else ["-"]):
-            groups.setdefault(owner, []).append(r["ref"])
+        for v in (r[key].split(",") if r[key] != empty else [empty]):
+            groups.setdefault(v, []).append(r["ref"])
     print(f"\n=== blast radius by {title} ===")
     for k, refs in sorted(groups.items()):
         print(f"{k}  →  {len(refs)} image(s): {', '.join(sorted(refs))}")
 
 rollup("base", "base.digest (CVE on an upstream base)")
-rollup_owners("owners (who to page)")
+rollup_multi("owners", "owners (who to page)")
+rollup_multi("clusters", "cluster (where it runs)")
 
 missing = [r["ref"] for r in rows if r["base"] == "-"]
 if missing:
