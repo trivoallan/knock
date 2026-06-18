@@ -127,28 +127,30 @@ Two of the former *Now* items shipped:
   reports `with_sbom` / `without_sbom`. The coverage ladder is now four rungs:
   `uncovered < stamped < signed < has-SBOM`. *(ADR 0029; closed #143)*
 
-## Now — 0.8: close the has-SBOM gate
+## Now — 0.8: close the enforcement ladder + docs polish
 
-> Theme: the mandate is enforceable and trustworthy, blast-radius reaches package level, and both
-> the adoption surface (docs site) and the observational has-SBOM audit have shipped in 0.7.0 (see
-> *Delivered*). **0.8 commits to one coverage lever plus a docs polish pass**; the Deferred bets stay
-> deferred until a concrete signal lands.
+> Theme: 0.7.0 made the mandate enforceable, trustworthy, and package-deep, and shipped the
+> adoption surface (docs site) + the observational has-SBOM audit. **0.8 closes the enforcement
+> ladder** — the last coverage rung gets its CI gate — **and raises the docs quality bar.** The
+> Deferred bets stay deferred until a concrete signal lands; no 1.0 commitment until one does.
 
-- **`audit --fail-on-no-sbom` gate** — *the* 0.8 deliverable. The observational `--sbom` tier already
-  reports SBOM presence;
-  the remaining step is the CI gate that *fails* the build when a stamped image lacks an SBOM —
-  completing the enforcement ladder `--fail-on-uncovered` → `--fail-on-unsigned` → `--fail-on-no-sbom`.
-  *(ADR 0029, P0.5)*
+- **`audit --fail-on-no-sbom` gate** — *the* 0.8 feature deliverable. The observational `--sbom` tier
+  already reports SBOM presence; the remaining step is the CI gate that *fails* the build when a
+  stamped image lacks an SBOM. This **closes the enforcement ladder**: all four rungs
+  (`uncovered < stamped < signed < has-SBOM`) now carry both an observational tier and a
+  `--fail-on-*` gate. *(ADR 0029, P0.5)*
 
 - **Docs polish pass.** The docs site shipped in 0.7.0; 0.8 raises its quality bar:
   - an **architecture presentation** — a narrative overview of the hexagon (sourced from the C4 model), not just the reference;
   - a **richer examples section** — broaden and deepen the worked `MirrorPolicy` walkthroughs;
   - **diagrams** woven into the prose (the committed Mermaid C4 exports, inline where they explain);
-  - **fenced code blocks** throughout — runnable, copy-pasteable commands and policy snippets;
-  - **better schema rendering — across *all* generated schemas** (`MirrorPolicy`, config `HOUBA_*`,
-    the scan predicate `/scan/v1`): each currently renders as a deep, noisy `anyOf > item N` tree
-    (json-schema-for-humans default); make them readable (collapse the union noise, friendlier
-    property paths, or a different renderer).
+  - **fenced code blocks** throughout — runnable, copy-pasteable commands and policy snippets.
+
+- **Schema rendering — readable generated reference (tooling, carries risk).** Distinct from the prose
+  polish above: the generated `MirrorPolicy`, config `HOUBA_*`, and scan-predicate `/scan/v1` reference
+  each render as a deep, noisy `anyOf > item N` tree (json-schema-for-humans default). Make them
+  readable — collapse the union noise, friendlier property paths, or a different renderer. Tracked as
+  its own line because the renderer swap/config is real work, not free polish.
 
 ## Deferred — revisit only on a real signal (YAGNI until then)
 
