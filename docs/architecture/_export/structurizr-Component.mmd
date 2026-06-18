@@ -47,7 +47,7 @@ graph LR
           style 43 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
           44("<div style='font-weight: bold'>SyftAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: syft]</div><div style='font-size: 80%; margin-top:10px'>Drives the syft CLI via<br />subprocess; config-file<br />auth/TLS; lazy binary<br />resolution.</div>")
           style 44 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
-          45("<div style='font-weight: bold'>CommandScanAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: grype]</div><div style='font-size: 80%; margin-top:10px'>Shells<br />HOUBA_SCAN_EVALUATOR_CMD<br />(e.g. grype sbom:{} -o<br />sarif); SBOM in, SARIF out;<br />lazy resolution.</div>")
+          45("<div style='font-weight: bold'>CommandScanAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: subprocess]</div><div style='font-size: 80%; margin-top:10px'>Shells<br />HOUBA_SCAN_EVALUATOR_CMD (any<br />SARIF-emitting tool, e.g.<br />grype sbom:{} -o sarif); SBOM<br />in, SARIF out. Evaluator not<br />bundled — supplied by the<br />deployment.</div>")
           style 45 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
         end
 

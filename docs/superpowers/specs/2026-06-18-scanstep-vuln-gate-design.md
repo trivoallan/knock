@@ -121,8 +121,10 @@ Extend only with `db_version` when present (propagate-or-omit).
   use-case → port, adapter → port, adapter → the scanner CLI. Refresh the committed
   `structurizr-Component.mmd` + `structurizr-Hexagon.mmd` exports. Context / Container / Landscape
   are unchanged.
-- **Runtime image**: the Dockerfile bundles the reference scanner (grype) alongside
-  regctl / buildctl / cosign / syft.
+- **Runtime image**: stays **evaluator-agnostic** — the scanner is *not* bundled (bundling one would
+  privilege a single tool, contradict the interchangeable `HOUBA_SCAN_EVALUATOR_CMD` contract, and not
+  solve CVE-DB freshness). houba bundles only what it always runs (regctl / buildctl / cosign / syft);
+  the chosen SARIF evaluator is supplied by the deployment via a derived image (see the example).
 - **Reference**: `make reference` regenerates `mirror-policy.{md,schema.json}` (the new `Destination`
   fields) and `config.md` (the new `HOUBA_SCAN_EVALUATOR_CMD`).
 - Mirrored as thin **ADR 0039**.

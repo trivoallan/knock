@@ -43,11 +43,16 @@ per destination, as a **point-in-time admission gate**:
 - The C4 **Component + Hexagon** views gain `VulnEvaluatorPort` + the evaluator adapter (and the
   relationships); the committed Mermaid exports are refreshed. Context / Container / Landscape are
   unchanged.
-- The runtime image bundles the reference scanner (grype) alongside regctl / buildctl / cosign / syft.
-- The MirrorPolicy schema gains two `Destination` fields → `make reference` regenerates
-  `mirror-policy.*` and `config.md`.
-- The reconcile flow reorders from `place → SBOM` to `SBOM/scan → gate → publish` on the gated
-  paths; the rebuild path grows a build-local-then-push step.
+- The runtime image stays **evaluator-agnostic** — the scanner is *not* bundled (that would privilege
+  one tool and contradict the interchangeable `HOUBA_SCAN_EVALUATOR_CMD` contract, and would not solve
+  CVE-DB freshness anyway). The chosen SARIF tool is supplied by the deployment via a derived image
+  (`FROM houba … COPY the evaluator`); houba bundles only what it *always* runs (regctl / buildctl /
+  cosign / syft). See `docs/examples/scan-gate/`.
+- The MirrorPolicy schema gains two `Destination` fields → `make reference` regenerates the
+  policy + config reference.
+- The reconcile flow reorders from `place → SBOM` to **stage → scan → promote** on the gated paths
+  (build/copy to a `.houba-staging` tag, scan, promote to the consumable tag only if it passes) —
+  uniform across copy and rebuild, no build-adapter change.
 - `db_version` is propagate-or-omit (the ADR 0020 ethos): stamped only when the evaluator surfaces it.
 - Enforcement coverage extends from CI (`attach --fail-on`) to the operator / reconcile front door,
   while ADR 0032's "not a vuln store" boundary is re-affirmed by construction.

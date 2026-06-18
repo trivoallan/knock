@@ -22,9 +22,10 @@ COPY --from=ghcr.io/sigstore/cosign/cosign:v3.1.1 /ko-app/cosign /usr/bin/cosign
 # syft generates the package-level SBOM on both paths (HOUBA_SBOM_FORMATS).
 COPY --from=anchore/syft:v1.45.1 /syft /usr/bin/syft
 
-# grype is the reference vuln evaluator (HOUBA_SCAN_EVALUATOR_CMD=grype sbom:{} -o sarif).
-COPY --from=anchore/grype:v0.114.0 /grype /usr/bin/grype
-
+# The scanstep's vuln evaluator is deliberately NOT bundled: it is pluggable
+# (HOUBA_SCAN_EVALUATOR_CMD, any SARIF-emitting tool — grype / trivy / regis). Supply it
+# from a derived image; see docs/examples/scan-gate/. Bundling one would privilege a single
+# tool and bloat the default image for users who don't use the scanstep.
 RUN apk add --no-cache ca-certificates
 
 COPY --from=build /src/dist/*.whl /tmp/

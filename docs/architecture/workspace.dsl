@@ -71,7 +71,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     adUsageOracle = component "CommandUsageAdapter" "Shells out to HOUBA_USAGE_ORACLE_CMD; passes digest + idle window via stdin (JSON); expects {last_seen} on stdout." "subprocess" "Adapter"
                     adCosign = component "CosignAdapter" "Drives the cosign CLI via subprocess (keyless | kms | key)." "cosign" "Adapter"
                     adSyft = component "SyftAdapter" "Drives the syft CLI via subprocess; config-file auth/TLS; lazy binary resolution." "syft" "Adapter"
-                    adScan = component "CommandScanAdapter" "Shells HOUBA_SCAN_EVALUATOR_CMD (e.g. grype sbom:{} -o sarif); SBOM in, SARIF out; lazy resolution." "grype" "Adapter"
+                    adScan = component "CommandScanAdapter" "Shells HOUBA_SCAN_EVALUATOR_CMD (any SARIF-emitting tool, e.g. grype sbom:{} -o sarif); SBOM in, SARIF out. Evaluator not bundled — supplied by the deployment." "subprocess" "Adapter"
                 }
                 config = component "config" "Reads HOUBA_* settings + roster resolvers — the only os.environ reader." "Pydantic Settings"
 
