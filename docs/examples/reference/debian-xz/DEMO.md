@@ -13,6 +13,38 @@ one leg; the other two are commodity. The fixture is `xz-utils 5.6.1-1` and
 into the registry — never through houba. The demo makes both the coverage
 and its blind spot visible at the same time.
 
+The three legs, joined on the image digest:
+
+```mermaid
+flowchart LR
+  eng([Platform / Security<br/>Engineer]):::person
+  cve[(CVE-2024-3094<br/>OSV Debian feed)]:::feed
+  src[(Source registries<br/>upstream debian-xz)]:::ext
+  houba{{houba<br/>stamped front door}}:::core
+  reg[(Demo registry · Zot<br/>placed + bypassed images)]:::ext
+  dt[Dependency-Track<br/>CVE to image]:::ext
+  blast[blast-radius consumer<br/>image to runtime to owner]:::ext
+  runtime[Runtime<br/>team-a · team-b · team-c]:::ext
+
+  eng -->|which images ship it, where, who owns them?| blast
+  src -->|pull| houba
+  houba -->|place · stamp · signed SBOM| reg
+  reg -->|SBOM referrers| dt
+  cve -->|vuln data| dt
+  dt -->|flags affected images| blast
+  reg -->|provenance stamps| blast
+  runtime -->|digest inventory| blast
+  blast -->|owner + locations · coverage gap| eng
+
+  classDef person fill:#52606d,stroke:#39434c,color:#fff;
+  classDef core fill:#1f6feb,stroke:#154da4,color:#fff;
+  classDef ext fill:#eef1f5,stroke:#69707a,color:#1f2933;
+  classDef feed fill:#fde2e1,stroke:#b42318,color:#7a271a;
+```
+
+houba is one leg; Dependency-Track and the blast-radius consumer are commodity.
+The deployment that runs this is in [step 1](#1-bring-the-stack-up).
+
 ---
 
 ## 1. Bring the stack up
@@ -32,6 +64,49 @@ brings up four components inside the `houba` namespace:
 `make local` is the inner-loop shortcut (`kubectl apply -k`, no operators). The
 Argo App-of-Apps equivalent — with ExternalSecretOperator, OpenBao, and
 ArgoCD — is `make demo`.
+
+The deployed topology — and the incident loop running through it:
+
+```mermaid
+flowchart LR
+  subgraph kind["kind cluster"]
+    subgraph nshouba["ns: houba"]
+      houba["houba reconcile<br/>CronJob"]:::houba
+      bk["buildkitd"]
+      zot["Zot<br/>demo registry"]:::ext
+      dt["Dependency-Track<br/>apiserver + frontend"]:::ext
+      seed["Job: seed-incident"]
+      pub["Job: publish-sbom"]
+      blast["Job: blast-radius"]
+    end
+    subgraph teama["ns: team-a"]
+      pa["pause pod<br/>demo/debian-xz @digest"]
+    end
+    subgraph teamb["ns: team-b"]
+      pb["pause pod<br/>demo/debian-xz @digest"]
+    end
+    subgraph teamc["ns: team-c"]
+      pc["pause pod<br/>bypassed/debian-xz @digest"]:::bypass
+    end
+  end
+
+  seed -->|push upstream + bypassed| zot
+  houba -->|read upstream/debian-xz| zot
+  houba -->|rebuild setTimezone| bk
+  houba -->|stamp + signed SBOM to demo/debian-xz| zot
+  pub -->|upload CycloneDX SBOM| dt
+  blast -->|read stamps| zot
+  blast -.->|join on digest| pa
+  blast -.->|join on digest| pb
+  blast -.->|coverage gap| pc
+
+  classDef houba fill:#1f6feb,stroke:#154da4,color:#fff;
+  classDef ext fill:#eef1f5,stroke:#69707a,color:#1f2933;
+  classDef bypass fill:#fde2e1,stroke:#b42318,color:#7a271a;
+```
+
+The `bypassed/debian-xz` path (red) never touches houba — no stamp, no SBOM — so
+it surfaces only as the coverage gap in step 7.
 
 > **RAM:** Dependency-Track requires a 4 GB heap. Give your kind/Docker VM
 > at least 8 GB or the apiserver pod stays `Pending`.
