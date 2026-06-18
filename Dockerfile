@@ -1,6 +1,6 @@
 # Phase B+ — runtime image: Python CLI + buildctl (rebuild) + regctl (registry ops).
 
-FROM python:3.12-slim AS build
+FROM python:3.13-alpine AS build
 
 WORKDIR /src
 COPY pyproject.toml uv.lock ./
@@ -8,7 +8,7 @@ COPY houba ./houba
 
 RUN pip install --no-cache-dir uv && uv build
 
-FROM python:3.12-slim AS runtime
+FROM python:3.13-alpine AS runtime
 
 # buildctl comes from the official upstream image (static Go binary).
 COPY --from=moby/buildkit:v0.31.0 /usr/bin/buildctl /usr/bin/buildctl
@@ -22,11 +22,11 @@ COPY --from=ghcr.io/sigstore/cosign/cosign:v3.1.1 /ko-app/cosign /usr/bin/cosign
 # syft generates the package-level SBOM on both paths (HOUBA_SBOM_FORMATS).
 COPY --from=anchore/syft:v1.45.1 /syft /usr/bin/syft
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache ca-certificates
 
 COPY --from=build /src/dist/*.whl /tmp/
+# ponytail: musl test — if pydantic-core (Rust) / pyyaml (C) fall to source build
+# here, add a builder stage with build-base+rust and copy the venv across.
 RUN pip install --no-cache-dir /tmp/*.whl && rm /tmp/*.whl
 
 # houba's own deployment runs hardened (runAsNonRoot + readOnlyRootFilesystem).
