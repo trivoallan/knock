@@ -88,8 +88,11 @@ class FakeRegistryPort:
     def login(self, host: str, *, username: str, password: str, tls_verify: bool) -> None:
         self.logins.append((host, username, tls_verify))
 
-    def list_referrers(self, image_ref: str, artifact_type: str) -> list[Referrer]:
-        return [r for r in self._referrers.get(image_ref, []) if r.artifact_type == artifact_type]
+    def list_referrers(self, image_ref: str, artifact_type: str | None = None) -> list[Referrer]:
+        refs = self._referrers.get(image_ref, [])
+        if artifact_type is None:
+            return list(refs)
+        return [r for r in refs if r.artifact_type == artifact_type]
 
     # Journals only; _referrers is a read-fixture seeded via the constructor (see list_referrers).
     def put_referrer(

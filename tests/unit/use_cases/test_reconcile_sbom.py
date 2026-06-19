@@ -193,3 +193,126 @@ def test_sbom_signing_is_gated_on_sbom_generation() -> None:
 
     assert _sbom_attestations(attestor) == []
     assert len(attestor.attested) == 1  # the transform attestation only
+
+
+def test_skipped_uncovered_tag_is_sbom_backfilled_once() -> None:
+    # Tag already mirrored (source unchanged), NO SBOM referrer seeded => exactly one
+    # syft generate call against the mirror's CURRENT digest, referrer attached there,
+    # op kind "sbom". No rebuild.
+    src = "docker.io/library/busybox"
+    dest_repo = "reg.local/demo/busybox"
+    mirror_digest = "sha256:mirrordigest"
+    registry = FakeRegistryPort(
+        tags={src: ["1.36.0"], dest_repo: ["1.36.0"]},
+        infos={
+            f"{src}:1.36.0": ImageInfo(digest="sha256:bbsrc", created=NOW, annotations={}),
+            f"{dest_repo}:1.36.0": ImageInfo(
+                digest=mirror_digest,
+                created=NOW,
+                annotations={"org.opencontainers.image.base.digest": "sha256:bbsrc"},
+            ),
+        },
+    )
+    gen = FakeSbomGenerator()
+    report = _run(_copy_policy(), registry, sbom_generator=gen, sbom_formats=["spdx-json"])
+
+    subject = f"{dest_repo}@{mirror_digest}"
+    assert gen.calls == [(subject, ("spdx-json",), True)]  # scanned the LIVE digest, no rebuild
+    assert _sbom_referrers(registry, subject) == [(SPDX, SPDX)]
+    ops = [op for v in report.policies[0].targets[0].variants for op in v.operations]
+    assert any(op.kind == "sbom" and op.error is None for op in ops)
+
+
+def test_skipped_covered_tag_is_not_resbomed() -> None:
+    # SBOM referrer already on the mirror tag => sbom_covered => no generate call (converged).
+    from houba.ports.registry import Referrer
+
+    src = "docker.io/library/busybox"
+    dest_repo = "reg.local/demo/busybox"
+    mirror_digest = "sha256:mirrordigest"
+    registry = FakeRegistryPort(
+        tags={src: ["1.36.0"], dest_repo: ["1.36.0"]},
+        infos={
+            f"{src}:1.36.0": ImageInfo(digest="sha256:bbsrc", created=NOW, annotations={}),
+            f"{dest_repo}:1.36.0": ImageInfo(
+                digest=mirror_digest,
+                created=NOW,
+                annotations={"org.opencontainers.image.base.digest": "sha256:bbsrc"},
+            ),
+        },
+        referrers={
+            f"{dest_repo}:1.36.0": [
+                Referrer(
+                    digest="sha256:spdx",
+                    artifact_type=SPDX,
+                    annotations={},
+                    subject_tag="1.36.0",
+                )
+            ]
+        },
+    )
+    gen = FakeSbomGenerator()
+    _run(_copy_policy(), registry, sbom_generator=gen, sbom_formats=["spdx-json"])
+    assert gen.calls == []
+
+
+def test_sbom_backfill_failure_is_visible() -> None:
+    # Uncovered placed tag + a failing generator => a FAILED "sbom" op (no silent gap).
+    src = "docker.io/library/busybox"
+    dest_repo = "reg.local/demo/busybox"
+    mirror_digest = "sha256:mirrordigest"
+    registry = FakeRegistryPort(
+        tags={src: ["1.36.0"], dest_repo: ["1.36.0"]},
+        infos={
+            f"{src}:1.36.0": ImageInfo(digest="sha256:bbsrc", created=NOW, annotations={}),
+            f"{dest_repo}:1.36.0": ImageInfo(
+                digest=mirror_digest,
+                created=NOW,
+                annotations={"org.opencontainers.image.base.digest": "sha256:bbsrc"},
+            ),
+        },
+    )
+    report = _run(
+        _copy_policy(),
+        registry,
+        sbom_generator=FakeSbomGenerator(fail=True),
+        sbom_formats=["spdx-json"],
+    )
+    ops = [op for v in report.policies[0].targets[0].variants for op in v.operations]
+    sbom_ops = [op for op in ops if op.kind == "sbom"]
+    assert len(sbom_ops) == 1
+    assert sbom_ops[0].error is not None
+
+
+def test_sbom_backfill_is_skipped_in_dry_run() -> None:
+    # Dry-run: the uncovered tag is still reported as a "sbom" op, but nothing is scanned
+    # or attached (applied=False) — mirrors the signature backfill's dry-run behavior.
+    src = "docker.io/library/busybox"
+    dest_repo = "reg.local/demo/busybox"
+    mirror_digest = "sha256:mirrordigest"
+    registry = FakeRegistryPort(
+        tags={src: ["1.36.0"], dest_repo: ["1.36.0"]},
+        infos={
+            f"{src}:1.36.0": ImageInfo(digest="sha256:bbsrc", created=NOW, annotations={}),
+            f"{dest_repo}:1.36.0": ImageInfo(
+                digest=mirror_digest,
+                created=NOW,
+                annotations={"org.opencontainers.image.base.digest": "sha256:bbsrc"},
+            ),
+        },
+    )
+    gen = FakeSbomGenerator()
+    report = _run(
+        _copy_policy(),
+        registry,
+        sbom_generator=gen,
+        sbom_formats=["spdx-json"],
+        dry_run_tags=True,
+        dry_run_deletions=True,
+    )
+    assert gen.calls == []  # no scan in dry-run
+    assert registry.artifact_referrers == []  # nothing attached
+    ops = [op for v in report.policies[0].targets[0].variants for op in v.operations]
+    sbom_ops = [op for op in ops if op.kind == "sbom"]
+    assert len(sbom_ops) == 1
+    assert sbom_ops[0].applied is False

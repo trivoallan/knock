@@ -46,7 +46,7 @@ from houba.domain.reconcile import (
     reconcile_import,
 )
 from houba.domain.retention import resolve_archive
-from houba.domain.sbom import build_sbom_annotations, build_sbom_statement
+from houba.domain.sbom import build_sbom_annotations, build_sbom_statement, media_type_for
 from houba.domain.sharding import owns
 from houba.domain.stamp import build_stamp_annotations
 from houba.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
@@ -91,7 +91,11 @@ def to_source_artifact(info: ImageInfo, *, now: datetime) -> SourceArtifact:
 
 
 def to_mirror_artifact(
-    info: ImageInfo, *, transform_version_key: str | None = None, attested: bool = True
+    info: ImageInfo,
+    *,
+    transform_version_key: str | None = None,
+    attested: bool = True,
+    sbom_covered: bool = True,
 ) -> MirrorArtifact | None:
     base = info.annotations.get(BASE_DIGEST_KEY)
     if base is None:
@@ -102,6 +106,7 @@ def to_mirror_artifact(
         transform_version=tv,
         imported_at=_parse_created(info.annotations.get(CREATED_KEY)),
         attested=attested,
+        sbom_covered=sbom_covered,
     )
 
 
@@ -248,6 +253,15 @@ class _SignWork:
 
 
 @dataclass(frozen=True)
+class _SbomWork:
+    variant: str
+    vplan: VariantPlan
+    out_tag: str
+    src_tag: str
+    formats: list[str]
+
+
+@dataclass(frozen=True)
 class _AliasWork:
     variant: str
     alias: str
@@ -272,6 +286,7 @@ def _counts_of(operations: list[Operation]) -> Counts:
         skipped=n("skipped"),
         marked=n("marked"),
         attested=n("attested"),
+        sbom=n("sbom"),
         failed=sum(1 for op in operations if op.error is not None),
     )
 
@@ -285,6 +300,7 @@ def _merge_counts(parts: list[Counts]) -> Counts:
         skipped=sum(c.skipped for c in parts),
         marked=sum(c.marked for c in parts),
         attested=sum(c.attested for c in parts),
+        sbom=sum(c.sbom for c in parts),
         failed=sum(c.failed for c in parts),
     )
 
@@ -321,17 +337,28 @@ def _apply_plan(
     }
     mirror: dict[str, MirrorArtifact] = {}
     mirror_digests: dict[str, str] = {}
+    missing_sbom: dict[str, list[str]] = {}  # out_tag → configured formats whose referrer is absent
+    # One unfiltered referrer probe per existing tag yields every artifactType present, feeding
+    # BOTH coverage signals (signature + SBOM). Skipped when neither signing nor SBOM is
+    # configured — nothing would route to a backfill stage (one fewer registry read per tag).
+    need_probe = attestor is not None or bool(sbom_formats)
     for out_tag in registry.list_tags(plan.dest_repo):
         info = registry.inspect(f"{plan.dest_repo}:{out_tag}")
-        # Only probe referrers when signing is configured — else attested stays True and
-        # nothing routes to the backfill stage (one fewer registry read per tag).
-        attested = attestor is None or bool(
-            registry.list_referrers(f"{plan.dest_repo}:{out_tag}", COSIGN_ATTESTATION_ARTIFACT_TYPE)
+        present = (
+            {r.artifact_type for r in registry.list_referrers(f"{plan.dest_repo}:{out_tag}")}
+            if need_probe
+            else set()
         )
-        ma = to_mirror_artifact(info, transform_version_key=tv_key, attested=attested)
+        attested = attestor is None or COSIGN_ATTESTATION_ARTIFACT_TYPE in present
+        absent = [fmt for fmt in sbom_formats if media_type_for(fmt) not in present]
+        ma = to_mirror_artifact(
+            info, transform_version_key=tv_key, attested=attested, sbom_covered=not absent
+        )
         if ma is not None:
             mirror[out_tag] = ma
             mirror_digests[out_tag] = info.digest
+            if absent:
+                missing_sbom[out_tag] = absent
 
     marked_referrers: dict[str, list[Referrer]] = {}
     for out_tag in mirror:
@@ -393,6 +420,42 @@ def _apply_plan(
             ),
             error,
         )
+
+    def _attach_sbom(out_digest: str, out_tag: str, formats: list[str]) -> None:
+        assert sbom_generator is not None  # callers guard: formats non-empty => generator wired
+        placed = f"{plan.dest_repo}@{out_digest}"
+        for d in sbom_generator.generate(
+            placed,
+            formats,
+            tls_verify=plan.config.tls_verify,
+            username=plan.config.username,
+            password=(plan.config.password.get_secret_value() if plan.config.password else None),
+            ca_cert=plan.config.ca_cert,
+        ):
+            registry.put_referrer(
+                placed,
+                d.media_type,  # artifactType == media type (discoverable)
+                build_sbom_annotations(
+                    prefix=label_prefix,
+                    subject_digest=out_digest,
+                    fmt=d.format,
+                    tool="syft",
+                    tool_version=d.tool_version,
+                    timestamp=now,
+                ),
+                blob=d.content,
+                media_type=d.media_type,
+            )
+            if attestor is not None:
+                attestor.attest(
+                    placed,
+                    build_sbom_statement(
+                        subject_name=f"{plan.dest_repo}:{out_tag}",
+                        subject_digest=out_digest,
+                        fmt=d.format,
+                        content=d.content,
+                    ),
+                )
 
     def _attest(
         out_digest: str, *, variant: str, vplan: VariantPlan, out_tag: str, source_digest: str
@@ -459,44 +522,7 @@ def _apply_plan(
                 # the op (no silently-uncovered image), like signing. Empty formats =>
                 # skip (lib/test affordance; HOUBA_SBOM_FORMATS guarantees >=1 in prod).
                 if sbom_formats and out_digest is not None:
-                    assert sbom_generator is not None  # caller guards: formats set => wired
-                    placed = f"{plan.dest_repo}@{out_digest}"
-                    for d in sbom_generator.generate(
-                        placed,
-                        sbom_formats,
-                        tls_verify=plan.config.tls_verify,
-                        username=plan.config.username,
-                        password=(
-                            plan.config.password.get_secret_value()
-                            if plan.config.password
-                            else None
-                        ),
-                        ca_cert=plan.config.ca_cert,
-                    ):
-                        registry.put_referrer(
-                            placed,
-                            d.media_type,  # artifactType == media type (discoverable)
-                            build_sbom_annotations(
-                                prefix=label_prefix,
-                                subject_digest=out_digest,
-                                fmt=d.format,
-                                tool="syft",
-                                tool_version=d.tool_version,
-                                timestamp=now,
-                            ),
-                            blob=d.content,
-                            media_type=d.media_type,
-                        )
-                        if attestor is not None:
-                            attestor.attest(
-                                placed,
-                                build_sbom_statement(
-                                    subject_name=f"{plan.dest_repo}:{w.out_tag}",
-                                    subject_digest=out_digest,
-                                    fmt=d.format,
-                                    content=d.content,
-                                ),
-                            )
+                    _attach_sbom(out_digest, w.out_tag, sbom_formats)
                 # Sign houba's predicate over the stamped output digest — rebuild AND copy
                 # (the label is the product: every placed image is signed). Inside the try =>
                 # a signing failure fails the operation rather than leaving a silent gap.
@@ -565,6 +591,38 @@ def _apply_plan(
             )
             op = Operation(
                 kind="attested",
+                out_tag=w.out_tag,
+                src_tag=w.src_tag,
+                digest=src_digest,
+                applied=False,
+                error=info,
+            )
+            emit_failed(op, w.variant, info)
+            return op
+
+    def _do_sbom(w: _SbomWork) -> Operation:
+        src_digest = source[w.src_tag].digest
+        try:
+            out_digest: str | None = None
+            if not dry_run_tags:
+                out_digest = mirror_digests[w.out_tag]  # the live digest — no rebuild
+                _attach_sbom(out_digest, w.out_tag, w.formats)
+            op = Operation(
+                kind="sbom",
+                out_tag=w.out_tag,
+                src_tag=w.src_tag,
+                digest=src_digest,
+                applied=not dry_run_tags,
+                out_digest=out_digest,
+            )
+            emit_applied(op, w.variant)
+            return op
+        except Exception as exc:
+            info = ErrorInfo(
+                type=type(exc).__name__, message=str(exc), exit_code=exit_code_for(exc)
+            )
+            op = Operation(
+                kind="sbom",
                 out_tag=w.out_tag,
                 src_tag=w.src_tag,
                 digest=src_digest,
@@ -671,6 +729,7 @@ def _apply_plan(
     # Stage 1: imports/updates, all variants flattened, input order preserved.
     import_items: list[_ImportWork] = []
     sign_items: list[_SignWork] = []
+    sbom_items: list[_SbomWork] = []
     for vr, vplan in zip(result.variants, plan.expanded.variants, strict=True):
         out_to_src = {t + vplan.suffix: t for t in vplan.tags}
         for out_tag in [*vr.to_import, *vr.to_update]:
@@ -693,9 +752,23 @@ def _apply_plan(
                     src_tag=out_to_src[out_tag],
                 )
             )
+        for out_tag in vr.to_sbom:
+            sbom_items.append(
+                _SbomWork(
+                    variant=vr.variant,
+                    vplan=vplan,
+                    out_tag=out_tag,
+                    src_tag=out_to_src[out_tag],
+                    # to_sbom ⟺ missing_sbom (same probe loop) — index, don't .get(): a
+                    # missing key is an invariant violation, not "re-attach every format".
+                    formats=missing_sbom[out_tag],
+                )
+            )
     import_ops = _run_stage(import_items, _do_import, executor=executor)
     # Barrier. Backfill stage: sign skipped-but-unsigned mirror tags (already up-to-date).
     sign_ops = _run_stage(sign_items, _do_sign, executor=executor)
+    # Barrier. Backfill stage: attach missing SBOM referrers on already-placed digests.
+    sbom_ops = _run_stage(sbom_items, _do_sbom, executor=executor)
 
     # Barrier. Stage 2: aliases (depend on the imported targets).
     alias_items: list[_AliasWork] = []
@@ -748,12 +821,16 @@ def _apply_plan(
     attested_by_variant: dict[str, list[Operation]] = defaultdict(list)
     for sit, op in zip(sign_items, sign_ops, strict=True):
         attested_by_variant[sit.variant].append(op)
+    sbom_by_variant: dict[str, list[Operation]] = defaultdict(list)
+    for sbit, op in zip(sbom_items, sbom_ops, strict=True):
+        sbom_by_variant[sbit.variant].append(op)
 
     variant_reports: list[VariantReport] = []
     for vr, vplan in zip(result.variants, plan.expanded.variants, strict=True):
-        changed = set(vr.to_import) | set(vr.to_update) | set(vr.to_sign)
+        changed = set(vr.to_import) | set(vr.to_update) | set(vr.to_sign) | set(vr.to_sbom)
         ops: list[Operation] = list(imports_by_variant[vr.variant])
         ops.extend(attested_by_variant[vr.variant])
+        ops.extend(sbom_by_variant[vr.variant])
         for tag in vplan.tags:
             out_tag = tag + vplan.suffix
             if out_tag not in changed:
