@@ -150,18 +150,14 @@ class RegctlAdapter:
         args.append(host)
         self._run(args, stdin=password)
 
-    def list_referrers(self, image_ref: str, artifact_type: str) -> list[Referrer]:
-        payload = self._json(
-            [
-                "artifact",
-                "list",
-                image_ref,
-                "--filter-artifact-type",
-                artifact_type,
-                "--format",
-                "{{json .}}",
-            ]
-        )
+    def list_referrers(
+        self, image_ref: str, artifact_type: str | None = None
+    ) -> list[Referrer]:
+        args = ["artifact", "list", image_ref]
+        if artifact_type is not None:
+            args += ["--filter-artifact-type", artifact_type]
+        args += ["--format", "{{json .}}"]
+        payload = self._json(args)
         raw = payload.get("descriptors")
         descriptors = raw if isinstance(raw, list) else []
         out: list[Referrer] = []

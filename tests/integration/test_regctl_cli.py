@@ -272,6 +272,16 @@ def test_list_referrers_empty_when_none(
     )
 
 
+def test_list_referrers_unfiltered_omits_filter_flag(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "referrers-one")
+    RegctlAdapter().list_referrers("harbor.corp/lib/redis:6.0.0")  # no artifact_type
+    line = next(ln for ln in log.read_text().splitlines() if ln.startswith("artifact list"))
+    assert "--filter-artifact-type" not in line
+
+
 def test_put_referrer_with_blob_invokes_artifact_put_with_flags(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
