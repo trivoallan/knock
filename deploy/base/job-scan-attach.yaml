@@ -1,0 +1,79 @@
+# Runs an off-the-shelf analyzer (grype) on the SBOM houba attached, and attaches the SARIF.
+# grype reads a LOCAL SBOM (no registry creds); regctl/houba do the registry I/O.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: houba-scan-attach
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"   # after reconcile placed + attached the SBOM
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: houba
+        app.kubernetes.io/component: scan-attach
+    spec:
+      serviceAccountName: houba
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: fetch-sbom            # houba image: pull each placed image's CycloneDX SBOM referrer
+          image: houba                # rewritten by the kustomize images transformer; has regctl + python3
+          command: ["bash", "/scripts/scan-attach.sh", "fetch"]
+          env:
+            - {name: HOME, value: /tmp}
+            - {name: SHARED, value: /shared}
+            - name: BLAST_REPOS
+              valueFrom: {configMapKeyRef: {name: houba-config, key: BLAST_REPOS}}
+          envFrom:
+            - secretRef: {name: houba-registries}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: scripts, mountPath: /scripts, readOnly: true}
+            - {name: shared, mountPath: /shared}
+            - {name: home, mountPath: /tmp}
+        - name: grype                 # off-the-shelf, unmodified: evaluate the local SBOM (no registry auth)
+          image: anchore/grype:v0.80.0
+          command: ["sh", "-c"]
+          args:
+            - 'set -e; for f in /shared/*.sbom.json; do [ -e "$f" ] || continue; grype "sbom:$f" -o sarif --file "${f%.sbom.json}.sarif"; done'
+          env:
+            - {name: GRYPE_DB_CACHE_DIR, value: /tmp/grype}   # writable (readOnlyRootFilesystem)
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: shared, mountPath: /shared}
+            - {name: home, mountPath: /tmp}
+      containers:
+        - name: attach                # houba image: attach each SARIF as a signed referrer
+          image: houba
+          command: ["bash", "/scripts/scan-attach.sh", "attach"]
+          env:
+            - {name: HOME, value: /tmp}
+            - {name: SHARED, value: /shared}
+            - name: BLAST_REPOS
+              valueFrom: {configMapKeyRef: {name: houba-config, key: BLAST_REPOS}}
+          envFrom:
+            - secretRef: {name: houba-registries}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: scripts, mountPath: /scripts, readOnly: true}
+            - {name: shared, mountPath: /shared}
+            - {name: home, mountPath: /tmp}
+      volumes:
+        - {name: scripts, configMap: {name: houba-scan-attach, defaultMode: 0755}}
+        - {name: shared, emptyDir: {}}
+        - {name: home, emptyDir: {}}
