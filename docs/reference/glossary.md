@@ -1,7 +1,7 @@
 ---
 title: "Glossary"
 description: "houba's domain vocabulary — the stamp, provenance, SBOM, transform, and lifecycle terms, each linked to its full treatment."
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 houba's vocabulary is precise: words like *stamp*, *front door*, and *blast-radius* carry specific technical meanings within the tool. This page defines each term as houba uses it.
