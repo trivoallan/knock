@@ -22,7 +22,10 @@ COPY --from=ghcr.io/sigstore/cosign/cosign:v3.1.1 /ko-app/cosign /usr/bin/cosign
 # syft generates the package-level SBOM on both paths (HOUBA_SBOM_FORMATS).
 COPY --from=anchore/syft:v1.45.1 /syft /usr/bin/syft
 
-RUN apk add --no-cache ca-certificates
+# bash: the demo/ops Jobs (reconcile helpers, blast-radius, publish-sbom, scan-attach, seed-incident)
+# run bash scripts mounted into this image — Alpine ships only busybox sh, so add bash (regression
+# from the Alpine runtime rebase). houba itself (Python) does not need it.
+RUN apk add --no-cache ca-certificates bash
 
 COPY --from=build /src/dist/*.whl /tmp/
 # ponytail: musl test — if pydantic-core (Rust) / pyyaml (C) fall to source build

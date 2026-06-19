@@ -214,3 +214,9 @@ logs: ## Tail the last reconcile run's logs
 
 down: ## Delete the kind cluster
 	kind delete cluster --name $(CLUSTER)
+
+scan: ## Run the scan-attach Job (grype on the SBOM -> houba attach) over the placed images
+	-$(KUBECTL) -n $(NS) delete job houba-scan-attach --ignore-not-found
+	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-scan-attach --timeout=300s
+	$(KUBECTL) -n $(NS) logs job/houba-scan-attach --all-containers
