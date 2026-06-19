@@ -4,7 +4,7 @@ Date: 2026-06-16
 
 ## Status
 
-Accepted
+Superseded by [39. SARIF `kind` discriminates a policy verdict from a vulnerability finding](0039-sarif-kind-discriminates-policy-from-vuln.md)
 
 Builds on [6. SLSA / in-toto attestation](0006-slsa-attestation.md) and the pluggable scan-format
 registry.

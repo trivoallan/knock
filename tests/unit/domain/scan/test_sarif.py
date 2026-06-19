@@ -76,37 +76,39 @@ def test_no_results_all_zero() -> None:
     )
 
 
-def test_kind_pass_counts_as_rule_passed() -> None:
+def test_kind_pass_counts_as_policy_passed() -> None:
     s = SarifMapper().summarize(_sarif([{"ruleId": "R1", "kind": "pass"}]))
-    assert s.facts["rule.passed"] == "1"
-    assert s.facts["rule.failed"] == "0"
+    assert s.facts["policy.passed"] == "1"
     assert s.facts["vuln.high"] == "0"  # not miscounted as a vuln
 
 
-def test_kind_fail_counts_as_rule_failed() -> None:
+def test_kind_fail_buckets_by_level() -> None:
     s = SarifMapper().summarize(_sarif([{"ruleId": "R1", "kind": "fail", "level": "error"}]))
-    assert s.facts["rule.failed"] == "1"
-    assert s.facts["rule.passed"] == "0"
-    assert s.facts["vuln.high"] == "0"  # level no longer routes to vuln once kind is explicit
+    assert s.facts["policy.high"] == "1"  # error -> high, as a policy verdict
+    assert s.facts["vuln.high"] == "0"
 
 
-def test_kind_open_counts_as_rule_failed() -> None:
+def test_kind_without_severity_or_level_is_policy_unknown() -> None:
     s = SarifMapper().summarize(_sarif([{"ruleId": "R1", "kind": "open"}]))
-    assert s.facts["rule.failed"] == "1"
+    assert s.facts["policy.unknown"] == "1"
 
 
-def test_cvss_score_wins_over_kind() -> None:
+def test_kind_wins_over_cvss_score() -> None:
+    # A verdict that also carries a CVSS score is bucketed by its severity, NOT as a vuln. The
+    # analyzer-agnostic split: keyed on the SARIF `kind`, never the tool name.
     s = SarifMapper().summarize(
-        _sarif([{"ruleId": "R1", "kind": "pass", "properties": {"security-severity": "9.8"}}])
+        _sarif([{"ruleId": "R1", "kind": "fail", "properties": {"security-severity": "9.8"}}])
     )
-    assert s.facts["vuln.critical"] == "1"
-    assert s.facts["rule.passed"] == "0"
+    assert s.facts["policy.critical"] == "1"
+    assert s.facts["vuln.critical"] == "0"
 
 
-def test_rule_keys_present_and_zero_when_no_results() -> None:
+def test_policy_keys_present_and_zero_when_no_results() -> None:
     s = SarifMapper().summarize(_sarif([]))
-    assert s.facts["rule.passed"] == "0"
-    assert s.facts["rule.failed"] == "0"
+    assert s.facts["policy.passed"] == "0"
+    assert all(
+        s.facts[f"policy.{b}"] == "0" for b in ("critical", "high", "medium", "low", "unknown")
+    )
 
 
 def test_malformed_json_raises_scan_report_error() -> None:

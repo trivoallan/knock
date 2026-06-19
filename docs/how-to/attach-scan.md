@@ -111,24 +111,26 @@ When no `--registry` is given and the ref's host is not in any roster entry (for
 public image or an empty roster), `attach` configures nothing and falls back to ambient regctl
 config — exactly today's behaviour. No flag and no roster entry required for public registries.
 
-## Posture reports (rule evaluations, not vulnerabilities)
+## Posture reports (governance verdicts, not vulnerabilities)
 
 A SARIF report is not always a vulnerability scan. Policy / posture analyzers that emit SARIF
-(license, EOL, best-practice, or compliance tools) report **rule evaluations** — each result carries
-an explicit SARIF `kind` (`pass` / `fail` / …) rather than a CVSS `security-severity` score.
+(license, EOL, best-practice, or compliance tools) report **evaluation outcomes** — each result
+carries an explicit SARIF `kind` (`pass` / `fail` / …) marking a verdict rather than a finding.
 
-`houba attach` recognizes this: a result with an explicit `kind` is summarized as a rule outcome,
-not a vulnerability, so a failed hygiene rule never inflates the `vuln.*` counts:
+`houba attach` keys on that standard SARIF signal: a result with an explicit `kind` is a **governance
+verdict** and **wins over** any CVSS `security-severity` it carries, so it is summarized in the
+`policy.*` space — never inflating the `vuln.*` counts:
 
 ```bash
 uv run houba attach --format sarif posture.sarif.json harbor.corp/lib/redis:7.2.0
 # attached sarif scan (posture-analyzer 1.x) → harbor.corp/lib/redis@sha256:ref…
 ```
 
-The stamp then carries `io.houba.scan.rule.passed` / `io.houba.scan.rule.failed` alongside the
-`io.houba.scan.vuln.*` buckets (a CVSS-scored result is always counted as a vulnerability, even if
-it also carries a `kind`). The `--fail-on <severity>` gate acts on `vuln.*` only — rule failures
-are reported in the stamp, not gated.
+The stamp then carries `io.houba.scan.policy.<severity>` (a failed verdict bucketed by its severity,
+e.g. `policy.critical`) and `io.houba.scan.policy.passed`, alongside the `io.houba.scan.vuln.*`
+buckets. houba keys on the SARIF `kind`, never on the tool name — so any analyzer emitting `kind`
+gets governance bucketing for free. The `--fail-on <severity>` gate acts on `vuln.*` only — policy
+verdicts are reported in the stamp, not gated.
 
 ### End-to-end: any SARIF analyzer at the front door
 
