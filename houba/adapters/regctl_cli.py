@@ -150,9 +150,7 @@ class RegctlAdapter:
         args.append(host)
         self._run(args, stdin=password)
 
-    def list_referrers(
-        self, image_ref: str, artifact_type: str | None = None
-    ) -> list[Referrer]:
+    def list_referrers(self, image_ref: str, artifact_type: str | None = None) -> list[Referrer]:
         args = ["artifact", "list", image_ref]
         if artifact_type is not None:
             args += ["--filter-artifact-type", artifact_type]

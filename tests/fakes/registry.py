@@ -88,9 +88,7 @@ class FakeRegistryPort:
     def login(self, host: str, *, username: str, password: str, tls_verify: bool) -> None:
         self.logins.append((host, username, tls_verify))
 
-    def list_referrers(
-        self, image_ref: str, artifact_type: str | None = None
-    ) -> list[Referrer]:
+    def list_referrers(self, image_ref: str, artifact_type: str | None = None) -> list[Referrer]:
         refs = self._referrers.get(image_ref, [])
         if artifact_type is None:
             return list(refs)
