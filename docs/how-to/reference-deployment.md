@@ -86,7 +86,8 @@ deploy/
 make demo             # kind up → install argo-cd → apply root → sync from git → seed OpenBao
                       #   → Zot out-of-band → reconcile → report
 make demo-run         # another one-shot reconcile from the synced CronJob
-make blast-radius     # re-read the stamp and print blast radius
+make scan             # grype on the SBOM -> houba attach (front-door scan provenance)
+make blast-radius     # re-read the stamp and print blast radius (now with a SCAN column)
 make registry-ui      # port-forward Zot's built-in UI to http://localhost:8082
 make argocd-ui        # ArgoCD UI (admin creds printed) at https://localhost:8083
 make logs             # tail the reconcile logs
@@ -269,3 +270,22 @@ In a real deployment you point your existing stack at the *same* annotations:
 
 houba does not call any of these — the coupling is the data. That is the whole point: the
 label is the product.
+
+### Scan at the front door — `make scan`
+
+The reference demo wires one such consumer end-to-end. `make scan` runs a one-shot Job: an
+off-the-shelf `anchore/grype` container evaluates the SBOM houba already attached to each placed
+image (`grype sbom:` — no registry credentials), and `houba attach` binds grype's SARIF as a signed
+referrer on the *same* digest. Swap grype for any SARIF-emitting tool and nothing else changes —
+houba is analyzer-agnostic and never the gate.
+
+```bash
+make demo            # places + stamps + SBOMs the front-door images
+make scan            # grype on the SBOM → houba attach, per placed image
+make blast-radius    # the report now has a SCAN column, read by digest
+```
+
+`make blast-radius` gains a **SCAN** column: placed images show grype's real findings (e.g.
+`C0 H3 M12`, or `clean`), while the **bypass image** shows `-` — it never went through the front
+door, so it has no scan referrer (no provenance in *any* dimension). grype pulls its CVE database
+from the internet on first run; an air-gapped deployment mirrors it internally.
