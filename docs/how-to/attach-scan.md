@@ -113,19 +113,44 @@ config — exactly today's behaviour. No flag and no roster entry required for p
 
 ## Posture reports (rule evaluations, not vulnerabilities)
 
-A SARIF report is not always a vulnerability scan. Policy / posture tools (for example the sibling
-tool **regis**, which emits SARIF) report **rule evaluations** — each result carries an explicit
-SARIF `kind` (`pass` / `fail` / …) rather than a CVSS `security-severity` score.
+A SARIF report is not always a vulnerability scan. Policy / posture analyzers that emit SARIF
+(license, EOL, best-practice, or compliance tools) report **rule evaluations** — each result carries
+an explicit SARIF `kind` (`pass` / `fail` / …) rather than a CVSS `security-severity` score.
 
 `houba attach` recognizes this: a result with an explicit `kind` is summarized as a rule outcome,
 not a vulnerability, so a failed hygiene rule never inflates the `vuln.*` counts:
 
 ```bash
 uv run houba attach --format sarif posture.sarif.json harbor.corp/lib/redis:7.2.0
-# attached sarif scan (regis 1.x) → harbor.corp/lib/redis@sha256:ref…
+# attached sarif scan (posture-analyzer 1.x) → harbor.corp/lib/redis@sha256:ref…
 ```
 
 The stamp then carries `io.houba.scan.rule.passed` / `io.houba.scan.rule.failed` alongside the
 `io.houba.scan.vuln.*` buckets (a CVSS-scored result is always counted as a vulnerability, even if
 it also carries a `kind`). The `--fail-on <severity>` gate acts on `vuln.*` only — rule failures
 are reported in the stamp, not gated.
+
+### End-to-end: any SARIF analyzer at the front door
+
+The same path works for **any analyzer that emits SARIF** — a vulnerability scanner, or a
+policy-as-code engine that also covers **licenses, EOL, and best-practices** beyond CVEs. The
+analyzer reads the placed, hardened front-door image itself; houba does not invoke it. You run your
+analyzer, then publish its verdict as portable provenance:
+
+```bash
+# any SARIF-emitting analyzer: read the placed image, apply your policy
+<analyzer> registry.example.com/lib/redis@sha256:abc… -o sarif > findings.sarif.json
+# houba: bind the verdict to the digest as a signed referrer
+houba attach registry.example.com/lib/redis@sha256:abc… --report findings.sarif.json
+```
+
+That verdict is now a signed referrer on the digest, read **by digest** by an admission controller
+(Kyverno), Dependency-Track, or an audit — the same join key as the stamp and SBOM. The division of
+labour: **the analyzer decides, houba carries, the admission controller enforces** (signed-scan +
+max-age, [ADR 0032](https://github.com/trivoallan/houba/blob/main/docs/architecture/decisions/0032-attach-is-scan-provenance-not-a-store.md)). Read
+at the **front door**: a registry that strips OCI referrers on replication (e.g. Harbor) won't carry
+them downstream — follow the digest back to where houba attached them.
+
+houba's only requirement is SARIF: it stays analyzer-agnostic (the `SarifMapper` handles
+CVSS-scored vulnerabilities and rule `pass`/`fail` alike), so swapping or adding analyzers never
+touches houba.
