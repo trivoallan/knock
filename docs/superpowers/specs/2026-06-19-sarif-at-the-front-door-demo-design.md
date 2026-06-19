@@ -80,9 +80,10 @@ scan dimension too. Everything joins on the digest.
 
 ## Deliberate simplifications (`ponytail:`)
 
-- **Tag-based, not digest-pinned.** Placed tags are stable post-`reconcile`, so grype-by-tag +
-  attach-by-tag bind the same content. Upgrade path: resolve tag→digest once and pass the digest to
-  both, to close the tag-moved race in a live registry.
+- **Digest-pinned.** scan-attach resolves each tag via `regctl image digest` (the same digest
+  blast-radius reads), uses `@digest` for fetch + attach, dedups tags sharing a digest, and falls
+  back to the SPDX SBOM when no CycloneDX referrer is present (grype reads either). Run `make scan`
+  right after the placing reconcile — referrers are per-digest, so a later reconcile strands them.
 - **No enforcement.** The demo stops at "read the verdict by digest"; Kyverno admission (the existing
   `docs/examples/admission/require-fresh-houba-scan.yaml`) is out of scope.
 - **CVE-DB egress is real** (grype pulls from its DB source); air-gapped mirroring is a one-line
@@ -96,13 +97,19 @@ scan dimension too. Everything joins on the digest.
 - Bundling grype into the houba image (dropped — the demo proves the opposite).
 - A second analyzer (trivy) in the demo — grype only; swapping is a one-line change.
 - houba-core changes (none — the scan Job is deploy glue; `attach` and `blast-radius.sh` exist).
+- **Rebuilt-with-provenance (index) images** — their SBOM/scan referrers do not land on the digest the
+  tag resolves to, so variant rows read `-` (e2e-confirmed: the index digest *and* its children carry
+  no referrers). A pre-existing houba **referrer-durability gap on the rebuild path** (it also breaks
+  `publish-sbom` → Dependency-Track for rebuilds) — tracked as a separate houba-core follow-up. The
+  demo's clean rows are the single-manifest path (the `debian-xz` fixture, busybox copies).
 
 ## Acceptance
 
-- `make scan` → the scan-attach Job completes; each placed front-door image gains a SARIF referrer
-  (`regctl referrers <digest>` shows it, with `io.houba.scan.*`), the image **digest unchanged**.
-- `make blast-radius` → the report shows a SCAN column: placed images with grype's findings, the
-  bypass image `— (no scan)`.
+- `make scan` → the scan-attach Job completes; each **single-manifest** front-door image gains a SARIF
+  referrer (`regctl artifact list <digest>` shows it, with `io.houba.scan.*`), the image **digest
+  unchanged**. (Rebuilt index variants are subject to the referrer-durability gap noted above.)
+- `make blast-radius` → the SCAN column shows the `debian-xz` fixture as `C145 H324 M663 L156`,
+  busybox copies as `clean`, and the bypass image as `-` (e2e-confirmed on kind).
 - `DeployReference` / `DeployLocal` show the scan-attach Job (grype + houba) + the CVE-DB egress;
   Mermaid exports refreshed; abstract views unchanged.
 - No change under `houba/` (the scan Job is deploy glue; `attach` and `blast-radius.sh` are existing).

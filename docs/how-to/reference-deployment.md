@@ -274,7 +274,7 @@ label is the product.
 ### Scan at the front door — `make scan`
 
 The reference demo wires one such consumer end-to-end. `make scan` runs a one-shot Job: an
-off-the-shelf `anchore/grype` container evaluates the SBOM houba already attached to each placed
+off-the-shelf grype container evaluates the SBOM houba already attached to each placed
 image (`grype sbom:` — no registry credentials), and `houba attach` binds grype's SARIF as a signed
 referrer on the *same* digest. Swap grype for any SARIF-emitting tool and nothing else changes —
 houba is analyzer-agnostic and never the gate.
@@ -285,7 +285,19 @@ make scan            # grype on the SBOM → houba attach, per placed image
 make blast-radius    # the report now has a SCAN column, read by digest
 ```
 
-`make blast-radius` gains a **SCAN** column: placed images show grype's real findings (e.g.
-`C0 H3 M12`, or `clean`), while the **bypass image** shows `-` — it never went through the front
-door, so it has no scan referrer (no provenance in *any* dimension). grype pulls its CVE database
-from the internet on first run; an air-gapped deployment mirrors it internally.
+`make blast-radius` gains a **SCAN** column: placed images show grype's real findings (e.g. the
+`debian-xz` fixture as `C145 H324 M663 L156`, or `clean`), while the **bypass image** shows `-` — it
+never went through the front door, so it has no scan referrer. grype pulls its CVE database from the
+internet on first run; an air-gapped deployment mirrors it internally.
+
+Two caveats to run it cleanly:
+
+- **Run `make scan` right after the reconcile that placed the images** (`make demo` / `demo-run`),
+  and `make blast-radius` right after — no reconcile in between. Referrers are bound to a **digest**;
+  a later reconcile that re-places an image strands the prior scan on the old digest.
+- **Rebuilt images built with provenance show `-` for now** (known limitation). A provenance rebuild
+  is an OCI **index**, and houba's SBOM/scan referrers don't currently land on the digest the tag
+  resolves to — so the variant rows (`debian:bookworm-slim-eu` / `-us`) read `-` even though they
+  were scanned. This is a houba referrer-durability gap on the rebuild path (it also affects
+  `publish-sbom` → Dependency-Track), tracked as a separate follow-up; the single-manifest path (the
+  `debian-xz` fixture, busybox copies) is unaffected.
