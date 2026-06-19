@@ -40,8 +40,11 @@ spec:
             - {name: scripts, mountPath: /scripts, readOnly: true}
             - {name: shared, mountPath: /shared}
             - {name: home, mountPath: /tmp}
-        - name: grype                 # off-the-shelf, unmodified: evaluate the local SBOM (no registry auth)
-          image: anchore/grype:v0.80.0
+        - name: grype                 # off-the-shelf grype, evaluates the local SBOM (no registry auth)
+          # anchore/grype is distroless (no /bin/sh for the loop below) and runs as root; the
+          # chainguard -dev variant ships busybox sh AND runs nonroot (satisfies the pod policy).
+          # ponytail: -dev is a moving tag — pin a digest for reproducibility / air-gapped mirrors.
+          image: cgr.dev/chainguard/grype:latest-dev
           command: ["sh", "-c"]
           args:
             - 'set -e; for f in /shared/*.sbom.json; do [ -e "$f" ] || continue; grype "sbom:$f" -o sarif --file "${f%.sbom.json}.sarif"; done'
