@@ -33,6 +33,7 @@ class MirrorArtifact:
     transform_version: str | None = None  # recorded {prefix}.transform.version
     imported_at: datetime | None = None  # parsed org.opencontainers.image.created (stamp time)
     attested: bool = True  # does this mirror digest already carry a signed houba attestation?
+    sbom_covered: bool = True  # does it already carry every required SBOM referrer?
 
 
 def _classify(
@@ -42,7 +43,7 @@ def _classify(
     grace: timedelta,
     *,
     desired_transform_version: str | None = None,
-) -> Literal["import", "update", "skip", "sign"]:
+) -> Literal["import", "update", "keep"]:
     if mirror is None:
         return "import"
     transform_unchanged = mirror.transform_version == desired_transform_version
@@ -51,8 +52,7 @@ def _classify(
         return "update"  # operator changed the hardening → rebuild now, no grace
     if not source_unchanged and now - source.pushed_at >= grace:
         return "update"  # source moved and settled
-    # Keeping the current mirror digest (skip) — backfill its signature if unsigned.
-    return "skip" if mirror.attested else "sign"
+    return "keep"  # keep the current mirror digest; coverage backfills are derived by the caller
 
 
 @dataclass(frozen=True)
@@ -62,6 +62,7 @@ class VariantReconcile:
     to_update: list[str]
     aliases: dict[str, str]
     to_sign: list[str] = field(default_factory=list)
+    to_sbom: list[str] = field(default_factory=list)
 
 
 def reconcile_variant(
@@ -82,6 +83,7 @@ def reconcile_variant(
     to_import: list[str] = []
     to_update: list[str] = []
     to_sign: list[str] = []
+    to_sbom: list[str] = []
     for src_tag in plan.tags:
         out_tag = src_tag + plan.suffix
         try:
@@ -91,19 +93,20 @@ def reconcile_variant(
                 f"source tag {src_tag!r} absent from source state — "
                 "expand_import selection and source fetch must be consistent"
             ) from exc
+        mir = mirror.get(out_tag)
         decision = _classify(
-            src,
-            mirror.get(out_tag),
-            now,
-            grace,
-            desired_transform_version=desired_transform_version,
+            src, mir, now, grace, desired_transform_version=desired_transform_version
         )
         if decision == "import":
             to_import.append(out_tag)
         elif decision == "update":
             to_update.append(out_tag)
-        elif decision == "sign":
-            to_sign.append(out_tag)
+        else:  # "keep" — backfill coverage on the kept digest, signature and SBOM independently
+            assert mir is not None  # _classify returns "keep" only when the mirror is present
+            if not mir.attested:
+                to_sign.append(out_tag)
+            if not mir.sbom_covered:
+                to_sbom.append(out_tag)
     aliases = {alias + plan.suffix: target + plan.suffix for alias, target in plan.aliases.items()}
     return VariantReconcile(
         variant=plan.name,
@@ -111,6 +114,7 @@ def reconcile_variant(
         to_update=to_update,
         aliases=aliases,
         to_sign=to_sign,
+        to_sbom=to_sbom,
     )
 
 

@@ -35,7 +35,7 @@ def test_classify_import_when_absent_from_mirror() -> None:
 def test_classify_skip_when_base_digest_unchanged() -> None:
     src = _src("sha256:a", 30)
     mir = MirrorArtifact(base_digest="sha256:a")
-    assert _classify(src, mir, NOW, GRACE) == "skip"
+    assert _classify(src, mir, NOW, GRACE) == "keep"
 
 
 def test_classify_update_when_changed_and_stable() -> None:
@@ -47,7 +47,7 @@ def test_classify_update_when_changed_and_stable() -> None:
 def test_classify_skip_when_changed_but_within_grace() -> None:
     src = _src("sha256:b", 3)  # source moved 3 days ago → within 7-day grace
     mir = MirrorArtifact(base_digest="sha256:a")
-    assert _classify(src, mir, NOW, GRACE) == "skip"
+    assert _classify(src, mir, NOW, GRACE) == "keep"
 
 
 def test_classify_update_exactly_at_grace_boundary() -> None:
@@ -94,6 +94,51 @@ def test_reconcile_variant_empty_suffix_passthrough() -> None:
     got = reconcile_variant(plan, source, {}, NOW, GRACE)
     assert got.to_import == ["2.0.0"]
     assert got.aliases == {"2": "2.0.0"}
+
+
+def test_classify_keep_is_independent_of_coverage() -> None:
+    # _classify decides only rebuild-vs-keep; signature/SBOM coverage is orthogonal.
+    src = _src("sha256:a", 30)
+    mir = MirrorArtifact(base_digest="sha256:a", attested=False, sbom_covered=False)
+    assert _classify(src, mir, NOW, GRACE) == "keep"
+
+
+def test_reconcile_variant_kept_uncovered_goes_to_sbom() -> None:
+    plan = _plan("standard", "", tags=["1.0.0"], aliases={})
+    source = {"1.0.0": _src("sha256:a", 30)}  # unchanged → keep
+    mirror = {"1.0.0": MirrorArtifact(base_digest="sha256:a", sbom_covered=False)}
+    got = reconcile_variant(plan, source, mirror, NOW, GRACE)
+    assert got.to_sbom == ["1.0.0"]
+    assert got.to_sign == []
+    assert got.to_import == [] and got.to_update == []
+
+
+def test_reconcile_variant_kept_unsigned_and_uncovered_in_both() -> None:
+    plan = _plan("standard", "", tags=["1.0.0"], aliases={})
+    source = {"1.0.0": _src("sha256:a", 30)}
+    mirror = {"1.0.0": MirrorArtifact(base_digest="sha256:a", attested=False, sbom_covered=False)}
+    got = reconcile_variant(plan, source, mirror, NOW, GRACE)
+    assert got.to_sign == ["1.0.0"]
+    assert got.to_sbom == ["1.0.0"]
+
+
+def test_reconcile_variant_kept_covered_in_neither() -> None:
+    plan = _plan("standard", "", tags=["1.0.0"], aliases={})
+    source = {"1.0.0": _src("sha256:a", 30)}
+    # attested and sbom_covered both default to True
+    mirror = {"1.0.0": MirrorArtifact(base_digest="sha256:a")}
+    got = reconcile_variant(plan, source, mirror, NOW, GRACE)
+    assert got.to_sign == [] and got.to_sbom == []
+
+
+def test_reconcile_variant_update_never_backfills_sbom() -> None:
+    # A rebuild (base changed, stable) re-attaches the SBOM itself → not a backfill candidate.
+    plan = _plan("standard", "", tags=["1.0.0"], aliases={})
+    source = {"1.0.0": _src("sha256:b", 10)}  # changed + stable → update
+    mirror = {"1.0.0": MirrorArtifact(base_digest="sha256:a", sbom_covered=False)}
+    got = reconcile_variant(plan, source, mirror, NOW, GRACE)
+    assert got.to_update == ["1.0.0"]
+    assert got.to_sbom == []
 
 
 def _expanded(variants: list[VariantPlan]) -> ExpandedImport:
@@ -166,7 +211,7 @@ def test_reconcile_variant_missing_source_tag_raises_clear_error() -> None:
 def test_classify_transform_unchanged_falls_back_to_source_logic() -> None:
     src = SourceArtifact(digest="sha256:s", pushed_at=NOW)
     mir = MirrorArtifact(base_digest="sha256:s", transform_version="sha256:tv")
-    assert _classify(src, mir, NOW, GRACE, desired_transform_version="sha256:tv") == "skip"
+    assert _classify(src, mir, NOW, GRACE, desired_transform_version="sha256:tv") == "keep"
 
 
 def test_classify_transform_changed_rebuilds_now_ignoring_grace() -> None:
@@ -179,7 +224,7 @@ def test_classify_transform_changed_rebuilds_now_ignoring_grace() -> None:
 def test_classify_copy_path_unchanged_when_no_transform_either_side() -> None:
     src = SourceArtifact(digest="sha256:s", pushed_at=NOW)
     mir = MirrorArtifact(base_digest="sha256:s")  # transform_version defaults None
-    assert _classify(src, mir, NOW, GRACE, desired_transform_version=None) == "skip"
+    assert _classify(src, mir, NOW, GRACE, desired_transform_version=None) == "keep"
 
 
 # ---------------------------------------------------------------------------
