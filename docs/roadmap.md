@@ -90,8 +90,8 @@ shipped** once design exposed the real gap:
   mappers" framing was a near-non-problem: Trivy already emits SARIF and `regis` will too. The real
   gap was *semantic* — the SARIF mapper counted every result as a vulnerability, so a `regis`
   posture report (pass/fail rules, EOL, hygiene) inflated `vuln.*` and tripped `--fail-on`. Now the
-  mapper classifies rule evaluations as `rule.passed`/`rule.failed`, generically (no `regis`-specific
-  code). *(ADR 0027; closed #102)*
+  mapper classifies governance verdicts into a severity-bucketed `policy.*` space, generically (no
+  `regis`-specific code). *(ADR 0027, superseded by 0039; closed #102)*
 - **Scan-referrer GC — the last feature-side item.** `houba gc` walks the roster and collects
   superseded scan-result referrers, keeping the N newest per `(tool, format)` older than a grace
   window (the same keep-N + older-than model proven on tag retention). Dry-run by default, `--apply`
