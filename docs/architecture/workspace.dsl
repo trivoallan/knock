@@ -249,6 +249,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     rfGc = infrastructureNode "CronJob: houba-gc" "Weekly houba gc --apply — collects superseded scan referrers (keep=2/older-than=30d). No git-sync/policies; walks the roster only." "Kubernetes CronJob"
                     rfDt = infrastructureNode "Deployment: dependency-track (own app)" "Worked-example SBOM consumer (apiserver + frontend, embedded H2) — its own ArgoCD Application (ADR 0035). Currency layer: package-level blast-radius. Fed the CycloneDX SBOM referrer houba attaches (HOUBA_SBOM_FORMATS), uploaded by publish-sbom." "Kubernetes Deployment"
                     rfPublishSbom = infrastructureNode "Job: houba-publish-sbom" "Fetches the CycloneDX SBOM referrer houba attaches to each placed image and uploads it to DT. regctl + python, no conversion. Twin of the blast-radius consumer." "Kubernetes Job"
+                    rfScanAttach = infrastructureNode "Job: houba-scan-attach" "Off-the-shelf grype evaluates the SBOM referrer houba attached (grype sbom:, no registry creds); houba attach binds the SARIF as a signed referrer on the same digest. regctl + grype + houba, no derived image. grype pulls its CVE DB from the internet (air-gapped => mirror)." "Kubernetes Job"
                     rfMarkedWorkloads = deploymentNode "marked workloads (team-a/b/c)" "pause pods annotated with the placed/bypass digest — the runtime stand-in (namespaces-as-clusters)" "Kubernetes Deployment" {
                         rfPausePods = infrastructureNode "pause pods" "One pod per namespace (team-a/b/c), annotated with the placed/bypass digest; queried by blast-radius via kube API." "Kubernetes Pod"
                     }
@@ -273,6 +274,7 @@ workspace "houba" "Single front door / stamper for external container images." {
             rfEsObj -> rfEso "Requests the roster Secret" "ESO"
             rfGit -> rfPolicyRepo "Pulls policies" "git"
             rfBlast -> rfDest "Reads provenance stamps" "regctl" "DataCoupling"
+            rfScanAttach -> rfDest "Fetches the SBOM referrer; attaches grype's SARIF" "regctl" "DataCoupling"
             rfBlast -> rfPausePods "Lists pods, joins digest -> cluster (kube API)" "kubectl / kube API"
             rfGc -> rfDest "Collects superseded scan referrers" "regctl" "DataCoupling"
         }
@@ -298,6 +300,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                         loGc = infrastructureNode "CronJob: houba-gc" "Suspended (like reconcile); fired on demand. houba gc --apply over the roster." "Kubernetes CronJob"
                         loDt = infrastructureNode "Deployment: dependency-track (own app)" "Worked-example SBOM consumer (apiserver + frontend, embedded H2) — (ADR 0035). Currency layer: package-level blast-radius. Fed the CycloneDX SBOM referrer houba attaches (HOUBA_SBOM_FORMATS), uploaded by publish-sbom." "Kubernetes Deployment"
                         loPublishSbom = infrastructureNode "Job: houba-publish-sbom" "Fetches the CycloneDX SBOM referrer houba attaches to each placed image and uploads it to DT. regctl + python, no conversion. Twin of the blast-radius consumer." "Kubernetes Job"
+                        loScanAttach = infrastructureNode "Job: houba-scan-attach" "grype (off-the-shelf) on the SBOM referrer => houba attach the SARIF. No derived image, no registry creds for grype; grype pulls its CVE DB from the internet (air-gapped => mirror)." "Kubernetes Job"
                         loMarkedWorkloads = deploymentNode "marked workloads (team-a/b/c)" "pause pods annotated with the placed/bypass digest — the runtime stand-in (namespaces-as-clusters)" "Kubernetes Deployment" {
                             loPausePods = infrastructureNode "pause pods" "One pod per namespace (team-a/b/c), annotated with the placed/bypass digest; queried by blast-radius via kube API." "Kubernetes Pod"
                         }
