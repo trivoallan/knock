@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from houba.use_cases.report import RunReport
 
 OperationKind = Literal[
-    "imported", "updated", "deleted", "aliased", "skipped", "marked", "attested"
+    "imported", "updated", "deleted", "aliased", "skipped", "marked", "attested", "sbom"
 ]
 
 
@@ -26,6 +26,7 @@ class Counts:
     skipped: int = 0
     marked: int = 0
     attested: int = 0
+    sbom: int = 0
     failed: int = 0
 
 
