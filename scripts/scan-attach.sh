@@ -14,6 +14,7 @@ set -euo pipefail
 MODE="${1:?usage: scan-attach.sh fetch|attach}"
 SHARED="${SHARED:-/shared}"
 CDX_TYPE="application/vnd.cyclonedx+json"
+SPDX_TYPE="application/spdx+json"
 
 read -r HOST TLS USER_NAME PASSWORD < <(
   BLAST_REGISTRY="${BLAST_REGISTRY:-}" python3 - <<'PY'
@@ -35,24 +36,36 @@ REPOS=${BLAST_REPOS//,/ }
 for repo in ${REPOS}; do
   case "${repo}" in bypassed/*) echo "» skip ${repo} (bypass — stays un-provenanced)" >&2; continue;; esac
   ref_base="${HOST}/${repo}"
+  seen=""   # digests already handled (dedup tags that share a digest)
   for tag in $(regctl tag ls "${ref_base}" 2>/dev/null); do
-    ref="${ref_base}:${tag}"
-    key="${repo//\//_}_${tag}"
+    # Pin to the SAME digest blast-radius reads (regctl image digest) so the scan referrer lands
+    # where the consumer looks. houba and regctl can resolve a tag to different digests
+    # (multi-arch index vs child manifest); the digest ref removes that ambiguity.
+    digest=$(regctl image digest "${ref_base}:${tag}" 2>/dev/null || echo "")
+    [ -n "${digest}" ] || { echo "» ${repo}:${tag} — cannot resolve digest — skipped" >&2; continue; }
+    case " ${seen} " in *" ${digest} "*) continue;; esac
+    seen="${seen} ${digest}"
+    ref="${ref_base}@${digest}"
+    key="${repo//\//_}_${digest#sha256:}"
+    short="${repo}@${digest:0:19}"   # repo@sha256:<first 12 hex>, for readable logs
     case "${MODE}" in
       fetch)
         if regctl artifact get --subject "${ref}" --filter-artifact-type "${CDX_TYPE}" \
              > "${SHARED}/${key}.sbom.json" 2>/dev/null && [ -s "${SHARED}/${key}.sbom.json" ]; then
-          echo "» fetched SBOM for ${repo}:${tag}" >&2
+          echo "» fetched CycloneDX SBOM for ${short}" >&2
+        elif regctl artifact get --subject "${ref}" --filter-artifact-type "${SPDX_TYPE}" \
+             > "${SHARED}/${key}.sbom.json" 2>/dev/null && [ -s "${SHARED}/${key}.sbom.json" ]; then
+          echo "» fetched SPDX SBOM for ${short}" >&2
         else
           rm -f "${SHARED}/${key}.sbom.json"
-          echo "» ${repo}:${tag} — no CycloneDX SBOM referrer — skipped" >&2
+          echo "» ${short} — no SBOM referrer (CDX or SPDX) — skipped" >&2
         fi
         ;;
       attach)
         if [ -s "${SHARED}/${key}.sarif" ]; then
           houba attach "${ref}" --report "${SHARED}/${key}.sarif"
         else
-          echo "» ${repo}:${tag} — no SARIF (grype produced none) — skipped" >&2
+          echo "» ${short} — no SARIF — skipped" >&2
         fi
         ;;
       *) echo "unknown mode ${MODE}" >&2; exit 2;;
