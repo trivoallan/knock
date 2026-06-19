@@ -1,4 +1,4 @@
-"""SARIF (2.1.0) scan-report mapper. Buckets findings into vuln severities."""
+"""SARIF (2.1.0) scan-report mapper: vuln findings → vuln.*, governance verdicts → policy.*."""
 
 from __future__ import annotations
 
@@ -45,38 +45,58 @@ def _score_to_bucket(score: float) -> str:
     return "low"
 
 
-def _classify(result: dict[str, Any], severities: dict[str, float]) -> str:
-    """Full fact key for one SARIF result: a `vuln.<severity>` or a `rule.<status>`."""
+def _result_score(result: dict[str, Any], severities: dict[str, float]) -> float | None:
+    """A SARIF result's CVSS score: its own `security-severity`, else its rule's."""
     props = result.get("properties")
     score = _to_float(props.get("security-severity")) if isinstance(props, dict) else None
     if score is None:
         rid = result.get("ruleId")
         if isinstance(rid, str):
             score = severities.get(rid)
+    return score
+
+
+def _level_to_bucket(level: Any) -> str:
+    """Legacy SARIF `level` → severity bucket: error→high, warning→medium, note/none→low."""
+    if level == "error":
+        return "high"
+    if level == "warning":
+        return "medium"
+    if level in ("note", "none"):
+        return "low"
+    return "unknown"
+
+
+def _classify(result: dict[str, Any], severities: dict[str, float]) -> str:
+    """Full fact key for one SARIF result: a `policy.*` verdict or a `vuln.<severity>` finding.
+
+    An explicit SARIF `kind` marks an evaluation outcome (a governance verdict) and **wins over**
+    the CVSS score, so a posture tool's severity-scored verdict lands in `policy.*`, not `vuln.*`.
+    houba keys on the standard `kind` signal, never on the tool name — that keeps it
+    analyzer-agnostic. A result without `kind` is a finding, bucketed by CVSS score then by level.
+    """
+    kind = result.get("kind")
+    if kind is not None:
+        if kind == "pass":
+            return "policy.passed"
+        score = _result_score(result, severities)
+        if score is not None:
+            return f"policy.{_score_to_bucket(score)}"
+        return f"policy.{_level_to_bucket(result.get('level'))}"
+    score = _result_score(result, severities)
     if score is not None:
         return f"vuln.{_score_to_bucket(score)}"
-    # A rule/policy evaluation announces itself with an explicit SARIF `kind`. Route those to
-    # rule.* so posture findings (e.g. regis EOL/hygiene via SARIF) don't inflate vuln counts.
-    # Only an explicit kind triggers this; producers that omit it keep the legacy bucketing below.
-    if "kind" in result:
-        return "rule.passed" if result.get("kind") == "pass" else "rule.failed"
-    # ponytail: no CVSS + no explicit kind -> legacy level fallback as a vuln. Ceiling: a
-    # kind-less, scoreless real vuln classifies by level; fine for CVSS-emitting scanners. Upgrade
-    # path: read a SARIF taxonomy/tag if a producer ever sets kind:"fail" on uncscored vulns.
-    level = result.get("level")
-    if level == "error":
-        return "vuln.high"
-    if level == "warning":
-        return "vuln.medium"
-    if level in ("note", "none"):
-        return "vuln.low"
-    return "vuln.unknown"
+    return f"vuln.{_level_to_bucket(result.get('level'))}"
 
 
 class SarifMapper(ScanFormatMapper):
     name = "sarif"
     report_media_type = "application/sarif+json"
-    fact_keys = (*(f"vuln.{b}" for b in _BUCKETS), "rule.passed", "rule.failed")
+    fact_keys = (
+        *(f"vuln.{b}" for b in _BUCKETS),
+        *(f"policy.{b}" for b in _BUCKETS),
+        "policy.passed",
+    )
 
     def recognizes(self, doc: dict[str, Any]) -> bool:
         schema = doc.get("$schema")
