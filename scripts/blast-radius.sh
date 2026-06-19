@@ -92,13 +92,29 @@ for repo in ${REPOS}; do
     # annotations from it — same shape the examples README documents.
     manifest=$(regctl manifest get "${ref_base}:${tag}" --format '{{json .}}' 2>/dev/null || echo '{}')
     digest=$(regctl image digest "${ref_base}:${tag}" 2>/dev/null || echo '-')
-    REF="${repo}:${tag}" DIGEST="${digest}" python3 - "${manifest}" >>"${ROWS_FILE}" <<'PY'
+    # Scan leg: the io.houba.scan.* summary lives on the scan-result referrer (by digest).
+    scan=$(regctl artifact list "${ref_base}:${tag}" \
+             --filter-artifact-type application/vnd.houba.scan.result.v1 \
+             --format '{{json .}}' 2>/dev/null || echo '{}')
+    REF="${repo}:${tag}" DIGEST="${digest}" python3 - "${manifest}" "${scan}" >>"${ROWS_FILE}" <<'PY'
 import json, os, sys
 ann = (json.loads(sys.argv[1] or "{}") or {}).get("annotations", {}) or {}
 base = ann.get("org.opencontainers.image.base.digest", "-")
 owners = ann.get("io.houba.owners", "-")
 policy = ann.get("io.houba.policy", "-")
-print("\t".join([os.environ["REF"], base, owners, policy, os.environ["DIGEST"]]))
+def scan_summary(raw):
+    try:
+        refs = json.loads(raw or "{}")
+    except ValueError:
+        return "-"
+    descs = refs if isinstance(refs, list) else (refs.get("referrers") or refs.get("manifests") or [])
+    for d in descs if isinstance(descs, list) else []:
+        a = d.get("annotations") or {}
+        buckets = [(b, a.get(f"io.houba.scan.vuln.{b}", "0")) for b in ("critical", "high", "medium", "low")]
+        hits = [f"{b[0].upper()}{n}" for b, n in buckets if n not in ("0", None)]
+        return " ".join(hits) if hits else "clean"
+    return "-"   # no scan referrer
+print("\t".join([os.environ["REF"], base, owners, policy, os.environ["DIGEST"], scan_summary(sys.argv[2])]))
 PY
   done
 done
@@ -120,9 +136,9 @@ for item in pods.get("items", []) or []:
 
 rows = []
 for line in open(sys.argv[1]):
-    ref, base, owners, policy, digest = (line.rstrip("\n").split("\t") + ["-"] * 5)[:5]
+    ref, base, owners, policy, digest, scan = (line.rstrip("\n").split("\t") + ["-"] * 6)[:6]
     clusters = ",".join(sorted(digest_clusters.get(digest, []))) or "-"
-    rows.append(dict(ref=ref, base=base, owners=owners, policy=policy, digest=digest, clusters=clusters))
+    rows.append(dict(ref=ref, base=base, owners=owners, policy=policy, digest=digest, clusters=clusters, scan=scan))
 
 fb, fo = os.environ.get("BLAST_BASE_DIGEST", ""), os.environ.get("BLAST_OWNER", "")
 def owns(row, owner):
@@ -130,9 +146,9 @@ def owns(row, owner):
 sel = [r for r in rows if (not fb or r["base"] == fb) and (not fo or owns(r, fo))]
 
 print(f"\n=== inventory ({len(sel)}/{len(rows)} artifacts) ===")
-print(f"{'REF':40} {'OWNERS':30} {'RUNNING IN':18} BASE.DIGEST")
+print(f"{'REF':40} {'OWNERS':30} {'RUNNING IN':18} {'SCAN':16} BASE.DIGEST")
 for r in sorted(sel, key=lambda r: r["ref"]):
-    print(f"{r['ref']:40} {r['owners']:30} {r['clusters']:18} {r['base']}")
+    print(f"{r['ref']:40} {r['owners']:30} {r['clusters']:18} {r['scan']:16} {r['base']}")
 
 def rollup(key, title):
     groups = {}
