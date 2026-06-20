@@ -47,7 +47,7 @@ spec:
           image: cgr.dev/chainguard/grype:latest-dev
           command: ["sh", "-c"]
           args:
-            - 'set -e; for f in /shared/*.sbom.json; do [ -e "$f" ] || continue; grype "sbom:$f" -o sarif --file "${f%.sbom.json}.sarif"; done'
+            - 'set -e; for f in /shared/*.sbom.json; do [ -e "$f" ] || continue; grype "sbom:$f" -o sarif --file "${f%.sbom.json}.grype.sarif"; done'
           env:
             - {name: GRYPE_DB_CACHE_DIR, value: /tmp/grype}   # writable (readOnlyRootFilesystem)
           securityContext:
@@ -55,6 +55,28 @@ spec:
             readOnlyRootFilesystem: true
             capabilities: {drop: ["ALL"]}
           volumeMounts:
+            - {name: shared, mountPath: /shared}
+            - {name: home, mountPath: /tmp}
+        - name: regis                 # off-the-shelf regis: governance verdicts (EOL/hygiene/licenses/CVE)
+          # regis reads the IMAGE (not the SBOM) and shells out to regctl; we set regctl to
+          # plain-HTTP for the in-cluster Zot. ponytail: -full bundles the analyzers, :main has
+          # PR #791's kind=fail; pin a digest for reproducibility once a release includes #791.
+          image: ghcr.io/trivoallan/regis:main-full
+          command: ["sh", "/scripts/regis-scan.sh"]
+          env:
+            - {name: HOME, value: /tmp}                    # regctl config + analyzer caches (RO rootfs)
+            - {name: TRIVY_CACHE_DIR, value: /tmp/trivy}
+            - {name: SHARED, value: /shared}
+            - name: BLAST_REPOS
+              valueFrom: {configMapKeyRef: {name: houba-config, key: BLAST_REPOS}}
+          envFrom:
+            - secretRef: {name: houba-registries}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: scripts, mountPath: /scripts, readOnly: true}
             - {name: shared, mountPath: /shared}
             - {name: home, mountPath: /tmp}
       containers:
