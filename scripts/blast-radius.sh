@@ -93,42 +93,51 @@ for repo in ${REPOS}; do
     # annotations from it — same shape the examples README documents.
     manifest=$(regctl manifest get "${ref_base}:${tag}" --format '{{json .}}' 2>/dev/null || echo '{}')
     digest=$(regctl image digest "${ref_base}:${tag}" 2>/dev/null || echo '-')
-    # Scan leg: fetch the scan-result referrer's SARIF (by digest) and bucket its findings.
-    # Proven `artifact get --subject` (same as publish-sbom); write to a file — a large SARIF as
-    # argv blows ARG_MAX. Empty file => no scan referrer on this digest.
+    # Scan/governance leg: list ALL scan referrers on this digest and read the io.houba.scan.*
+    # annotations houba already computed. Summed by fact space, NOT by tool: vuln.* -> SCAN,
+    # policy.* -> POLICY. A grype referrer populates vuln.*, a regis referrer populates policy.*;
+    # every houba scan referrer carries both key sets (zero-filled), so the sum just works.
     : > "${SCAN_FILE}"
-    regctl artifact get --subject "${ref_base}:${tag}" \
-      --filter-artifact-type application/vnd.houba.scan.result.v1 > "${SCAN_FILE}" 2>/dev/null || true
+    regctl artifact list "${ref_base}:${tag}" \
+      --filter-artifact-type application/vnd.houba.scan.result.v1 \
+      --format '{{json .}}' > "${SCAN_FILE}" 2>/dev/null || true
     REF="${repo}:${tag}" DIGEST="${digest}" python3 - "${manifest}" "${SCAN_FILE}" >>"${ROWS_FILE}" <<'PY'
 import json, os, sys
 ann = (json.loads(sys.argv[1] or "{}") or {}).get("annotations", {}) or {}
 base = ann.get("org.opencontainers.image.base.digest", "-")
 owners = ann.get("io.houba.owners", "-")
 policy = ann.get("io.houba.policy", "-")
-def scan_summary(path):
+def axis(descriptors, space):
+    # space = "vuln" or "policy"; sum io.houba.scan.<space>.<bucket> across all referrers.
+    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    found = False
+    for d in descriptors:
+        a = d.get("annotations") or {}
+        for b in counts:
+            v = a.get(f"io.houba.scan.{space}.{b}")
+            if v is not None:
+                found = True
+                try:
+                    counts[b] += int(v)
+                except (TypeError, ValueError):
+                    pass
+    if not found:
+        return "-"   # no scan referrer carries this fact space
+    hits = [f"{b[0].upper()}{counts[b]}" for b in ("critical", "high", "medium", "low") if counts[b]]
+    return " ".join(hits) if hits else "clean"
+
+def referrers(path):
     if not os.path.exists(path) or os.path.getsize(path) == 0:
-        return "-"   # no scan referrer on this digest
+        return []
     try:
         doc = json.load(open(path))
     except (ValueError, OSError):
-        return "-"
-    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-    def bucket(s):
-        return "critical" if s >= 9 else "high" if s >= 7 else "medium" if s >= 4 else "low"
-    for run in doc.get("runs") or []:
-        driver = (run.get("tool") or {}).get("driver") or {}
-        rules = {r.get("id"): r for r in (driver.get("rules") or [])}
-        for res in run.get("results") or []:
-            sev = (res.get("properties") or {}).get("security-severity")
-            if sev is None:
-                sev = ((rules.get(res.get("ruleId")) or {}).get("properties") or {}).get("security-severity")
-            try:
-                counts[bucket(float(sev))] += 1
-            except (TypeError, ValueError):
-                pass
-    hits = [f"{k[0].upper()}{counts[k]}" for k in ("critical", "high", "medium", "low") if counts[k]]
-    return " ".join(hits) if hits else "clean"
-print("\t".join([os.environ["REF"], base, owners, policy, os.environ["DIGEST"], scan_summary(sys.argv[2])]))
+        return []
+    return doc.get("descriptors") or doc.get("manifests") or []
+
+descs = referrers(sys.argv[2])
+print("\t".join([os.environ["REF"], base, owners, policy, os.environ["DIGEST"],
+                 axis(descs, "vuln"), axis(descs, "policy")]))
 PY
   done
 done
@@ -150,9 +159,10 @@ for item in pods.get("items", []) or []:
 
 rows = []
 for line in open(sys.argv[1]):
-    ref, base, owners, policy, digest, scan = (line.rstrip("\n").split("\t") + ["-"] * 6)[:6]
+    ref, base, owners, policy, digest, scan, gov = (line.rstrip("\n").split("\t") + ["-"] * 7)[:7]
     clusters = ",".join(sorted(digest_clusters.get(digest, []))) or "-"
-    rows.append(dict(ref=ref, base=base, owners=owners, policy=policy, digest=digest, clusters=clusters, scan=scan))
+    rows.append(dict(ref=ref, base=base, owners=owners, policy=policy, digest=digest,
+                     clusters=clusters, scan=scan, gov=gov))
 
 fb, fo = os.environ.get("BLAST_BASE_DIGEST", ""), os.environ.get("BLAST_OWNER", "")
 def owns(row, owner):
@@ -160,9 +170,9 @@ def owns(row, owner):
 sel = [r for r in rows if (not fb or r["base"] == fb) and (not fo or owns(r, fo))]
 
 print(f"\n=== inventory ({len(sel)}/{len(rows)} artifacts) ===")
-print(f"{'REF':40} {'OWNERS':30} {'RUNNING IN':18} {'SCAN':16} BASE.DIGEST")
+print(f"{'REF':38} {'OWNERS':26} {'RUNNING IN':14} {'SCAN':14} {'POLICY':14} BASE.DIGEST")
 for r in sorted(sel, key=lambda r: r["ref"]):
-    print(f"{r['ref']:40} {r['owners']:30} {r['clusters']:18} {r['scan']:16} {r['base']}")
+    print(f"{r['ref']:38} {r['owners']:26} {r['clusters']:14} {r['scan']:14} {r['gov']:14} {r['base']}")
 
 def rollup(key, title):
     groups = {}
