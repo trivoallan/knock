@@ -62,11 +62,15 @@ for repo in ${REPOS}; do
         fi
         ;;
       attach)
-        if [ -s "${SHARED}/${key}.sarif" ]; then
-          houba attach "${ref}" --report "${SHARED}/${key}.sarif"
-        else
-          echo "» ${short} — no SARIF — skipped" >&2
-        fi
+        # One referrer per analyzer: grype writes <key>.grype.sarif, regis writes <key>.regis.sarif.
+        # The SBOM is <key>.sbom.json, so the *.sarif glob never matches it.
+        attached=0
+        for sarif in "${SHARED}/${key}".*.sarif; do
+          [ -e "${sarif}" ] || continue
+          houba attach "${ref}" --report "${sarif}"
+          attached=$((attached + 1))
+        done
+        [ "${attached}" -gt 0 ] || echo "» ${short} — no SARIF (grype/regis) — skipped" >&2
         ;;
       *) echo "unknown mode ${MODE}" >&2; exit 2;;
     esac
