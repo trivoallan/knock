@@ -21,7 +21,7 @@ that point), so coverage is uniform — there is no "rebuilt images only" gap. A
 over every external image, houba is the natural choke point to guarantee **100% SBOM coverage**, which
 is what *coverage gates value* demands. Coverage is also self-healing: on every reconcile, a kept
 digest missing its SBOM referrer is re-covered on the live digest without a rebuild, mirroring the
-existing signature backfill (ADR 0039).
+existing signature backfill (ADR 0040).
 
 Generation is **always-on**, governed by `HOUBA_SBOM_FORMATS` — a global operator setting, never a
 per-policy field. It chooses *which* formats (SPDX by default; CycloneDX alongside or instead), never

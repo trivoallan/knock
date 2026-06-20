@@ -2,7 +2,7 @@
 
 *Status: design. Closes the gap deferred by [the sign-the-SBOM spec](2026-06-17-sign-sbom-design.md)
 ("Backfill of already-placed tags is deferred until a real signal demands it") — the signal has now
-arrived (see Evidence). ADR 0039. Date: 2026-06-19.*
+arrived (see Evidence). ADR 0040. Date: 2026-06-19.*
 
 ## Why (the gap, and the signal)
 
@@ -139,7 +139,7 @@ is ever produced because presence (by media type) is checked first. Same converg
 ## Deliverables
 
 - Code + tests above.
-- **ADR 0039** (`docs/architecture/decisions/0039-sbom-coverage-backfill.md`) — thin, links here:
+- **ADR 0040** (`docs/architecture/decisions/0040-sbom-coverage-backfill.md`) — thin, links here:
   "reconcile self-heals SBOM coverage on kept digests, mirroring the signature backfill."
 - One line in the reconcile explanation doc noting coverage is now self-healing (not import-only),
   cross-linking the sign-the-SBOM spec's deferred-backfill note.
