@@ -18,24 +18,12 @@
         "source": "github",
         "repo": "obra/superpowers"
       }
-    },
-    "agent-skills": {
-      "source": {
-        "source": "github",
-        "repo": "rlespinasse/agent-skills"
-      }
     }
   },
   "enabledPlugins": {
     "superpowers@superpowers-dev": true,
     "product-management@knowledge-work-plugins": true,
-    "ponytail@ponytail": true,
-    "conventional-commit@agent-skills": true,
-    "diataxis@agent-skills": true,
-    "local-branches-status@agent-skills": true,
-    "pin-github-actions@agent-skills": true,
-    "verify-pr-logs@agent-skills": true,
-    "verify-readme-features@agent-skills": true
+    "ponytail@ponytail": true
   },
   "hooks": {
     "SessionStart": [
