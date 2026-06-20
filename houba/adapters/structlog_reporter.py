@@ -77,6 +77,9 @@ class StructlogReporter:
             deleted=totals.deleted,
             aliased=totals.aliased,
             skipped=totals.skipped,
+            marked=totals.marked,
+            attested=totals.attested,
+            sbom=totals.sbom,
             failed=totals.failed,
         )
 
@@ -90,5 +93,8 @@ class StructlogReporter:
             deleted=report.totals.deleted,
             aliased=report.totals.aliased,
             skipped=report.totals.skipped,
+            marked=report.totals.marked,
+            attested=report.totals.attested,
+            sbom=report.totals.sbom,
             failed=report.totals.failed,
         )
