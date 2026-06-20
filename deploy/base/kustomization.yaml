@@ -69,10 +69,11 @@ configMapGenerator:
   - name: houba-publish-sbom
     files:
       - publish-sbom.sh=../../scripts/publish-sbom.sh
-  # The scan-attach script, mounted into the scan-attach Job (canonical copy at scripts/).
+  # The scan-attach + regis-scan scripts, mounted into the scan-attach Job (canonical copy at scripts/).
   - name: houba-scan-attach
     files:
       - scan-attach.sh=../../scripts/scan-attach.sh
+      - regis-scan.sh=../../scripts/regis-scan.sh
   # The XZ incident seed: the build script + the fixture Dockerfile (buildctl's context),
   # mounted together at /ctx so buildkitd builds the deliberately-vulnerable fixture in-cluster.
   - name: houba-seed-incident
