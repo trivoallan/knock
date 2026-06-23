@@ -1,0 +1,34 @@
+# Migration parity — fan ONE upstream image into TWO team projects in a single
+# `houba reconcile`, the per-team fan-out a registry-replication rule used to do.
+#
+# The point of the example is the multi-entry `defaults.destinations` list: houba
+# *places* (and stamps + SBOMs) into each destination, so every team copy is
+# self-describing. Replication, by contrast, strips OCI referrers in transit
+# (goharbor/harbor#23210), leaving the team copy blind to a CVE query.
+#
+# Prove it: `scripts/migration-parity-proof.sh` reconciles this and asserts the
+# package-SBOM referrer is present on BOTH copies. See
+# docs/how-to/migrate-from-replication.md.
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: migration-redis
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/redis
+  defaults:
+    owners:
+      - group:default/platform        # stamped as io.houba.owners on every copy
+    destinations:                      # `registry` omitted → the single configured registry
+      - project: team-a               #   one entry per team project — the replication fan-out
+        repository: redis
+      - project: team-b
+        repository: redis
+  imports:
+    - name: stable
+      tags:
+        includeRegex: "^7\\.2\\."       # just the 7.2.x line, to keep the demo quick
+        aliases:
+          - "{major}.{minor}"           # 7.2 → highest 7.2.z

@@ -46,8 +46,8 @@ spec:
   source: { registry: docker.io, repository: library/redis }
   defaults:
     destinations:
-      - { registry: internal, project: team-a, repository: redis }
-      - { registry: internal, project: team-b, repository: redis }
+      - { project: team-a, repository: redis }
+      - { project: team-b, repository: redis }
   imports:
     - name: stable
       tags: { semverOnly: true }
@@ -56,6 +56,24 @@ spec:
 Running `houba reconcile` against this policy places the selected tags into both
 destinations, stamps each with the same provenance annotations, and attaches a
 package-level SBOM to each placed digest. There is no separate replication job to wire.
+
+## Prove it
+
+The claim above — *the referrer survives into every team copy* — is runnable, not just asserted.
+The example [`docs/examples/migration/redis.yml`](https://github.com/trivoallan/houba/blob/main/docs/examples/migration/redis.yml)
+fans `redis` into two team projects, and [`scripts/migration-parity-proof.sh`](https://github.com/trivoallan/houba/blob/main/scripts/migration-parity-proof.sh)
+asserts the package-SBOM referrer landed on **both** copies:
+
+```bash
+POLICY_DIR=docs/examples/migration ./scripts/migration-parity-proof.sh
+# PASS team-a/redis:7.2@sha256:… — SBOM referrer present
+# PASS team-b/redis:7.2@sha256:… — SBOM referrer present
+# migration-parity proof PASSED: every team copy is self-describing
+```
+
+It exits non-zero, naming the bare copy, if any destination is missing the referrer — the failure a
+replicated copy would exhibit. (The script proves houba's side; it does not stand up Harbor to
+reproduce the stripping, which the issue above documents.)
 
 ## Migration checklist
 
