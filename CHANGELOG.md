@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.8.0](https://github.com/trivoallan/houba/compare/v0.7.0...v0.8.0) (2026-06-23)
+
+
+### Features
+
+* **deploy:** demonstrable blast-radius — owner + cluster join (demo glue, no houba-core) ([#156](https://github.com/trivoallan/houba/issues/156)) ([9554927](https://github.com/trivoallan/houba/commit/955492712193ee6166090480d0b6df530291c23b))
+* **deploy:** make argocd-ui + distinct UI ports (registry 8080→8082) ([#158](https://github.com/trivoallan/houba/issues/158)) ([db0ab65](https://github.com/trivoallan/houba/commit/db0ab65d11dd36554263992ae4d8df6993bee57e))
+* **domain:** SARIF kind routes governance verdicts to policy.* ([#166](https://github.com/trivoallan/houba/issues/166)) ([75eaf13](https://github.com/trivoallan/houba/commit/75eaf13cf32e98f02f0faac321b9d54b4c63f1c1))
+* **image:** rebase runtime on Alpine + Python 3.13 ([#161](https://github.com/trivoallan/houba/issues/161)) ([494f1dc](https://github.com/trivoallan/houba/commit/494f1dcf055f6db80398778458b31d26426a12b0))
+
+
+### Bug Fixes
+
+* **adapters:** emit marked/attested/sbom counts in the journal summary ([#169](https://github.com/trivoallan/houba/issues/169)) ([d28135e](https://github.com/trivoallan/houba/commit/d28135e4454668e72bc7933c627ddad989069afd))
+* **reconcile:** backfill SBOM coverage on kept digests ([#167](https://github.com/trivoallan/houba/issues/167)) ([29d12e6](https://github.com/trivoallan/houba/commit/29d12e672b5f9b99d2a2a10908570ff362dce9f3))
+
+
+### Documentation
+
+* **docs:** docs polish pass — architecture narrative, rebuild/harden how-to, slidev deck ([#155](https://github.com/trivoallan/houba/issues/155)) ([448329f](https://github.com/trivoallan/houba/commit/448329f1afa9f7fa9e338756276c9ad7b8793dd9))
+* **docs:** documentation polish pass — architecture page, restructured reference, search, glossary, llms.txt ([#157](https://github.com/trivoallan/houba/issues/157)) ([1ded166](https://github.com/trivoallan/houba/commit/1ded166b80c0c6d9b8da1b515b8b3c5a7c252f7d))
+* **docs:** publish the SARIF ingestion profile reference ([#168](https://github.com/trivoallan/houba/issues/168)) ([30ea1f2](https://github.com/trivoallan/houba/commit/30ea1f24100d202a14d4ef42a41eea694fe898d1))
+* **how-to:** governance findings as portable provenance (any SARIF analyzer) ([#164](https://github.com/trivoallan/houba/issues/164)) ([e7ea143](https://github.com/trivoallan/houba/commit/e7ea143e7825bcfd8defc45ab3d7a0d742f1bd8c))
+* **roadmap:** decouple forward direction from versions; re-theme Now to adoption ([#153](https://github.com/trivoallan/houba/issues/153)) ([9ff6a42](https://github.com/trivoallan/houba/commit/9ff6a42ac3ca2b38d9d0615a36e41ab8bfe18deb))
+* **roadmap:** defer MirrorPolicy-as-CRD (operator unrequested) ([#159](https://github.com/trivoallan/houba/issues/159)) ([ccaa7ac](https://github.com/trivoallan/houba/commit/ccaa7ac678b27a3c54da038a1114f53dc200cb6f))
+* **roadmap:** re-snapshot to 0.8.0 ([#171](https://github.com/trivoallan/houba/issues/171)) ([1d191b6](https://github.com/trivoallan/houba/commit/1d191b60c48309bd2c341a34efae3b797a9d11c8))
+
 ## [0.7.0](https://github.com/trivoallan/houba/compare/v0.6.0...v0.7.0) (2026-06-17)
 
 
