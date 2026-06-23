@@ -138,18 +138,23 @@ Two of the former *Now* items shipped:
 > already runs. Adoption has two faces — a *demonstrable* end-to-end story **and** a *self-serve* docs
 > surface good enough to onboard without us — both enablement on already-shipped capability, **not tied
 > to a version**.
+>
+> The committed near-term increment leads with the *demonstrable* face — the migration-parity narrative —
+> then clears the two self-serve levers below (a readable generated reference, the no-SBOM backstop). The
+> consumption-surface bet (*Developer coverage portal*, in *Later*) stays parked: its houba-side
+> prerequisites have now shipped (the `digest` join key and the `audit --sbom` tier, #143), but
+> graduating it is a separate, larger commitment taken only on a real demand signal.
 
 - **Adoption proof — the demonstrable mandate.** Wire the end-to-end story on the reference
   deployment: houba places + stamps + SBOMs (copy *and* rebuild) → an SBOM/vuln consumer answers
   *"which images ship the vulnerable package?"* → the stamp's `owners` answer *"who do we contact?"* →
   a runtime source answers *"where does it run?"*, all joined on the image digest. The reproduced XZ
   (CVE-2024-3094) incident and the bypass-image coverage blind spot already ship (the loop is built);
-  the owner + runtime (cluster) join now ships on the reference deployment (#156) — what remains is the
-  migration-parity narrative. houba is **one leg** of
-  the join — it produces the facts; the org's tools run the query. A side note on placement: the
-  per-team fan-out a replication setup gives you is already a policy `destinations` list, so houba
-  *replaces* registry replication rather than chaining behind them — and because replication strips
-  OCI referrers, that is what keeps the SBOM/signature alive in every team copy.
+  the owner + runtime (cluster) join now ships on the reference deployment (#156). What remains is the
+  **migration-parity narrative** — a worked how-to/example showing houba's policy `destinations` fan-out
+  *replacing* registry replication rather than chaining behind it, and (because replication strips OCI
+  referrers) keeping the SBOM/signature alive in every team copy. houba is **one leg** of the join — it
+  produces the facts; the org's tools run the query.
 - **Docs polish pass — shipped (#155, #157, #164, #168).** The architecture-narrative page (with inline
   C4 diagrams), the `rebuild-and-harden` how-to (richer worked examples), site-wide fenced code blocks,
   a restructured reference (search + glossary + `llms.txt`), the governance-findings-as-provenance
