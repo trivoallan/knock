@@ -1,6 +1,6 @@
 # houba — Roadmap
 
-*Format: Now / Deferred / Later. Status as of **0.7.0** (2026-06). The core loop is delivered, and the
+*Format: Now / Deferred / Later. Status as of **0.8.0** (2026-06). The core loop is delivered, and the
 single-front-door mandate is now **enforceable and trustworthy** — complete attestation coverage, a
 `--fail-on` CI gate, and a frozen provenance contract have all shipped. Blast-radius now reaches
 **package** granularity: every placed image carries a syft-generated SBOM (signed under houba's
@@ -144,22 +144,25 @@ Two of the former *Now* items shipped:
   *"which images ship the vulnerable package?"* → the stamp's `owners` answer *"who do we contact?"* →
   a runtime source answers *"where does it run?"*, all joined on the image digest. The reproduced XZ
   (CVE-2024-3094) incident and the bypass-image coverage blind spot already ship (the loop is built);
-  what remains is the owner/runtime join and the migration-parity narrative. houba is **one leg** of
+  the owner + runtime (cluster) join now ships on the reference deployment (#156) — what remains is the
+  migration-parity narrative. houba is **one leg** of
   the join — it produces the facts; the org's tools run the query. A side note on placement: the
   per-team fan-out a replication setup gives you is already a policy `destinations` list, so houba
   *replaces* registry replication rather than chaining behind them — and because replication strips
   OCI referrers, that is what keeps the SBOM/signature alive in every team copy.
-- **Docs polish pass — shipped (#155).** The architecture-narrative page (with inline C4 diagrams),
-  the `rebuild-and-harden` how-to (richer worked examples), and site-wide fenced code blocks all
-  landed. One docs-polish lever remains:
+- **Docs polish pass — shipped (#155, #157, #164, #168).** The architecture-narrative page (with inline
+  C4 diagrams), the `rebuild-and-harden` how-to (richer worked examples), site-wide fenced code blocks,
+  a restructured reference (search + glossary + `llms.txt`), the governance-findings-as-provenance
+  how-to, and the published SARIF ingestion-profile reference all landed. One docs-polish lever remains:
 - **Schema rendering — readable generated reference (tooling, carries risk).** The generated
   `MirrorPolicy`, config `HOUBA_*`, and scan-predicate `/scan/v1` reference each render as a deep, noisy
   `anyOf > item N` tree (json-schema-for-humans default). Make them readable — collapse the union noise,
   friendlier property paths, or a different renderer. Distinct line: the renderer swap/config is real
   work, not free polish.
 - **`audit --fail-on-no-sbom` — minor (backfill guard).** Since SBOMs now generate on **both** paths,
-  every freshly-placed image already carries one, so this gate only catches pre-unification backfill
-  and regressions — a small completeness item, no longer a headline. *(ADR 0029)*
+  every freshly-placed image already carries one; reconcile also backfills the SBOM on kept (un-replaced)
+  digests (#167), so the only hole left is pre-unification images and regressions — the gate is purely a
+  backstop, no longer a headline. *(ADR 0029)*
 
 ## Deferred — revisit only on a real signal (YAGNI until then)
 
