@@ -7,6 +7,7 @@ beat-4 can't be faked by a misconfiguration:
   1 = checked, still affected (>0 projects)  -> beat 4 not yet green
   2 = could NOT check (missing env, auth/HTTP/network error) -> inconclusive, not a verdict
 """
+
 import json
 import os
 import sys
@@ -19,7 +20,7 @@ CANT_CHECK = 2
 def main() -> int:
     cve = sys.argv[1] if len(sys.argv) > 1 else "CVE-2021-44228"
     try:
-        base = os.environ["DT_BASE_URL"].rstrip("/")      # e.g. http://dependency-track-apiserver:8080
+        base = os.environ["DT_BASE_URL"].rstrip("/")  # e.g. http://dependency-track-apiserver:8080
         key = os.environ["DT_API_KEY"]
     except KeyError as e:
         print(f"cannot check: set DT_BASE_URL and DT_API_KEY ({e} unset)", file=sys.stderr)
