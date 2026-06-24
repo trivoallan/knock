@@ -23,6 +23,12 @@ jobs:
       major: ${{ steps.release.outputs.major }}
       minor: ${{ steps.release.outputs.minor }}
     steps:
+      # Needed so the re-lock step below can push to the release PR branch.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
       # Maintains a release PR from Conventional Commits; on merge it tags the
       # release, writes CHANGELOG.md, and bumps the version in pyproject.toml.
       # Config: release-please-config.json + .release-please-manifest.json.
@@ -36,6 +42,24 @@ jobs:
           # RELEASE_PLEASE_TOKEN secret is set (PRs opened by GITHUB_TOKEN do
           # not trigger workflows, so required checks can't report on them).
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      # release-please bumps pyproject.toml on the release PR but never re-locks, so
+      # uv.lock's root version lags by one release. Re-sync it on that same PR branch.
+      # ponytail: re-runs `uv lock` whole; fine — only the root version changes.
+      - name: Re-lock uv.lock on the release PR
+        if: ${{ steps.release.outputs.pr }}
+        env:
+          BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+        run: |
+          git fetch origin "$BRANCH"
+          git checkout "$BRANCH"
+          pipx run uv lock
+          if ! git diff --quiet uv.lock; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "chore(deps): sync uv.lock to the bumped version"
+            git push origin "$BRANCH"
+          fi
 
   # On a freshly-cut release, build and publish the signed, attested image.
   # Running here (same workflow run as the release) avoids the well-known gotcha
