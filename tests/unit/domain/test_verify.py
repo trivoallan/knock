@@ -111,3 +111,8 @@ def test_scan_pass_picks_freshest_predicate():
     old_bad = _pred("2026-06-01T00:00:00+00:00", critical=1)
     new_good = _pred("2026-06-24T11:30:00+00:00", critical=0, high=0)
     assert _eval({Requirement.scan_pass}, scan_predicates=[old_bad, new_good]).passed is True
+
+
+def test_scan_pass_fails_closed_on_unparseable_attested_at():
+    out = _eval({Requirement.scan_pass}, scan_predicates=[_pred("not-a-date", high=0)]).outcomes[0]
+    assert out.passed is False and "unparseable" in out.detail

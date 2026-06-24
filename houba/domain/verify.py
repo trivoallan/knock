@@ -92,7 +92,18 @@ def _scan_outcome(
 ) -> RequirementOutcome:
     if not preds:
         return RequirementOutcome(Requirement.scan_pass, False, "no verifiable scan attestation")
-    freshest = max(preds, key=lambda p: _to_utc(p.attested_at))
+    try:
+        freshest = max(preds, key=lambda p: _to_utc(p.attested_at))
+        age = now - _to_utc(freshest.attested_at)
+    except ValueError:
+        # A signed predicate with a non-ISO attested_at can't establish freshness. The gate's
+        # posture is fail-closed, so reject rather than let ValueError escape the pure domain
+        # (it would surface as exit 4 InternalError instead of a clean exit-1 gate verdict).
+        return RequirementOutcome(
+            Requirement.scan_pass,
+            False,
+            "scan attestation has an unparseable attested_at timestamp",
+        )
     if gate_breached(freshest.summary, max_severity):
         breached = [
             f"{n} finding(s) at {s.value}"
@@ -103,7 +114,6 @@ def _scan_outcome(
         return RequirementOutcome(
             Requirement.scan_pass, False, f"{'; '.join(breached)} (>= {max_severity.value})"
         )
-    age = now - _to_utc(freshest.attested_at)
     if age > max_age:
         return RequirementOutcome(
             Requirement.scan_pass,
