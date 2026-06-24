@@ -140,8 +140,10 @@ kargo: cert-manager ## Install kargo ($(KARGO_VERSION)) — promotion gate opera
 	  || $(HELM) upgrade --install kargo oci://ghcr.io/akuity/kargo-charts/kargo \
 	       --namespace kargo --create-namespace \
 	       --version $(KARGO_VERSION) \
-	       --set api.adminAccount.passwordHash='$$2a$$10$$Zrhhie4vDfMTQ4l4l7e6.eRZ90rQ7P2dZ2NfMA8RHk0HhB6Sa9Ki' \
+	       --set api.adminAccount.passwordHash='$$2b$$10$$V3i/1rDaLYm4Dhp5wiP8NOKbMgaHvfIAB2tIGbnwygGQbHWGYGIeq' \
 	       --set api.adminAccount.tokenSigningKey=demotokensigningkeyabc123
+	@# passwordHash above is bcrypt("houba-demo-admin") — the password `make kargo-ui` prints.
+	@# Same demo password as DT (DT_ADMIN_PASSWORD); keep the two in sync if you change it.
 	$(KUBECTL) -n kargo rollout status deploy/kargo-api --timeout=300s
 
 kyverno: ## Install kyverno ($(KYVERNO_VERSION)) — admission gate operator (standalone, no cert-manager dep)
@@ -298,9 +300,9 @@ registry-ui: ## Open Zot's built-in registry UI (port-forward svc/registry to lo
 
 kargo-ui: ## Open the kargo UI to watch the promotion gate (port-forward svc/kargo-api)
 	@# kargo-api serves the UI over HTTPS (self-signed, cert-manager-issued) on :443 — the same
-	@# port the kargo quickstart port-forwards. Login is the admin account whose passwordHash is
-	@# set in the `kargo` install target (tokenSigningKey demotokensigningkeyabc123).
-	@echo ">> kargo UI at https://localhost:8084  (login user 'admin' / the password set in 'make kargo'; self-signed cert, accept the warning). Ctrl-C to stop."
+	@# port the kargo quickstart port-forwards. The admin password is the bcrypt plaintext the
+	@# `kargo` target installs (houba-demo-admin), the same as DT's.
+	@echo ">> kargo UI at https://localhost:8084  (login admin / houba-demo-admin — self-signed cert, accept the warning). Ctrl-C to stop."
 	$(KUBECTL) -n kargo port-forward svc/kargo-api 8084:443
 
 logs: ## Tail the last reconcile run's logs
