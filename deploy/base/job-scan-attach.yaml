@@ -66,6 +66,13 @@ spec:
             - {name: SHARED, value: /shared}
             - name: BLAST_REPOS
               valueFrom: {configMapKeyRef: {name: houba-config, key: BLAST_REPOS}}
+            # Key-mode cosign so the referrer is signed: the downstream gate
+            # (houba verify --require scan-pass) only accepts a verified attestation.
+            # Keyless is impossible on kind (no Fulcio/Rekor/OIDC).
+            - {name: HOUBA_ATTEST_SIGNER, value: key}
+            - {name: HOUBA_ATTEST_KEY_REF, value: /attest/cosign.key}
+            - name: COSIGN_PASSWORD
+              valueFrom: {secretKeyRef: {name: houba-attest-key, key: COSIGN_PASSWORD}}
           envFrom:
             - secretRef: {name: houba-registries}
           securityContext:
@@ -76,7 +83,9 @@ spec:
             - {name: scripts, mountPath: /scripts, readOnly: true}
             - {name: shared, mountPath: /shared}
             - {name: home, mountPath: /tmp}
+            - {name: attest-key, mountPath: /attest, readOnly: true}
       volumes:
         - {name: scripts, configMap: {name: houba-scan-attach, defaultMode: 0755}}
         - {name: shared, emptyDir: {}}
         - {name: home, emptyDir: {}}
+        - {name: attest-key, secret: {secretName: houba-attest-key, items: [{key: cosign.key, path: cosign.key}]}}

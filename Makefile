@@ -8,6 +8,7 @@
 CLUSTER ?= houba-demo
 IMAGE   ?= houba:dev
 NS      ?= houba
+COSIGN  ?= cosign
 
 # The blast-radius script lives outside the base dir (canonical scripts/), so the
 # configMapGenerator needs the relaxed load restrictor. `kubectl apply -k` can't pass
@@ -34,7 +35,8 @@ OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+
 
 .PHONY: help reference docs-serve cluster image up-local local local-run \
         argocd demo demo-run openbao-seed seed-incident incident-deploy \
-        blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui argocd-ui docker-auth logs down
+        blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui argocd-ui docker-auth logs down \
+        scan cosign-keygen
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -220,3 +222,11 @@ scan: ## Run the scan-attach Job (grype on the SBOM -> houba attach) over the pl
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-scan-attach --timeout=300s
 	$(KUBECTL) -n $(NS) logs job/houba-scan-attach --all-containers
+
+cosign-keygen: ## Generate a demo cosign keypair and load it as a Secret (key-mode signing)
+	@test -f /tmp/houba-demo.key || COSIGN_PASSWORD= $(COSIGN) generate-key-pair --output-key-prefix /tmp/houba-demo
+	-$(KUBECTL) -n $(NS) delete secret houba-attest-key --ignore-not-found
+	$(KUBECTL) -n $(NS) create secret generic houba-attest-key \
+	  --from-file=cosign.key=/tmp/houba-demo.key \
+	  --from-file=cosign.pub=/tmp/houba-demo.pub \
+	  --from-literal=COSIGN_PASSWORD=
