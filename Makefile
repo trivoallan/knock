@@ -39,6 +39,7 @@ OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+
 CERT_MANAGER_VERSION ?= v1.20.2
 KARGO_VERSION        ?= 1.10.7
 KYVERNO_VERSION      ?= 3.8.1
+ROLLOUTS_VERSION     ?= 2.41.0   # argo-rollouts chart (app v1.9.0): the AnalysisTemplate CRD the kargo gate needs
 
 # ---- Demo registry + UV shorthand ----------------------------------------
 # DEMO_REG is the in-CLUSTER service name — what the kubelet/Kyverno see in a Pod's
@@ -56,7 +57,7 @@ UV             ?= uv
 LOG4SHELL_SRC ?= ghcr.io/christophetd/log4shell-vulnerable-app@sha256:6f88430688108e512f7405ac3c73d47f5c370780b94182854ea2cddc6bd59929
 
 .PHONY: help reference docs-serve cluster image up-local local local-run \
-        argocd cert-manager kargo kyverno \
+        argocd cert-manager kargo kyverno argo-rollouts \
         demo demo-run openbao-seed seed-incident incident-deploy seed-log4shell \
         blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui kargo-ui argocd-ui docker-auth logs down \
         scan cosign-keygen demo-assert-gates demo-cve-blast-radius
@@ -120,7 +121,7 @@ cert-manager: ## Install cert-manager ($(CERT_MANAGER_VERSION)) — prerequisite
 	@$(KUBECTL) get namespace cert-manager >/dev/null 2>&1 \
 	  && $(HELM) status cert-manager -n cert-manager >/dev/null 2>&1 \
 	  && echo ">> cert-manager already installed — skipping" \
-	  || $(HELM) upgrade --install cert-manager jetstack/cert-manager \
+	  || $(HELM) upgrade --install cert-manager cert-manager \
 	       --repo https://charts.jetstack.io \
 	       --namespace cert-manager --create-namespace \
 	       --version $(CERT_MANAGER_VERSION) \
@@ -128,15 +129,17 @@ cert-manager: ## Install cert-manager ($(CERT_MANAGER_VERSION)) — prerequisite
 	$(KUBECTL) -n cert-manager rollout status deploy/cert-manager --timeout=180s
 	$(KUBECTL) -n cert-manager rollout status deploy/cert-manager-webhook --timeout=180s
 
-kargo: cert-manager ## Install kargo ($(KARGO_VERSION)) — promotion gate operator (requires helm 3.12+, not helm 4+)
-	@# kargo chart is published as oci://ghcr.io/akuity/kargo — requires helm 3.12+ (helm 4 has a
-	@# breaking OCI-descriptor check incompatible with kargo's chart format as of v1.10.x).
+kargo: cert-manager ## Install kargo ($(KARGO_VERSION)) — promotion gate operator (requires helm 3.13+)
+	@# The kargo Helm CHART lives at oci://ghcr.io/akuity/kargo-charts/kargo (tags carry no `v`);
+	@# oci://ghcr.io/akuity/kargo is the container IMAGE (a multi-arch index) — pulling that as a
+	@# chart fails with "manifest does not contain minimum number of descriptors". The chart pulls
+	@# fine under both helm 3 and helm 4.
 	@$(KUBECTL) get namespace kargo >/dev/null 2>&1 \
 	  && $(HELM) status kargo -n kargo >/dev/null 2>&1 \
 	  && echo ">> kargo already installed — skipping" \
-	  || $(HELM) upgrade --install kargo oci://ghcr.io/akuity/kargo \
+	  || $(HELM) upgrade --install kargo oci://ghcr.io/akuity/kargo-charts/kargo \
 	       --namespace kargo --create-namespace \
-	       --version v$(KARGO_VERSION) \
+	       --version $(KARGO_VERSION) \
 	       --set api.adminAccount.passwordHash='$$2a$$10$$Zrhhie4vDfMTQ4l4l7e6.eRZ90rQ7P2dZ2NfMA8RHk0HhB6Sa9Ki' \
 	       --set api.adminAccount.tokenSigningKey=demotokensigningkeyabc123
 	$(KUBECTL) -n kargo rollout status deploy/kargo-api --timeout=300s
@@ -145,13 +148,28 @@ kyverno: ## Install kyverno ($(KYVERNO_VERSION)) — admission gate operator (st
 	@$(KUBECTL) get namespace kyverno >/dev/null 2>&1 \
 	  && $(HELM) status kyverno -n kyverno >/dev/null 2>&1 \
 	  && echo ">> kyverno already installed — skipping" \
-	  || $(HELM) upgrade --install kyverno kyverno/kyverno \
+	  || $(HELM) upgrade --install kyverno kyverno \
 	       --repo https://kyverno.github.io/kyverno \
 	       --namespace kyverno --create-namespace \
 	       --version $(KYVERNO_VERSION)
 	$(KUBECTL) -n kyverno rollout status deploy/kyverno-admission-controller --timeout=300s
 
-demo: cluster image argocd cert-manager kargo kyverno ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
+argo-rollouts: ## Install Argo Rollouts ($(ROLLOUTS_VERSION)) — the AnalysisTemplate CRD + controller the kargo gate runs through
+	@# The kargo scan-gate is an Argo Rollouts AnalysisTemplate (argoproj.io/v1alpha1); without
+	@# this CRD `make seed-incident` fails to apply the kargo Component ("no matches for kind
+	@# AnalysisTemplate"). Documented prerequisite (same posture as ESO), installed here so the
+	@# one-command demo is self-contained on a fresh cluster.
+	@$(KUBECTL) get namespace argo-rollouts >/dev/null 2>&1 \
+	  && $(HELM) status argo-rollouts -n argo-rollouts >/dev/null 2>&1 \
+	  && echo ">> argo-rollouts already installed — skipping" \
+	  || $(HELM) upgrade --install argo-rollouts argo-rollouts \
+	       --repo https://argoproj.github.io/argo-helm \
+	       --namespace argo-rollouts --create-namespace \
+	       --version $(ROLLOUTS_VERSION) \
+	       --set installCRDs=true
+	$(KUBECTL) -n argo-rollouts rollout status deploy/argo-rollouts --timeout=300s
+
+demo: cluster image argocd cert-manager kargo kyverno argo-rollouts ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
 	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) \
 	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
 	@echo ">> App-of-Apps applied. ArgoCD is syncing 4 children: ESO+OpenBao (wave 0) then houba+buildkitd (wave 1)."
