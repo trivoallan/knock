@@ -1,7 +1,0 @@
-# Key-mode cosign signing add-on for the scan-attach Job (key-mode, not keyless: kind has
-# no Fulcio/Rekor/OIDC). The houba-attest-key Secret it consumes is created out-of-band by
-# `make cosign-keygen` (a generated demo keypair) — private key material is NEVER committed.
-# Pulled into the overlays as a Component (ADR 0035), the same dual-use shape as
-# components/dependency-track.
-apiVersion: kustomize.config.k8s.io/v1alpha1
-kind: Component
