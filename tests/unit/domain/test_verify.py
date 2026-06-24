@@ -133,3 +133,38 @@ def test_scan_absent_detail_has_fix_hint():
         {Requirement.scan_pass}, stamp_present=True, sbom_present=True, scan_predicates=[]
     ).outcomes[0]
     assert out.passed is False and "houba attach" in out.detail
+
+
+def _gov_pred(at, summary):
+    return VerifiedPredicate(summary=summary, attested_at=at)
+
+
+def test_governed_passes_on_pass_receipt():
+    pred = _gov_pred("2026-06-24T11:00:00+00:00", {"policy.passed": "1"})
+    out = _eval({Requirement.governed}, scan_predicates=[pred]).outcomes[0]
+    assert out.requirement is Requirement.governed
+    assert out.passed is True
+
+
+def test_governed_fails_on_policy_breach():
+    pred = _gov_pred("2026-06-24T11:00:00+00:00", {"policy.critical": "1"})
+    out = _eval({Requirement.governed}, scan_predicates=[pred]).outcomes[0]
+    assert out.passed is False and "failing" in out.detail
+
+
+def test_governed_fails_when_not_governed():
+    pred = _gov_pred("2026-06-24T11:00:00+00:00", {"vuln.low": "0"})
+    out = _eval({Requirement.governed}, scan_predicates=[pred]).outcomes[0]
+    assert out.passed is False and "not governed" in out.detail
+
+
+def test_governed_fails_closed_when_no_predicate():
+    out = _eval({Requirement.governed}, scan_predicates=[]).outcomes[0]
+    assert out.requirement is Requirement.governed
+    assert out.passed is False
+
+
+def test_governed_fails_closed_on_unparseable_attested_at():
+    pred = _gov_pred("not-a-date", {"policy.passed": "1"})
+    out = _eval({Requirement.governed}, scan_predicates=[pred]).outcomes[0]
+    assert out.passed is False and "unparseable" in out.detail

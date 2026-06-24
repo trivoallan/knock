@@ -139,7 +139,7 @@ $ houba verify [OPTIONS] IMAGE_REF
 
 **Options**:
 
-* `--require TEXT`: Comma-separated: scan-pass,stamp,sbom.  [default: scan-pass]
+* `--require TEXT`: Comma-separated: scan-pass,stamp,sbom,governed.  [default: scan-pass]
 * `--max-severity [critical|high|medium|low|unknown]`: Fail at or above this scan severity.  [default: high]
 * `--max-age TEXT`: Scan freshness SLA (e.g. 7d, 12h, 30m).  [default: 7d]
 * `--registry TEXT`: Roster entry to authenticate against.

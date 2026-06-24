@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from houba.domain.scan.summary import Severity, gate_breached
+from houba.domain.scan.summary import Severity, gate_breached, policy_breached
 from houba.errors import ConfigError
 from houba.ports.attestor import VerifiedPredicate
 
@@ -21,6 +21,7 @@ class Requirement(enum.StrEnum):
     stamp = "stamp"
     scan_pass = "scan-pass"  # noqa: S105
     sbom = "sbom"
+    governed = "governed"
 
 
 _DURATION_RE = re.compile(r"^(\d+)([dhms])$")
@@ -141,6 +142,51 @@ def _scan_outcome(
     )
 
 
+def _governed_outcome(preds: list[VerifiedPredicate]) -> RequirementOutcome:
+    """Gate on regis's three-valued verdict, read off the freshest scan predicate's facts.
+
+    `policy.passed` (regis `kind:"pass"`) ⇒ governed+clean; any `policy.<bucket>` > 0
+    (a `kind:"fail"` verdict) ⇒ governed+failing; no `policy.*` signal at all ⇒ not governed.
+    Governance has no severity/age threshold here, so this needs only the predicates.
+    """
+    if not preds:
+        return RequirementOutcome(
+            Requirement.governed,
+            False,
+            "no verifiable scan attestation — run `houba attach <ref> <scan-report>` "
+            "with a configured signer",
+        )
+    try:
+        freshest = max(preds, key=lambda p: _to_utc(p.attested_at))
+    except ValueError:
+        return RequirementOutcome(
+            Requirement.governed,
+            False,
+            "scan attestation has an unparseable attested_at timestamp"
+            " — re-attach the scan; attested_at must be ISO-8601",
+        )
+    has_policy_signal = freshest.summary.get("policy.passed", "0") not in ("0", "") or any(
+        int(freshest.summary.get(f"policy.{s.value}", "0") or "0") > 0 for s in Severity
+    )
+    if not has_policy_signal:
+        return RequirementOutcome(
+            Requirement.governed,
+            False,
+            "not governed — no regis verdict on this digest",
+        )
+    if policy_breached(freshest.summary):
+        return RequirementOutcome(
+            Requirement.governed,
+            False,
+            "governance verdict failing — policy finding(s) present",
+        )
+    return RequirementOutcome(
+        Requirement.governed,
+        True,
+        "governed and clean (regis pass receipt)",
+    )
+
+
 def evaluate(
     *,
     requirements: set[Requirement],
@@ -158,4 +204,6 @@ def evaluate(
         outcomes.append(_scan_outcome(scan_predicates, max_severity, max_age, now))
     if Requirement.sbom in requirements:
         outcomes.append(_sbom_outcome(sbom_present))
+    if Requirement.governed in requirements:
+        outcomes.append(_governed_outcome(scan_predicates))
     return VerifyReport(outcomes=tuple(outcomes))

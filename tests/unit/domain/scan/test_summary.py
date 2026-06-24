@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from houba.domain.scan.summary import ScanSummary, Severity, build_scan_annotations, gate_breached
+from houba.domain.scan.summary import (
+    ScanSummary,
+    Severity,
+    build_scan_annotations,
+    gate_breached,
+    policy_breached,
+)
 
 TS = datetime(2026, 6, 12, 9, 30, tzinfo=UTC)
 
@@ -75,3 +81,20 @@ def test_gate_no_findings_or_missing_facts() -> None:
     assert gate_breached(_facts(), Severity.unknown) is False
     assert gate_breached({}, Severity.critical) is False
     assert gate_breached({"vuln.critical": "notanint"}, Severity.critical) is False
+
+
+def test_policy_breached_on_failing_verdict() -> None:
+    assert policy_breached({"policy.critical": "2"}) is True
+    assert policy_breached({"policy.low": "1"}) is True
+    assert policy_breached({"policy.unknown": "1"}) is True
+
+
+def test_policy_passed_receipt_is_not_a_breach() -> None:
+    assert policy_breached({"policy.passed": "1"}) is False
+
+
+def test_policy_breached_no_signal_or_garbage() -> None:
+    assert policy_breached({}) is False
+    # a scan finding is not a policy verdict
+    assert policy_breached({"vuln.critical": "5"}) is False
+    assert policy_breached({"policy.critical": "notanint"}) is False

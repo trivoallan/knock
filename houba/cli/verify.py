@@ -18,7 +18,7 @@ from houba.use_cases.verify import verify_exit_code, verify_image
 def verify(
     image_ref: Annotated[str, typer.Argument(help="Image reference (tag or digest) to verify.")],
     require: Annotated[
-        str, typer.Option("--require", help="Comma-separated: scan-pass,stamp,sbom.")
+        str, typer.Option("--require", help="Comma-separated: scan-pass,stamp,sbom,governed.")
     ] = "scan-pass",
     max_severity: Annotated[
         Severity, typer.Option("--max-severity", help="Fail at or above this scan severity.")

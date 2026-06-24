@@ -47,6 +47,15 @@ def gate_breached(facts: dict[str, str], fail_on: Severity) -> bool:
     return any(_count(facts.get(f"vuln.{s.value}")) > 0 for s in at_or_above)
 
 
+def policy_breached(facts: dict[str, str]) -> bool:
+    """True when any ``policy.<bucket>`` count is > 0 (a regis ``kind:"fail"`` verdict).
+
+    Governance verdicts have no severity threshold here — *any* failing bucket breaches.
+    The ``policy.passed`` receipt (regis ``kind:"pass"``) is **not** a breach.
+    """
+    return any(_count(facts.get(f"policy.{s.value}")) > 0 for s in Severity)
+
+
 @dataclass(frozen=True)
 class ScanSummary:
     """A normalized, format-specific scan summary.

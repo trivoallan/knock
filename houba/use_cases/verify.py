@@ -56,10 +56,10 @@ def verify_image(
         sbom_present = any(registry.list_referrers(subject, at) for at in _SBOM_TYPES)
 
     scan_predicates: list[VerifiedPredicate] = []
-    if Requirement.scan_pass in requirements:
+    if requirements & {Requirement.scan_pass, Requirement.governed}:
         if attestor is None:
             raise ConfigError(
-                "houba verify --require scan-pass needs HOUBA_ATTEST_SIGNER configured"
+                "houba verify --require scan-pass/governed needs HOUBA_ATTEST_SIGNER configured"
             )
         scan_predicates = attestor.verify(subject, SCAN_PREDICATE_TYPE)
 
