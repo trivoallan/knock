@@ -72,3 +72,38 @@ def test_evaluate_combines_requirements():
     report = _eval({Requirement.stamp, Requirement.sbom}, stamp_present=True, sbom_present=False)
     assert report.passed is False
     assert {o.requirement for o in report.outcomes} == {Requirement.stamp, Requirement.sbom}
+
+
+from houba.ports.attestor import VerifiedPredicate
+
+
+def _pred(at, **vuln):
+    return VerifiedPredicate(summary={f"vuln.{k}": str(v) for k, v in vuln.items()}, attested_at=at)
+
+
+def test_scan_pass_fresh_and_clean():
+    p = _pred("2026-06-24T11:00:00+00:00", critical=0, high=0)
+    assert _eval({Requirement.scan_pass}, scan_predicates=[p]).passed is True
+
+
+def test_scan_pass_fails_on_severity():
+    p = _pred("2026-06-24T11:00:00+00:00", critical=1)
+    out = _eval({Requirement.scan_pass}, scan_predicates=[p]).outcomes[0]
+    assert out.passed is False and "critical" in out.detail
+
+
+def test_scan_pass_fails_closed_when_no_predicate():
+    out = _eval({Requirement.scan_pass}, scan_predicates=[]).outcomes[0]
+    assert out.passed is False and "no verifiable scan attestation" in out.detail
+
+
+def test_scan_pass_fails_on_stale():
+    p = _pred("2026-06-01T00:00:00+00:00", high=0)  # > 7d before NOW
+    out = _eval({Requirement.scan_pass}, scan_predicates=[p]).outcomes[0]
+    assert out.passed is False and "SLA" in out.detail
+
+
+def test_scan_pass_picks_freshest_predicate():
+    old_bad = _pred("2026-06-01T00:00:00+00:00", critical=1)
+    new_good = _pred("2026-06-24T11:30:00+00:00", critical=0, high=0)
+    assert _eval({Requirement.scan_pass}, scan_predicates=[old_bad, new_good]).passed is True

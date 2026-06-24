@@ -79,8 +79,37 @@ def _sbom_outcome(present: bool) -> RequirementOutcome:
     )
 
 
-def _scan_outcome(preds: list[VerifiedPredicate], max_severity: Severity, max_age: timedelta, now: datetime) -> RequirementOutcome:  # replaced in Task 4
-    return RequirementOutcome(Requirement.scan_pass, False, "not implemented")
+def _to_utc(text: str) -> datetime:
+    dt = datetime.fromisoformat(text)
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+
+def _scan_outcome(
+    preds: list[VerifiedPredicate], max_severity: Severity, max_age: timedelta, now: datetime
+) -> RequirementOutcome:
+    if not preds:
+        return RequirementOutcome(Requirement.scan_pass, False, "no verifiable scan attestation")
+    freshest = max(preds, key=lambda p: _to_utc(p.attested_at))
+    if gate_breached(freshest.summary, max_severity):
+        breached = [
+            f"{n} finding(s) at {s.value}"
+            for s in Severity
+            if (n := int(freshest.summary.get(f"vuln.{s.value}", "0") or "0")) > 0
+            and gate_breached({f"vuln.{s.value}": str(n)}, max_severity)
+        ]
+        return RequirementOutcome(
+            Requirement.scan_pass, False, f"{'; '.join(breached)} (>= {max_severity.value})"
+        )
+    age = now - _to_utc(freshest.attested_at)
+    if age > max_age:
+        return RequirementOutcome(
+            Requirement.scan_pass, False,
+            f"scan attested {int(age.total_seconds())}s ago > {int(max_age.total_seconds())}s SLA",
+        )
+    return RequirementOutcome(
+        Requirement.scan_pass, True,
+        f"severity <= {max_severity.value}, attested {int(age.total_seconds())}s ago",
+    )
 
 
 def evaluate(
