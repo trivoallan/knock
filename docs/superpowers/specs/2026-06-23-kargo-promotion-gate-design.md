@@ -170,7 +170,7 @@ spec:
     - name: max-age-seconds
       value: "604800"                  # 7d freshness SLA — attestation older than this fails closed
   metrics:
-    - name: verdict-passing-and-fresh
+    - name: gate                       # keep short: Rollouts puts <run-uid>.<metric>.<n> in a ≤63B pod label
       count: 1                         # one shot — the gate is a single pass/fail
       failureLimit: 0                  # any failure ⇒ analysis fails ⇒ promotion blocked
       provider:
@@ -309,3 +309,52 @@ C4Context
     UpdateRelStyle(kargo, registry, $offsetY="-40")
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
+
+## 9. Experiment results — VALIDATED (2026-06-24)
+
+The §6 maquette was run end-to-end on a disposable kind cluster (Kargo v1.10.7 + Argo Rollouts
+2.40.6), with **houba used as-is** (`uv run houba attach`, 0.7.0) — **no houba code changed**.
+Subject: a local image carrying houba's signed scan attestation; the Kargo Stage ran the §6.1
+`AnalysisTemplate` (`job` provider, `cosign verify-attestation` + `jq`, reads only).
+
+| Scenario | Setup | AnalysisRun | Gate message (captured in the tooling image) |
+|----------|-------|-------------|----------------------------------------------|
+| **A** fresh + passing | `vuln.*=0`, SLA 7d | **Successful** | `PASS: severity<=high, attested 123s ago` |
+| **B** newer + failing | `vuln.critical=1` attached newer | **Failed** | `FAIL: 1 finding(s) at critical (>= high)` |
+| **C** fresh + passing, SLA 2s | passing scan, waited > 2s | **Failed** | `FAIL: attested 123s ago > 2s SLA -> re-scan` |
+
+⇒ **B (the promotion gate) is validated.** A Kargo verification gate reads houba's signed scan
+predicate (severity via the `gate_breached` semantics, freshness via the signed `attested_at`),
+picks the freshest of accumulated attestations, and fail-closes on stale — with zero houba change.
+Scenario C confirms §4.1: the gate fails on **staleness alone**, severity passing.
+
+### 9.1 Gotchas the live run surfaced (fold into the how-to)
+
+1. **Key-based signing has no Rekor entry** ⇒ the gate's `cosign verify-attestation` needs
+   `--insecure-ignore-tlog=true` (and `--allow-insecure-registry` for a plain-HTTP registry). The
+   **keyless** production shape in §6.1 keeps Rekor, so it does *not* need that flag.
+2. **AnalysisRun metric name must be short.** Argo Rollouts stamps the Job name
+   (`<analysisRun-uid>.<metric>.<n>`) into a pod **label ≤ 63 bytes**. `verdict-passing-and-fresh`
+   overflowed; renamed the metric to `gate`. (§6.1 updated.)
+3. **A Kargo Stage promotion needs ≥ 1 step** — `steps: []` is rejected. Use a trivial no-op
+   (an `http` GET to a 200 endpoint) so freight lands and verification runs.
+4. **Rollouts integration is a Kargo controller toggle checked at startup.** If the Argo Rollouts
+   CRDs are absent when `kargo-controller` boots, it disables verification ("Rollouts integration
+   is disabled on this controller"). Install Argo Rollouts *first*, or `kubectl rollout restart
+   deploy/kargo-controller` afterwards; re-run with `kargo verify stage`.
+
+### 9.2 Decision on `houba verify` (§5)
+
+The raw-tools gate works, but getting it right took four non-obvious pieces: `--insecure-ignore-tlog`
+for key mode, slurping + `max_by(.attested_at)` over accumulated attestations, replicating the
+`gate_breached` at-or-above-threshold loop, and ISO-8601 age math (GNU `date -d`, absent on
+busybox/macOS). Every gate (Kargo, a Kyverno sidecar, CI) re-implementing that is exactly the
+duplication `attach` exists to avoid. **Recommendation: lean BUILD `houba verify`** (read-only,
+exit 0/1, exposes verdict + age) — but it stays the maintainer's call; this section records the
+evidence, not a commitment.
+
+### 9.3 The C-gap stands (B ≠ C)
+
+The experiment only ever fired the gate on a **promotion/verify event**. A CVE landing on
+already-promoted, stable freight triggers nothing — direct evidence that **C (the blast-radius
+query) is not optional** and the promotion gate alone does not "solve feedback timing".
