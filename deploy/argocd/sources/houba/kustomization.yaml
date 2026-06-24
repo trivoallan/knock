@@ -14,6 +14,10 @@ resources:
   - externalsecret.yaml
   - clustersecretstore.yaml
 
+components:
+  - ../../../components/kargo
+  - ../../../components/kyverno
+
 generatorOptions:
   disableNameSuffixHash: true
 

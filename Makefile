@@ -9,6 +9,7 @@ CLUSTER ?= houba-demo
 IMAGE   ?= houba:dev
 NS      ?= houba
 COSIGN  ?= cosign
+HELM    ?= helm
 
 # The blast-radius script lives outside the base dir (canonical scripts/), so the
 # configMapGenerator needs the relaxed load restrictor. `kubectl apply -k` can't pass
@@ -33,10 +34,32 @@ ARGOCD_VERSION  ?= v2.12.4
 # the agent-injector / csi-provider pods the chart also creates.
 OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+$$' | head -1)
 
+# ---- Operator versions (pinned to the versions proven on this cluster) ----
+# cert-manager must be installed before kargo (kargo depends on cert-manager webhooks).
+CERT_MANAGER_VERSION ?= v1.20.2
+KARGO_VERSION        ?= 1.10.7
+KYVERNO_VERSION      ?= 3.8.1
+
+# ---- Demo registry + UV shorthand ----------------------------------------
+# DEMO_REG is the in-CLUSTER service name — what the kubelet/Kyverno see in a Pod's
+# image ref. The host can't resolve it (kind has no port mapping), so host-side
+# regctl/houba calls reach the registry through a `port-forward svc/registry` to
+# DEMO_REG_LOCAL (the proven bridge, same as incident-deploy / registry-ui).
+DEMO_REG       ?= registry.houba.svc.cluster.local:5000
+DEMO_REG_LOCAL ?= localhost:5000
+UV             ?= uv
+
+# ---- log4shell incident image (pinned digest) ----------------------------
+# CVE-2021-44228 (log4j 2.14.1, Critical) confirmed via grype on 2026-06-24.
+# Source is a Docker schema2 manifest; the demo Zot is OCI-strict (rejects it with
+# HTTP 415), so seed-log4shell converts to OCI on the way in (regctl image mod --to-oci).
+LOG4SHELL_SRC ?= ghcr.io/christophetd/log4shell-vulnerable-app@sha256:6f88430688108e512f7405ac3c73d47f5c370780b94182854ea2cddc6bd59929
+
 .PHONY: help reference docs-serve cluster image up-local local local-run \
-        argocd demo demo-run openbao-seed seed-incident incident-deploy \
+        argocd cert-manager kargo kyverno \
+        demo demo-run openbao-seed seed-incident incident-deploy seed-log4shell \
         blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui argocd-ui docker-auth logs down \
-        scan cosign-keygen
+        scan cosign-keygen demo-assert-gates
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -93,7 +116,42 @@ argocd-ui: ## Open the ArgoCD UI (port-forward svc/argocd-server; prints admin c
 	  echo ">> ArgoCD UI at https://localhost:8083  (login admin / $$PW — self-signed cert, accept the warning). Ctrl-C to stop."
 	$(KUBECTL) -n argocd port-forward svc/argocd-server 8083:443
 
-demo: cluster image argocd ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
+cert-manager: ## Install cert-manager ($(CERT_MANAGER_VERSION)) — prerequisite for kargo
+	@$(KUBECTL) get namespace cert-manager >/dev/null 2>&1 \
+	  && $(HELM) status cert-manager -n cert-manager >/dev/null 2>&1 \
+	  && echo ">> cert-manager already installed — skipping" \
+	  || $(HELM) upgrade --install cert-manager jetstack/cert-manager \
+	       --repo https://charts.jetstack.io \
+	       --namespace cert-manager --create-namespace \
+	       --version $(CERT_MANAGER_VERSION) \
+	       --set crds.enabled=true
+	$(KUBECTL) -n cert-manager rollout status deploy/cert-manager --timeout=180s
+	$(KUBECTL) -n cert-manager rollout status deploy/cert-manager-webhook --timeout=180s
+
+kargo: cert-manager ## Install kargo ($(KARGO_VERSION)) — promotion gate operator (requires helm 3.12+, not helm 4+)
+	@# kargo chart is published as oci://ghcr.io/akuity/kargo — requires helm 3.12+ (helm 4 has a
+	@# breaking OCI-descriptor check incompatible with kargo's chart format as of v1.10.x).
+	@$(KUBECTL) get namespace kargo >/dev/null 2>&1 \
+	  && $(HELM) status kargo -n kargo >/dev/null 2>&1 \
+	  && echo ">> kargo already installed — skipping" \
+	  || $(HELM) upgrade --install kargo oci://ghcr.io/akuity/kargo \
+	       --namespace kargo --create-namespace \
+	       --version v$(KARGO_VERSION) \
+	       --set api.adminAccount.passwordHash='$$2a$$10$$Zrhhie4vDfMTQ4l4l7e6.eRZ90rQ7P2dZ2NfMA8RHk0HhB6Sa9Ki' \
+	       --set api.adminAccount.tokenSigningKey=demotokensigningkeyabc123
+	$(KUBECTL) -n kargo rollout status deploy/kargo-api --timeout=300s
+
+kyverno: ## Install kyverno ($(KYVERNO_VERSION)) — admission gate operator (standalone, no cert-manager dep)
+	@$(KUBECTL) get namespace kyverno >/dev/null 2>&1 \
+	  && $(HELM) status kyverno -n kyverno >/dev/null 2>&1 \
+	  && echo ">> kyverno already installed — skipping" \
+	  || $(HELM) upgrade --install kyverno kyverno/kyverno \
+	       --repo https://kyverno.github.io/kyverno \
+	       --namespace kyverno --create-namespace \
+	       --version $(KYVERNO_VERSION)
+	$(KUBECTL) -n kyverno rollout status deploy/kyverno-admission-controller --timeout=300s
+
+demo: cluster image argocd cert-manager kargo kyverno ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
 	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) \
 	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
 	@echo ">> App-of-Apps applied. ArgoCD is syncing 4 children: ESO+OpenBao (wave 0) then houba+buildkitd (wave 1)."
@@ -113,16 +171,25 @@ demo: cluster image argocd ## The single Argo reference on kind, end-to-end (ope
 	@for i in $$(seq 1 30); do $(KUBECTL) -n $(NS) get secret houba-registries >/dev/null 2>&1 && break; sleep 10; done
 	@echo ">> Waiting for the houba CronJob (wave 1) to sync ..."
 	@for i in $$(seq 1 60); do $(KUBECTL) -n $(NS) get cronjob/houba-reconcile >/dev/null 2>&1 && break; sleep 10; done
+	$(MAKE) cosign-keygen
 	$(MAKE) demo-run
 	@sleep 3
 	$(MAKE) blast-radius OVERLAY=deploy/argocd/sources/houba
 	$(MAKE) dt-bootstrap OVERLAY=deploy/argocd/sources/houba
 	$(MAKE) publish-sbom OVERLAY=deploy/argocd/sources/houba
+	$(MAKE) scan OVERLAY=deploy/argocd/sources/houba
+	$(MAKE) seed-log4shell
+	@echo ">> Beat 3a (project teams): kargo holds the log4shell freight (houba verify exit 1)."
+	@echo ">> Beat 3b (platform team): Kyverno denies the log4shell pod at admission."
+	@echo ">> Beat 4: the rebuilt clean image is promoted and DT blast-radius goes green."
+	$(MAKE) demo-assert-gates
 	@echo ">> The Argo reference is up and mirrored the reference policy end-to-end: operators"
-	@echo ">>       (ESO+OpenBao) + houba/buildkitd, the ESO->OpenBao secret path, a git-sync'd"
-	@echo ">>       policy (busybox copy + debian rebuild), and the registry destination."
+	@echo ">>       (cert-manager + kargo + kyverno + ESO->OpenBao) + houba/buildkitd, the"
+	@echo ">>       ESO->OpenBao secret path, a git-sync'd policy (busybox copy + debian rebuild),"
+	@echo ">>       the kargo promotion gate (beat 3a), the Kyverno admission gate (beat 3b),"
+	@echo ">>       and DT blast-radius (beat 4)."
 	@echo ">>       For a REAL cluster: pin your published image, point sources/houba at your"
-	@echo ">>       policy repo and vault, and use your registry (not this demo registry:2)."
+	@echo ">>       policy repo and vault, and use your registry (not this demo registry)."
 	@echo ">> Browse the ArgoCD UI with 'make argocd-ui' (admin creds printed)."
 
 demo-run: ## Fire a one-shot reconcile from the ArgoCD-synced CronJob
@@ -230,3 +297,34 @@ cosign-keygen: ## Generate a demo cosign keypair and load it as a Secret (key-mo
 	  --from-file=cosign.key=/tmp/houba-demo.key \
 	  --from-file=cosign.pub=/tmp/houba-demo.pub \
 	  --from-literal=COSIGN_PASSWORD=
+
+seed-log4shell: ## Copy the pinned log4shell image into the demo registry (beat-3 vuln source)
+	@# Host can't resolve the in-cluster registry name, so push via a port-forward to
+	@# DEMO_REG_LOCAL. Source is Docker schema2; Zot is OCI-strict (HTTP 415) → convert on copy.
+	@$(KUBECTL) -n $(NS) port-forward svc/registry 5000:5000 >/dev/null 2>&1 & \
+	  PF=$$!; trap 'kill $$PF 2>/dev/null' EXIT; \
+	  for i in $$(seq 1 20); do curl -fsS http://$(DEMO_REG_LOCAL)/v2/ >/dev/null 2>&1 && break; sleep 0.5; done; \
+	  regctl image mod $(LOG4SHELL_SRC) --to-oci --create $(DEMO_REG_LOCAL)/demo/log4shell:1
+	@echo ">> Seeded demo/log4shell:1 — raw, intentionally never scanned/attested; that missing verdict is exactly what the gates catch (beats 3a/3b)."
+
+demo-assert-gates: ## Self-check beats 3a/3b (kargo gate + Kyverno admission) and beat 4 (DT clear)
+	@test -f /tmp/houba-demo.pub || { echo "ERROR: /tmp/houba-demo.pub missing — run 'make cosign-keygen' first"; exit 1; }
+	@# prod is a throwaway scratch namespace for the admission probe (not the kargo 'prod' Stage CR).
+	@$(KUBECTL) create namespace prod --dry-run=client -o yaml | $(KUBECTL) apply -f - >/dev/null
+	@# Host-side regctl/houba reach the registry via a port-forward (DEMO_REG_LOCAL); the digest
+	@# is identical to the in-cluster ref. Beat 3b's `kubectl run` keeps the in-cluster name
+	@# (DEMO_REG) — Kyverno matches that string and denies at admission, before any image pull.
+	@$(KUBECTL) -n $(NS) port-forward svc/registry 5000:5000 >/dev/null 2>&1 & \
+	  PF=$$!; trap 'kill $$PF 2>/dev/null' EXIT; \
+	  for i in $$(seq 1 20); do curl -fsS http://$(DEMO_REG_LOCAL)/v2/ >/dev/null 2>&1 && break; sleep 0.5; done; \
+	  D=$$(regctl image digest $(DEMO_REG_LOCAL)/demo/log4shell:1); \
+	  echo ">> Beat 3a: kargo gate must HOLD log4shell (houba verify exit 1)"; \
+	  HOUBA_ATTEST_SIGNER=key HOUBA_ATTEST_KEY_REF=/tmp/houba-demo.pub \
+	    $(UV) run houba verify $(DEMO_REG_LOCAL)/demo/log4shell@$$D --require scan-pass --max-severity critical; \
+	  RC=$$?; \
+	  test $$RC -eq 1 || { echo "BEAT3a FAIL: gate did not hold log4shell (exit $$RC)"; exit 1; }; \
+	  echo ">> Beat 3b: Kyverno must DENY the log4shell pod at admission"; \
+	  $(KUBECTL) -n prod run l4s --image=$(DEMO_REG)/demo/log4shell@$$D --restart=Never 2>/dev/null \
+	    && { echo "BEAT3b FAIL: admission did not deny"; exit 1; } || echo "   denied (ok)"; \
+	  echo ">> Beats 3a/3b asserted."
+	$(UV) run python3 deploy/scripts/dt_assert_clear.py CVE-2021-44228
