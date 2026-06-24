@@ -12,7 +12,12 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from houba.domain.scan.summary import Severity, gate_breached, policy_breached
+from houba.domain.scan.summary import (
+    Severity,
+    gate_breached,
+    policy_breached,
+    policy_signal_present,
+)
 from houba.errors import ConfigError
 from houba.ports.attestor import VerifiedPredicate
 
@@ -165,10 +170,7 @@ def _governed_outcome(preds: list[VerifiedPredicate]) -> RequirementOutcome:
             "scan attestation has an unparseable attested_at timestamp"
             " — re-attach the scan; attested_at must be ISO-8601",
         )
-    has_policy_signal = freshest.summary.get("policy.passed", "0") not in ("0", "") or any(
-        int(freshest.summary.get(f"policy.{s.value}", "0") or "0") > 0 for s in Severity
-    )
-    if not has_policy_signal:
+    if not policy_signal_present(freshest.summary):
         return RequirementOutcome(
             Requirement.governed,
             False,

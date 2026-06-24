@@ -56,6 +56,11 @@ def policy_breached(facts: dict[str, str]) -> bool:
     return any(_count(facts.get(f"policy.{s.value}")) > 0 for s in Severity)
 
 
+def policy_signal_present(facts: dict[str, str]) -> bool:
+    """True when the digest carries any regis verdict — a pass receipt or a failing bucket."""
+    return _count(facts.get("policy.passed")) > 0 or policy_breached(facts)
+
+
 @dataclass(frozen=True)
 class ScanSummary:
     """A normalized, format-specific scan summary.

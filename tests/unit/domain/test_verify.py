@@ -168,3 +168,16 @@ def test_governed_fails_closed_on_unparseable_attested_at():
     pred = _gov_pred("not-a-date", {"policy.passed": "1"})
     out = _eval({Requirement.governed}, scan_predicates=[pred]).outcomes[0]
     assert out.passed is False and "unparseable" in out.detail
+
+
+def test_governed_fails_closed_on_garbage_policy_bucket():
+    # A non-numeric policy bucket value with NO pass receipt must NOT raise
+    # (it would escape the pure domain as exit 4); it must be a clean gate fail.
+    pred = _gov_pred("2026-06-24T11:00:00+00:00", {"policy.critical": "notanint"})
+    out = _eval(
+        {Requirement.governed},
+        stamp_present=True,
+        sbom_present=True,
+        scan_predicates=[pred],
+    ).outcomes[0]
+    assert out.passed is False and "not governed" in out.detail

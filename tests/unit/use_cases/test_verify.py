@@ -105,3 +105,19 @@ def test_verify_scan_pass_without_attestor_is_config_error():
             max_severity=Severity.high,
             max_age=timedelta(days=7),
         )
+
+
+def test_verify_governed_without_attestor_is_config_error():
+    from houba.use_cases.verify import verify_image
+
+    with pytest.raises(ConfigError):
+        verify_image(
+            REF,
+            requirements={Requirement.governed},
+            registry=_registry(),
+            attestor=None,
+            clock=FakeClock(NOW),
+            label_prefix="io.houba",
+            max_severity=Severity.high,
+            max_age=timedelta(days=7),
+        )
