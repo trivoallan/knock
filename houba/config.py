@@ -130,6 +130,12 @@ class AttestSettings(BaseModel):
     verify_oidc_issuer: str = Field(
         default="", description="Keyless verify: cosign --certificate-oidc-issuer."
     )
+    allow_insecure_registry: bool = Field(
+        default=False,
+        description="Let cosign sign/verify against a plain-HTTP or self-signed registry "
+        "(adds --allow-http-registry + --allow-insecure-registry). The cosign counterpart "
+        "of a roster entry's tls_verify=false; testing/demo only.",
+    )
 
     @model_validator(mode="after")
     def _key_required_for_keyed_signers(self) -> AttestSettings:
@@ -217,6 +223,11 @@ class Settings(BaseSettings):
     attest_verify_oidc_issuer: str = Field(
         default="", description="Keyless verify OIDC issuer (HOUBA_ATTEST_VERIFY_OIDC_ISSUER)."
     )
+    attest_allow_insecure_registry: bool = Field(
+        default=False,
+        description="Let cosign use plain-HTTP / self-signed registries "
+        "(HOUBA_ATTEST_ALLOW_INSECURE_REGISTRY); testing/demo only.",
+    )
 
     @property
     def attest(self) -> AttestSettings:
@@ -228,6 +239,7 @@ class Settings(BaseSettings):
             builder_id=self.attest_builder_id,
             verify_identity=self.attest_verify_identity,
             verify_oidc_issuer=self.attest_verify_oidc_issuer,
+            allow_insecure_registry=self.attest_allow_insecure_registry,
         )
 
     @model_validator(mode="after")

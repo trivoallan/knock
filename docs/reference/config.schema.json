@@ -344,6 +344,12 @@
       "title": "Attest Verify Oidc Issuer",
       "type": "string"
     },
+    "attest_allow_insecure_registry": {
+      "default": false,
+      "description": "Let cosign use plain-HTTP / self-signed registries (HOUBA_ATTEST_ALLOW_INSECURE_REGISTRY); testing/demo only.",
+      "title": "Attest Allow Insecure Registry",
+      "type": "boolean"
+    },
     "usage_oracle_cmd": {
       "anyOf": [
         {

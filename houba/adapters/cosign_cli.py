@@ -55,6 +55,14 @@ class CosignAdapter:
             return ["--key", cfg.key_ref]
         return []
 
+    def _registry_args(self) -> list[str]:
+        # The cosign counterpart of a roster entry's tls_verify=false: --allow-http-registry
+        # for a plain-HTTP registry, --allow-insecure-registry for self-signed/expired TLS.
+        # buildkit's registry.insecure=true covers both, so we mirror that and pass both.
+        if self._config.allow_insecure_registry:
+            return ["--allow-http-registry", "--allow-insecure-registry"]
+        return []
+
     def attest(self, subject_ref: str, statement: dict[str, Any]) -> AttestationRef:
         cfg = self._config
         predicate_type = str(statement.get("predicateType", ""))
@@ -77,6 +85,7 @@ class CosignAdapter:
                 "--predicate",
                 str(pred_path),
                 *self._key_args(),
+                *self._registry_args(),
                 "--signing-config",
                 str(scfg_path),
                 subject_ref,
@@ -112,7 +121,14 @@ class CosignAdapter:
         ]
 
     def verify(self, subject_ref: str, predicate_type: str) -> list[VerifiedPredicate]:
-        args = ["verify-attestation", "--type", predicate_type, *self._verify_args(), subject_ref]
+        args = [
+            "verify-attestation",
+            "--type",
+            predicate_type,
+            *self._verify_args(),
+            *self._registry_args(),
+            subject_ref,
+        ]
         try:
             r = subprocess.run(  # noqa: S603
                 [self._resolve(), *args],

@@ -38,3 +38,14 @@ def test_verify_passes_key_and_tlog_flags(fake_bin_path, tmp_path, monkeypatch):
     assert "verify-attestation" in argv
     assert "--key" in argv
     assert "--insecure-ignore-tlog=true" in argv
+
+
+def test_verify_insecure_registry_adds_http_flags(fake_bin_path, tmp_path, monkeypatch):
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    monkeypatch.setenv("FAKE_COSIGN_VERIFY_SCENARIO", "verified")
+    cfg = AttestSettings(signer="key", key_ref="/tmp/cosign.pub", allow_insecure_registry=True)
+    CosignAdapter(cfg).verify(SUBJECT, "https://houba.dev/predicate/scan/v1")
+    argv = log.read_text()
+    assert "--allow-http-registry" in argv
+    assert "--allow-insecure-registry" in argv

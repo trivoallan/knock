@@ -94,6 +94,33 @@ def test_keyless_blank_fulcio_omits_key_and_service_flags(
         assert flag not in args
 
 
+def test_attest_insecure_registry_adds_http_flags(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    monkeypatch.setenv("FAKE_COSIGN_SCENARIO", "success")
+    cfg = AttestSettings(signer="key", key_ref="/keys/cosign.key", allow_insecure_registry=True)
+    CosignAdapter(cfg).attest(SUBJECT, STATEMENT)
+
+    args = _log_text(log)
+    assert "--allow-http-registry" in args
+    assert "--allow-insecure-registry" in args
+
+
+def test_attest_secure_registry_omits_http_flags(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    monkeypatch.setenv("FAKE_COSIGN_SCENARIO", "success")
+    CosignAdapter(AttestSettings(signer="keyless")).attest(SUBJECT, STATEMENT)
+
+    args = _log_text(log)
+    assert "--allow-http-registry" not in args
+    assert "--allow-insecure-registry" not in args
+
+
 def test_failure_raises_cosign_error(fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FAKE_COSIGN_SCENARIO", "fail")
     with pytest.raises(CosignError):

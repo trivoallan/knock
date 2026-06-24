@@ -357,6 +357,7 @@ def test_attest_schema_is_serializable_and_lists_fields() -> None:
         "builder_id",
         "verify_identity",
         "verify_oidc_issuer",
+        "allow_insecure_registry",
     }
 
 
