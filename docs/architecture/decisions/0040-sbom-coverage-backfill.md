@@ -1,4 +1,4 @@
-# 39. SBOM coverage backfill in reconcile
+# 40. SBOM coverage backfill in reconcile
 
 Date: 2026-06-19
 

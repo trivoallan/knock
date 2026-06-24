@@ -1,7 +1,7 @@
 ---
 title: "Audit coverage"
 description: "Find images that lack the stamp with houba audit, and gate CI on coverage, signing, or SBOM presence."
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 Once images are flowing through houba, **`houba audit`** answers the coverage-gate question:

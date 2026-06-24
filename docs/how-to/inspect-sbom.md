@@ -1,7 +1,7 @@
 ---
 title: "Inspect an image's SBOM"
 description: "Find and fetch the SBOM referrer attached to a placed image, and enable CycloneDX alongside SPDX."
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 Every image `houba reconcile` places carries a package-level SBOM attached as an OCI referrer (for the
