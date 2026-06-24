@@ -8,6 +8,8 @@ cosign handles its own network retries internally). The trust model
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import re
 import shutil
@@ -19,7 +21,7 @@ from typing import Any
 from houba.config import AttestSettings
 from houba.domain.attestation import build_signing_config
 from houba.errors import CosignError
-from houba.ports.attestor import AttestationRef
+from houba.ports.attestor import AttestationRef, VerifiedPredicate
 
 _DIGEST_RE = re.compile(r"sha256:[0-9a-f]{64}(?![0-9a-f])")
 
@@ -96,3 +98,45 @@ class CosignAdapter:
             predicate_type=predicate_type,
             referrer_digest=m.group(0) if m else "",
         )
+
+    def _verify_args(self) -> list[str]:
+        cfg = self._config
+        if cfg.signer in ("kms", "key"):
+            # Key/KMS signatures carry no Rekor entry -> skip the tlog check (kargo §9.1 #1).
+            return ["--key", cfg.key_ref, "--insecure-ignore-tlog=true"]
+        return [
+            "--certificate-identity-regexp", cfg.verify_identity,
+            "--certificate-oidc-issuer", cfg.verify_oidc_issuer,
+        ]
+
+    def verify(self, subject_ref: str, predicate_type: str) -> list[VerifiedPredicate]:
+        args = ["verify-attestation", "--type", predicate_type, *self._verify_args(), subject_ref]
+        try:
+            r = subprocess.run(  # noqa: S603
+                [self._resolve(), *args],
+                check=False, capture_output=True, text=True, timeout=300,
+            )
+        except (OSError, subprocess.TimeoutExpired) as e:
+            raise CosignError(str(e)) from e
+        if r.returncode != 0:
+            return []  # cosign ran, nothing verifiable -> fail-closed at the gate
+        return _parse_verified_predicates(r.stdout)
+
+
+def _parse_verified_predicates(stdout: str) -> list[VerifiedPredicate]:
+    """Decode cosign verify-attestation DSSE lines to predicates; drop anything malformed."""
+    out: list[VerifiedPredicate] = []
+    for line in stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            bundle = json.loads(line)
+            statement = json.loads(base64.b64decode(bundle["payload"]))
+            pred = statement["predicate"]
+            out.append(
+                VerifiedPredicate(summary=dict(pred["summary"]), attested_at=str(pred["attested_at"]))
+            )
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError, binascii.Error):
+            continue
+    return out
