@@ -1,0 +1,11 @@
+# Admission-gate add-on (E4): a Kyverno ClusterPolicy that denies admission of Pods
+# from the demo registry unless a valid, signature-verified houba scan attestation is
+# present. Pulled in as a Component (the same dual-use shape as components/kargo /
+# components/dependency-track) so one set of manifests serves both `make local` and
+# the Argo source. Requires the Kyverno CRDs in the cluster (documented prerequisite,
+# never embedded — same posture as KEDA / the External Secrets Operator).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - policy-verify-houba-scan.yaml

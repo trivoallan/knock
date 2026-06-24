@@ -1,0 +1,80 @@
+# Admission gate (E4): deny a Pod whose image lacks a valid houba scan attestation.
+#
+# The gate reads the SAME signed cosign attestation the kargo promotion gate reads (E1):
+# a DSSE-wrapped in-toto Statement of predicate type
+# "https://houba.dev/predicate/scan/v1", signed with the demo keypair
+# (Secret houba-attest-key / cosign.pub, created by `make cosign-keygen`).
+#
+# KEY-mode cosign (NOT keyless): kind has no Fulcio/Rekor/OIDC; the tlog check is
+# skipped automatically in key mode (air-gapped / kind-friendly). The policy references
+# the public key via "k8s://houba/houba-attest-key" — Kyverno reads cosign.pub from that
+# Secret at admission time. The private key is never consulted by this policy.
+#
+# cosignOCI11: true — cosign v2+ (this demo uses v3.1.1) writes attestations as OCI 1.1
+# referrers by default. Kyverno must look them up via the OCI 1.1 referrers API, not the
+# legacy `-att` tag scheme. See: https://kyverno.io/docs/writing-policies/verify-images/
+#
+# Scope: the rule matches only images from the demo registry prefix
+# (registry.houba.svc.cluster.local:5000/demo/*) so this policy never blocks unrelated
+# cluster workloads — including Kyverno's own components.
+#
+# failureAction: Enforce — deny admission when the attestation is absent, invalid,
+# or signed by the wrong key. Switch to Audit during rollout if needed.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-houba-scan
+  annotations:
+    policies.kyverno.io/title: Require houba scan attestation
+    policies.kyverno.io/category: Supply-Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Deny admission of any Pod that references an image from the demo registry
+      (registry.houba.svc.cluster.local:5000/demo/*) unless a valid, signature-verified
+      houba scan attestation (predicate type https://houba.dev/predicate/scan/v1) is
+      present in the OCI registry. The attestation must be signed by the demo keypair
+      (houba-attest-key / cosign.pub). This is the admission-time enforcement counterpart
+      of the kargo promotion gate (E1): the same signed referrer, enforced at a different
+      control point.
+spec:
+  rules:
+    - name: require-houba-scan-attestation
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      verifyImages:
+        - # Match only images from the in-cluster demo registry.
+          # The wildcard covers every repo under the demo prefix.
+          imageReferences:
+            - "registry.houba.svc.cluster.local:5000/demo/*"
+
+          # cosign v2+ stores attestations as OCI 1.1 referrers.
+          cosignOCI11: true
+
+          # failureAction: Enforce → deny the Pod if verification fails.
+          failureAction: Enforce
+
+          # The attestation to verify: a DSSE-wrapped in-toto Statement whose
+          # predicate type is the houba scan predicate.
+          # "type" (not the deprecated "predicateType") is the field name in
+          # Kyverno v1.18 (confirmed via kubectl explain).
+          #
+          # The attestor lives ONLY under attestations[] (an attestation-only gate).
+          # A sibling top-level verifyImages[].attestors would ALSO demand a plain
+          # `cosign sign` image signature — which houba never produces (it only
+          # `cosign attest`s, see houba/adapters/cosign_cli.py) — so under Enforce it
+          # would deny every demo Pod. Do not re-add a top-level attestors block.
+          # "k8s://houba/houba-attest-key" tells Kyverno to read the 'cosign.pub'
+          # entry from that Secret (key-mode, not keyless; standard k8s:// protocol).
+          attestations:
+            - type: "https://houba.dev/predicate/scan/v1"
+              # No additional conditions: presence + valid signature is sufficient.
+              # Add conditions here to enforce severity thresholds if desired
+              # (e.g., assert predicate.summary.critical == 0).
+              attestors:
+                - count: 1
+                  entries:
+                    - keys:
+                        publicKeys: "k8s://houba/houba-attest-key"
