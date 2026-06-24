@@ -70,7 +70,9 @@ def _stamp_outcome(present: bool) -> RequirementOutcome:
     return RequirementOutcome(
         Requirement.stamp,
         present,
-        "houba stamp present" if present else "no houba stamp on the manifest",
+        "houba stamp present"
+        if present
+        else "no houba stamp on the manifest — run `houba reconcile` so the front door stamps it",
     )
 
 
@@ -78,7 +80,9 @@ def _sbom_outcome(present: bool) -> RequirementOutcome:
     return RequirementOutcome(
         Requirement.sbom,
         present,
-        "SBOM referrer present" if present else "no SBOM referrer",
+        "SBOM referrer present"
+        if present
+        else "no SBOM referrer — run `houba reconcile` (it attaches and backfills the SBOM)",
     )
 
 
@@ -91,7 +95,12 @@ def _scan_outcome(
     preds: list[VerifiedPredicate], max_severity: Severity, max_age: timedelta, now: datetime
 ) -> RequirementOutcome:
     if not preds:
-        return RequirementOutcome(Requirement.scan_pass, False, "no verifiable scan attestation")
+        return RequirementOutcome(
+            Requirement.scan_pass,
+            False,
+            "no verifiable scan attestation — run `houba attach <ref> <scan-report>` "
+            "with a configured signer",
+        )
     try:
         freshest = max(preds, key=lambda p: _to_utc(p.attested_at))
         age = now - _to_utc(freshest.attested_at)
@@ -102,7 +111,8 @@ def _scan_outcome(
         return RequirementOutcome(
             Requirement.scan_pass,
             False,
-            "scan attestation has an unparseable attested_at timestamp",
+            "scan attestation has an unparseable attested_at timestamp"
+            " — re-attach the scan; attested_at must be ISO-8601",
         )
     if gate_breached(freshest.summary, max_severity):
         breached = [
@@ -112,13 +122,17 @@ def _scan_outcome(
             and gate_breached({f"vuln.{s.value}": str(n)}, max_severity)
         ]
         return RequirementOutcome(
-            Requirement.scan_pass, False, f"{'; '.join(breached)} (>= {max_severity.value})"
+            Requirement.scan_pass,
+            False,
+            f"{'; '.join(breached)} (>= {max_severity.value})"
+            " — rebuild/patch and re-attach a clean scan, or raise --max-severity",
         )
     if age > max_age:
         return RequirementOutcome(
             Requirement.scan_pass,
             False,
-            f"scan attested {int(age.total_seconds())}s ago > {int(max_age.total_seconds())}s SLA",
+            f"scan attested {int(age.total_seconds())}s ago > {int(max_age.total_seconds())}s SLA"
+            " — re-scan and `houba attach` a fresh attestation",
         )
     return RequirementOutcome(
         Requirement.scan_pass,

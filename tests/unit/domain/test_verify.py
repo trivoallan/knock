@@ -116,3 +116,20 @@ def test_scan_pass_picks_freshest_predicate():
 def test_scan_pass_fails_closed_on_unparseable_attested_at():
     out = _eval({Requirement.scan_pass}, scan_predicates=[_pred("not-a-date", high=0)]).outcomes[0]
     assert out.passed is False and "unparseable" in out.detail
+
+
+def test_stamp_absent_detail_has_fix_hint():
+    out = _eval({Requirement.stamp}, stamp_present=False).outcomes[0]
+    assert out.passed is False and "houba reconcile" in out.detail
+
+
+def test_sbom_absent_detail_has_fix_hint():
+    out = _eval({Requirement.sbom}, stamp_present=True, sbom_present=False).outcomes[0]
+    assert out.passed is False and "houba reconcile" in out.detail
+
+
+def test_scan_absent_detail_has_fix_hint():
+    out = _eval(
+        {Requirement.scan_pass}, stamp_present=True, sbom_present=True, scan_predicates=[]
+    ).outcomes[0]
+    assert out.passed is False and "houba attach" in out.detail
