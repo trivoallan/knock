@@ -87,6 +87,8 @@ make demo             # kind up → install argo-cd → apply root → sync from
                       #   → Zot out-of-band → reconcile → report
 make demo-run         # another one-shot reconcile from the synced CronJob
 make scan             # grype on the SBOM -> houba attach (front-door scan provenance)
+make seed-log4shell   # seed a known-vulnerable (CVE-2021-44228) image for the gate beats
+make demo-assert-gates # self-check beats 3a/3b/4 (kargo hold + Kyverno deny + DT clear)
 make blast-radius     # re-read the stamp and print blast radius (now with a SCAN column)
 make registry-ui      # port-forward Zot's built-in UI to http://localhost:8082
 make argocd-ui        # ArgoCD UI (admin creds printed) at https://localhost:8083
@@ -133,6 +135,32 @@ after to see it close — coverage gates the value).
 :::note Branch ceiling
 ArgoCD reads the child Applications **from git**, so the demo reflects what is *pushed*, not local edits. To demo your branch, push it to your fork and run `ARGOCD_REPO_URL=https://github.com/you/houba ARGOCD_REPO_REF=your-branch make demo`. To iterate on **uncommitted** changes, use `make local` instead.
 :::
+
+## The four-beat golden-image-factory demo
+
+`make demo` also installs three admission/promotion operators (**cert-manager → kargo → kyverno**,
+pinned helm charts) and ends on a four-beat story. The pivot is that houba publishes **one signed
+cosign scan attestation** at the front door, and **three independent readers** consume it from the
+registry — houba itself is never in the runtime path:
+
+1. **Front door (beat 1).** Every placed image carries the houba provenance stamp.
+   `houba verify "$REPO@$DIGEST" --require stamp` → exit 0.
+2. **Package-level blast radius (beat 2).** Its SBOM is in Dependency-Track (`make dt-ui`), so a CVE
+   becomes one query across the org.
+3. **The two gates (beat 3), reading the same signed verdict:**
+   - **3a — project teams.** The **kargo** promotion gate runs `houba verify --require scan-pass`
+     as an `AnalysisTemplate`; a known-vulnerable **log4shell** freight (`make seed-log4shell`,
+     CVE-2021-44228) is **held** because it has no signature-verified pass (`houba verify` exit 1).
+   - **3b — platform team.** The **Kyverno** `verify-houba-scan` ClusterPolicy **denies the
+     log4shell Pod at admission** (`Enforce`) for the same missing attestation.
+4. **Rebuild closes it (beat 4).** The rebuilt, scanned-clean image is promoted, and Dependency-Track
+   reports zero projects still affected by the CVE.
+
+`make demo-assert-gates` self-checks beats 3a/3b/4 (it exits non-zero on any mismatch), so the demo
+is its own regression test. Beats 3a/4 reach the in-cluster registry from the host through a
+`port-forward` (the service name is unresolvable from the host); the `kubectl run` admission probe in
+beat 3b keeps the in-cluster image ref so Kyverno matches and denies it before any pull. Signing is
+**key-mode** cosign (`make cosign-keygen`) because kind has no Fulcio/Rekor/OIDC for keyless.
 
 ## The inner-loop escape hatch — `make local` (`kubectl apply -k`)
 
