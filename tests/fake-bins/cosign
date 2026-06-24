@@ -1,12 +1,32 @@
 #!/usr/bin/env sh
 # Fake cosign for integration tests.
-# Scenario via FAKE_COSIGN_SCENARIO; every call's argv is appended to FAKE_COSIGN_LOG.
+# attest scenario via FAKE_COSIGN_SCENARIO; verify-attestation via FAKE_COSIGN_VERIFY_SCENARIO.
+# Every call's argv is appended to FAKE_COSIGN_LOG.
 set -e
 
 [ -n "${FAKE_COSIGN_LOG:-}" ] && echo "$@" >> "$FAKE_COSIGN_LOG"
 
-# When asked, capture the signing-config file's CONTENT (the file is a tempfile the
-# caller deletes after we return, so tests can't read it otherwise).
+if [ "$1" = "verify-attestation" ]; then
+    case "${FAKE_COSIGN_VERIFY_SCENARIO:-verified}" in
+        verified)
+            # Build the predicate JSON using python3 to avoid sh quoting issues
+            b64=$(python3 -c "
+import base64, json
+pred = json.loads('${FAKE_COSIGN_PRED:-}') if '${FAKE_COSIGN_PRED:-}' else {'summary': {'vuln.critical': '0'}, 'attested_at': '2026-06-24T00:00:00+00:00'}
+stmt = {'predicateType': 'https://houba.dev/predicate/scan/v1', 'predicate': pred}
+print(base64.b64encode(json.dumps(stmt).encode()).decode())
+")
+            echo "{\"payloadType\":\"application/vnd.in-toto+json\",\"payload\":\"${b64}\",\"signatures\":[]}"
+            echo "Verification succeeded" >&2
+            ;;
+        none) echo "no matching attestations" >&2; exit 1 ;;
+        verifyfail) echo "signature verification failed" >&2; exit 1 ;;
+        *) echo "fake-cosign: unknown verify scenario" >&2; exit 99 ;;
+    esac
+    exit 0
+fi
+
+# --- attest (unchanged) ---
 if [ -n "${FAKE_COSIGN_SIGNING_CONFIG:-}" ]; then
     prev=""
     for arg in "$@"; do
@@ -24,12 +44,6 @@ case "${FAKE_COSIGN_SCENARIO:-success}" in
         echo "Pushing attestation manifest to registry" >&2
         echo "sha256:1111111111111111111111111111111111111111111111111111111111111111" >&2
         ;;
-    fail)
-        echo "cosign: simulated failure" >&2
-        exit 1
-        ;;
-    *)
-        echo "fake-cosign: unknown scenario ${FAKE_COSIGN_SCENARIO}" >&2
-        exit 99
-        ;;
+    fail) echo "cosign: simulated failure" >&2; exit 1 ;;
+    *) echo "fake-cosign: unknown scenario ${FAKE_COSIGN_SCENARIO}" >&2; exit 99 ;;
 esac

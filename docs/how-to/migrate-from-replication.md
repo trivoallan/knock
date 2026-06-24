@@ -1,7 +1,7 @@
 ---
 title: "Migrate off registry replication"
 description: "Replace a legacy CI + registry-replication intake with houba destinations: same jobs, better provenance, and OCI referrers that survive to every team copy."
-sidebar_position: 7
+sidebar_position: 8
 ---
 
 houba covers every job a legacy intake does. It is **not** a replication mechanism —

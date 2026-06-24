@@ -27,6 +27,8 @@ Each field is set as `HOUBA_<FIELD>` (the property name upper-cased). JSON-typed
 | `HOUBA_ATTEST_FULCIO_URL` | string | `(empty)` | Keyless CA URL; blank ⇒ public Fulcio. |
 | `HOUBA_ATTEST_REKOR_URL` | string | `(empty)` | Transparency-log URL; blank ⇒ no log entry. |
 | `HOUBA_ATTEST_BUILDER_ID` | string | `(empty)` | URI identifying this houba builder. |
+| `HOUBA_ATTEST_VERIFY_IDENTITY` | string | `(empty)` | Keyless verify identity regexp (HOUBA_ATTEST_VERIFY_IDENTITY). |
+| `HOUBA_ATTEST_VERIFY_OIDC_ISSUER` | string | `(empty)` | Keyless verify OIDC issuer (HOUBA_ATTEST_VERIFY_OIDC_ISSUER). |
 | `HOUBA_USAGE_ORACLE_CMD` | string | `(unset)` | Executable speaking the usage-oracle contract; required to run `houba purge`. |
 | `HOUBA_USAGE_ORACLE_TIMEOUT` | integer | `30` | Per-query timeout (seconds) for the usage oracle. |
 | `HOUBA_PURGE_MIN_IDLE_DAYS` | integer | `(unset)` | Idle window `houba purge` requires before reaping a marked tag. |

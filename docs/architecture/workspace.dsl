@@ -30,6 +30,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     cliAudit = component "audit" "The audit command: catalog-walks the registry, reports images missing the provenance stamp." "Typer"
                     cliAttach = component "attach" "The attach command: ingests an upstream scan report and attaches it as a stamped OCI referrer." "Typer"
                     cliGc = component "gc" "The gc command: catalog-walks the registry and deletes superseded scan-result referrers, keeping the N newest per (tool, format) older than a grace window." "Typer"
+                    cliVerify = component "verify" "The verify command: reads houba's facts for a digest (signed scan attestation, stamp, SBOM referrer) and produces a single exit-0/1 gate verdict." "Typer"
                     cliRender = component "render" "Formats the RunReport to stdout (text / JSON)." "Python"
                     cliDi = component "_di" "Composition root: wires ports to adapters." "Python"
                 }
@@ -40,6 +41,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     ucAudit = component "audit (use case)" "Catalog-walks the registry and classifies each image as stamped or not; emits the coverage report + exit code." "Python"
                     ucAttach = component "attach (use case)" "Resolves the subject digest, summarizes the ingested scan report, and puts it as a stamped OCI referrer." "Python"
                     ucGc = component "gc (use case)" "Catalog-walks the registry for scan-result referrers and collects the superseded ones (keep N newest per (tool, format) older than a grace window); pure temporal decision, no usage oracle. Dry-run by default." "Python"
+                    ucVerify = component "verify (use case)" "Resolves stamp annotations, SBOM referrers, and verified scan predicates for a digest; delegates to domain evaluate(); returns a VerifyReport. Read-only." "Python"
                     ucReport = component "report" "RunReport contract + worst-wins exit code." "Pydantic"
                     ucRegistrySession = component "registry_session" "Shared use-case helper: configure TLS/CA + login once per host (idempotent via caller-owned logged_in set). Used by reconcile, audit, and attach." "Python"
                 }
@@ -52,6 +54,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     domAttestation = component "attestation predicate" "Builds the in-toto transform Statement (predicate type /v1)." "Pure Python" "Domain"
                     domScan = component "scan ingestion" "Detects the scan-report format, parses it (e.g. SARIF), and summarizes it into stamp annotations." "Pure Python" "Domain"
                     domSbom = component "SBOM facts" "SBOM format media-types and referrer annotation builder (domain/sbom.py)." "Pure Python" "Domain"
+                    domVerify = component "verify logic" "Pure gate evaluation: Requirement enum; evaluate() maps stamp/sbom presence and verified scan predicates to a VerifyReport (pass/fail + detail per requirement). Reuses gate_breached; fail-closed on missing/stale/unverifiable attestation." "Pure Python" "Domain"
                 }
                 group "Ports" {
                     portRegistry = component "RegistryPort" "OCI registry ops: list, inspect, copy, annotate, delete, login, referrer list/put/delete; list_repositories (catalog walk for purge)." "typing.Protocol" "Port"
@@ -59,7 +62,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     portReporter = component "Reporter" "In-flight reconcile event journal." "typing.Protocol" "Port"
                     portClock = component "ClockPort" "Injectable now()." "typing.Protocol" "Port"
                     portUsageOracle = component "UsageOraclePort" "Was this image digest seen in prod since a given timestamp? (stateless, point-in-time query)." "typing.Protocol" "Port"
-                    portAttestor = component "AttestorPort" "Sign an in-toto Statement (DSSE) + attach it as an OCI referrer." "typing.Protocol" "Port"
+                    portAttestor = component "AttestorPort" "Sign an in-toto Statement (DSSE) + attach it as an OCI referrer. Verify: cosign verify-attestation over a predicate type → list[VerifiedPredicate]." "typing.Protocol" "Port"
                     portSbomGenerator = component "SbomGeneratorPort" "Generate package-level SBOM(s) for a placed image by digest; returns one document per format." "typing.Protocol" "Port"
                 }
                 group "Adapters" {
@@ -123,6 +126,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         cliMain -> cliAudit "Registers the command" "Typer"
         cliMain -> cliAttach "Registers the command" "Typer"
         cliMain -> cliGc "Registers the command" "Typer"
+        cliMain -> cliVerify "Registers the command" "Typer"
         cliAudit -> cliDi "Builds the composition root" "Python"
         cliAudit -> ucAudit "Runs the audit" "Python"
         ucAudit -> domCoverage "Classifies each image" "Python"
@@ -141,6 +145,9 @@ workspace "houba" "Single front door / stamper for external container images." {
         cliGc -> cliDi "Builds the composition root" "Python"
         cliGc -> ucGc "Runs the gc" "Python"
         cliGc -> portClock "Reads now()" "Protocol"
+        cliVerify -> cliDi "Builds the composition root" "Python"
+        cliVerify -> ucVerify "Runs the gate evaluation" "Python"
+        cliVerify -> portClock "Reads now()" "Protocol"
         cliReconcile -> cliDi "Builds the composition root" "Python"
         cliReconcile -> ucLoader "Loads policies" "Python"
         cliReconcile -> ucReconcile "Runs reconciliation" "Python"
@@ -169,6 +176,11 @@ workspace "houba" "Single front door / stamper for external container images." {
 
         ucGc -> portRegistry "Lists repos + scan referrers; deletes superseded ones" "Protocol"
         ucGc -> ucRegistrySession "Configures TLS/CA + login per registry" "Python"
+        ucVerify -> domVerify "Evaluates stamp / sbom / scan-pass outcomes" "Python"
+        ucVerify -> portRegistry "Reads annotations + lists SBOM referrers" "Protocol"
+        ucVerify -> portAttestor "verify-attestation: returns list[VerifiedPredicate]" "Protocol"
+        ucVerify -> portClock "Reads now() for freshness" "Protocol"
+        ucVerify -> ucRegistrySession "Configures TLS/CA + login per registry" "Python"
 
         ucRegistrySession -> portRegistry "Calls configure_registry + login" "Protocol"
 

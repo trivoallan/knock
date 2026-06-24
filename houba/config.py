@@ -124,6 +124,12 @@ class AttestSettings(BaseModel):
     builder_id: str = Field(
         default="", description="URI identifying this houba builder (feeds both predicates)."
     )
+    verify_identity: str = Field(
+        default="", description="Keyless verify: cosign --certificate-identity-regexp."
+    )
+    verify_oidc_issuer: str = Field(
+        default="", description="Keyless verify: cosign --certificate-oidc-issuer."
+    )
 
     @model_validator(mode="after")
     def _key_required_for_keyed_signers(self) -> AttestSettings:
@@ -205,6 +211,12 @@ class Settings(BaseSettings):
         default="", description="Transparency-log URL; blank ⇒ no log entry."
     )
     attest_builder_id: str = Field(default="", description="URI identifying this houba builder.")
+    attest_verify_identity: str = Field(
+        default="", description="Keyless verify identity regexp (HOUBA_ATTEST_VERIFY_IDENTITY)."
+    )
+    attest_verify_oidc_issuer: str = Field(
+        default="", description="Keyless verify OIDC issuer (HOUBA_ATTEST_VERIFY_OIDC_ISSUER)."
+    )
 
     @property
     def attest(self) -> AttestSettings:
@@ -214,6 +226,8 @@ class Settings(BaseSettings):
             fulcio_url=self.attest_fulcio_url,
             rekor_url=self.attest_rekor_url,
             builder_id=self.attest_builder_id,
+            verify_identity=self.attest_verify_identity,
+            verify_oidc_issuer=self.attest_verify_oidc_issuer,
         )
 
     @model_validator(mode="after")

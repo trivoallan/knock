@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from houba.errors import CosignError
+from houba.ports.attestor import VerifiedPredicate
 from tests.fakes.attestor import FakeAttestor
 
 
@@ -24,3 +25,11 @@ def test_fake_journals_calls_and_returns_ref() -> None:
 def test_fake_fail_raises_cosign_error() -> None:
     with pytest.raises(CosignError):
         FakeAttestor(fail=True).attest("reg/x@sha256:out", _statement())
+
+
+def test_fake_attestor_verify_returns_seeded_and_journals():
+    pred = VerifiedPredicate(summary={"vuln.high": "0"}, attested_at="2026-06-24T00:00:00+00:00")
+    fake = FakeAttestor(predicates=[pred])
+    out = fake.verify("reg/app@sha256:abc", "https://houba.dev/predicate/scan/v1")
+    assert out == [pred]
+    assert fake.verified == [("reg/app@sha256:abc", "https://houba.dev/predicate/scan/v1")]
