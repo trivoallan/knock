@@ -62,16 +62,19 @@ spec:
           # plain-HTTP for the in-cluster Zot. ponytail: -full bundles the analyzers, :main has
           # PR #791's kind=fail; pin a digest for reproducibility once a release includes #791.
           image: ghcr.io/trivoallan/regis:main-full
+          imagePullPolicy: IfNotPresent   # regis is amd64-only; make scan kind-loads it (emulated on arm64)
           command: ["sh", "/scripts/regis-scan.sh"]
           env:
-            - {name: HOME, value: /tmp}                    # regctl config + analyzer caches (RO rootfs)
-            - {name: TRIVY_CACHE_DIR, value: /tmp/trivy}
+            - {name: HOME, value: /tmp/regis-home}          # own subdir: /tmp/.regctl is root-owned by the houba init
+            - {name: TRIVY_CACHE_DIR, value: /tmp/regis-home/trivy}
             - {name: SHARED, value: /shared}
             - name: BLAST_REPOS
               valueFrom: {configMapKeyRef: {name: houba-config, key: BLAST_REPOS}}
           envFrom:
             - secretRef: {name: houba-registries}
           securityContext:
+            runAsUser: 1001               # the image's `regis` user (non-numeric USER fails runAsNonRoot)
+            runAsGroup: 1001
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities: {drop: ["ALL"]}

@@ -295,20 +295,23 @@ make blast-radius    # the report now has SCAN + POLICY columns, read by digest
 
 `make blast-radius` gains **SCAN** and **POLICY** columns, summed from the `io.houba.scan.*`
 annotations houba computed — by fact space, not by tool. Placed images show grype's vulnerabilities
-under SCAN (e.g. the `debian-xz` fixture as `C145 H324 M663 L156`, or `clean`) and regis's governance
-verdicts under POLICY (`clean` or `C…/H…/M…/L…`), while the **bypass image** shows `-` on **both**
+under SCAN (e.g. the `debian-xz` fixture as `C142 H305 M659 L148`, or `clean`) and regis's governance
+verdicts under POLICY (e.g. `C2 H2`, or `clean`), while the **bypass image** shows `-` on **both**
 axes — it never went through the front door, so it has no scan referrer at all. grype pulls its CVE
 database and regis pulls the placed image plus its analyzer data on first run; an air-gapped
 deployment mirrors both internally.
 
-Two caveats to run it cleanly:
+Three caveats to run it cleanly:
 
 - **Run `make scan` right after the reconcile that placed the images** (`make demo` / `demo-run`),
   and `make blast-radius` right after — no reconcile in between. Referrers are bound to a **digest**;
   a later reconcile that re-places an image strands the prior scan on the old digest.
-- **Rebuilt images built with provenance show `-` for now** (known limitation). A provenance rebuild
-  is an OCI **index**, and houba's SBOM/scan referrers don't currently land on the digest the tag
-  resolves to — so the variant rows (`debian:bookworm-slim-eu` / `-us`) read `-` on both axes even
-  though they were scanned. This is a houba referrer-durability gap on the rebuild path (it also affects
-  `publish-sbom` → Dependency-Track), tracked as a separate follow-up; the single-manifest path (the
-  `debian-xz` fixture, busybox copies) is unaffected.
+- **regis ships linux/amd64 only.** On an arm64 host (Apple Silicon) `make scan` flattens it to a
+  single-arch archive (needs **skopeo**) and loads it into kind, so the node runs it under qemu
+  **emulation** — correct but slow (the scan-attach Job takes several minutes; the wait is 600s). On
+  an amd64 host the init pulls regis natively. grype is multi-arch, so its step is native either way.
+- **Referrers are digest-bound, so a row only shows SCAN/POLICY once it's been scanned on its current
+  digest.** Rebuilt-with-provenance variants (`debian:bookworm-slim-eu` / `-us`) now carry both axes:
+  the earlier rebuild referrer-durability gap (SBOM/scan referrers missing the resolved digest of an
+  OCI **index**) was healed by the SBOM-coverage backfill on kept digests (ADR 0040), so grype's SBOM
+  fetch and regis's image read both land on the digest blast-radius reads.

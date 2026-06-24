@@ -8,6 +8,9 @@
 CLUSTER ?= houba-demo
 IMAGE   ?= houba:dev
 NS      ?= houba
+# regis ships linux/amd64 only; pin the platform so it loads into kind on Apple Silicon too
+# (runs under the node VM's qemu emulation). main-full bundles the analyzers (Trivy/Hadolint/Dockle).
+REGIS_IMAGE ?= ghcr.io/trivoallan/regis:main-full
 
 # The blast-radius script lives outside the base dir (canonical scripts/), so the
 # configMapGenerator needs the relaxed load restrictor. `kubectl apply -k` can't pass
@@ -215,8 +218,17 @@ logs: ## Tail the last reconcile run's logs
 down: ## Delete the kind cluster
 	kind delete cluster --name $(CLUSTER)
 
-scan: ## Run the scan-attach Job (grype on the SBOM -> houba attach) over the placed images
+scan: ## Run the scan-attach Job (grype on the SBOM + regis on the image -> houba attach) over the placed images
 	-$(KUBECTL) -n $(NS) delete job houba-scan-attach --ignore-not-found
+	@# regis is amd64-only. On arm64 hosts (Apple Silicon) the node can't pull it, so flatten it to a
+	@# single-arch archive (skopeo: drops the index + buildkit attestation that break `kind load
+	@# docker-image`) and load it; the IfNotPresent init then runs it under the node VM's qemu
+	@# emulation. On amd64 hosts the init just pulls regis natively, so this is skipped.
+	@if [ "$$(uname -m)" = "arm64" ] || [ "$$(uname -m)" = "aarch64" ]; then \
+	  echo ">> regis is amd64-only; flattening + loading for qemu emulation (needs skopeo)"; \
+	  skopeo copy --override-arch amd64 --override-os linux docker://$(REGIS_IMAGE) docker-archive:/tmp/regis-amd64.tar:$(REGIS_IMAGE) && \
+	  kind load image-archive /tmp/regis-amd64.tar --name $(CLUSTER); \
+	fi
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-scan-attach --timeout=300s
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-scan-attach --timeout=600s   # regis is slow under emulation
 	$(KUBECTL) -n $(NS) logs job/houba-scan-attach --all-containers
