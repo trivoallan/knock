@@ -327,4 +327,15 @@ demo-assert-gates: ## Self-check beats 3a/3b (kargo gate + Kyverno admission) an
 	  $(KUBECTL) -n prod run l4s --image=$(DEMO_REG)/demo/log4shell@$$D --restart=Never 2>/dev/null \
 	    && { echo "BEAT3b FAIL: admission did not deny"; exit 1; } || echo "   denied (ok)"; \
 	  echo ">> Beats 3a/3b asserted."
-	$(UV) run python3 deploy/scripts/dt_assert_clear.py CVE-2021-44228
+	@# Beat 4: package-level blast-radius. The host-side script reaches DT through a
+	@# port-forward (the service name is unresolvable from the host) and authenticates with
+	@# the Automation key dt-bootstrap minted into the dt-api-key Secret. We assert the
+	@# log4shell component (log4j-core) is absent from every DT project — pure SBOM data,
+	@# no vuln mirror needed.
+	@$(KUBECTL) -n $(NS) port-forward svc/dependency-track-apiserver 8081:8080 >/dev/null 2>&1 & \
+	  PF=$$!; trap 'kill $$PF 2>/dev/null' EXIT; \
+	  for i in $$(seq 1 30); do curl -fsS http://localhost:8081/api/version >/dev/null 2>&1 && break; sleep 0.5; done; \
+	  KEY=$$($(KUBECTL) -n $(NS) get secret dt-api-key -o jsonpath='{.data.DT_API_KEY}' | base64 -d); \
+	  echo ">> Beat 4: DT blast-radius must be clear of log4shell (log4j-core)"; \
+	  DT_BASE_URL=http://localhost:8081 DT_API_KEY=$$KEY \
+	    $(UV) run python3 deploy/scripts/dt_assert_clear.py log4j-core
