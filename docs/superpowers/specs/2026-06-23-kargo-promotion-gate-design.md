@@ -144,10 +144,18 @@ a digest and fail-closes on stale. Red/green cleanly → validates B *and* exhib
 ### 6.1 Maquette — the `AnalysisTemplate`
 
 Argo Rollouts `AnalysisTemplate` (what Kargo runs as a verification gate), `job` provider. The job
-**only reads** referrers — never scans, never rebuilds — and **fail-closes** on anything missing,
-unsigned, too severe, or stale. Tooling image bundles `regctl` + `cosign` + `jq` (not the houba
-runtime image, which carries none of jq/curl by design). Annotation keys/artifactType below follow
-houba's `attach` convention and are **illustrative** — pin them to the published ingestion profile.
+**only reads** the scan attestation — never scans, never rebuilds — and **fail-closes** on anything
+missing, unverifiable, too severe, or stale. Tooling image bundles `cosign` + `jq` (not the houba
+runtime image, which carries none of jq/curl by design).
+
+The values below are **pinned from houba's code**, not illustrative:
+- the scan result is a **signed in-toto attestation**, predicateType `https://houba.dev/predicate/scan/v1`
+  (referrer artifactType `application/vnd.houba.scan.result.v1`);
+- severity facts live in `predicate.summary` as `vuln.<bucket>` **counts** (`critical|high|medium|low|unknown`),
+  gated exactly like houba's `gate_breached` (any count > 0 at/above the threshold ⇒ fail);
+- **freshness is the signed `predicate.attested_at`** — *not* the unsigned `io.houba.scan.timestamp`
+  annotation, which `houba/domain/scan/attestation.py` documents as gc-only ("the only trustworthy
+  freshness source"). `cosign verify-attestation` discovers, verifies, and yields the predicate in one.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -159,8 +167,8 @@ spec:
     - name: image                      # full ref incl. @sha256:… — injected by Kargo from Freight
     - name: max-severity
       value: high                      # critical > high > medium > low > unknown
-    - name: max-age-days
-      value: "7"                       # freshness SLA — verdict older than this fails closed
+    - name: max-age-seconds
+      value: "604800"                  # 7d freshness SLA — attestation older than this fails closed
   metrics:
     - name: verdict-passing-and-fresh
       count: 1                         # one shot — the gate is a single pass/fail
@@ -174,45 +182,49 @@ spec:
                 restartPolicy: Never
                 containers:
                   - name: verify
-                    image: ghcr.io/example/oci-verify-tools:latest   # regctl + cosign + jq; reads only
+                    image: ghcr.io/example/oci-verify-tools:latest   # cosign + jq + coreutils; reads only
                     env:
-                      - { name: IMAGE,        value: "{{args.image}}" }
-                      - { name: MAX_SEVERITY, value: "{{args.max-severity}}" }
-                      - { name: MAX_AGE_DAYS, value: "{{args.max-age-days}}" }
-                      - { name: VERDICT_TYPE, value: "application/vnd.houba.scan-verdict+json" }
+                      - { name: IMAGE,           value: "{{args.image}}" }
+                      - { name: MAX_SEVERITY,    value: "{{args.max-severity}}" }
+                      - { name: MAX_AGE_SECONDS, value: "{{args.max-age-seconds}}" }
+                      - { name: PREDICATE_TYPE,  value: "https://houba.dev/predicate/scan/v1" }
+                      - { name: SIGNER_ID,       value: "https://github.com/your-org/.*" }  # cosign identity regexp
+                      - { name: OIDC_ISSUER,     value: "https://token.actions.githubusercontent.com" }
                     command: ["sh", "-eu", "-c"]
                     args:
                       - |
-                        # 1. Locate the signed scan-verdict referrer (houba attach convention).
-                        ref=$(regctl referrers "$IMAGE" --filter-artifact-type "$VERDICT_TYPE" \
-                              --format '{{ with index .Descriptors 0 }}{{ .Digest }}{{ end }}')
-                        [ -n "$ref" ] || { echo "FAIL: no scan verdict attached → fail-closed"; exit 1; }
-                        subj="${IMAGE%@*}@${ref}"
+                        # 1. Verify ALL scan attestations, then pick the FRESHEST by attested_at
+                        #    (houba accumulates referrers — re-attaching is scan history; latest wins).
+                        raw=$(cosign verify-attestation --type "$PREDICATE_TYPE" \
+                                --certificate-identity-regexp "$SIGNER_ID" \
+                                --certificate-oidc-issuer "$OIDC_ISSUER" \
+                                "$IMAGE" 2>/dev/null) \
+                          || { echo "FAIL: no verifiable scan attestation → fail-closed"; exit 1; }
+                        pred=$(printf '%s\n' "$raw" | jq -r 'select(.payload).payload' \
+                                | while IFS= read -r p; do printf '%s' "$p" | base64 -d; echo; done \
+                                | jq -s 'map(.predicate) | max_by(.attested_at)')
+                        [ -n "$pred" ] && [ "$pred" != "null" ] \
+                          || { echo "FAIL: no scan predicate → fail-closed"; exit 1; }
 
-                        # 2. Verify the referrer signature — unsigned/tampered → fail-closed.
-                        cosign verify "$subj" \
-                          --certificate-identity-regexp "$SIGNER_ID" \
-                          --certificate-oidc-issuer "$OIDC_ISSUER" >/dev/null \
-                          || { echo "FAIL: verdict signature invalid → fail-closed"; exit 1; }
+                        # 2. Severity gate — mirrors gate_breached: any vuln.<bucket> count > 0 at/above threshold.
+                        rank() { case "$1" in critical) echo 0;; high) echo 1;; medium) echo 2;;
+                                              low) echo 3;; *) echo 4;; esac; }
+                        maxr=$(rank "$MAX_SEVERITY"); buckets="critical high medium low"
+                        case "$MAX_SEVERITY" in low|unknown) buckets="$buckets unknown";; esac
+                        for b in $buckets; do
+                          [ "$b" = unknown ] || [ "$(rank "$b")" -le "$maxr" ] || continue
+                          n=$(printf '%s' "$pred" | jq -r --arg k "vuln.$b" '.summary[$k] // "0"')
+                          [ "${n:-0}" -eq 0 ] || { echo "FAIL: $n finding(s) at $b (≥ $MAX_SEVERITY)"; exit 1; }
+                        done
 
-                        # 3. Read severity bucket + emission time from the verdict annotations.
-                        ann=$(regctl manifest get "$subj" --format '{{ json .Annotations }}')
-                        sev=$(echo "$ann"     | jq -r '."io.houba.scan.max-severity" // "unknown"')
-                        created=$(echo "$ann" | jq -r '."org.opencontainers.image.created" // empty')
+                        # 3. Freshness gate — SIGNED attested_at only. Missing/stale → fail-closed.
+                        at=$(printf '%s' "$pred" | jq -r '.attested_at // empty')
+                        [ -n "$at" ] || { echo "FAIL: predicate has no attested_at → fail-closed"; exit 1; }
+                        age=$(( $(date -u +%s) - $(date -u -d "$at" +%s) ))
+                        [ "$age" -le "$MAX_AGE_SECONDS" ] \
+                          || { echo "FAIL: scan attested ${age}s ago > ${MAX_AGE_SECONDS}s SLA → re-scan"; exit 1; }
 
-                        # 4. Severity gate.
-                        rank() { case "$1" in critical) echo 4;; high) echo 3;; medium) echo 2;;
-                                              low) echo 1;; *) echo 0;; esac; }
-                        [ "$(rank "$sev")" -le "$(rank "$MAX_SEVERITY")" ] \
-                          || { echo "FAIL: severity $sev > allowed $MAX_SEVERITY"; exit 1; }
-
-                        # 5. Freshness gate — missing or stale timestamp → fail-closed.
-                        [ -n "$created" ] || { echo "FAIL: verdict has no timestamp → fail-closed"; exit 1; }
-                        age=$(( ( $(date -u +%s) - $(date -u -d "$created" +%s) ) / 86400 ))
-                        [ "$age" -le "$MAX_AGE_DAYS" ] \
-                          || { echo "FAIL: verdict ${age}d old > ${MAX_AGE_DAYS}d SLA → re-scan"; exit 1; }
-
-                        echo "PASS: severity=$sev age=${age}d"
+                        echo "PASS: severity≤$MAX_SEVERITY, attested ${age}s ago"
 ```
 
 **Wiring (Stage excerpt — illustrative):** Kargo runs the gate on the promotion candidate and injects
@@ -228,11 +240,12 @@ spec:
         value: ${{ imageFrom("registry.example/app").RepoDigest }}   # pinned Freight digest
 ```
 
-**The §5 fork, made concrete.** If `houba verify` lands, steps 1–5 collapse to one line — the whole
-point of the primitive being that it encapsulates houba's referrer/annotation conventions:
+**The §5 fork, made concrete.** If `houba verify` lands, steps 1–3 collapse to one line — the whole
+point of the primitive being that it encapsulates predicate discovery, verification, and the
+`gate_breached` + `attested_at` evaluation:
 
 ```sh
-houba verify "$IMAGE" --require scan-pass --max-severity "$MAX_SEVERITY" --max-age "${MAX_AGE_DAYS}d"
+houba verify "$IMAGE" --require scan-pass --max-severity "$MAX_SEVERITY" --max-age "${MAX_AGE_SECONDS}s"
 ```
 
 The maquette deliberately ships the raw-tools version first (zero houba code) so the §6 test can run
