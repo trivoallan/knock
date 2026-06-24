@@ -21,6 +21,7 @@ $ houba [OPTIONS] COMMAND [ARGS]...
 * `attach`: Ingest a scan report produced upstream and...
 * `audit`: Walk the registry and report images that...
 * `gc`: Garbage-collect superseded scan-result...
+* `verify`: Read houba's facts for a digest and gate...
 * `version`: Print the CLI version.
 
 ## `houba reconcile`
@@ -120,6 +121,29 @@ $ houba gc [OPTIONS]
 * `--keep INTEGER`: Newest scan referrers to retain per (tool, format).  [default: 2]
 * `--older-than-days INTEGER`: Only collect referrers older than this many days.  [default: 30]
 * `--apply`: Actually delete (default: dry-run, plan only).
+* `--help`: Show this message and exit.
+
+## `houba verify`
+
+Read houba's facts for a digest and gate on them (exit 0 = pass, 1 = fail).
+
+**Usage**:
+
+```console
+$ houba verify [OPTIONS] IMAGE_REF
+```
+
+**Arguments**:
+
+* `IMAGE_REF`: Image reference (tag or digest) to verify.  [required]
+
+**Options**:
+
+* `--require TEXT`: Comma-separated: scan-pass,stamp,sbom.  [default: scan-pass]
+* `--max-severity [critical|high|medium|low|unknown]`: Fail at or above this scan severity.  [default: high]
+* `--max-age TEXT`: Scan freshness SLA (e.g. 7d, 12h, 30m).  [default: 7d]
+* `--registry TEXT`: Roster entry to authenticate against.
+* `--output TEXT`: Output format: 'text' (default) or 'json'.  [default: text]
 * `--help`: Show this message and exit.
 
 ## `houba version`

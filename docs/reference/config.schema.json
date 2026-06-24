@@ -332,6 +332,18 @@
       "title": "Attest Builder Id",
       "type": "string"
     },
+    "attest_verify_identity": {
+      "default": "",
+      "description": "Keyless verify identity regexp (HOUBA_ATTEST_VERIFY_IDENTITY).",
+      "title": "Attest Verify Identity",
+      "type": "string"
+    },
+    "attest_verify_oidc_issuer": {
+      "default": "",
+      "description": "Keyless verify OIDC issuer (HOUBA_ATTEST_VERIFY_OIDC_ISSUER).",
+      "title": "Attest Verify Oidc Issuer",
+      "type": "string"
+    },
     "usage_oracle_cmd": {
       "anyOf": [
         {
