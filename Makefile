@@ -58,8 +58,8 @@ LOG4SHELL_SRC ?= ghcr.io/christophetd/log4shell-vulnerable-app@sha256:6f88430688
 .PHONY: help reference docs-serve cluster image up-local local local-run \
         argocd cert-manager kargo kyverno \
         demo demo-run openbao-seed seed-incident incident-deploy seed-log4shell \
-        blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui argocd-ui docker-auth logs down \
-        scan cosign-keygen demo-assert-gates
+        blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui kargo-ui argocd-ui docker-auth logs down \
+        scan cosign-keygen demo-assert-gates demo-cve-blast-radius
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -278,6 +278,13 @@ registry-ui: ## Open Zot's built-in registry UI (port-forward svc/registry to lo
 	@echo ">> Browse the mirrored images at http://localhost:8082 (Ctrl-C to stop)."
 	$(KUBECTL) -n $(NS) port-forward svc/registry 8082:5000
 
+kargo-ui: ## Open the kargo UI to watch the promotion gate (port-forward svc/kargo-api)
+	@# kargo-api serves the UI over HTTPS (self-signed, cert-manager-issued) on :443 — the same
+	@# port the kargo quickstart port-forwards. Login is the admin account whose passwordHash is
+	@# set in the `kargo` install target (tokenSigningKey demotokensigningkeyabc123).
+	@echo ">> kargo UI at https://localhost:8084  (login user 'admin' / the password set in 'make kargo'; self-signed cert, accept the warning). Ctrl-C to stop."
+	$(KUBECTL) -n kargo port-forward svc/kargo-api 8084:443
+
 logs: ## Tail the last reconcile run's logs
 	$(KUBECTL) -n $(NS) logs job/houba-reconcile-run -f
 
@@ -339,3 +346,18 @@ demo-assert-gates: ## Self-check beats 3a/3b (kargo gate + Kyverno admission) an
 	  echo ">> Beat 4: DT blast-radius must be clear of log4shell (log4j-core)"; \
 	  DT_BASE_URL=http://localhost:8081 DT_API_KEY=$$KEY \
 	    $(UV) run python3 deploy/scripts/dt_assert_clear.py log4j-core
+
+demo-cve-blast-radius: ## (opt-in, best-effort) Show DT's CVE→image blast radius for the XZ CVE
+	@# The CVE-to-image leg of the XZ story (docs/examples/reference/debian-xz/DEMO.md), as an
+	@# opt-in probe — NOT part of `make demo`, which stays deterministic via the component check.
+	@# It mirrors the OSV Debian feed, re-analyses the placed images, then polls DT for projects
+	@# flagged with CVE-2024-3094. The OSV mirror + DT re-analysis are async, so this is
+	@# best-effort: it reports whatever DT knows and never fails (see dt_blast_radius_cve.py).
+	$(MAKE) dt-vulns
+	$(MAKE) publish-sbom OVERLAY=deploy/argocd/sources/houba
+	@$(KUBECTL) -n $(NS) port-forward svc/dependency-track-apiserver 8081:8080 >/dev/null 2>&1 & \
+	  PF=$$!; trap 'kill $$PF 2>/dev/null' EXIT; \
+	  for i in $$(seq 1 30); do curl -fsS http://localhost:8081/api/version >/dev/null 2>&1 && break; sleep 0.5; done; \
+	  KEY=$$($(KUBECTL) -n $(NS) get secret dt-api-key -o jsonpath='{.data.DT_API_KEY}' | base64 -d); \
+	  DT_BASE_URL=http://localhost:8081 DT_API_KEY=$$KEY \
+	    $(UV) run python3 deploy/scripts/dt_blast_radius_cve.py CVE-2024-3094 420
