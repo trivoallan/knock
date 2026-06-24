@@ -71,6 +71,9 @@ spec:
             # Keyless is impossible on kind (no Fulcio/Rekor/OIDC).
             - {name: HOUBA_ATTEST_SIGNER, value: key}
             - {name: HOUBA_ATTEST_KEY_REF, value: /attest/cosign.key}
+            # The demo registry (Zot) is plain-HTTP, so cosign must allow HTTP — the attest
+            # counterpart of the roster's tls_verify=false. Drop this for a TLS registry.
+            - {name: HOUBA_ATTEST_ALLOW_INSECURE_REGISTRY, value: "true"}
             - name: COSIGN_PASSWORD
               valueFrom: {secretKeyRef: {name: houba-attest-key, key: COSIGN_PASSWORD}}
           envFrom:

@@ -55,6 +55,8 @@ spec:
                       # Rekor is needed (air-gapped / kind-friendly).
                       - {name: HOUBA_ATTEST_SIGNER, value: key}
                       - {name: HOUBA_ATTEST_KEY_REF, value: /attest/cosign.pub}
+                      # Plain-HTTP demo registry: let cosign verify over HTTP (drop for TLS).
+                      - {name: HOUBA_ATTEST_ALLOW_INSECURE_REGISTRY, value: "true"}
                     envFrom:
                       # Same roster Secret as every other houba workload (host-match auth).
                       - secretRef: {name: houba-registries}
