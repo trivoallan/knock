@@ -1,0 +1,74 @@
+# The promotion gate (E1): an Argo Rollouts AnalysisTemplate that runs `houba verify`
+# as a one-shot Job. Kargo's verification (Stage.spec.verification) creates an AnalysisRun
+# from this template; the freight's resolved image DIGEST is passed in as `image-ref`, so the
+# gate is always digest-bound. The gate READS the signed scan attestation houba attached and
+# emits a single pass/fail verdict — exit 0 promotes, exit 1 holds the freight.
+#
+# KEY-mode cosign (NOT keyless): kind has no Fulcio/Rekor/OIDC, so keyless verification cannot
+# work here (see components/attest-key). The gate mounts only the PUBLIC key (`cosign.pub`) from
+# the same `houba-attest-key` Secret the scan-attach Job signs with; the private key never
+# leaves the signing side.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: houba-scan-gate
+spec:
+  args:
+    - name: image-ref          # fully-qualified pinned digest, injected by the Stage's verification
+  metrics:
+    - name: scan-gate
+      # One run, one verdict: no retries, no interval. A non-zero exit fails the metric,
+      # which fails the AnalysisRun, which holds the freight.
+      count: 1
+      failureLimit: 0
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            ttlSecondsAfterFinished: 600
+            template:
+              spec:
+                restartPolicy: Never
+                securityContext:
+                  runAsNonRoot: true
+                  seccompProfile:
+                    type: RuntimeDefault
+                containers:
+                  - name: gate
+                    # Rewritten by the kustomize images transformer (same `houba` local-image
+                    # trick the base Jobs use); has regctl + cosign + python3.
+                    image: houba
+                    command: ["houba"]
+                    args:
+                      - verify
+                      - "{{args.image-ref}}"
+                      - --require=scan-pass
+                      # Beat-3 source is a vuln scanner → vuln.critical; fail the gate on any
+                      # critical (or worse) finding in the signed scan.
+                      - --max-severity=critical
+                      # Reject a stale scan: the attestation must be < 7 days old.
+                      - --max-age=7d
+                    env:
+                      - {name: HOME, value: /tmp}
+                      # Key-mode verification: read the attestation's signature against the
+                      # PUBLIC key. The tlog check is skipped automatically in key mode, so no
+                      # Rekor is needed (air-gapped / kind-friendly).
+                      - {name: HOUBA_ATTEST_SIGNER, value: key}
+                      - {name: HOUBA_ATTEST_KEY_REF, value: /attest/cosign.pub}
+                    envFrom:
+                      # Same roster Secret as every other houba workload (host-match auth).
+                      - secretRef: {name: houba-registries}
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      readOnlyRootFilesystem: true
+                      capabilities: {drop: ["ALL"]}
+                    volumeMounts:
+                      - {name: attest-key, mountPath: /attest, readOnly: true}
+                      - {name: home, mountPath: /tmp}
+                volumes:
+                  # Mount ONLY the public key — the gate verifies, it never signs.
+                  - name: attest-key
+                    secret:
+                      secretName: houba-attest-key
+                      items: [{key: cosign.pub, path: cosign.pub}]
+                  - {name: home, emptyDir: {}}

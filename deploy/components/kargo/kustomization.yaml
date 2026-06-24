@@ -1,0 +1,14 @@
+# Promotion-gate add-on (E1): a kargo pipeline (Warehouse → dev → prod) whose promotion to prod
+# is gated by `houba verify` running as an Argo Rollouts AnalysisTemplate. Pulled in as a
+# Component (the same dual-use shape as components/buildkitd / components/dependency-track) so the
+# one set of manifests serves both `make local` and the Argo source. Requires the kargo and Argo
+# Rollouts CRDs in the cluster (documented prerequisite, never embedded — same posture as KEDA /
+# the External Secrets Operator).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - analysistemplate-scan-gate.yaml
+  - warehouse.yaml
+  - stage-dev.yaml
+  - stage-prod.yaml

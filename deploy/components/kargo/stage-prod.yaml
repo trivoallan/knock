@@ -1,0 +1,38 @@
+# prod Stage: the GATED step. It sources its Freight from the dev Stage (not directly from the
+# Warehouse), and before that Freight may settle in prod, kargo runs the houba-scan-gate
+# AnalysisTemplate as a verification. The gate receives the freight's RESOLVED image digest as
+# `image-ref` (kargo's `imageFrom(...)` expression), so `houba verify` always checks the exact
+# digest being promoted, never a tag.
+#
+# Gate fails (exit 1: no signed scan / stale / a critical finding) ⇒ verification fails ⇒ the
+# Freight is HELD at prod. This is the demonstrable "freight held" assertion exercised end-to-end
+# in Task 5 (needs the demo stack: a registry with placed + signed images).
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: houba-demo
+      sources:
+        # Freight reaches prod only after occupying dev (and passing this gate).
+        direct: false
+        stages:
+          - dev
+  promotionTemplate:
+    spec:
+      steps:
+        # No-op: kargo requires ≥1 step. The substance is the verification gate below.
+        - uses: compose-output
+          config:
+            output: prod
+  verification:
+    analysisTemplates:
+      - name: houba-scan-gate
+    args:
+      # Build the fully-qualified pinned digest from the freight and hand it to the gate.
+      # `imageFrom(repoURL)` resolves the subscribed image in the current Freight.
+      - name: image-ref
+        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/demo/debian").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/demo/debian").Digest }}'

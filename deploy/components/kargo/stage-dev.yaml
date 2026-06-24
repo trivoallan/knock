@@ -1,0 +1,26 @@
+# dev Stage: the entry point of the pipeline. It requests Freight directly from the Warehouse
+# (sources.direct) and has no verification — dev takes whatever the Warehouse discovers. prod
+# sources its Freight FROM this Stage (stage-prod.yaml), so freight must land in dev first.
+#
+# Promotion here is effectively a pointer move: kargo records that this Freight now occupies dev,
+# without mutating any GitOps repo. kargo requires at least one promotion step, so we use the
+# no-op `compose-output` step — the product point being demonstrated is the GATE on prod, not the
+# promotion mechanics.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: houba-demo
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      steps:
+        # No-op: kargo requires ≥1 step. The demo's substance is the prod gate, not promotion.
+        - uses: compose-output
+          config:
+            output: dev

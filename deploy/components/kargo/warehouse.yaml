@@ -1,0 +1,22 @@
+# The Warehouse: kargo's source of artifacts. It polls the demo registry repo houba placed
+# images into and produces Freight (a pinned, digest-bound snapshot) on each new revision.
+# That Freight is what the dev→prod Stages promote, and what the scan gate verifies by digest.
+#
+# Namespace is intentionally omitted: the kustomize base applies `namespace: houba`, which is
+# the kargo Project namespace for the demo.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: houba-demo
+spec:
+  # Short poll so the demo reacts quickly; production would widen this.
+  interval: 30s
+  subscriptions:
+    - image:
+        # The in-cluster Zot repo houba reconciled the demo image into (host-match auth via the
+        # `houba-registries` roster). Plain-HTTP demo registry → skip TLS verification.
+        repoURL: registry.houba.svc.cluster.local:5000/demo/debian
+        insecureSkipTLSVerify: true
+        # Track newest by semver; cap discovery so the demo stays small.
+        imageSelectionStrategy: SemVer
+        discoveryLimit: 10
