@@ -47,3 +47,57 @@ def parse_requirements(text: str) -> set[Requirement]:
     if not out:
         raise ConfigError("--require must name at least one of: " + ", ".join(r.value for r in Requirement))
     return out
+
+
+@dataclass(frozen=True)
+class RequirementOutcome:
+    requirement: Requirement
+    passed: bool
+    detail: str
+
+
+@dataclass(frozen=True)
+class VerifyReport:
+    outcomes: tuple[RequirementOutcome, ...]
+
+    @property
+    def passed(self) -> bool:
+        return all(o.passed for o in self.outcomes)
+
+
+def _stamp_outcome(present: bool) -> RequirementOutcome:
+    return RequirementOutcome(
+        Requirement.stamp, present,
+        "houba stamp present" if present else "no houba stamp on the manifest",
+    )
+
+
+def _sbom_outcome(present: bool) -> RequirementOutcome:
+    return RequirementOutcome(
+        Requirement.sbom, present,
+        "SBOM referrer present" if present else "no SBOM referrer",
+    )
+
+
+def _scan_outcome(preds: list[VerifiedPredicate], max_severity: Severity, max_age: timedelta, now: datetime) -> RequirementOutcome:  # replaced in Task 4
+    return RequirementOutcome(Requirement.scan_pass, False, "not implemented")
+
+
+def evaluate(
+    *,
+    requirements: set[Requirement],
+    stamp_present: bool,
+    sbom_present: bool,
+    scan_predicates: list[VerifiedPredicate],
+    max_severity: Severity,
+    max_age: timedelta,
+    now: datetime,
+) -> VerifyReport:
+    outcomes: list[RequirementOutcome] = []
+    if Requirement.stamp in requirements:
+        outcomes.append(_stamp_outcome(stamp_present))
+    if Requirement.scan_pass in requirements:
+        outcomes.append(_scan_outcome(scan_predicates, max_severity, max_age, now))
+    if Requirement.sbom in requirements:
+        outcomes.append(_sbom_outcome(sbom_present))
+    return VerifyReport(outcomes=tuple(outcomes))
