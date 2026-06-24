@@ -355,6 +355,8 @@ def test_attest_schema_is_serializable_and_lists_fields() -> None:
         "fulcio_url",
         "rekor_url",
         "builder_id",
+        "verify_identity",
+        "verify_oidc_issuer",
     }
 
 

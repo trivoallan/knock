@@ -105,8 +105,10 @@ class CosignAdapter:
             # Key/KMS signatures carry no Rekor entry -> skip the tlog check (kargo §9.1 #1).
             return ["--key", cfg.key_ref, "--insecure-ignore-tlog=true"]
         return [
-            "--certificate-identity-regexp", cfg.verify_identity,
-            "--certificate-oidc-issuer", cfg.verify_oidc_issuer,
+            "--certificate-identity-regexp",
+            cfg.verify_identity,
+            "--certificate-oidc-issuer",
+            cfg.verify_oidc_issuer,
         ]
 
     def verify(self, subject_ref: str, predicate_type: str) -> list[VerifiedPredicate]:
@@ -114,7 +116,10 @@ class CosignAdapter:
         try:
             r = subprocess.run(  # noqa: S603
                 [self._resolve(), *args],
-                check=False, capture_output=True, text=True, timeout=300,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=300,
             )
         except (OSError, subprocess.TimeoutExpired) as e:
             raise CosignError(str(e)) from e
@@ -135,7 +140,9 @@ def _parse_verified_predicates(stdout: str) -> list[VerifiedPredicate]:
             statement = json.loads(base64.b64decode(bundle["payload"]))
             pred = statement["predicate"]
             out.append(
-                VerifiedPredicate(summary=dict(pred["summary"]), attested_at=str(pred["attested_at"]))
+                VerifiedPredicate(
+                    summary=dict(pred["summary"]), attested_at=str(pred["attested_at"])
+                )
             )
         except (KeyError, TypeError, ValueError, json.JSONDecodeError, binascii.Error):
             continue

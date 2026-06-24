@@ -1,15 +1,21 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from houba.domain.verify import Requirement, parse_duration, parse_requirements
+from houba.domain.scan.summary import Severity
+from houba.domain.verify import Requirement, evaluate, parse_duration, parse_requirements
 from houba.errors import ConfigError
+from houba.ports.attestor import VerifiedPredicate
 
 
 @pytest.mark.parametrize(
     "text,expected",
-    [("7d", timedelta(days=7)), ("12h", timedelta(hours=12)),
-     ("30m", timedelta(minutes=30)), ("45s", timedelta(seconds=45))],
+    [
+        ("7d", timedelta(days=7)),
+        ("12h", timedelta(hours=12)),
+        ("30m", timedelta(minutes=30)),
+        ("45s", timedelta(seconds=45)),
+    ],
 )
 def test_parse_duration_units(text, expected):
     assert parse_duration(text) == expected
@@ -24,7 +30,9 @@ def test_parse_duration_rejects_garbage(bad):
 def test_parse_requirements_default_and_subset():
     assert parse_requirements("scan-pass") == {Requirement.scan_pass}
     assert parse_requirements("scan-pass,stamp,sbom") == {
-        Requirement.scan_pass, Requirement.stamp, Requirement.sbom
+        Requirement.scan_pass,
+        Requirement.stamp,
+        Requirement.sbom,
     }
 
 
@@ -33,18 +41,17 @@ def test_parse_requirements_rejects_unknown():
         parse_requirements("scan-pass,bogus")
 
 
-from datetime import datetime, timezone
-
-from houba.domain.scan.summary import Severity
-from houba.domain.verify import VerifyReport, evaluate
-
-NOW = datetime(2026, 6, 24, 12, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 6, 24, 12, 0, 0, tzinfo=UTC)
 
 
 def _eval(reqs, **kw):
     base = dict(
-        stamp_present=False, sbom_present=False, scan_predicates=[],
-        max_severity=Severity.high, max_age=timedelta(days=7), now=NOW,
+        stamp_present=False,
+        sbom_present=False,
+        scan_predicates=[],
+        max_severity=Severity.high,
+        max_age=timedelta(days=7),
+        now=NOW,
     )
     base.update(kw)
     return evaluate(requirements=reqs, **base)
@@ -72,9 +79,6 @@ def test_evaluate_combines_requirements():
     report = _eval({Requirement.stamp, Requirement.sbom}, stamp_present=True, sbom_present=False)
     assert report.passed is False
     assert {o.requirement for o in report.outcomes} == {Requirement.stamp, Requirement.sbom}
-
-
-from houba.ports.attestor import VerifiedPredicate
 
 
 def _pred(at, **vuln):

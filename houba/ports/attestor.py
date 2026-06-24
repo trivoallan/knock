@@ -30,7 +30,7 @@ class AttestorPort(Protocol):
         """Sign `statement` (DSSE) and attach it as a referrer to `subject_ref`."""
         ...
 
-    def verify(self, subject_ref: str, predicate_type: str) -> "list[VerifiedPredicate]":
+    def verify(self, subject_ref: str, predicate_type: str) -> list[VerifiedPredicate]:
         """Return the signature-verified predicates of `predicate_type` on `subject_ref`.
 
         Empty list = cosign ran but found no verifiable attestation (fail-closed at the gate).

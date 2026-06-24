@@ -10,7 +10,7 @@ from __future__ import annotations
 import enum
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from houba.domain.scan.summary import Severity, gate_breached
 from houba.errors import ConfigError
@@ -19,7 +19,7 @@ from houba.ports.attestor import VerifiedPredicate
 
 class Requirement(enum.StrEnum):
     stamp = "stamp"
-    scan_pass = "scan-pass"
+    scan_pass = "scan-pass"  # noqa: S105
     sbom = "sbom"
 
 
@@ -45,7 +45,8 @@ def parse_requirements(text: str) -> set[Requirement]:
             allowed = ", ".join(r.value for r in Requirement)
             raise ConfigError(f"unknown --require {token!r}; allowed: {allowed}") from None
     if not out:
-        raise ConfigError("--require must name at least one of: " + ", ".join(r.value for r in Requirement))
+        allowed = ", ".join(r.value for r in Requirement)
+        raise ConfigError("--require must name at least one of: " + allowed)
     return out
 
 
@@ -67,21 +68,23 @@ class VerifyReport:
 
 def _stamp_outcome(present: bool) -> RequirementOutcome:
     return RequirementOutcome(
-        Requirement.stamp, present,
+        Requirement.stamp,
+        present,
         "houba stamp present" if present else "no houba stamp on the manifest",
     )
 
 
 def _sbom_outcome(present: bool) -> RequirementOutcome:
     return RequirementOutcome(
-        Requirement.sbom, present,
+        Requirement.sbom,
+        present,
         "SBOM referrer present" if present else "no SBOM referrer",
     )
 
 
 def _to_utc(text: str) -> datetime:
     dt = datetime.fromisoformat(text)
-    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
 
 def _scan_outcome(
@@ -103,11 +106,13 @@ def _scan_outcome(
     age = now - _to_utc(freshest.attested_at)
     if age > max_age:
         return RequirementOutcome(
-            Requirement.scan_pass, False,
+            Requirement.scan_pass,
+            False,
             f"scan attested {int(age.total_seconds())}s ago > {int(max_age.total_seconds())}s SLA",
         )
     return RequirementOutcome(
-        Requirement.scan_pass, True,
+        Requirement.scan_pass,
+        True,
         f"severity <= {max_severity.value}, attested {int(age.total_seconds())}s ago",
     )
 

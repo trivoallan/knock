@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from typing import TextIO
 
+from houba.domain.verify import VerifyReport
 from houba.use_cases.attach import ScanOutcome
 from houba.use_cases.report import Operation, RunReport
 
@@ -60,6 +61,27 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
         f"aliased={t.aliased} skipped={t.skipped} marked={t.marked} "
         f"attested={t.attested} sbom={t.sbom} failed={t.failed} failed_policies={failed_policies}\n"
     )
+
+
+def render_verify_report(report: VerifyReport, *, fmt: str, stream: TextIO) -> None:
+    if fmt == "json":
+        stream.write(
+            json.dumps(
+                {
+                    "passed": report.passed,
+                    "requirements": [
+                        {"requirement": o.requirement.value, "passed": o.passed, "detail": o.detail}
+                        for o in report.outcomes
+                    ],
+                }
+            )
+            + "\n"
+        )
+        return
+    for o in report.outcomes:
+        mark = "✓" if o.passed else "✗"
+        stream.write(f"{mark} {o.requirement.value}: {o.detail}\n")
+    stream.write(f"verify {'PASS' if report.passed else 'FAIL'}\n")
 
 
 def render_scan_outcome(outcome: ScanOutcome, *, fmt: str, stream: TextIO) -> None:
