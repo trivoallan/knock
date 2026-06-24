@@ -174,8 +174,36 @@ def enable_osv(jwt):
     print(f"» enabled OSV ecosystem 'Debian' ({';'.join(ecosystems)!r})", flush=True)
 
 
+def relax_bom_validation(jwt):
+    # DT >= 4.11 defaults `bom.validation.mode` to ENABLED, validating each upload against the
+    # CycloneDX schema — whose `license.id` must be a value in DT's embedded SPDX-license enum.
+    # syft's SBOM for a full OS image (e.g. demo/debian, 3000+ components) routinely carries a
+    # package whose declared license isn't a current SPDX id (Debian notation like 'GPL-2+',
+    # 'public-domain', ...), so DT rejects the whole BOM with HTTP 400 "Schema validation failed".
+    # The demo's value is package-level blast-radius, not license-schema enforcement, so disable
+    # validation to ingest syft's real-world SBOMs as-is (idempotent).
+    props = json.load(_req("GET", "/api/v1/configProperty", jwt=jwt))
+    mode = next((p for p in props if p.get("propertyName") == "bom.validation.mode"), None)
+    if mode is None:
+        print("» bom.validation.mode not found (older DT?) — skipping", flush=True)
+        return
+    if mode.get("propertyValue") == "DISABLED":
+        print("» BOM validation already DISABLED", flush=True)
+        return
+    body = [
+        {
+            "groupName": mode["groupName"],
+            "propertyName": "bom.validation.mode",
+            "propertyValue": "DISABLED",
+        }
+    ]
+    _req("POST", "/api/v1/configProperty/aggregate", jwt=jwt, json_body=body)
+    print("» disabled BOM schema validation (syft SBOMs ingest as-is)", flush=True)
+
+
 if __name__ == "__main__":
     wait_api()
     jwt = jwt_token()
     enable_osv(jwt)
+    relax_bom_validation(jwt)
     write_secret(automation_key(jwt))
