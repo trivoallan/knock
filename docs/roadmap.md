@@ -139,8 +139,9 @@ Two of the former *Now* items shipped:
 > surface good enough to onboard without us — both enablement on already-shipped capability, **not tied
 > to a version**.
 >
-> The committed near-term increment leads with the *demonstrable* face — the migration-parity narrative —
-> then clears the two self-serve levers below (a readable generated reference, the no-SBOM backstop). The
+> The committed near-term increment led with the *demonstrable* face — the migration-parity narrative,
+> now shipped (runnable proof, #180) — and continues with the two self-serve levers below (a readable
+> generated reference, the no-SBOM backstop). The
 > consumption-surface bet (*Developer coverage portal*, in *Later*) stays parked: its houba-side
 > prerequisites have now shipped (the `digest` join key and the `audit --sbom` tier, #143), but
 > graduating it is a separate, larger commitment taken only on a real demand signal.
@@ -150,10 +151,13 @@ Two of the former *Now* items shipped:
   *"which images ship the vulnerable package?"* → the stamp's `owners` answer *"who do we contact?"* →
   a runtime source answers *"where does it run?"*, all joined on the image digest. The reproduced XZ
   (CVE-2024-3094) incident and the bypass-image coverage blind spot already ship (the loop is built);
-  the owner + runtime (cluster) join now ships on the reference deployment (#156). What remains is the
-  **migration-parity narrative** — a worked how-to/example showing houba's policy `destinations` fan-out
-  *replacing* registry replication rather than chaining behind it, and (because replication strips OCI
-  referrers) keeping the SBOM/signature alive in every team copy. houba is **one leg** of the join — it
+  the owner + runtime (cluster) join now ships on the reference deployment (#156). The
+  **migration-parity narrative** has now shipped too — the how-to (#156) plus a *runnable* proof: a
+  two-destination example and a `regctl`-only parity script that asserts the package-SBOM referrer
+  survives houba's `destinations` fan-out into **every** team copy (which registry replication strips).
+  *(spec #179; proof #180; ADR 0040)* What remains is a thin **P1** — have the proof also assert the
+  cosign signature tier when a signer is configured, and wire it into the reference-deployment
+  walkthrough. houba is **one leg** of the join — it
   produces the facts; the org's tools run the query.
 - **Docs polish pass — shipped (#155, #157, #164, #168).** The architecture-narrative page (with inline
   C4 diagrams), the `rebuild-and-harden` how-to (richer worked examples), site-wide fenced code blocks,
