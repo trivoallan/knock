@@ -5,10 +5,11 @@ turning houba's **signed scan attestation** into a binary promotion gate. This i
 enforcement lever placed *in the delivery path*: an image cannot reach prod unless its scan is
 present, fresh, signature-verified, and free of critical findings.
 
-## What the four resources do
+## What the resources do
 
 | Resource | Role |
 |---|---|
+| `project.yaml` | Declares `houba` as a kargo **Project** — the prerequisite without which the Warehouse/Stage admission webhooks reject everything ("namespace is not a project"). kargo adopts the namespace via its `kargo.akuity.io/project: "true"` label (set in `base/namespace.yaml`). |
 | `warehouse.yaml` | Polls the demo registry repo (`registry.houba.svc.cluster.local:5000/demo/debian`) every 30s and produces digest-bound **Freight**. |
 | `stage-dev.yaml` | Entry Stage; requests Freight directly from the Warehouse, no verification. |
 | `stage-prod.yaml` | Sources Freight **from dev** and runs the gate as a **verification** before the Freight may settle. Passes the freight's resolved digest as `image-ref`. |

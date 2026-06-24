@@ -1,0 +1,9 @@
+# Declares `houba` as a kargo Project — the prerequisite the Warehouse and Stages assume.
+# Without it kargo's admission webhook rejects them ("namespace \"houba\" is not a project").
+# kargo adopts the pre-existing namespace because base/namespace.yaml carries the
+# `kargo.akuity.io/project: "true"` label. Project is cluster-scoped: the overlays' `namespace:`
+# transformer stamps a stray `metadata.namespace` on it, which the API server harmlessly ignores.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: houba

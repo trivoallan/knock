@@ -2,3 +2,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: houba
+  labels:
+    # Lets kargo adopt this namespace as its Project (see components/kargo/project.yaml);
+    # without the label kargo refuses to manage a pre-existing namespace.
+    kargo.akuity.io/project: "true"
