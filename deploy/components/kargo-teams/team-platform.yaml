@@ -1,6 +1,6 @@
 # Team A (platform) as its OWN kargo Project. In kargo, one namespace == one Project (the tenancy
 # unit), isolated from the data team and from the reference `houba` pipeline. The platform team
-# owns TWO images — busybox and alpine — each with its own Warehouse + dev→prod pipeline. Both are
+# owns TWO images — busybox and static — each with its own Warehouse + dev→prod pipeline. Both are
 # clean, so both promote through their gate.
 #
 # The gate AnalysisTemplate (houba-scan-gate) and the attest-key/registry Secrets are applied into
@@ -31,8 +31,8 @@ spec:
   promotionPolicies:
     - {stage: busybox-dev, autoPromotionEnabled: true}
     - {stage: busybox-prod, autoPromotionEnabled: true}
-    - {stage: alpine-dev, autoPromotionEnabled: true}
-    - {stage: alpine-prod, autoPromotionEnabled: true}
+    - {stage: static-dev, autoPromotionEnabled: true}
+    - {stage: static-prod, autoPromotionEnabled: true}
 ---
 # ----- busybox image pipeline -----
 apiVersion: kargo.akuity.io/v1alpha1
@@ -85,29 +85,31 @@ spec:
       - name: image-ref
         value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/platform/busybox").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/platform/busybox").Digest }}'
 ---
-# ----- alpine image pipeline -----
+# ----- static image pipeline -----
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Warehouse
 metadata:
-  name: alpine
+  name: static
   namespace: team-platform
 spec:
   interval: 30s
   subscriptions:
     - image:
-        repoURL: registry.houba.svc.cluster.local:5000/platform/alpine
+        repoURL: registry.houba.svc.cluster.local:5000/platform/static
         insecureSkipTLSVerify: true
-        imageSelectionStrategy: SemVer
+        # chainguard/static ships a rolling `latest` tag (not semver) → select it lexically.
+        imageSelectionStrategy: Lexical
+        allowTags: "^latest$"
         discoveryLimit: 10
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-  name: alpine-dev
+  name: static-dev
   namespace: team-platform
 spec:
   requestedFreight:
-    - origin: {kind: Warehouse, name: alpine}
+    - origin: {kind: Warehouse, name: static}
       sources: {direct: true}
   promotionTemplate:
     spec:
@@ -118,12 +120,12 @@ spec:
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-  name: alpine-prod
+  name: static-prod
   namespace: team-platform
 spec:
   requestedFreight:
-    - origin: {kind: Warehouse, name: alpine}
-      sources: {direct: false, stages: [alpine-dev]}
+    - origin: {kind: Warehouse, name: static}
+      sources: {direct: false, stages: [static-dev]}
   promotionTemplate:
     spec:
       steps:
@@ -134,4 +136,4 @@ spec:
       - name: houba-scan-gate
     args:
       - name: image-ref
-        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/platform/alpine").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/platform/alpine").Digest }}'
+        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/platform/static").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/platform/static").Digest }}'

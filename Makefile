@@ -445,7 +445,7 @@ demo-teams: ## (opt-in) Two teams, each its OWN kargo Project (own namespace) wi
 	@$(KUBECTL) -n $(NS) port-forward svc/registry 5000:5000 >/dev/null 2>&1 & \
 	  PF=$$!; trap 'kill $$PF 2>/dev/null' EXIT; \
 	  for i in $$(seq 1 20); do curl -fsS http://$(DEMO_REG_LOCAL)/v2/ >/dev/null 2>&1 && break; sleep 0.5; done; \
-	  for spec in "platform/busybox:1.37.0 0 platform" "platform/alpine:3.21.3 0 platform" "data/debian-xz:5.6.1 1 data" "data/debian:bookworm-slim 1 data"; do \
+	  for spec in "platform/busybox:1.37.0 0 platform" "platform/static:latest 0 platform" "data/debian-xz:5.6.1 1 data" "data/debian:bookworm-slim 1 data"; do \
 	    set -- $$spec; ref=$$1; want=$$2; team=$$3; \
 	    D=$$(regctl image digest $(DEMO_REG_LOCAL)/$$ref); \
 	    HOUBA_ATTEST_SIGNER=key HOUBA_ATTEST_KEY_REF=/tmp/houba-demo.pub HOUBA_ATTEST_ALLOW_INSECURE_REGISTRY=true \
@@ -457,7 +457,7 @@ demo-teams: ## (opt-in) Two teams, each its OWN kargo Project (own namespace) wi
 	  echo ">> Host-side contrast holds across 4 images (platform clean / data critical)."
 	@# Live kargo gates: each Project's prod Stages must reach the expected verdict (promoted/held).
 	@echo ">> Live kargo gates per Project (auto-promotion fires each AnalysisRun):"
-	@for spec in "team-platform busybox-prod True" "team-platform alpine-prod True" "team-data debian-xz-prod VerificationFailed" "team-data debian-prod VerificationFailed"; do \
+	@for spec in "team-platform busybox-prod True" "team-platform static-prod True" "team-data debian-xz-prod VerificationFailed" "team-data debian-prod VerificationFailed"; do \
 	  set -- $$spec; ns=$$1; st=$$2; want=$$3; \
 	  for i in $$(seq 1 60); do \
 	    got=$$($(KUBECTL) -n $$ns get stage $$st -o jsonpath='{range .status.conditions[?(@.type=="Verified")]}{.status}/{.reason}{end}' 2>/dev/null); \

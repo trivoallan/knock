@@ -1,0 +1,27 @@
+# Team A (platform), image 2 of 2: a chainguard static base — zero-CVE by design — placed to
+# platform/static. Demonstrates that a team owns MULTIPLE images in its own kargo Project, and
+# that a security-hardened base PASSES the platform team's kargo gate (no critical findings), so
+# both platform images promote.
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: team-platform-static
+spec:
+  artifactType: image
+  defaults:
+    vendor: Platform Team
+    owners:
+      - group:default/platform
+  source:
+    registry: cgr.dev
+    repository: chainguard/static
+  imports:
+    - name: base
+      owners:
+        - group:default/platform
+      tags:
+        semverOnly: false
+        includeRegex: "^latest$"   # rolling tag → platform/static:latest
+      destinations:
+        - project: platform
+          repository: static
