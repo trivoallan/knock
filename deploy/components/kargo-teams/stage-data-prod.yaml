@@ -1,0 +1,26 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: data-prod
+  namespace: houba
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: data
+      sources:
+        direct: false
+        stages:
+          - data-dev
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          config:
+            output: prod
+  verification:
+    analysisTemplates:
+      - name: houba-scan-gate
+    args:
+      - name: image-ref
+        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/data/debian-xz").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/data/debian-xz").Digest }}'

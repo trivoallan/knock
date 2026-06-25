@@ -1,0 +1,13 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: platform
+  namespace: houba
+spec:
+  interval: 30s
+  subscriptions:
+    - image:
+        repoURL: registry.houba.svc.cluster.local:5000/platform/debian
+        insecureSkipTLSVerify: true
+        imageSelectionStrategy: SemVer
+        discoveryLimit: 10
