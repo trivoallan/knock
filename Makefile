@@ -60,7 +60,7 @@ LOG4SHELL_SRC ?= ghcr.io/christophetd/log4shell-vulnerable-app@sha256:6f88430688
         argocd cert-manager kargo kyverno argo-rollouts \
         demo demo-run openbao-seed seed-incident incident-deploy seed-log4shell \
         blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui kargo-ui argocd-ui docker-auth logs down \
-        scan cosign-keygen demo-assert-gates demo-cve-blast-radius
+        scan cosign-keygen demo-assert-gates demo-cve-blast-radius demo-teams
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -381,3 +381,27 @@ demo-cve-blast-radius: ## (opt-in, best-effort) Show DT's CVE→image blast radi
 	  KEY=$$($(KUBECTL) -n $(NS) get secret dt-api-key -o jsonpath='{.data.DT_API_KEY}' | base64 -d); \
 	  DT_BASE_URL=http://localhost:8081 DT_API_KEY=$$KEY \
 	    $(UV) run python3 deploy/scripts/dt_blast_radius_cve.py CVE-2024-3094 420
+
+demo-teams: ## (opt-in) Two teams, each a policy in docs/examples/teams/ with its own kargo gate
+	@# Additive, off the critical `make demo` path. Reconciles the team folder, scan-attaches both
+	@# teams' repos so each gate verdict is real, applies per-team kargo pipelines, then asserts
+	@# team-platform promotes (clean) while team-data is held (debian-xz critical).
+	$(MAKE) seed-incident OVERLAY=$(OVERLAY)
+	@# Reconcile ONLY the teams folder: clone a one-shot job from the CronJob, override POLICY_DIR.
+	-$(KUBECTL) -n $(NS) delete job houba-reconcile-teams --ignore-not-found
+	$(KUBECTL) -n $(NS) create job houba-reconcile-teams --from=cronjob/houba-reconcile --dry-run=client -o yaml \
+	  | $(KUBECTL) set env --local -f - POLICY_DIR=/policies/current/docs/examples/teams -o yaml \
+	  | $(KUBECTL) apply -f -
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-teams --timeout=600s
+	@# scan-attach over the teams' repos so team-data gets a CRITICAL verdict (not "no attestation")
+	@# and team-platform gets a scan-pass. Extract just the scan-attach Job, override BLAST_REPOS.
+	-$(KUBECTL) -n $(NS) delete job houba-scan-attach-teams --ignore-not-found
+	$(KUSTOMIZE) $(OVERLAY) \
+	  | $(UV) run python deploy/scripts/extract-job.py houba-scan-attach houba-scan-attach-teams "platform/debian data/debian-xz" \
+	  | $(KUBECTL) apply -f -
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-scan-attach-teams --timeout=300s
+	@# Apply the per-team kargo pipelines (plain manifests, explicit namespace).
+	$(KUBECTL) apply -f deploy/components/kargo-teams/
+	@echo ">> Two team pipelines applied. Waiting ~90s for Warehouses to discover Freight and gates to run ..."
+	@sleep 90
+	$(UV) run python3 deploy/scripts/assert-team-gates.py
