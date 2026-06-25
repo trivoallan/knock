@@ -85,3 +85,14 @@ def test_coverage_check_returns_gap(redis_server):
     placed = {"sha256:a", "sha256:b"}
     gap = scan_streams.coverage_check(r, placed, max_age_s=10_000, now=10_000)
     assert gap == ["sha256:a"]
+
+
+def test_trim_keeps_unread_same_ms_sibling(redis_server):
+    r = redis_server
+    scan_streams.ensure_group(r, WORK, GROUP)
+    r.xadd(WORK, {"ref": "repo@sha256:a"}, id="100-0")
+    r.xadd(WORK, {"ref": "repo@sha256:b"}, id="100-1")  # un-read, SAME ms as last-delivered
+    msg_id, _ = scan_streams.reserve(r, "w")  # reads 100-0 only
+    scan_streams.ack(r, msg_id, digest="sha256:a", attested_at=1)
+    survivors = [mid for mid, _ in r.xrange(WORK)]
+    assert "100-1" in survivors  # the un-read sibling must NOT be trimmed
