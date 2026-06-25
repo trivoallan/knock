@@ -18,8 +18,9 @@ GROUP = os.environ.get("REDIS_GROUP", "scan")
 
 
 def connect() -> redis.Redis:
+    # REDIS_ADDR is "host:port" (no URL scheme). rsplit splits on the LAST colon.
     addr = os.environ.get("REDIS_ADDR", "scan-queue-redis:6379")
-    host, port = addr.split(":")
+    host, port = addr.rsplit(":", 1)
     return redis.Redis(host=host, port=int(port), decode_responses=True)
 
 
@@ -56,9 +57,12 @@ def _trim_minid(r, stream=WORK, group=GROUP):
         # oldest still-pending (delivered, un-acked) entry and everything after it survive
         r.xtrim(stream, minid=pend["min"], approximate=False)
         return
-    last_delivered = r.xinfo_groups(stream)[0]["last-delivered-id"]
+    groups = {g["name"]: g for g in r.xinfo_groups(stream)}
+    last_delivered = groups[group]["last-delivered-id"]
     if last_delivered == "0-0":
         return
+    # Requires Redis >= 6.2 (XAUTOCLAIM, XTRIM MINID) + XINFO last-generated-id;
+    # the pipeline runs redis:7.
     last_generated = r.xinfo_stream(stream)["last-generated-id"]
     if last_delivered == last_generated:
         # nothing un-read: every entry is read+acked -> reclaim all of them
@@ -80,7 +84,10 @@ def ack(r, msg_id, digest, attested_at, stream=WORK, group=GROUP, confirmed=CONF
 
 def dead_letter(r, msg_id, ref, reason, stream=WORK, group=GROUP, dead=DEAD):
     """INVARIANT: XADD to dead (durable) BEFORE XACK on work. A crash between them
-    re-delivers and re-dead-letters (a dedupable duplicate) — never a loss."""
+    re-delivers and re-dead-letters (a dedupable duplicate) — never a loss.
+    NOTE: this function does NOT trim the work stream (the reaper trims after its loop).
+    A standalone caller (e.g. a worker dead-lettering a classify_failure "permanent" verdict)
+    must call _trim_minid itself, or processed entries on the work stream will not be reclaimed."""
     payload = {"ref": ref, **{k: str(v) for k, v in reason.items()}}
     r.xadd(dead, payload)
     r.xack(stream, group, msg_id)

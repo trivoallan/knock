@@ -96,3 +96,11 @@ def test_trim_keeps_unread_same_ms_sibling(redis_server):
     scan_streams.ack(r, msg_id, digest="sha256:a", attested_at=1)
     survivors = [mid for mid, _ in r.xrange(WORK)]
     assert "100-1" in survivors  # the un-read sibling must NOT be trimmed
+
+
+def test_ensure_group_idempotent(redis_server):
+    r = redis_server
+    scan_streams.ensure_group(r, WORK, GROUP)
+    scan_streams.ensure_group(r, WORK, GROUP)  # second call must not raise (BUSYGROUP swallowed)
+    scan_streams.enqueue(r, WORK, ["repo@sha256:a"])
+    assert r.xlen(WORK) == 1
