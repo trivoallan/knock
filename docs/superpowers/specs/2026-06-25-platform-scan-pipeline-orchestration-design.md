@@ -1,195 +1,138 @@
-# Platform-internal scan + SBOM pipeline — convergent reconcile, not Kargo, not a workflow engine
+# Platform-internal scan + SBOM pipeline — incremental, reconcile-fed (not a walk, not Kargo, not a bus)
 
-> **Status:** Design (approved) — pre-implementation. Decided in an office-hours design pass
-> (2026-06-25). One small houba-core change is implied (§4); everything else is deployment glue
-> outside the hexagon. **Open scale risk (§5, raised 2026-06-25):** registry *enumeration* cost — not
-> the per-image walk — may not hold on a large Harbor, and could force enumeration via the Harbor API
-> or an event/placement-fed worklist (a hybrid). Resolve before implementation. Builds on
-> `houba audit` ([audit.py](../../../houba/use_cases/audit.py), the
-> `--signed`/`--sbom` tiers), the scan-result referrer (`houba attach`), the demo's `publish-sbom`
-> Job, and the producer-side freshness decision in
-> [2026-06-16-scan-max-age-design.md](2026-06-16-scan-max-age-design.md).
+> **Status:** Design (approved) — pre-implementation. Reworked 2026-06-25 in a brainstorming pass
+> after a live `regctl` benchmark refuted the original walk-based backbone. **The backbone requires no
+> houba-core change** (§4): it is deployment glue over reconcile's existing structured output
+> (`Operation.out_digest`, [report.py](../../../houba/use_cases/report.py)) and the existing
+> `houba attach`. Builds on the producer-side freshness decision in
+> [2026-06-16-scan-max-age-design.md](2026-06-16-scan-max-age-design.md) and the reconcile output
+> contract in [2026-06-11-reconcile-output-design.md](2026-06-11-reconcile-output-design.md).
 
 ## 1. Context & motivation
 
-The platform/security team owns the software supply chain of a large group: **>300 Kubernetes
-clusters, a Harbor with ~150k images**. houba is already the front door (rebuild/harden, stamp,
-SBOM); `regis` already governs (scan / policy → SARIF verdict). What is missing is the **operational
-loop that runs the platform team's own post-placement work** over the live registry:
+The platform/security team owns the supply chain of a large group: **>300 clusters, a Harbor with
+~150k images.** houba is the front door (rebuild/harden, stamp, SBOM); `regis` governs (scan → SARIF
+verdict). The missing piece is the **operational loop that runs the post-placement work** over each
+image houba places: **`regis scan` → `houba attach` the signed verdict → publish the SBOM to
+Dependency-Track.**
 
-1. **scan** each placed image with regis,
-2. **attach** the signed verdict to the digest (`houba attach`),
-3. **publish** the package SBOM to Dependency-Track (the currency / blast-radius layer).
+Two scoping facts fix the whole design:
 
-Scope of this spec is **platform-internal only** — nothing touching the end consumers (project
-teams) yet. It answers one question: *what orchestrates that loop at 150k scale?*
+- **Scope A — houba-placed images only.** The pipeline ensures *"every image houba placed is scanned /
+  attached / in DT."* It does **not** hunt for images that bypassed the front door (a direct push to
+  Harbor) — that is the separate `audit ④` question (B), §7. houba is the source of truth for A; the
+  registry is not.
+- **Target — all images.** houba's goal is to be the front door for **every** image. Today it manages
+  ~0; the target is ~150k. The set grows **one placement at a time** along the adoption ramp.
 
-## 2. What this is NOT (two rejected framings)
+## 2. The two facts that killed the walk and chose the shape
 
-**Not Kargo.** [Kargo](https://kargo.io/) is a stage-to-stage **promotion** engine; this work is
-**event/convergent per-artifact post-processing**. Kargo's *Freight* is not a 150k work queue,
-Kargo has no rescan-cadence primitive, and bending it here uses ~10 % of the tool while ignoring the
-promotion/Git model that *is* Kargo. Kargo stays reserved for the **project-team promotion gate**
-(the read-side gate validated on kind in
-[2026-06-23-kargo-promotion-gate-design.md](2026-06-23-kargo-promotion-gate-design.md) §9), which is
-deliberately deferred. Using Kargo for the platform-internal loop is adopting a promotion engine in
-order *not* to promote.
+**Fact 1 — the per-image cost is the ceiling, not enumeration.** A live benchmark (the `regctl`
+per-image probes `houba audit` runs — `image digest` + `manifest get`) measured **~1 s/image** against
+the real registry. The cause is structural: the adapter **spawns a fresh `regctl` process per call**,
+so every image pays a **cold TLS handshake + auth** (no keep-alive, no connection reuse — a property
+of houba's deliberate "no HTTP layer"). Extrapolated to 150k: **~46 h base, ~115 h with
+`--signed --sbom`.** The sample was small and fixed-cost-dominated (re-run with ~200 images for a true
+steady-state rate, likely 2–5× faster), but even 5× faster the conclusion is robust: **a periodic
+full-fleet walk is hours-to-days and cannot be the backbone.** `_catalog` was a red herring — the
+scoped walk pays the same per-image cost.
 
-**Not a workflow engine (Argo Workflows) on day 1.** It is **net-new platform infrastructure** at
-300-cluster scale (a controller + Server UI + RBAC + artifact repo to operate and secure), and the
-work has **almost no DAG** (§3). A DAG engine earns its place with inter-step dependencies, per-step
-retry, and artifact passing — the case this work has the *least*. It is the deferred **upgrade**
-(§6), not the starting point.
+**Fact 2 — "all images via the front door" makes incremental complete.** If every image passes through
+`reconcile`, then scanning each image **at placement** covers the fleet **by construction** — nothing
+escapes, because nothing enters except through reconcile. The 150k is never walked as a batch; it
+accumulates one placement at a time, and the per-image cost is paid **spread over the adoption ramp +
+ongoing churn**, tied to actual placement work, never in a sweep.
 
-## 3. The shape — two independent convergent reconcile loops
+The two facts agree: **the backbone is incremental-at-placement, not a periodic walk** — and
+enumeration (`_catalog`, Harbor API, policy-scoped listing) is **not needed in the backbone at all.**
 
-### 3.1 Why convergent
+## 3. The design — incremental, reconcile-fed
 
-A webhook-driven design is **lossy** (a missed Harbor push event = an image silently never scanned)
-and does **not** cover the dominant workload, which is not "a new image" but "**a CVE dropped,
-rescan a cohort of already-placed images**". A reconcile sweep is **self-healing** (a missed event
-is caught on the next pass) and **absorbs the rescan cadence in the same mechanism**. It also
-mirrors houba's own philosophy — everything houba does is a convergent reconcile. The Harbor webhook
-becomes a *latency optimisation* to bolt on later, never the backbone.
+```
+houba reconcile (CronJob, exists)            scan worker pool (glue)
+  places/updates digests                       dequeue digest
+  emits structured JSON with                     → regis scan
+  out_digest per applied Operation               → houba attach (signed verdict)
+        │                                         → publish SBOM to Dependency-Track
+        ▼                                         → ack  (fail → retry → DLQ after N)
+  enqueuer (glue): parse output,             ▲
+  enqueue applied out_digests   ──────────►  │  durable work queue (Redis/NATS/SQS/…)
+                                                at-least-once + dead-letter
+```
 
-**Caveat (load-bearing):** this superiority assumes registry **enumeration is affordable**. §5 records
-that on a large Harbor it may not be — a full `_catalog` per sweep is the very cost the team cannot
-pay — which can force a **hybrid**: an event/placement-fed worklist for the flow, plus a periodic
-*scoped* (never full-catalog) reconcile as the net. The convergent backbone survives only if §5 is
-resolved.
+- **Producer — `houba reconcile`** (the CronJob that already exists). Its output is a **structured JSON
+  contract** (schema-published) whose every `Operation` carries `out_digest` (the produced digest, set
+  iff `applied`). **The scan worklist is exactly the `out_digest`s of applied operations.** houba
+  emits a list; it never imports a queue or any eventing — it stays **eventing-agnostic.**
+- **Handoff — a durable work queue** (technology is deployment glue: Redis list / NATS / SQS / a DB
+  table). A thin **enqueuer** (glue) parses reconcile's output and pushes the applied `out_digest`s.
+  At-least-once + dead-letter.
+- **Consumer — a scan worker pool** (glue). Dequeue a digest → `regis scan` → `houba attach` → publish
+  SBOM to DT → ack; on failure, retry, then DLQ after N. **Pool parallelism is the throughput knob**
+  (gated by regis capacity, not by houba), a K8s setting.
+- **Rescan on CVE.** Dependency-Track already does CVE→image blast-radius; a thin job **re-enqueues**
+  the affected digests into the **same** queue → same worker path. Not a walk.
+- **No periodic full walk. No `_catalog`. No enumeration. No Argo Events/Workflows. No Kargo.**
 
-### 3.2 There is no chain — there are two independent gaps
+## 4. houba-core footprint — essentially none
 
-The SBOM is **not** produced by the scan. houba generates it with syft **at placement** and attaches
-it as an OCI referrer. So "publish SBOM to DT" does not depend on the scan at all:
+The backbone is **pure deployment composition of existing houba verbs.** reconcile **already** emits
+`out_digest` per applied `Operation` in a schema'd JSON contract; the worker **already** has
+`houba attach` (and `regis` + a thin DT push). The enqueuer, the queue, the worker pool, the DLQ are
+**deployment glue outside the hexagon.** No new port, adapter, or use case is required for the
+backbone.
 
-- **Loop A — scan-coverage:** `audit` says *"digest X has no scan verdict"* → `regis scan` then
-  `houba attach`.
-- **Loop B — dt-publish:** `audit` says *"digest X has an SBOM referrer not yet in DT"* → upload it.
-  This is the **existing demo `publish-sbom` Job** (`make publish-sbom`: fetch the CycloneDX referrer
-  houba attaches, upload via DT's BOM API) generalised from a one-shot into a convergent CronJob.
+Two optional, deferrable extras (NOT on the critical path):
 
-No inter-loop ordering to orchestrate; the only sequence that remains, `regis scan && houba attach`,
-is two lines of shell in one container, not a DAG.
+- The **`houba audit --scan` presence tier** (twin of `--signed`/`--sbom`, ADR 0036) — useful **only**
+  for the optional insurance walk (§6) and the coverage portal, never for the backbone. Defer until a
+  walk is actually wanted.
+- If the per-image throughput ceiling (Fact 1) ever has to be lifted for a fleet-scale walk (question
+  B, §7), that is a **registry-client architecture change** (persistent/pipelined client vs
+  subprocess-per-call, against the current "no HTTP layer") — explicitly **out of scope** here and
+  unneeded by this incremental backbone.
 
-### 3.3 What replaces the workflow engine's three services
+## 5. Why not the alternatives
 
-| Engine service | Bare-K8s replacement |
+| Alternative | Verdict |
 |---|---|
-| **Ordering** | none needed between loops (independent); within a loop it is shell order |
-| **Retry** | **convergence + idempotency**: a partial failure reappears in the next `audit` gap; a step already done is never re-scheduled (the gap is defined as "missing"). Native `backoffLimit` / `backoffLimitPerIndex` cover transient retry |
-| **Artifact passing** | none: each step's artifact is a **digest-bound referrer** (verdict, SBOM); the next step reads the registry, not a passed file. The referrer substrate *is* the bus |
+| **Periodic full / scoped walk** (the original §3) | **Killed by Fact 1** — hours-to-days per sweep at 150k; the scoped walk pays the same per-image cost. |
+| **Enumerate via `_catalog` or the Harbor API** | **Not needed** — the backbone never re-discovers what houba placed; reconcile just placed it. Enumeration only matters for question B (§7). |
+| **Argo Events / Argo Workflows** | **Single client** (confirmed) → a bus/engine for one point-to-point pipe is net-new infra for nothing. A work queue is right-sized. Adopt a bus only when multiple sources/consumers justify it. |
+| **Kargo** | A promotion engine, not a per-artifact post-processor. Reserved for the **project-team promotion gate** ([2026-06-23-kargo-promotion-gate-design.md](2026-06-23-kargo-promotion-gate-design.md) §9), deliberately deferred. |
+| **reconcile does scan inline** | Rejected — couples reconcile to the scanner, breaks **houba ≠ scanner**, and overloads the heavy placement path. reconcile emits; the worker scans. |
 
-### 3.4 Primitives
+## 6. Self-healing & idempotency
 
-- A **tooling image** = `regis` + the `houba` CLI + a small **python** DT pusher (the houba runtime
-  image ships no curl/jq by design — see [[houba-image-no-curl]]; DT's BOM upload is a POST to
-  `/api/v1/bom`, idempotent, DT replaces per project).
-- Two **CronJobs** (`concurrencyPolicy: Forbid` so sweeps never overlap) — `scan-coverage` and
-  `dt-publish` — each fans a `houba audit` gap into a **`parallelism`-capped indexed Job** (one
-  index per digest).
-- **Dashboards** = the audit gap number itself (the KPI: gap → 0 = success, a stuck non-zero gap =
-  alert), DT for the vuln/SBOM view, pod logs for "why did this scan fail".
+The worker is **idempotent** — re-scanning a digest is harmless (`attach` accumulates+gc's, DT
+replaces per project) — so **at-least-once delivery is sufficient** and duplicates cost nothing.
+Durability seam: the enqueuer drains reconcile's **persisted** output artifact idempotently (dedup by
+digest), so a crash re-reads rather than drops. The queue's retry + DLQ **is** the bounded
+self-healing mechanism (failure-only state, never 150k).
 
-## 4. The one houba-core change — `audit` gains a scan-verdict *presence* tier
-
-`houba audit` today carries `digest` + `--signed` + `--sbom` tiers (signed-coverage-audit spec;
-`--sbom` = ADR 0036), but is **blind to the scan verdict**: `--signed` lists *any* cosign bundle
-(`application/vnd.dev.sigstore.bundle.v0.3+json`) and so cannot tell a provenance signature from a
-scan attestation; nothing lists the scan-result referrer
-([`application/vnd.houba.scan.result.v1`](../../../houba/domain/scan/constants.py)). So Loop A's
-worklist — "which digests lack a scan verdict" — is not computable from `audit` today.
-
-**Change:** add a `--scan` tier, the exact twin of `--signed` / `--sbom`:
-
-- `audit_coverage(..., check_scan: bool = False)`, `CoverageOutcome.scan: bool | None`, counts
-  `with_scan` / `without_scan` (NOT `scanned` — that name is already the total-walked count), probed
-  on covered images only, via `list_referrers(ref, SCAN_RESULT_ARTIFACT_TYPE)`. Observational, one
-  cheap referrer listing — same ceiling as the other two tiers.
-
-**Freshness stays OUT of `audit` — deliberate, not an omission.** The
-[scan-max-age spec](2026-06-16-scan-max-age-design.md) already resolved (fork 1) that **houba does
-not gain an audit-side freshness tier**: an audit tier reports drift but cannot block, so freshness
-is **producer-side** (the signed `ScanPredicate.attested_at`) and enforced at the **gate**
-(`houba verify` — [verify.py](../../../houba/use_cases/verify.py) `max_age` —, admission, Kargo).
-This spec honours that. The **scheduler** layers staleness itself, cheaply and outside houba-core,
-from the unsigned `{prefix}.scan.timestamp` annotation on the scan-result referrer
-([summary.py](../../../houba/domain/scan/summary.py)) — adequate because scheduling a rescan is a
-**non-adversarial** decision; the signed `attested_at` is required only at the adversarial gate. This
-keeps **houba ≠ scanner ≠ gate** intact: `audit` reports presence, the loop schedules, `verify` /
-Kargo gate.
-
-**Fork (recorded):** the scheduler could instead walk referrers itself, leaving `audit` untouched.
-Rejected in favour of the `audit` tier — it is consistent with the existing tiers, reuses the same
-detection, and the coverage portal (ADR 0035/0036) gets a scan column for free. The diff is the
-`--sbom` twin.
-
-## 5. The load-bearing risk — registry *enumeration*, not the per-image walk
-
-The cost that gates this design is **enumeration of the registry, not per-image probing.**
-`houba audit` calls `RegistryPort.list_repositories(host)` = `regctl repo ls` = the registry v2
-**`_catalog`** over the whole registry, **eagerly and in full, before classifying any image.** On a
-large Harbor (~150k images) `_catalog` is the expensive, operationally-discouraged operation — Harbor
-enumerates its entire repo set. The platform team **cannot afford a full `_catalog` on prod.**
-
-**`--limit` does NOT bound this** (correction to this spec's earlier framing). The `--limit` slice
-flag caps the per-image probes via `itertools.islice`, but `list_repositories` runs **fully first** —
-so `--limit` is useful for bounding probe work, yet does **not** make `audit` affordable where
-`_catalog` itself is the constraint.
-
-**Load-bearing consequence.** The convergent sweep (§3) calls `audit` **every sweep** → a full
-`_catalog` **every sweep**. If one full enumeration is unaffordable, the per-sweep convergent design
-**as drawn does not hold at this scale.** "Enumeration is cheap" is the load-bearing assumption; if it
-is false, the convergent backbone collapses and the design must change.
-
-**Two ways out (an architecture decision, not a detail):**
-
-1. **Enumerate via Harbor's own API** (`/api/v2.0/projects` + `/repositories`, DB-indexed and
-   **project-scopeable**) instead of the registry `_catalog`. This is a **new enumeration source** —
-   houba is deliberately regctl/OCI-only today and has no Harbor adapter. Generic in spirit (a
-   registry's own API) but Harbor-specific in fact; weigh against the repo's "no org-specific
-   behaviour" rule (acceptable only as a generic primitive configured per registry, never hardcoded
-   Harbor logic).
-2. **Do not enumerate** — feed the worklist from **events** (Harbor push webhooks) or from
-   **`houba reconcile`'s own placement output** (it already knows exactly what it placed). This
-   **reopens the convergent-vs-event tradeoff** of §3.1, which was decided *assuming enumeration is
-   free*. A **hybrid** is the likely landing: an event/placement-fed worklist for the flow, plus a
-   periodic *scoped* (never full-catalog) reconcile as the safety net.
-
-**Measurement that respects the constraint.** Do **not** run `houba audit` for the slope test — it
-always enumerates. Probe per-image cost on a **known** set of repos (`regctl tag ls <host>/<repo>` is
-repo-scoped, no `_catalog`) and extrapolate; seed the known-repo list from Harbor's indexed
-`/api/v2.0/repositories`, **not** from `_catalog`. The per-image rate is what extrapolates to the
-150k walk; the enumeration cost is a separate, dominant fixed term that decides between the two ways
-out above.
-
-## 6. Upgrade trigger to Argo Workflows (stated testably)
-
-The fan-out glue (read gap → apply N Jobs) is the one thing a workflow engine would hand you. Keep it
-**stateless** — read the gap, apply Jobs, exit; K8s holds the state. The moment the glue wants its
-**own memory / retry queue / status API**, you are reinventing Argo Workflows badly: stop and adopt
-it then. Until that line is crossed, bare K8s + DT + `audit` is less to run and operate.
+**Optional deep insurance** against a fully-dropped digest: a **slow, rare, policy-scoped** coverage
+walk (the demoted ex-backbone) run occasionally — explicitly "eventually," never the heartbeat, and
+gated on the `--scan` tier (§4). YAGNI until a dropped digest is actually observed.
 
 ## 7. Scope
 
-**In scope (once §5 holds):** the `--scan` audit tier; the two convergent CronJobs + indexed Jobs;
-the tooling image; the `dt-publish` loop generalised from the demo `publish-sbom` Job.
+**In scope:** the enqueuer, the work queue, the scan worker pool, the DT push, the CVE-driven
+re-enqueue job — all deployment glue; reuse of reconcile's `out_digest` output and `houba attach`.
 
-**Out of scope:** Kargo for this loop (it is the project-team promotion gate, deferred); a workflow
-engine on day 1 (deferred upgrade, §6); an audit **freshness** tier (rejected by the scan-max-age
-spec — freshness is producer-side + gate-enforced); any end-consumer / project-team surface; a Harbor
-webhook (latency optimisation, later).
+**Out of scope:** question **B** (images that bypassed the front door) — it needs enumeration (Harbor
+API or an affordable catalog sample) and is a separate, low-frequency audit; the mandate (front door +
+Kyverno admission) is what makes A complete, B is belt-and-suspenders for the gap between "pushed to
+Harbor" and "admitted to a cluster." Also out: a periodic full walk; Argo Events/Workflows; Kargo;
+lifting the per-image throughput ceiling; any end-consumer/project-team surface.
 
 ## 8. C4 / ADR / examples sync
 
-Mirrored as **ADR 0042** (thin, links here). The **examples** obligation does not fire: no
-`MirrorPolicy` / user-facing policy change — the deliverables are deployment manifests and one CLI
-flag.
+Mirrored as **ADR 0042** (reworked alongside this spec). **Examples** obligation does not fire: no
+`MirrorPolicy`/user-facing policy change — the deliverables are deployment manifests and two thin glue
+containers (enqueuer, worker), zero houba-core.
 
-**workspace.dsl deferred to implementation, deferral recorded** (Kargo-spec precedent). The
-structural delta is at **deployment** level only — Dependency-Track, regis, the `publish-sbom` Job,
-and the `houba-reconcile` / `houba-gc` CronJobs are **already modelled**; the only addition is the
-two new reconcile CronJobs (`scan-coverage`, `dt-publish`) against the production Harbor. No
-context-level actor or external system is added (DT and regis already exist in the model). Modelling
-it before the §5 walk-feasibility check would be speculative; the C4 edit fires when implementation
-is green-lit.
+**workspace.dsl deferred to implementation, deferral recorded** (Kargo-spec precedent). The structural
+delta is **deployment** level only — Dependency-Track, regis, and the `houba-reconcile` CronJob are
+already modelled; the additions are the work queue, the enqueuer, and the scan worker pool, all
+consuming reconcile's existing output. No context-level actor or external system is added. The C4 edit
+fires when implementation is green-lit.
