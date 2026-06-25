@@ -8,4 +8,5 @@ apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 
 resources:
+  - rbac-read-attest-key.yaml
   - policy-verify-houba-scan.yaml

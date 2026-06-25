@@ -1,0 +1,21 @@
+# The verify-houba-scan policy loads the demo public key from Secret houba/houba-attest-key
+# (its `k8s://houba/houba-attest-key` reference). Kyverno's admission controller has no rights
+# on application Secrets by default, so the key fails to load — every verifyImages check then
+# reports verifiedCount: 0 and the gate degrades to deny-all (it even blocks a *validly* attested
+# image, not just log4shell; the demo only probes the deny case, so it never surfaced).
+#
+# Grant a least-privilege `get` on exactly that Secret. The aggregate label folds these rules
+# into the kyverno:admission-controller ClusterRole (verified selector on this cluster), so no
+# RoleBinding is needed — which also sidesteps kustomize rewriting a RoleBinding subject's
+# namespace under the overlay's `namespace: houba`.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno:read-houba-attest-key
+  labels:
+    rbac.kyverno.io/aggregate-to-admission-controller: "true"
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["houba-attest-key"]
+    verbs: ["get"]
