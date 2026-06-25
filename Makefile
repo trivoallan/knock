@@ -363,6 +363,17 @@ demo-assert-gates: ## Self-check beats 3a/3b (kargo gate + Kyverno admission) an
 	  $(KUBECTL) -n prod run l4s --image=$(DEMO_REG)/demo/log4shell@$$D --restart=Never 2>/dev/null \
 	    && { echo "BEAT3b FAIL: admission did not deny"; exit 1; } || echo "   denied (ok)"; \
 	  echo ">> Beats 3a/3b asserted."
+	@# Beat 3a (live): the same verdict, but as a real kargo AnalysisRun. The reference Warehouse
+	@# tracks log4shell and auto-promotes dev→prod (projectconfig.yaml), so prod's verification
+	@# fires the houba-scan-gate Job and HOLDS the freight. Assert the prod Stage settled into
+	@# Verified=VerificationFailed — the live gate's verdict, visible in the kargo UI (make kargo-ui).
+	@echo ">> Beat 3a (live): kargo prod Stage must HOLD log4shell via its AnalysisRun"
+	@for i in $$(seq 1 60); do \
+	  V=$$($(KUBECTL) -n $(NS) get stage prod -o jsonpath='{range .status.conditions[?(@.type=="Verified")]}{.reason}{end}' 2>/dev/null); \
+	  test "$$V" = "VerificationFailed" && { echo "   held (prod Verified=VerificationFailed)"; break; }; \
+	  test $$i -eq 60 && { echo "BEAT3a-live FAIL: prod Stage did not hold log4shell in time (Verified=$$V)"; $(KUBECTL) -n $(NS) get stage prod; exit 1; }; \
+	  sleep 5; \
+	done
 	@# Beat 4: package-level blast-radius. The host-side script reaches DT through a
 	@# port-forward (the service name is unresolvable from the host) and authenticates with
 	@# the Automation key dt-bootstrap minted into the dt-api-key Secret. We assert the

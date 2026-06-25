@@ -33,6 +33,6 @@ spec:
       - name: houba-scan-gate
     args:
       # Build the fully-qualified pinned digest from the freight and hand it to the gate.
-      # `imageFrom(repoURL)` resolves the subscribed image in the current Freight.
+      # `imageFrom(repoURL)` resolves the subscribed image (log4shell) in the current Freight.
       - name: image-ref
-        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/demo/debian").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/demo/debian").Digest }}'
+        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/demo/log4shell").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/demo/log4shell").Digest }}'

@@ -1,6 +1,13 @@
-# The Warehouse: kargo's source of artifacts. It polls the demo registry repo houba placed
-# images into and produces Freight (a pinned, digest-bound snapshot) on each new revision.
-# That Freight is what the dev→prod Stages promote, and what the scan gate verifies by digest.
+# The Warehouse: kargo's source of artifacts. It polls the demo registry repo and produces
+# Freight (a pinned, digest-bound snapshot) on each new revision. That Freight is what the
+# dev→prod Stages promote, and what the scan gate verifies by digest.
+#
+# It tracks `demo/log4shell` — the demo's known-bad image (Log4Shell, CVE-2021-44228), seeded
+# with NO signed scan attestation. This is beat 3a's subject: the live prod gate runs
+# `houba verify --require scan-pass` against its digest and HOLDS it (no verifiable scan), so the
+# AnalysisRun shows up in the kargo UI as a real held promotion. (Earlier this tracked
+# `demo/debian`, whose `bookworm-slim-*` tags are not semver, so the SemVer selector never
+# produced Freight and the gate never ran live — beat 3a was only asserted out-of-band.)
 #
 # Namespace is intentionally omitted: the kustomize base applies `namespace: houba`, which is
 # the kargo Project namespace for the demo.
@@ -13,10 +20,12 @@ spec:
   interval: 30s
   subscriptions:
     - image:
-        # The in-cluster Zot repo houba reconciled the demo image into (host-match auth via the
+        # The in-cluster Zot repo the demo seeded log4shell into (host-match auth via the
         # `houba-registries` roster). Plain-HTTP demo registry → skip TLS verification.
-        repoURL: registry.houba.svc.cluster.local:5000/demo/debian
+        repoURL: registry.houba.svc.cluster.local:5000/demo/log4shell
         insecureSkipTLSVerify: true
-        # Track newest by semver; cap discovery so the demo stays small.
-        imageSelectionStrategy: SemVer
+        # log4shell carries a single non-semver tag (`1`): select it lexically, constrained to
+        # that exact tag, so discovery is deterministic regardless of any future tags.
+        imageSelectionStrategy: Lexical
+        allowTags: "^1$"
         discoveryLimit: 10
