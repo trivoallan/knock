@@ -1,0 +1,9 @@
+# Incremental, reconcile-fed scan pipeline (spec 2026-06-25-platform-scan-pipeline-orchestration).
+# Turns each digest houba reconcile places into a scan + attach + DT publish, off a Redis queue.
+# Requires KEDA in the cluster (documented prereq, like components/keda-buildkitd).
+# Must be listed AFTER the base (it patches cronjob-reconcile).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - redis.yaml
