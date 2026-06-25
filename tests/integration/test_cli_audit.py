@@ -88,3 +88,12 @@ def test_audit_sbom_reports_with_sbom_count(
     assert data["counts"]["without_sbom"] == 0
     # per-outcome digest flows through
     assert all(o["digest"] == "sha256:abc123" for o in data["outcomes"])
+
+
+def test_audit_limit_caps_scanned(monkeypatch: pytest.MonkeyPatch, fake_bin_path: Path) -> None:
+    _env(monkeypatch, fake_bin_path)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "repos")
+    result = runner.invoke(app, ["audit", "--limit", "1"])
+    assert result.exit_code == 0, result.stdout
+    data = json.loads(result.stdout)
+    assert data["counts"]["scanned"] == 1

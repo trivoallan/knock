@@ -40,6 +40,13 @@ def audit(
         bool,
         typer.Option("--sbom", help="Also probe each stamped image for a package SBOM referrer."),
     ] = False,
+    limit: Annotated[
+        int | None,
+        typer.Option(
+            "--limit",
+            help="Stop after N images — bounded smoke-check / walk benchmark over a slice.",
+        ),
+    ] = None,
 ) -> None:
     """Walk the registry and report images that do NOT carry houba's provenance stamp."""
     container = build_container()
@@ -54,6 +61,7 @@ def audit(
         label_prefix=settings.label_prefix,
         check_signed=check_signed,
         check_sbom=check_sbom,
+        limit=limit,
     )
     _render(report, fmt=settings.log_format, check_signed=check_signed, check_sbom=check_sbom)
     raise typer.Exit(
