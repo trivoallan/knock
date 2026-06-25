@@ -39,8 +39,11 @@ lines of shell.
 
 - houba stays scanner-free and gate-free: `audit` reports presence, the loop schedules, `verify` /
   Kargo gate. No new port/adapter; the change is one observational audit tier.
-- The gating risk is the **walk**, not the orchestrator: `audit` is "Sequential v1" — its time over
-  a real Harbor slice must be measured before relying on it at 150k (shard/parallelise if needed).
+- **Open load-bearing risk (raised 2026-06-25):** the gating cost is registry **enumeration**, not
+  the per-image walk. `houba audit` lists the whole `_catalog` eagerly each sweep, which a large
+  Harbor may not afford — and `--limit` does not bound it. If true, the per-sweep convergent design
+  does not hold and must change: enumerate via the Harbor API (project-scopeable) or feed the worklist
+  from events / `reconcile` placement output (a hybrid). Resolve before implementation; see spec §5.
 - `workspace.dsl` is deferred to implementation (deferral recorded in the spec): the only delta is
   two deployment-level CronJobs; DT, regis, and the existing CronJobs are already modelled.
 

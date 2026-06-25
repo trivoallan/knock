@@ -2,7 +2,10 @@
 
 > **Status:** Design (approved) — pre-implementation. Decided in an office-hours design pass
 > (2026-06-25). One small houba-core change is implied (§4); everything else is deployment glue
-> outside the hexagon. Builds on `houba audit` ([audit.py](../../../houba/use_cases/audit.py), the
+> outside the hexagon. **Open scale risk (§5, raised 2026-06-25):** registry *enumeration* cost — not
+> the per-image walk — may not hold on a large Harbor, and could force enumeration via the Harbor API
+> or an event/placement-fed worklist (a hybrid). Resolve before implementation. Builds on
+> `houba audit` ([audit.py](../../../houba/use_cases/audit.py), the
 > `--signed`/`--sbom` tiers), the scan-result referrer (`houba attach`), the demo's `publish-sbom`
 > Job, and the producer-side freshness decision in
 > [2026-06-16-scan-max-age-design.md](2026-06-16-scan-max-age-design.md).
@@ -48,6 +51,12 @@ rescan a cohort of already-placed images**". A reconcile sweep is **self-healing
 is caught on the next pass) and **absorbs the rescan cadence in the same mechanism**. It also
 mirrors houba's own philosophy — everything houba does is a convergent reconcile. The Harbor webhook
 becomes a *latency optimisation* to bolt on later, never the backbone.
+
+**Caveat (load-bearing):** this superiority assumes registry **enumeration is affordable**. §5 records
+that on a large Harbor it may not be — a full `_catalog` per sweep is the very cost the team cannot
+pay — which can force a **hybrid**: an event/placement-fed worklist for the flow, plus a periodic
+*scoped* (never full-catalog) reconcile as the net. The convergent backbone survives only if §5 is
+resolved.
 
 ### 3.2 There is no chain — there are two independent gaps
 
@@ -115,13 +124,44 @@ Rejected in favour of the `audit` tier — it is consistent with the existing ti
 detection, and the coverage portal (ADR 0035/0036) gets a scan column for free. The diff is the
 `--sbom` twin.
 
-## 5. The real risk is the walk, not the orchestrator
+## 5. The load-bearing risk — registry *enumeration*, not the per-image walk
 
-`audit.py` describes itself as **"Sequential v1"**. A sequential catalog walk over 150k images **per
-sweep** is the gating concern. **Before any YAML is written**, run the existing
-`houba audit --check-signed --check-sbom` against a real Harbor slice (e.g. 5k images) to measure the
-slope toward 150k. If it does not hold, shard the walk by registry/repo or parallelise it — a
-separate, scoped change. This is the first real-world step; the orchestration is downstream of it.
+The cost that gates this design is **enumeration of the registry, not per-image probing.**
+`houba audit` calls `RegistryPort.list_repositories(host)` = `regctl repo ls` = the registry v2
+**`_catalog`** over the whole registry, **eagerly and in full, before classifying any image.** On a
+large Harbor (~150k images) `_catalog` is the expensive, operationally-discouraged operation — Harbor
+enumerates its entire repo set. The platform team **cannot afford a full `_catalog` on prod.**
+
+**`--limit` does NOT bound this** (correction to this spec's earlier framing). The `--limit` slice
+flag caps the per-image probes via `itertools.islice`, but `list_repositories` runs **fully first** —
+so `--limit` is useful for bounding probe work, yet does **not** make `audit` affordable where
+`_catalog` itself is the constraint.
+
+**Load-bearing consequence.** The convergent sweep (§3) calls `audit` **every sweep** → a full
+`_catalog` **every sweep**. If one full enumeration is unaffordable, the per-sweep convergent design
+**as drawn does not hold at this scale.** "Enumeration is cheap" is the load-bearing assumption; if it
+is false, the convergent backbone collapses and the design must change.
+
+**Two ways out (an architecture decision, not a detail):**
+
+1. **Enumerate via Harbor's own API** (`/api/v2.0/projects` + `/repositories`, DB-indexed and
+   **project-scopeable**) instead of the registry `_catalog`. This is a **new enumeration source** —
+   houba is deliberately regctl/OCI-only today and has no Harbor adapter. Generic in spirit (a
+   registry's own API) but Harbor-specific in fact; weigh against the repo's "no org-specific
+   behaviour" rule (acceptable only as a generic primitive configured per registry, never hardcoded
+   Harbor logic).
+2. **Do not enumerate** — feed the worklist from **events** (Harbor push webhooks) or from
+   **`houba reconcile`'s own placement output** (it already knows exactly what it placed). This
+   **reopens the convergent-vs-event tradeoff** of §3.1, which was decided *assuming enumeration is
+   free*. A **hybrid** is the likely landing: an event/placement-fed worklist for the flow, plus a
+   periodic *scoped* (never full-catalog) reconcile as the safety net.
+
+**Measurement that respects the constraint.** Do **not** run `houba audit` for the slope test — it
+always enumerates. Probe per-image cost on a **known** set of repos (`regctl tag ls <host>/<repo>` is
+repo-scoped, no `_catalog`) and extrapolate; seed the known-repo list from Harbor's indexed
+`/api/v2.0/repositories`, **not** from `_catalog`. The per-image rate is what extrapolates to the
+150k walk; the enumeration cost is a separate, dominant fixed term that decides between the two ways
+out above.
 
 ## 6. Upgrade trigger to Argo Workflows (stated testably)
 
