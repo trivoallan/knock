@@ -9,17 +9,21 @@ spec:
         spec:
           containers:
             - name: houba
-              # Emit the JSON machine report to the shared dir, then a sentinel.
+              # Emit the JSON machine report, then ALWAYS write the sentinel and
+              # preserve reconcile's exit code — so the enqueuer never hangs and a
+              # reconcile failure stays a clean Job failure (decoupled from the glue).
               args:
-                - 'set -e; HOUBA_LOG_FORMAT=json houba reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX" --shard-count "$SHARD_COUNT" > /shared/report.json; touch /shared/reconcile.done'
+                - 'HOUBA_LOG_FORMAT=json houba reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX" --shard-count "$SHARD_COUNT" > /shared/report.json; rc=$?; touch /shared/reconcile.done; exit $rc'
               volumeMounts:
                 - { name: scan-shared, mountPath: /shared }
             - name: enqueuer
               image: houba   # rewritten by the kustomize images transformer; has python3
               command: ["/bin/sh", "-c"]
+              # Best-effort + bounded: wait up to 5 min for the sentinel, then enqueue
+              # and ALWAYS exit 0 — the enqueuer can never fail or hang the reconcile Job.
               args:
-                - 'until [ -f /shared/reconcile.done ]; do sleep 2; done;
-                   python3 /scripts/enqueue-out-digests.py < /shared/report.json'
+                - 'i=0; while [ ! -f /shared/reconcile.done ] && [ "$i" -lt 150 ]; do sleep 2; i=$((i+1)); done;
+                   python3 /scripts/enqueue-out-digests.py < /shared/report.json || true; exit 0'
               env:
                 - { name: REDIS_ADDR, value: "scan-queue-redis:6379" }
               envFrom:

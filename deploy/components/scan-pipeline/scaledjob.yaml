@@ -13,7 +13,10 @@ spec:
   triggers:
     - type: redis
       metadata:
-        address: scan-queue-redis:6379
+        # FQDN, not the bare name: the KEDA operator resolves this from the `keda`
+        # namespace, so a same-namespace short name (scan-queue-redis) does not resolve.
+        # The worker pods run in `houba` and keep the bare REDIS_ADDR.
+        address: scan-queue-redis.houba.svc.cluster.local:6379
         listName: houba:scan:work
         listLength: "1"        # one waiting digest => one Job (up to maxReplicaCount)
         enableTLS: "false"
@@ -49,23 +52,28 @@ spec:
               - { name: shared, mountPath: /shared }
               - { name: scripts, mountPath: /scripts, readOnly: true }
               - { name: home, mountPath: /tmp }
-          - name: scan               # grype the SBOM -> SARIF (unmodified analyzer, no creds)
-            image: anchore/grype:latest
-            command: ["sh", "-eu", "-c"]
+          - name: scan               # grype the SBOM -> SARIF (no creds)
+            # chainguard -dev: ships busybox sh AND runs nonroot, so it satisfies the pod's
+            # runAsNonRoot policy (anchore/grype is distroless + root -> CreateContainerConfigError).
+            # ponytail: -dev is a moving tag — pin a digest for reproducibility / air-gapped.
+            image: cgr.dev/chainguard/grype:latest-dev
+            command: ["sh", "-c"]
             args:
-              - 'grype "sbom:/shared/sbom.json" -o sarif > /shared/scan.sarif'
+              - 'grype "sbom:/shared/sbom.json" -o sarif --file /shared/scan.sarif'
+            env:
+              - { name: GRYPE_DB_CACHE_DIR, value: /tmp/grype }   # writable cache
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities: { drop: ["ALL"] }
             volumeMounts:
               - { name: shared, mountPath: /shared }
+              - { name: home, mountPath: /tmp }
         containers:
-          - name: attach-publish     # houba attach the SARIF + push the SBOM to DT
+          - name: attach             # houba attach the SARIF verdict referrer + ack
             image: houba
-            command: ["bash", "/scripts/scan-one.sh", "attach-publish"]
+            command: ["bash", "/scripts/scan-one.sh", "attach"]
             env:
               - { name: HOME, value: /tmp }
-              - { name: DT_URL, value: "http://dependency-track-apiserver:8080" }
-              - name: DT_API_KEY
-                valueFrom:
-                  secretKeyRef: { name: dt-api-key, key: DT_API_KEY, optional: true }
             envFrom:
               - secretRef: { name: houba-registries }
             securityContext:

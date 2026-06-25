@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# scan-one.sh fetch|attach-publish — operate on the single reserved digest in /shared/digest.
-# Distilled from scan-attach.sh + publish-sbom.sh: no repo walk, one ref.
+# scan-one.sh fetch|attach — operate on the single reserved digest in /shared/digest.
+# Distilled from scan-attach.sh: no repo walk, one ref. SBOM->DT is Loop B (publish-sbom).
 set -euo pipefail
 : "${HOUBA_REGISTRIES:?set HOUBA_REGISTRIES}"
-MODE="${1:?usage: scan-one.sh fetch|attach-publish}"
+MODE="${1:?usage: scan-one.sh fetch|attach}"
 REF="$(cat /shared/digest)"          # host/repo@sha256:...
 CDX_TYPE="application/vnd.cyclonedx+json"
 SPDX_TYPE="application/spdx+json"
@@ -29,21 +29,12 @@ case "$MODE" in
       || regctl artifact get --subject "$REF" --filter-artifact-type "$SPDX_TYPE" > /shared/sbom.json
     [ -s /shared/sbom.json ] || { echo "no SBOM referrer for $REF" >&2; exit 1; }
     ;;
-  attach-publish)
+  attach)
+    # Loop A = scan + attach ONLY. The SBOM -> Dependency-Track push is Loop B
+    # (the existing publish-sbom Job), independent of the scan (the SBOM is made at
+    # placement, not by the scan). Keeping them separate matches the spec and avoids
+    # coupling a scan worker to DT's availability.
     houba attach "$REF" --report /shared/scan.sarif
-    if [ -n "${DT_API_KEY:-}" ]; then
-      repo="${REF#*/}"; repo="${repo%@*}"
-      DT_URL="${DT_URL:?}" DT_API_KEY="$DT_API_KEY" CDX=/shared/sbom.json REPO="$repo" python3 - <<'PY'
-import base64, json, os, urllib.request
-b64 = base64.b64encode(open(os.environ["CDX"], "rb").read()).decode()
-body = json.dumps({"projectName": os.environ["REPO"], "projectVersion": "scanned",
-                   "autoCreate": True, "bom": b64}).encode()
-req = urllib.request.Request(os.environ["DT_URL"] + "/api/v1/bom", data=body, method="PUT")
-req.add_header("Content-Type", "application/json"); req.add_header("X-Api-Key", os.environ["DT_API_KEY"])
-urllib.request.urlopen(req, timeout=60)  # noqa: S310
-print(f"published {os.environ['REPO']} to DT", flush=True)
-PY
-    fi
     python3 /scripts/scan-queue-ack.py ok
     ;;
   *) echo "unknown mode $MODE" >&2; exit 2;;
