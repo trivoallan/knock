@@ -3,6 +3,7 @@ unit-tested without a broker; the Redis I/O lives in scan_streams.py."""
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 
 
@@ -48,5 +49,22 @@ def classify_failure(stage: str, exit_code: int, stderr: str) -> Failure:
     if any(m in s for m in _PERMANENT):
         return Failure("permanent", f"{stage}: image gone (manifest 404) -> drop, do not retry")
     if any(m in s for m in _SIGNER):
-        return Failure("transient", f"{stage}: signer error -> check HOUBA_ATTEST_SIGNER, then replay")
-    return Failure("transient", f"{stage} failed (see error) -> likely transient (registry 5xx); replay")
+        return Failure(
+            "transient", f"{stage}: signer error -> check HOUBA_ATTEST_SIGNER, then replay"
+        )
+    return Failure(
+        "transient", f"{stage} failed (see error) -> likely transient (registry 5xx); replay"
+    )
+
+
+def coverage_gap(placed: set[str], fresh_confirmed: set[str]) -> list[str]:
+    """The supply-chain anchor: digests placed but not freshly scan-confirmed.
+    A non-empty result = images the pipe silently dropped (or whose scan went stale)."""
+    return list(placed - fresh_confirmed)
+
+
+def gap_by_owner(gap: list[str], owners: dict[str, str]) -> dict[str, int]:
+    """Join each uncovered digest to the stamp's owner (Backstage entity-ref) so the
+    metric is actionable: '12 uncovered, team-x (5), team-y (7)', not an anonymous N.
+    Producer-side only (a metric label) — NOT the coverage portal."""
+    return dict(Counter(owners.get(d, "<unknown>") for d in gap))

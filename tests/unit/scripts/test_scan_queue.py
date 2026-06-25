@@ -1,4 +1,10 @@
-from scripts.scan_queue import classify_failure, enqueue_refs, should_dead_letter
+from scripts.scan_queue import (
+    classify_failure,
+    coverage_gap,
+    enqueue_refs,
+    gap_by_owner,
+    should_dead_letter,
+)
 
 
 def test_enqueue_refs_only_applied_ops_with_out_digest():
@@ -52,3 +58,23 @@ def test_classify_failure_signer_missing():
     f = classify_failure(stage="attach", exit_code=2, stderr="CosignError: no signer configured")
     assert f.kind == "transient"
     assert "HOUBA_ATTEST_SIGNER" in f.suggested_action
+
+
+def test_coverage_gap_is_placed_minus_fresh_confirmed():
+    placed = {"sha256:a", "sha256:b", "sha256:c"}
+    fresh_confirmed = {"sha256:b"}
+    assert sorted(coverage_gap(placed, fresh_confirmed)) == ["sha256:a", "sha256:c"]
+
+
+def test_coverage_gap_empty_when_all_confirmed():
+    assert coverage_gap({"sha256:a"}, {"sha256:a"}) == []
+
+
+def test_gap_by_owner_counts_per_owner_ref():
+    gap = ["sha256:a", "sha256:b", "sha256:c"]
+    owners = {"sha256:a": "team-x", "sha256:b": "team-x", "sha256:c": "team-y"}
+    assert gap_by_owner(gap, owners) == {"team-x": 2, "team-y": 1}
+
+
+def test_gap_by_owner_unknown_owner_bucket():
+    assert gap_by_owner(["sha256:z"], {}) == {"<unknown>": 1}
