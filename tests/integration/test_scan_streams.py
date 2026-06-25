@@ -104,3 +104,13 @@ def test_ensure_group_idempotent(redis_server):
     scan_streams.ensure_group(r, WORK, GROUP)  # second call must not raise (BUSYGROUP swallowed)
     scan_streams.enqueue(r, WORK, ["repo@sha256:a"])
     assert r.xlen(WORK) == 1
+
+
+def test_dlq_replay_moves_back_to_work(redis_server):
+    r = redis_server
+    scan_streams.ensure_group(r, WORK, GROUP)
+    r.xadd(DEAD, {"ref": "repo@sha256:x", "error": "503", "stage": "scan"})
+    moved = scan_streams.dlq_replay(r, "sha256:x")
+    assert moved == 1
+    assert r.xlen(DEAD) == 0
+    assert [m[1]["ref"] for m in r.xrange(WORK)] == ["repo@sha256:x"]

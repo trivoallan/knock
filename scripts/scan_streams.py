@@ -127,3 +127,28 @@ def coverage_check(r, placed, max_age_s, now, confirmed=CONFIRMED):
     ZRANGEBYSCORE + a set-diff (the pure function). No DT query, no registry walk."""
     fresh = set(r.zrangebyscore(confirmed, now - max_age_s, now))
     return coverage_gap(set(placed), fresh)
+
+
+def dlq_list(r, dead=DEAD):
+    return [{"id": mid, **fields} for mid, fields in r.xrange(dead)]
+
+
+def dlq_replay(r, digest, dead=DEAD, work=WORK):
+    """Re-enqueue every dead entry whose ref ends with @<digest> (or all if digest=='--all');
+    remove it from the dead stream."""
+    moved = 0
+    for mid, fields in r.xrange(dead):
+        if digest == "--all" or fields.get("ref", "").endswith("@" + digest):
+            r.xadd(work, {"ref": fields["ref"]})
+            r.xdel(dead, mid)
+            moved += 1
+    return moved
+
+
+def dlq_drop(r, digest, dead=DEAD):
+    dropped = 0
+    for mid, fields in r.xrange(dead):
+        if fields.get("ref", "").endswith("@" + digest):
+            r.xdel(dead, mid)
+            dropped += 1
+    return dropped
