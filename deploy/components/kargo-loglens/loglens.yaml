@@ -5,7 +5,9 @@
 # single-cluster demo there is no log store, so the UI shows "log streaming is not configured".
 # loglens closes that gap: given GET /<jobNamespace>/<jobName>/<container>, it finds the Pod by the
 # Job's `batch.kubernetes.io/job-name` label and proxies that Pod's logs from the Kubernetes API.
-# stdlib only (python:3.12-slim), least-privilege RBAC (read Pods + Pods/log in houba).
+# stdlib only (python:3.12-slim). RBAC is cluster-wide (read Pods + Pods/log) because kargo runs
+# each gate Job in its own Project namespace — the reference `houba` and the per-team Projects
+# (team-platform, team-data) — and the urlTemplate hands loglens the jobNamespace.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -13,10 +15,9 @@ metadata:
   namespace: houba
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: kargo-loglens
-  namespace: houba
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -26,13 +27,12 @@ rules:
     verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: kargo-loglens
-  namespace: houba
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: kargo-loglens
 subjects:
   - kind: ServiceAccount

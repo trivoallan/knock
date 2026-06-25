@@ -8,9 +8,9 @@
 # installed BEFORE kargo (kargo disables the integration at startup if the Rollouts CRDs are
 # absent). The `demo` target orders argo-rollouts before kargo for this reason.
 #
-# NOTE: ProjectConfig is a singleton per Project (name == namespace). The teams pipeline ships a
-# SUPERSET of this list (deploy/components/kargo-teams/projectconfig.yaml: dev/prod + the four
-# team Stages) so `make demo-teams`, applied after `make demo`, does not drop these entries.
+# ProjectConfig is a singleton per Project (name == namespace), but the team pipelines are their
+# OWN kargo Projects (team-platform / team-data namespaces) with their own ProjectConfigs, so this
+# reference config and the team configs never collide.
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
 metadata:

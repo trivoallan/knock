@@ -1,0 +1,26 @@
+# Team B (data), image 2 of 2: a debian base (bookworm-slim) carrying critical CVEs, placed to
+# data/debian. Demonstrates a team owning MULTIPLE images: HELD by the data team's kargo gate just
+# like debian-xz, so the data Project holds its whole portfolio while platform's promotes.
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: team-data-debian
+spec:
+  artifactType: image
+  defaults:
+    vendor: Data Team
+    owners:
+      - group:default/data
+  source:
+    registry: docker.io
+    repository: library/debian
+  imports:
+    - name: base
+      owners:
+        - group:default/data
+      tags:
+        semverOnly: false
+        includeRegex: "^bookworm-slim$"   # non-semver tag → data/debian:bookworm-slim
+      destinations:
+        - project: data
+          repository: debian

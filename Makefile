@@ -402,12 +402,15 @@ demo-cve-blast-radius: ## (opt-in, best-effort) Show DT's CVE→image blast radi
 	  DT_BASE_URL=http://localhost:8081 DT_API_KEY=$$KEY \
 	    $(UV) run python3 deploy/scripts/dt_blast_radius_cve.py CVE-2024-3094 420
 
-demo-teams: ## (opt-in) Two teams, each a policy in docs/examples/teams/ with its own kargo gate
-	@# Additive, off the critical `make demo` path. Reconciles the team folder, scan-attaches both
-	@# teams' repos so each gate verdict is real, applies per-team kargo pipelines, then asserts
-	@# team-platform promotes (clean) while team-data is held (debian-xz critical).
+demo-teams: ## (opt-in) Two teams, each its OWN kargo Project (own namespace) with multiple images
+	@# Additive, off the critical `make demo` path. Each team is a folder of MirrorPolicies
+	@# (docs/examples/teams/{platform,data}) AND its own kargo Project (team-platform / team-data
+	@# namespaces), gating MULTIPLE images: platform owns busybox+alpine (both clean → promote);
+	@# data owns debian-xz+debian (both critical → held). Reconciles the folder, scan-attaches all
+	@# four repos so each gate verdict is real, applies the per-team Projects + per-namespace gate
+	@# infra, then asserts the contrast both host-side and via the live kargo gates.
 	$(MAKE) seed-incident OVERLAY=$(OVERLAY)
-	@# Reconcile ONLY the teams folder: clone a one-shot job from the CronJob, override POLICY_DIR.
+	@# Reconcile the whole teams folder (the policy loader recurses subdirs → all four policies).
 	-$(KUBECTL) -n $(NS) delete job houba-reconcile-teams --ignore-not-found
 	@# POLICY_DIR points the reconcile at the teams folder; TEAMS_POLICY_REF lets you test from a
 	@# branch before the folder is merged to the policy repo ref the cluster git-syncs (default main).
@@ -415,37 +418,55 @@ demo-teams: ## (opt-in) Two teams, each a policy in docs/examples/teams/ with it
 	  | $(KUBECTL) set env --local -f - POLICY_DIR=/policies/current/docs/examples/teams POLICY_REPO_REF=$(TEAMS_POLICY_REF) -o yaml \
 	  | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-teams --timeout=600s
-	@# scan-attach over the teams' repos so team-data gets a CRITICAL verdict (not "no attestation")
-	@# and team-platform gets a scan-pass. Extract just the scan-attach Job, override BLAST_REPOS.
+	@# scan-attach over ALL FOUR team repos so each image gets a real grype verdict (clean vs
+	@# critical), not "no attestation". Extract just the scan-attach Job, override BLAST_REPOS.
 	-$(KUBECTL) -n $(NS) delete job houba-scan-attach-teams --ignore-not-found
 	$(KUSTOMIZE) $(OVERLAY) \
-	  | $(UV) run python deploy/scripts/extract-job.py houba-scan-attach houba-scan-attach-teams "platform/busybox data/debian-xz" \
+	  | $(UV) run python deploy/scripts/extract-job.py houba-scan-attach houba-scan-attach-teams "platform/busybox platform/alpine data/debian-xz data/debian" \
 	  | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-scan-attach-teams --timeout=300s
-	@# loglens makes the gate AnalysisRun logs viewable in the kargo UI (houba namespace).
+	@# loglens (cluster-scoped RBAC) makes each Project's gate AnalysisRun logs viewable in the UI.
 	$(KUBECTL) apply -f deploy/components/kargo-loglens/
-	@# Apply the per-team kargo pipelines — the structural integration: each team's policy → its own
-	@# Warehouse/Stage/gate, coexisting with the reference pipeline (distinct names). Auto-promotion
-	@# (projectconfig.yaml) flows Freight to the gated prod Stages so the AnalysisRun gate runs.
+	@# Per-team kargo Projects: own namespace + Project + Warehouses (one per image) + dev→prod
+	@# pipelines + auto-promotion, isolated from each other and from the reference `houba` Project.
 	$(KUBECTL) apply -f deploy/components/kargo-teams/
-	@# Assert the contrast the same way the reference demo does (beat 3a): `houba verify` per team,
-	@# host-side via a registry port-forward + the key from `make cosign-keygen`. (The demo doesn't
-	@# drive live kargo promotions — the reference stages never hold freight either — so the gate
-	@# verdict is asserted directly with the same engine the kargo gate runs.)
+	@# Each Project runs its gate Jobs in its OWN namespace, so replicate the gate infra there: the
+	@# houba-scan-gate AnalysisTemplate + the public attest key + the registry roster Secret.
+	@for ns in team-platform team-data; do \
+	  $(KUBECTL) -n $$ns apply -f deploy/components/kargo/analysistemplate-scan-gate.yaml; \
+	  for s in houba-attest-key houba-registries; do \
+	    $(KUBECTL) -n $(NS) get secret $$s -o yaml \
+	      | grep -vE '^  (namespace|resourceVersion|uid|creationTimestamp):' \
+	      | $(KUBECTL) -n $$ns apply -f -; \
+	  done; \
+	done
+	@# Assert the contrast host-side (deterministic, same engine the gate runs) across all 4 images.
 	@test -f /tmp/houba-demo.pub || { echo "ERROR: /tmp/houba-demo.pub missing — run 'make cosign-keygen' first"; exit 1; }
 	@$(KUBECTL) -n $(NS) port-forward svc/registry 5000:5000 >/dev/null 2>&1 & \
 	  PF=$$!; trap 'kill $$PF 2>/dev/null' EXIT; \
 	  for i in $$(seq 1 20); do curl -fsS http://$(DEMO_REG_LOCAL)/v2/ >/dev/null 2>&1 && break; sleep 0.5; done; \
-	  echo ">> team-platform (group:default/platform): clean busybox must PASS its gate (exit 0)"; \
-	  DP=$$(regctl image digest $(DEMO_REG_LOCAL)/platform/busybox:1.37.0); \
-	  HOUBA_ATTEST_SIGNER=key HOUBA_ATTEST_KEY_REF=/tmp/houba-demo.pub HOUBA_ATTEST_ALLOW_INSECURE_REGISTRY=true \
-	    $(UV) run houba verify $(DEMO_REG_LOCAL)/platform/busybox@$$DP --require scan-pass --max-severity critical; \
-	  RCP=$$?; \
-	  echo ">> team-data (group:default/data): debian-xz must be HELD by its gate (exit 1)"; \
-	  DD=$$(regctl image digest $(DEMO_REG_LOCAL)/data/debian-xz:5.6.1); \
-	  HOUBA_ATTEST_SIGNER=key HOUBA_ATTEST_KEY_REF=/tmp/houba-demo.pub HOUBA_ATTEST_ALLOW_INSECURE_REGISTRY=true \
-	    $(UV) run houba verify $(DEMO_REG_LOCAL)/data/debian-xz@$$DD --require scan-pass --max-severity critical; \
-	  RCD=$$?; \
-	  test $$RCP -eq 0 || { echo "FAIL: team-platform clean image was NOT promotable (exit $$RCP)"; exit 1; }; \
-	  test $$RCD -eq 1 || { echo "FAIL: team-data xz image was NOT held (exit $$RCD)"; exit 1; }; \
-	  echo ">> Contrast holds: team-platform PROMOTED (clean) / team-data HELD (debian-xz critical), each owner-attributed."
+	  for spec in "platform/busybox:1.37.0 0 platform" "platform/alpine:3.21.3 0 platform" "data/debian-xz:5.6.1 1 data" "data/debian:bookworm-slim 1 data"; do \
+	    set -- $$spec; ref=$$1; want=$$2; team=$$3; \
+	    D=$$(regctl image digest $(DEMO_REG_LOCAL)/$$ref); \
+	    HOUBA_ATTEST_SIGNER=key HOUBA_ATTEST_KEY_REF=/tmp/houba-demo.pub HOUBA_ATTEST_ALLOW_INSECURE_REGISTRY=true \
+	      $(UV) run houba verify $(DEMO_REG_LOCAL)/$${ref%%:*}@$$D --require scan-pass --max-severity critical; \
+	    rc=$$?; \
+	    test $$rc -eq $$want || { echo "FAIL: $$ref (team $$team) expected verify exit $$want, got $$rc"; exit 1; }; \
+	    test $$want -eq 0 && echo "   $$ref ($$team) PROMOTABLE (clean)" || echo "   $$ref ($$team) HELD (critical)"; \
+	  done; \
+	  echo ">> Host-side contrast holds across 4 images (platform clean / data critical)."
+	@# Live kargo gates: each Project's prod Stages must reach the expected verdict (promoted/held).
+	@echo ">> Live kargo gates per Project (auto-promotion fires each AnalysisRun):"
+	@for spec in "team-platform busybox-prod True" "team-platform alpine-prod True" "team-data debian-xz-prod VerificationFailed" "team-data debian-prod VerificationFailed"; do \
+	  set -- $$spec; ns=$$1; st=$$2; want=$$3; \
+	  for i in $$(seq 1 60); do \
+	    got=$$($(KUBECTL) -n $$ns get stage $$st -o jsonpath='{range .status.conditions[?(@.type=="Verified")]}{.status}/{.reason}{end}' 2>/dev/null); \
+	    case "$$want" in \
+	      True) case "$$got" in True/*) echo "   $$ns/$$st PROMOTED ($$got)"; break;; esac ;; \
+	      *) case "$$got" in */VerificationFailed) echo "   $$ns/$$st HELD ($$got)"; break;; esac ;; \
+	    esac; \
+	    test $$i -eq 60 && { echo "FAIL: $$ns/$$st did not reach $$want (got '$$got')"; $(KUBECTL) -n $$ns get stage $$st; exit 1; }; \
+	    sleep 5; \
+	  done; \
+	done
+	@echo ">> Two kargo Projects, each gating multiple images: platform PROMOTED / data HELD, owner-attributed."

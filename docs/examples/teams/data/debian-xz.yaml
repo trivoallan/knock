@@ -1,10 +1,10 @@
-# Team B (data). Owns the debian-xz image carrying the backdoored xz (CVE-2024-3094), placed to
-# data/*. In the two-team demo this is the image that is HELD by its own kargo gate (critical
-# scan finding). Sources the fixture seeded by `make seed-incident` (upstream/debian-xz).
+# Team B (data), image 1 of 2: debian-xz carrying the backdoored xz (CVE-2024-3094), placed to
+# data/debian-xz. HELD by the data team's kargo gate (critical scan finding). Sources the fixture
+# seeded by `make seed-incident` (upstream/debian-xz).
 apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy
 metadata:
-  name: team-data
+  name: team-data-debian-xz
 spec:
   artifactType: image
   defaults:

@@ -1,0 +1,137 @@
+# Team A (platform) as its OWN kargo Project. In kargo, one namespace == one Project (the tenancy
+# unit), isolated from the data team and from the reference `houba` pipeline. The platform team
+# owns TWO images — busybox and alpine — each with its own Warehouse + dev→prod pipeline. Both are
+# clean, so both promote through their gate.
+#
+# The gate AnalysisTemplate (houba-scan-gate) and the attest-key/registry Secrets are applied into
+# this namespace by `make demo-teams` (kargo runs each gate Job in the Project namespace). The
+# namespace is self-declared with kargo's project label so the Project adopts it.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-platform
+  labels:
+    kargo.akuity.io/project: "true"
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: team-platform
+---
+# Auto-promotion: flow each image's Freight Warehouse → dev → prod so the prod gate's AnalysisRun
+# fires (without it Freight stalls at dev and no gate runs). Project-scoped — no collision with the
+# reference `houba` ProjectConfig, which lives in its own namespace.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: team-platform
+  namespace: team-platform
+spec:
+  promotionPolicies:
+    - {stage: busybox-dev, autoPromotionEnabled: true}
+    - {stage: busybox-prod, autoPromotionEnabled: true}
+    - {stage: alpine-dev, autoPromotionEnabled: true}
+    - {stage: alpine-prod, autoPromotionEnabled: true}
+---
+# ----- busybox image pipeline -----
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: busybox
+  namespace: team-platform
+spec:
+  interval: 30s
+  subscriptions:
+    - image:
+        repoURL: registry.houba.svc.cluster.local:5000/platform/busybox
+        insecureSkipTLSVerify: true
+        imageSelectionStrategy: SemVer
+        discoveryLimit: 10
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: busybox-dev
+  namespace: team-platform
+spec:
+  requestedFreight:
+    - origin: {kind: Warehouse, name: busybox}
+      sources: {direct: true}
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          config: {output: dev}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: busybox-prod
+  namespace: team-platform
+spec:
+  requestedFreight:
+    - origin: {kind: Warehouse, name: busybox}
+      sources: {direct: false, stages: [busybox-dev]}
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          config: {output: prod}
+  verification:
+    analysisTemplates:
+      - name: houba-scan-gate
+    args:
+      - name: image-ref
+        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/platform/busybox").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/platform/busybox").Digest }}'
+---
+# ----- alpine image pipeline -----
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: alpine
+  namespace: team-platform
+spec:
+  interval: 30s
+  subscriptions:
+    - image:
+        repoURL: registry.houba.svc.cluster.local:5000/platform/alpine
+        insecureSkipTLSVerify: true
+        imageSelectionStrategy: SemVer
+        discoveryLimit: 10
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: alpine-dev
+  namespace: team-platform
+spec:
+  requestedFreight:
+    - origin: {kind: Warehouse, name: alpine}
+      sources: {direct: true}
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          config: {output: dev}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: alpine-prod
+  namespace: team-platform
+spec:
+  requestedFreight:
+    - origin: {kind: Warehouse, name: alpine}
+      sources: {direct: false, stages: [alpine-dev]}
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          config: {output: prod}
+  verification:
+    analysisTemplates:
+      - name: houba-scan-gate
+    args:
+      - name: image-ref
+        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/platform/alpine").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/platform/alpine").Digest }}'

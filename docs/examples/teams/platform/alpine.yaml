@@ -1,0 +1,25 @@
+# Team A (platform), image 2 of 2: a clean alpine. Demonstrates that a team owns MULTIPLE images
+# in its own kargo Project. alpine's recent tags carry no critical CVEs, so it too PASSES the
+# platform team's kargo gate — both platform images promote.
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: team-platform-alpine
+spec:
+  artifactType: image
+  defaults:
+    vendor: Platform Team
+    owners:
+      - group:default/platform
+  source:
+    registry: docker.io
+    repository: library/alpine
+  imports:
+    - name: base
+      owners:
+        - group:default/platform
+      tags:
+        includeRegex: "^3\\.21\\.3$"   # one stable tag → platform/alpine:3.21.3
+      destinations:
+        - project: platform
+          repository: alpine

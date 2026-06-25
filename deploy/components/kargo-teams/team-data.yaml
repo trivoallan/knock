@@ -1,0 +1,137 @@
+# Team B (data) as its OWN kargo Project — isolated from the platform team and from the reference
+# `houba` pipeline. The data team owns TWO images — debian-xz (the CVE-2024-3094 xz backdoor) and
+# a debian base — each with its own Warehouse + dev→prod pipeline. Both carry critical CVEs, so
+# both are HELD at their prod gate: the data Project holds its whole portfolio while platform's
+# promotes.
+#
+# Gate AnalysisTemplate + attest-key/registry Secrets are applied into this namespace by
+# `make demo-teams`. The namespace is self-declared with kargo's project label so the Project
+# adopts it.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-data
+  labels:
+    kargo.akuity.io/project: "true"
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: team-data
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: team-data
+  namespace: team-data
+spec:
+  promotionPolicies:
+    - {stage: debian-xz-dev, autoPromotionEnabled: true}
+    - {stage: debian-xz-prod, autoPromotionEnabled: true}
+    - {stage: debian-dev, autoPromotionEnabled: true}
+    - {stage: debian-prod, autoPromotionEnabled: true}
+---
+# ----- debian-xz image pipeline -----
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: debian-xz
+  namespace: team-data
+spec:
+  interval: 30s
+  subscriptions:
+    - image:
+        repoURL: registry.houba.svc.cluster.local:5000/data/debian-xz
+        insecureSkipTLSVerify: true
+        imageSelectionStrategy: SemVer
+        discoveryLimit: 10
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: debian-xz-dev
+  namespace: team-data
+spec:
+  requestedFreight:
+    - origin: {kind: Warehouse, name: debian-xz}
+      sources: {direct: true}
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          config: {output: dev}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: debian-xz-prod
+  namespace: team-data
+spec:
+  requestedFreight:
+    - origin: {kind: Warehouse, name: debian-xz}
+      sources: {direct: false, stages: [debian-xz-dev]}
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          config: {output: prod}
+  verification:
+    analysisTemplates:
+      - name: houba-scan-gate
+    args:
+      - name: image-ref
+        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/data/debian-xz").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/data/debian-xz").Digest }}'
+---
+# ----- debian base image pipeline (non-semver tag → Lexical selector) -----
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: debian
+  namespace: team-data
+spec:
+  interval: 30s
+  subscriptions:
+    - image:
+        repoURL: registry.houba.svc.cluster.local:5000/data/debian
+        insecureSkipTLSVerify: true
+        # bookworm-slim is not semver — select it lexically, constrained to that exact tag.
+        imageSelectionStrategy: Lexical
+        allowTags: "^bookworm-slim$"
+        discoveryLimit: 10
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: debian-dev
+  namespace: team-data
+spec:
+  requestedFreight:
+    - origin: {kind: Warehouse, name: debian}
+      sources: {direct: true}
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          config: {output: dev}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: debian-prod
+  namespace: team-data
+spec:
+  requestedFreight:
+    - origin: {kind: Warehouse, name: debian}
+      sources: {direct: false, stages: [debian-dev]}
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: compose-output
+          config: {output: prod}
+  verification:
+    analysisTemplates:
+      - name: houba-scan-gate
+    args:
+      - name: image-ref
+        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/data/debian").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/data/debian").Digest }}'
