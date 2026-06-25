@@ -1,6 +1,11 @@
 # Keyless scan attestations so the Kyverno admission gate works (sigstore on kind)
 
-**Status:** Design — approved 2026-06-25, pending implementation plan.
+**Status:** Design — approved 2026-06-25, **deferred**. P1 (install sigstore-scaffolding) was
+spiked and revealed the keyless path pulls in Knative Serving + Kourier + a full Sigstore stack —
+disproportionate to one demo beat. Decision: ship the demo with the Kyverno gate documented as
+deny-only (the kargo gate carries the cryptographic enforcement), keep the Kyverno RBAC fix, and
+hold this keyless design for when a fully-functional Kyverno admission gate is worth the
+infrastructure. See `deploy/components/kyverno/README.md` → "Known limitation".
 
 ## Problem
 
