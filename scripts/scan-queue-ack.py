@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """Ack a reserved digest. Usage: scan-queue-ack.py ok|fail."""
+
+# ponytail: a Job that crashes between reserve and ack leaves its ref in the
+# 'processing' list. A stale-reaper CronJob (requeue processing entries older
+# than T) is the deferred hardening — out of scope for this backbone.
 import os
 import socket
 import sys
