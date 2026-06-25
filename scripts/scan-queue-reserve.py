@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Reserve one digest: BRPOPLPUSH work -> processing, write it to /shared/digest."""
+
 import os
 import socket
 import sys

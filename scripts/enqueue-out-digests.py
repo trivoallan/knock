@@ -6,6 +6,7 @@ collects every operation with applied=true and a non-null out_digest, and pushes
 "<dest_repo>@<out_digest>" refs onto REDIS_WORK_LIST. TargetReport.dest_repo is already
 host-qualified (e.g. registry.example:5000/demo/busybox), so no roster lookup is needed.
 """
+
 import json
 import os
 import socket
