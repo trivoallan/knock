@@ -15,7 +15,9 @@ for doc in yaml.safe_load_all(sys.stdin):
         doc["metadata"]["name"] = new_name
         doc["metadata"].pop("resourceVersion", None)
         spec = doc["spec"]["template"]["spec"]
-        for container in spec.get("containers", []):
+        # Override on BOTH init and main containers: scan-attach fetches SBOMs in an
+        # initContainer and attaches in the main container, and BOTH read BLAST_REPOS.
+        for container in spec.get("initContainers", []) + spec.get("containers", []):
             env = container.setdefault("env", [])
             env[:] = [e for e in env if e.get("name") != "BLAST_REPOS"]
             env.append({"name": "BLAST_REPOS", "value": blast})
