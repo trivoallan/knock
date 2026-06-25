@@ -74,6 +74,74 @@ houba reconcile (CronJob, exists)            scan worker pool (glue)
   the affected digests into the **same** queue → same worker path. Not a walk.
 - **No periodic full walk. No `_catalog`. No enumeration. No Argo Events/Workflows. No Kargo.**
 
+### 3.1 System context
+
+houba (reconcile + the enqueuer glue) is the producer; the registry, regis and Dependency-Track are
+the external systems the worker pool reads/writes. No new context-level actor is introduced.
+
+```mermaid
+C4Context
+    title System Context - platform-internal scan/SBOM pipeline (incremental, reconcile-fed)
+
+    Person(platform, "Platform / Security engineer", "Owns the front-door mandate; manages MirrorPolicies")
+
+    System(houba, "houba reconcile", "Front door - places/updates digests; emits out_digest per applied Operation")
+    System(queue, "Work queue (Redis)", "Durable worklist of placed digests; at-least-once + DLQ")
+    System(worker, "Scan worker pool", "KEDA-scaled consumer: per digest runs scan, attach, DT publish")
+
+    System_Ext(regis, "regis", "Scanner - produces the SARIF verdict")
+    System_Ext(registry, "OCI Registry (Harbor)", "Digests + signed referrers (stamp / SBOM / verdict)")
+    System_Ext(dt, "Dependency-Track", "SBOM store + CVE to image blast-radius")
+
+    Rel(platform, houba, "Configures policy")
+    Rel(houba, registry, "Places digests; attaches stamp/SBOM")
+    Rel(houba, queue, "Enqueuer pushes applied out_digests")
+    Rel(queue, worker, "Dequeue digest")
+    Rel(worker, regis, "Scan digest")
+    Rel(worker, registry, "houba attach - signed verdict referrer")
+    Rel(worker, dt, "Publish SBOM")
+    Rel(dt, queue, "CVE blast-radius re-enqueues affected digests")
+```
+
+### 3.2 Sequence
+
+Placement is the only way in (the mandate); the worklist is reconcile's own `out_digest`s; the worker
+processes each digest with a reliable-queue reservation (`BRPOPLPUSH` → remove-on-success /
+requeue-or-DLQ-on-failure); CVE rescans re-enter the same queue. No walk anywhere.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant R as houba reconcile (CronJob)
+    participant E as enqueuer (sidecar)
+    participant Q as Work queue (Redis)
+    participant W as Scan worker (KEDA-scaled)
+    participant S as regis
+    participant Reg as OCI Registry
+    participant DT as Dependency-Track
+
+    Note over R,Reg: Placement - the only way in (front-door mandate)
+    R->>Reg: place/update digest (copy or rebuild + stamp + SBOM)
+    R->>E: structured JSON output (out_digest per applied Operation)
+    E->>Q: LPUSH applied out_digests
+
+    Note over Q,DT: Incremental - pool scales on queue depth (KEDA)
+    W->>Q: BRPOPLPUSH work to processing (reserve)
+    W->>S: scan digest
+    S-->>W: SARIF verdict
+    W->>Reg: houba attach - signed scan-verdict referrer
+    W->>DT: publish SBOM
+    alt success
+        W->>Q: LREM processing (done)
+    else failure
+        W->>Q: requeue for retry, or DLQ after N
+    end
+
+    Note over DT,Q: Rescan on CVE - no walk
+    DT->>DT: new CVE to blast-radius (affected digests)
+    DT->>Q: re-enqueue affected digests
+```
+
 ## 4. houba-core footprint — essentially none
 
 The backbone is **pure deployment composition of existing houba verbs.** reconcile **already** emits
