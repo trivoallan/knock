@@ -8,6 +8,7 @@ kind: Component
 resources:
   - redis.yaml
   - scaledjob.yaml
+  - cronjob-reaper.yaml
 
 patches:
   - path: patch-reconcile-enqueuer.yaml
@@ -21,6 +22,7 @@ configMapGenerator:
       - enqueue-out-digests.py=../../../scripts/enqueue-out-digests.py
       - scan-queue-reserve.py=../../../scripts/scan-queue-reserve.py
       - scan-queue-ack.py=../../../scripts/scan-queue-ack.py
+      - scan-queue-reap.sh=../../../scripts/scan-queue-reap.sh
       - scan-one.sh=../../../scripts/scan-one.sh
 
 generatorOptions:

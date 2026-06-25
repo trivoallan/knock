@@ -1,0 +1,53 @@
+# Stale-reaper: requeues digests stuck in `processing` (a worker that died between
+# reserve and ack). Two-snapshot heuristic — the schedule IS the staleness threshold,
+# so it must exceed the max worker duration. redis:7-alpine ships redis-cli.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scan-queue-reaper
+  labels:
+    app.kubernetes.io/name: scan-queue-reaper
+    app.kubernetes.io/component: scan-pipeline
+spec:
+  schedule: "*/15 * * * *"   # > max worker duration (fetch + grype + attach)
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: scan-queue-reaper
+            app.kubernetes.io/component: scan-pipeline
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reaper
+              image: redis:7-alpine
+              command: ["sh", "/scripts/scan-queue-reap.sh"]
+              env:
+                - { name: REDIS_HOST, value: scan-queue-redis }
+                - { name: HOME, value: /tmp }   # redis-cli history dir (readOnlyRootFilesystem)
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests: { cpu: 10m, memory: 16Mi }
+                limits: { memory: 64Mi }
+              volumeMounts:
+                - { name: scripts, mountPath: /scripts, readOnly: true }
+                - { name: home, mountPath: /tmp }
+          volumes:
+            - name: scripts
+              configMap: { name: scan-pipeline-scripts, defaultMode: 0755 }
+            - name: home
+              emptyDir: {}
