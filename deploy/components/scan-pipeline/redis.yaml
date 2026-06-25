@@ -1,8 +1,9 @@
 # The reference work queue: a single Redis (durable enough for at-least-once with reserve/ack).
-# Swappable glue — replace with NATS/SQS without touching houba. Lists used:
-#   houba:scan:work        the worklist (LPUSH by the enqueuer, BRPOPLPUSH by each Job)
-#   houba:scan:processing  in-flight reservations (LREM on success)
-#   houba:scan:dead        DLQ (after N failures)
+# Swappable glue — replace with NATS/SQS without touching houba. Streams used:
+#   houba:scan:work        the work stream (XADD by the enqueuer, XREADGROUP by each Job)
+# Consumer group: scan
+# AOF enabled (appendonly yes + appendfsync everysec) for durability across container restarts.
+# Production hardening: replace emptyDir with a PVC for pod-reschedule durability.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,7 +30,7 @@ spec:
       containers:
         - name: redis
           image: redis:7-alpine
-          args: ["--save", "60", "1", "--appendonly", "yes"]
+          args: ["--save", "60", "1", "--appendonly", "yes", "--appendfsync", "everysec"]
           ports:
             - { name: redis, containerPort: 6379 }
           securityContext:

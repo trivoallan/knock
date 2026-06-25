@@ -1,6 +1,7 @@
-# Stale-reaper: requeues digests stuck in `processing` (a worker that died between
-# reserve and ack). Two-snapshot heuristic — the schedule IS the staleness threshold,
-# so it must exceed the max worker duration. redis:7-alpine ships redis-cli.
+# Stale-reaper: reclaims PEL entries (pending entries list) stuck in the consumer group
+# after a worker that died between reserve and ack. Uses XAUTOCLAIM with a per-entry
+# min-idle window (REAP_MIN_IDLE_MS), so a frequent schedule just bounds reclaim latency —
+# the schedule no longer IS the staleness threshold (unlike the old LIST two-snapshot heuristic).
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -9,7 +10,7 @@ metadata:
     app.kubernetes.io/name: scan-queue-reaper
     app.kubernetes.io/component: scan-pipeline
 spec:
-  schedule: "*/15 * * * *"   # > max worker duration (fetch + grype + attach)
+  schedule: "*/15 * * * *"   # bounds reclaim latency; per-entry idle threshold set via REAP_MIN_IDLE_MS
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
@@ -30,24 +31,23 @@ spec:
               type: RuntimeDefault
           containers:
             - name: reaper
-              image: redis:7-alpine
-              command: ["sh", "/scripts/scan-queue-reap.sh"]
+              image: houba
+              command: ["python3", "/scripts/scan-reaper.py"]
               env:
-                - { name: REDIS_HOST, value: scan-queue-redis }
-                - { name: HOME, value: /tmp }   # redis-cli history dir (readOnlyRootFilesystem)
+                - { name: REDIS_ADDR, value: "scan-queue-redis:6379" }
+                - { name: REAP_MIN_IDLE_MS, value: "1800000" }
+                - { name: MAX_DELIVERIES, value: "5" }
+                - { name: PYTHONPATH, value: "/" }
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
                 capabilities:
                   drop: ["ALL"]
               resources:
-                requests: { cpu: 10m, memory: 16Mi }
-                limits: { memory: 64Mi }
+                requests: { cpu: 10m, memory: 32Mi }
+                limits: { memory: 128Mi }
               volumeMounts:
                 - { name: scripts, mountPath: /scripts, readOnly: true }
-                - { name: home, mountPath: /tmp }
           volumes:
             - name: scripts
               configMap: { name: scan-pipeline-scripts, defaultMode: 0755 }
-            - name: home
-              emptyDir: {}

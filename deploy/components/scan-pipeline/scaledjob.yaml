@@ -11,14 +11,15 @@ spec:
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   triggers:
-    - type: redis
+    - type: redis-streams
       metadata:
         # FQDN, not the bare name: the KEDA operator resolves this from the `keda`
         # namespace, so a same-namespace short name (scan-queue-redis) does not resolve.
         # The worker pods run in `houba` and keep the bare REDIS_ADDR.
         address: scan-queue-redis.houba.svc.cluster.local:6379
-        listName: houba:scan:work
-        listLength: "1"        # one waiting digest => one Job (up to maxReplicaCount)
+        stream: houba:scan:work
+        consumerGroup: scan
+        pendingEntriesCount: "1"   # one pending entry => one Job (up to maxReplicaCount)
         enableTLS: "false"
   jobTargetRef:
     backoffLimit: 0
@@ -33,11 +34,12 @@ spec:
           runAsNonRoot: true
           seccompProfile: { type: RuntimeDefault }
         initContainers:
-          - name: reserve            # BRPOPLPUSH one digest -> /shared/digest
+          - name: reserve            # XREADGROUP one digest -> /shared/msgid + /shared/digest
             image: houba
-            command: ["python3", "/scripts/scan-queue-reserve.py"]
+            command: ["python3", "/scripts/scan-reserve.py"]
             env:
               - { name: REDIS_ADDR, value: "scan-queue-redis:6379" }
+              - { name: PYTHONPATH, value: "/" }
             volumeMounts:
               - { name: shared, mountPath: /shared }
               - { name: scripts, mountPath: /scripts, readOnly: true }
@@ -74,6 +76,7 @@ spec:
             command: ["bash", "/scripts/scan-one.sh", "attach"]
             env:
               - { name: HOME, value: /tmp }
+              - { name: PYTHONPATH, value: "/" }
             envFrom:
               - secretRef: { name: houba-registries }
             securityContext:
