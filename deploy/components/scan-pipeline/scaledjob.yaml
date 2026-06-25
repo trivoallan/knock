@@ -18,8 +18,12 @@ spec:
         # The worker pods run in `houba` and keep the bare REDIS_ADDR.
         address: scan-queue-redis.houba.svc.cluster.local:6379
         stream: houba:scan:work
-        consumerGroup: scan
-        pendingEntriesCount: "1"   # one pending entry => one Job (up to maxReplicaCount)
+        # streamLength (XLEN) scales on OUTSTANDING work. NOT pendingEntriesCount: XPENDING is 0 for
+        # un-read entries, so it would never spawn a worker for fresh work — a cold-start deadlock,
+        # proven in the kind e2e (KEDA 2.20.1: pendingEntriesCount never fired, streamLength did).
+        # XLEN counts un-read + reserved-unacked; acked entries are XTRIM'd in ack(), so the metric
+        # drains to 0 when the queue clears. (No consumerGroup needed — XLEN is group-independent.)
+        streamLength: "1"   # >=1 outstanding entry => one Job (up to maxReplicaCount)
         enableTLS: "false"
   jobTargetRef:
     backoffLimit: 0
