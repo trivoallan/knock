@@ -7,7 +7,7 @@ spec:
   interval: 30s
   subscriptions:
     - image:
-        repoURL: registry.houba.svc.cluster.local:5000/platform/debian
+        repoURL: registry.houba.svc.cluster.local:5000/platform/busybox
         insecureSkipTLSVerify: true
         imageSelectionStrategy: SemVer
         discoveryLimit: 10

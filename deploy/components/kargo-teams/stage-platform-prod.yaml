@@ -23,4 +23,4 @@ spec:
       - name: houba-scan-gate
     args:
       - name: image-ref
-        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/platform/debian").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/platform/debian").Digest }}'
+        value: '${{ imageFrom("registry.houba.svc.cluster.local:5000/platform/busybox").RepoURL + "@" + imageFrom("registry.houba.svc.cluster.local:5000/platform/busybox").Digest }}'

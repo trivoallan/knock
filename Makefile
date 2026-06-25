@@ -28,6 +28,9 @@ OVERLAY  ?= deploy/overlays/local
 # local changes are invisible until pushed. `make local` is the escape hatch for that.
 ARGOCD_REPO_URL ?= https://github.com/trivoallan/houba
 ARGOCD_REPO_REF ?= main
+# Policy repo ref the `demo-teams` reconcile git-syncs for docs/examples/teams. Defaults to main
+# (the merged state); override to a feature branch to test before merge.
+TEAMS_POLICY_REF ?= main
 ARGOCD_VERSION  ?= v2.12.4
 # The OpenBao server pod (StatefulSet -> openbao-0). Selected by name pattern, NOT a
 # chart label (which varies): the `-[0-9]+$$` anchor matches openbao-0 while excluding
@@ -389,19 +392,40 @@ demo-teams: ## (opt-in) Two teams, each a policy in docs/examples/teams/ with it
 	$(MAKE) seed-incident OVERLAY=$(OVERLAY)
 	@# Reconcile ONLY the teams folder: clone a one-shot job from the CronJob, override POLICY_DIR.
 	-$(KUBECTL) -n $(NS) delete job houba-reconcile-teams --ignore-not-found
+	@# POLICY_DIR points the reconcile at the teams folder; TEAMS_POLICY_REF lets you test from a
+	@# branch before the folder is merged to the policy repo ref the cluster git-syncs (default main).
 	$(KUBECTL) -n $(NS) create job houba-reconcile-teams --from=cronjob/houba-reconcile --dry-run=client -o yaml \
-	  | $(KUBECTL) set env --local -f - POLICY_DIR=/policies/current/docs/examples/teams -o yaml \
+	  | $(KUBECTL) set env --local -f - POLICY_DIR=/policies/current/docs/examples/teams POLICY_REPO_REF=$(TEAMS_POLICY_REF) -o yaml \
 	  | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-teams --timeout=600s
 	@# scan-attach over the teams' repos so team-data gets a CRITICAL verdict (not "no attestation")
 	@# and team-platform gets a scan-pass. Extract just the scan-attach Job, override BLAST_REPOS.
 	-$(KUBECTL) -n $(NS) delete job houba-scan-attach-teams --ignore-not-found
 	$(KUSTOMIZE) $(OVERLAY) \
-	  | $(UV) run python deploy/scripts/extract-job.py houba-scan-attach houba-scan-attach-teams "platform/debian data/debian-xz" \
+	  | $(UV) run python deploy/scripts/extract-job.py houba-scan-attach houba-scan-attach-teams "platform/busybox data/debian-xz" \
 	  | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-scan-attach-teams --timeout=300s
-	@# Apply the per-team kargo pipelines (plain manifests, explicit namespace).
+	@# Apply the per-team kargo pipelines — the structural integration: each team's policy → its own
+	@# Warehouse/Stage/gate, coexisting with the reference pipeline (distinct names).
 	$(KUBECTL) apply -f deploy/components/kargo-teams/
-	@echo ">> Two team pipelines applied. Waiting ~90s for Warehouses to discover Freight and gates to run ..."
-	@sleep 90
-	$(UV) run python3 deploy/scripts/assert-team-gates.py
+	@# Assert the contrast the same way the reference demo does (beat 3a): `houba verify` per team,
+	@# host-side via a registry port-forward + the key from `make cosign-keygen`. (The demo doesn't
+	@# drive live kargo promotions — the reference stages never hold freight either — so the gate
+	@# verdict is asserted directly with the same engine the kargo gate runs.)
+	@test -f /tmp/houba-demo.pub || { echo "ERROR: /tmp/houba-demo.pub missing — run 'make cosign-keygen' first"; exit 1; }
+	@$(KUBECTL) -n $(NS) port-forward svc/registry 5000:5000 >/dev/null 2>&1 & \
+	  PF=$$!; trap 'kill $$PF 2>/dev/null' EXIT; \
+	  for i in $$(seq 1 20); do curl -fsS http://$(DEMO_REG_LOCAL)/v2/ >/dev/null 2>&1 && break; sleep 0.5; done; \
+	  echo ">> team-platform (group:default/platform): clean busybox must PASS its gate (exit 0)"; \
+	  DP=$$(regctl image digest $(DEMO_REG_LOCAL)/platform/busybox:1.37.0); \
+	  HOUBA_ATTEST_SIGNER=key HOUBA_ATTEST_KEY_REF=/tmp/houba-demo.pub HOUBA_ATTEST_ALLOW_INSECURE_REGISTRY=true \
+	    $(UV) run houba verify $(DEMO_REG_LOCAL)/platform/busybox@$$DP --require scan-pass --max-severity critical; \
+	  RCP=$$?; \
+	  echo ">> team-data (group:default/data): debian-xz must be HELD by its gate (exit 1)"; \
+	  DD=$$(regctl image digest $(DEMO_REG_LOCAL)/data/debian-xz:5.6.1); \
+	  HOUBA_ATTEST_SIGNER=key HOUBA_ATTEST_KEY_REF=/tmp/houba-demo.pub HOUBA_ATTEST_ALLOW_INSECURE_REGISTRY=true \
+	    $(UV) run houba verify $(DEMO_REG_LOCAL)/data/debian-xz@$$DD --require scan-pass --max-severity critical; \
+	  RCD=$$?; \
+	  test $$RCP -eq 0 || { echo "FAIL: team-platform clean image was NOT promotable (exit $$RCP)"; exit 1; }; \
+	  test $$RCD -eq 1 || { echo "FAIL: team-data xz image was NOT held (exit $$RCD)"; exit 1; }; \
+	  echo ">> Contrast holds: team-platform PROMOTED (clean) / team-data HELD (debian-xz critical), each owner-attributed."

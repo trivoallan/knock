@@ -1,5 +1,7 @@
-# Team A (platform). Owns a clean debian base image, placed through the front door to platform/*.
-# In the two-team demo this is the image that PROMOTES (clean scan → gate passes).
+# Team A (platform). Owns a clean busybox image, placed through the front door to platform/*.
+# busybox carries no critical CVEs, so it PASSES its kargo gate (houba verify scan-pass) — the
+# promoted half of the contrast. (A debian base would carry criticals and be held, so it can't
+# play the "clean" role here.)
 apiVersion: houba.io/v1alpha1
 kind: MirrorPolicy
 metadata:
@@ -12,14 +14,13 @@ spec:
       - group:default/platform
   source:
     registry: docker.io
-    repository: library/debian
+    repository: library/busybox
   imports:
     - name: base
       owners:
         - group:default/platform
       tags:
-        semverOnly: false
-        includeRegex: "^bookworm-slim$"
+        includeRegex: "^1\\.37\\.0$"   # one stable tag → platform/busybox:1.37.0
       destinations:
         - project: platform
-          repository: debian
+          repository: busybox

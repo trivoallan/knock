@@ -3,8 +3,8 @@
 A folder of MirrorPolicies, one per team, each with its own `owners` (Backstage entity-ref) and
 its own destination repo. Two teams here:
 
-- **team-platform** (`group:default/platform`) → a clean `debian:bookworm-slim` placed to
-  `platform/debian`. Promotes cleanly through its kargo gate.
+- **team-platform** (`group:default/platform`) → a clean `busybox:1.37.0` placed to
+  `platform/busybox`. Promotes cleanly through its kargo gate (no critical CVEs).
 - **team-data** (`group:default/data`) → the backdoored `debian-xz` (CVE-2024-3094) placed to
   `data/debian-xz`. Held by its kargo gate (critical scan finding).
 
