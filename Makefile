@@ -40,8 +40,6 @@ CERT_MANAGER_VERSION ?= v1.20.2
 KARGO_VERSION        ?= 1.10.7
 KYVERNO_VERSION      ?= 3.8.1
 ROLLOUTS_VERSION     ?= 2.41.0   # argo-rollouts chart (app v1.9.0): the AnalysisTemplate CRD the kargo gate needs
-SIGSTORE_VERSION     ?= v0.7.31
-KNATIVE_VERSION      ?= v1.22.1
 
 # ---- Demo registry + UV shorthand ----------------------------------------
 # DEMO_REG is the in-CLUSTER service name — what the kubelet/Kyverno see in a Pod's
@@ -59,7 +57,7 @@ UV             ?= uv
 LOG4SHELL_SRC ?= ghcr.io/christophetd/log4shell-vulnerable-app@sha256:6f88430688108e512f7405ac3c73d47f5c370780b94182854ea2cddc6bd59929
 
 .PHONY: help reference docs-serve cluster image up-local local local-run \
-        argocd cert-manager kargo kyverno sigstore argo-rollouts \
+        argocd cert-manager kargo kyverno argo-rollouts \
         demo demo-run openbao-seed seed-incident incident-deploy seed-log4shell \
         blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui kargo-ui argocd-ui docker-auth logs down \
         scan cosign-keygen demo-assert-gates demo-cve-blast-radius
@@ -157,48 +155,6 @@ kyverno: ## Install kyverno ($(KYVERNO_VERSION)) — admission gate operator (st
 	       --namespace kyverno --create-namespace \
 	       --version $(KYVERNO_VERSION)
 	$(KUBECTL) -n kyverno rollout status deploy/kyverno-admission-controller --timeout=300s
-
-sigstore: ## Install sigstore-scaffolding ($(SIGSTORE_VERSION)) — in-cluster Fulcio + Rekor + CTLog + Trillian + TUF (keyless signing prerequisite)
-	@# sigstore-scaffolding runs on Knative Serving; install it first if absent.
-	@$(KUBECTL) get namespace knative-serving >/dev/null 2>&1 && echo ">> knative-serving already installed — skipping" || { \
-	  $(KUBECTL) apply -f https://github.com/knative/serving/releases/download/knative-$(KNATIVE_VERSION)/serving-crds.yaml; \
-	  $(KUBECTL) apply -f https://github.com/knative/serving/releases/download/knative-$(KNATIVE_VERSION)/serving-core.yaml; \
-	  $(KUBECTL) apply -f https://github.com/knative/net-kourier/releases/download/knative-$(KNATIVE_VERSION)/kourier.yaml; \
-	  $(KUBECTL) patch configmap/config-network --namespace knative-serving --type merge \
-	    --patch '{"data":{"ingress-class":"kourier.ingress.networking.knative.dev"}}'; \
-	  $(KUBECTL) -n knative-serving wait --for=condition=Available deploy --all --timeout=300s; \
-	  $(KUBECTL) -n kourier-system wait --for=condition=Available deploy --all --timeout=300s; \
-	}
-	@# Enable Knative feature flag required by sigstore-scaffolding TUF (fieldRef in ksvc env).
-	$(KUBECTL) -n knative-serving patch configmap config-features --type merge \
-	  --patch '{"data":{"kubernetes.podspec-fieldref":"enabled"}}'
-	@# Now apply sigstore-scaffolding components in dependency order (mirrors setup-scaffolding-from-release.sh).
-	@$(KUBECTL) get namespace fulcio-system >/dev/null 2>&1 && echo ">> sigstore-scaffolding already installed — skipping" || { \
-	  $(KUBECTL) apply -f https://github.com/sigstore/scaffolding/releases/download/$(SIGSTORE_VERSION)/release-trillian.yaml; \
-	  $(KUBECTL) -n trillian-system wait --for=condition=Complete job --all --timeout=300s; \
-	  $(KUBECTL) -n trillian-system wait --for=condition=Ready ksvc log-server --timeout=300s; \
-	  $(KUBECTL) -n trillian-system wait --for=condition=Ready ksvc log-signer --timeout=300s; \
-	  $(KUBECTL) apply -f https://github.com/sigstore/scaffolding/releases/download/$(SIGSTORE_VERSION)/release-rekor.yaml; \
-	  $(KUBECTL) -n rekor-system wait --for=condition=Complete job --all --timeout=300s; \
-	  $(KUBECTL) -n rekor-system wait --for=condition=Ready ksvc rekor --timeout=300s; \
-	  $(KUBECTL) apply -f https://github.com/sigstore/scaffolding/releases/download/$(SIGSTORE_VERSION)/release-fulcio.yaml; \
-	  $(KUBECTL) -n fulcio-system wait --for=condition=Complete job --all --timeout=300s; \
-	  $(KUBECTL) -n fulcio-system wait --for=condition=Ready ksvc fulcio --timeout=300s; \
-	  $(KUBECTL) -n fulcio-system wait --for=condition=Ready ksvc fulcio-grpc --timeout=300s; \
-	  $(KUBECTL) apply -f https://github.com/sigstore/scaffolding/releases/download/$(SIGSTORE_VERSION)/release-ctlog.yaml; \
-	  $(KUBECTL) -n ctlog-system wait --for=condition=Complete job --all --timeout=300s; \
-	  $(KUBECTL) -n ctlog-system wait --for=condition=Ready ksvc ctlog --timeout=300s; \
-	  $(KUBECTL) apply -f https://github.com/sigstore/scaffolding/releases/download/$(SIGSTORE_VERSION)/release-tsa.yaml; \
-	  $(KUBECTL) -n tsa-system wait --for=condition=Complete job --all --timeout=300s; \
-	  $(KUBECTL) -n tsa-system wait --for=condition=Ready ksvc tsa --timeout=300s; \
-	  $(KUBECTL) apply -f https://github.com/sigstore/scaffolding/releases/download/$(SIGSTORE_VERSION)/release-tuf.yaml; \
-	  $(KUBECTL) -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: tuf-system/' | $(KUBECTL) apply -f -; \
-	  $(KUBECTL) -n fulcio-system get secrets fulcio-pub-key -oyaml | sed 's/namespace: .*/namespace: tuf-system/' | $(KUBECTL) apply -f -; \
-	  $(KUBECTL) -n rekor-system get secrets rekor-pub-key -oyaml | sed 's/namespace: .*/namespace: tuf-system/' | $(KUBECTL) apply -f -; \
-	  $(KUBECTL) -n tsa-system get secrets tsa-cert-chain -oyaml | sed 's/namespace: .*/namespace: tuf-system/' | $(KUBECTL) apply -f -; \
-	  $(KUBECTL) -n tuf-system wait --for=condition=Complete job --all --timeout=300s; \
-	  $(KUBECTL) -n tuf-system wait --for=condition=Ready ksvc tuf --timeout=300s; \
-	}
 
 argo-rollouts: ## Install Argo Rollouts ($(ROLLOUTS_VERSION)) — the AnalysisTemplate CRD + controller the kargo gate runs through
 	@# The kargo scan-gate is an Argo Rollouts AnalysisTemplate (argoproj.io/v1alpha1); without
