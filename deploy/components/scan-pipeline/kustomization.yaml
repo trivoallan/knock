@@ -18,6 +18,8 @@ configMapGenerator:
   - name: scan-pipeline-scripts
     files:
       - enqueue-out-digests.py=../../../scripts/enqueue-out-digests.py
+      - scan-queue-reserve.py=../../../scripts/scan-queue-reserve.py
+      - scan-queue-ack.py=../../../scripts/scan-queue-ack.py
 
 generatorOptions:
   disableNameSuffixHash: true
