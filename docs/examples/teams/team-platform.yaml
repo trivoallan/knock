@@ -1,0 +1,25 @@
+# Team A (platform). Owns a clean debian base image, placed through the front door to platform/*.
+# In the two-team demo this is the image that PROMOTES (clean scan → gate passes).
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: team-platform
+spec:
+  artifactType: image
+  defaults:
+    vendor: Platform Team
+    owners:
+      - group:default/platform
+  source:
+    registry: docker.io
+    repository: library/debian
+  imports:
+    - name: base
+      owners:
+        - group:default/platform
+      tags:
+        semverOnly: false
+        includeRegex: "^bookworm-slim$"
+      destinations:
+        - project: platform
+          repository: debian

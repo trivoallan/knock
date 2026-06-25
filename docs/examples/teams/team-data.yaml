@@ -1,0 +1,31 @@
+# Team B (data). Owns the debian-xz image carrying the backdoored xz (CVE-2024-3094), placed to
+# data/*. In the two-team demo this is the image that is HELD by its own kargo gate (critical
+# scan finding). Sources the fixture seeded by `make seed-incident` (upstream/debian-xz).
+apiVersion: houba.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: team-data
+spec:
+  artifactType: image
+  defaults:
+    vendor: Data Team
+    owners:
+      - group:default/data
+  source:
+    registry: registry.houba.svc.cluster.local:5000
+    repository: upstream/debian-xz
+  imports:
+    - name: incident
+      owners:
+        - group:default/data
+      tags:
+        semverOnly: false
+        includeRegex: "^5\\.6\\.1$"
+      variants:
+        - name: hardened
+          suffix: ""
+          transform:
+            - setTimezone: { zone: Europe/Paris }
+      destinations:
+        - project: data
+          repository: debian-xz
