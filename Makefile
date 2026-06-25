@@ -174,7 +174,7 @@ argo-rollouts: ## Install Argo Rollouts ($(ROLLOUTS_VERSION)) — the AnalysisTe
 	       --set installCRDs=true
 	$(KUBECTL) -n argo-rollouts rollout status deploy/argo-rollouts --timeout=300s
 
-demo: cluster image argocd cert-manager kargo kyverno argo-rollouts ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
+demo: cluster image argocd cert-manager argo-rollouts kargo kyverno ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
 	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) \
 	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
 	@echo ">> App-of-Apps applied. ArgoCD is syncing 4 children: ESO+OpenBao (wave 0) then houba+buildkitd (wave 1)."

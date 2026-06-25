@@ -1,0 +1,24 @@
+# Auto-promotion for the two team pipelines: without it, Freight is discovered but never promoted
+# past dev, so the gated prod Stages never receive Freight and their houba-scan-gate AnalysisRun
+# never runs. With auto-promotion, kargo flows each team's Freight Warehouse → dev → prod, firing
+# the gate: team-platform (clean busybox) passes and promotes; team-data (debian-xz, critical)
+# is held. Scoped to the team Stages only — the reference dev/prod pipeline is untouched.
+#
+# Requires kargo's Argo Rollouts integration to be ON, which means Argo Rollouts must be installed
+# BEFORE kargo (kargo disables the integration at startup if the Rollouts CRDs are absent). The
+# `demo` target orders argo-rollouts before kargo for this reason.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: houba
+  namespace: houba
+spec:
+  promotionPolicies:
+    - stage: platform-dev
+      autoPromotionEnabled: true
+    - stage: platform-prod
+      autoPromotionEnabled: true
+    - stage: data-dev
+      autoPromotionEnabled: true
+    - stage: data-prod
+      autoPromotionEnabled: true

@@ -35,9 +35,13 @@ spec:
                     type: RuntimeDefault
                 containers:
                   - name: gate
-                    # Rewritten by the kustomize images transformer (same `houba` local-image
-                    # trick the base Jobs use); has regctl + cosign + python3.
-                    image: houba
+                    # houba:dev is the local kind image (regctl + cosign + python3). NOTE: the
+                    # kustomize `images` transformer does NOT reach this nested AnalysisTemplate
+                    # path (provider.job.spec...), so the image is pinned here, not rewritten.
+                    # imagePullPolicy IfNotPresent uses the kind-loaded image (no registry pull).
+                    # Adopters: pin your published image (e.g. ghcr.io/<you>/houba:X.Y.Z).
+                    image: houba:dev
+                    imagePullPolicy: IfNotPresent
                     command: ["houba"]
                     args:
                       - verify
