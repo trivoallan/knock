@@ -250,3 +250,25 @@ def test_check_sbom_matches_cyclonedx_too() -> None:
     )
     by = {o.image_ref: o for o in report.outcomes}
     assert by[f"{_REPO}:7.1"].sbom is True
+
+
+def test_limit_caps_the_walk() -> None:
+    report = audit_coverage(
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba", limit=1
+    )
+    assert len(report.outcomes) == 1
+    assert report.counts.scanned == 1
+
+
+def test_limit_above_total_returns_all() -> None:
+    report = audit_coverage(
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba", limit=99
+    )
+    assert report.counts.scanned == 2
+
+
+def test_limit_none_is_unbounded() -> None:
+    report = audit_coverage(
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba", limit=None
+    )
+    assert report.counts.scanned == 2
