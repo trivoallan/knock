@@ -15,6 +15,15 @@ resources:
 components:
   - ../../components/buildkitd
   - ../../components/dependency-track
+  - ../../components/scan-pipeline
+
+# Re-run the houba image rewrite at the overlay level so it also catches the
+# scan-pipeline component's containers (enqueuer + worker), which the base-level
+# transformer never sees — components are applied after the base accumulates.
+images:
+  - name: houba
+    newName: houba
+    newTag: dev
 
 generatorOptions:
   disableNameSuffixHash: true

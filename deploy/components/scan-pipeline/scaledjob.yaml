@@ -1,0 +1,91 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: scan-worker
+  labels:
+    app.kubernetes.io/name: scan-worker
+    app.kubernetes.io/component: scan-pipeline
+spec:
+  pollingInterval: 15          # check the queue every 15s
+  maxReplicaCount: 8           # the scan ceiling — tune to regis/grype capacity
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  triggers:
+    - type: redis
+      metadata:
+        # FQDN, not the bare name: the KEDA operator resolves this from the `keda`
+        # namespace, so a same-namespace short name (scan-queue-redis) does not resolve.
+        # The worker pods run in `houba` and keep the bare REDIS_ADDR.
+        address: scan-queue-redis.houba.svc.cluster.local:6379
+        listName: houba:scan:work
+        listLength: "1"        # one waiting digest => one Job (up to maxReplicaCount)
+        enableTLS: "false"
+  jobTargetRef:
+    backoffLimit: 0
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/name: scan-worker
+      spec:
+        serviceAccountName: houba
+        restartPolicy: Never
+        securityContext:
+          runAsNonRoot: true
+          seccompProfile: { type: RuntimeDefault }
+        initContainers:
+          - name: reserve            # BRPOPLPUSH one digest -> /shared/digest
+            image: houba
+            command: ["python3", "/scripts/scan-queue-reserve.py"]
+            env:
+              - { name: REDIS_ADDR, value: "scan-queue-redis:6379" }
+            volumeMounts:
+              - { name: shared, mountPath: /shared }
+              - { name: scripts, mountPath: /scripts, readOnly: true }
+          - name: fetch-sbom         # pull the reserved digest's CycloneDX SBOM (houba image: regctl)
+            image: houba
+            command: ["bash", "/scripts/scan-one.sh", "fetch"]
+            env:
+              - { name: HOME, value: /tmp }
+            envFrom:
+              - secretRef: { name: houba-registries }
+            volumeMounts:
+              - { name: shared, mountPath: /shared }
+              - { name: scripts, mountPath: /scripts, readOnly: true }
+              - { name: home, mountPath: /tmp }
+          - name: scan               # grype the SBOM -> SARIF (no creds)
+            # chainguard -dev: ships busybox sh AND runs nonroot, so it satisfies the pod's
+            # runAsNonRoot policy (anchore/grype is distroless + root -> CreateContainerConfigError).
+            # ponytail: -dev is a moving tag — pin a digest for reproducibility / air-gapped.
+            image: cgr.dev/chainguard/grype:latest-dev
+            command: ["sh", "-c"]
+            args:
+              - 'grype "sbom:/shared/sbom.json" -o sarif --file /shared/scan.sarif'
+            env:
+              - { name: GRYPE_DB_CACHE_DIR, value: /tmp/grype }   # writable cache
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities: { drop: ["ALL"] }
+            volumeMounts:
+              - { name: shared, mountPath: /shared }
+              - { name: home, mountPath: /tmp }
+        containers:
+          - name: attach             # houba attach the SARIF verdict referrer + ack
+            image: houba
+            command: ["bash", "/scripts/scan-one.sh", "attach"]
+            env:
+              - { name: HOME, value: /tmp }
+            envFrom:
+              - secretRef: { name: houba-registries }
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            volumeMounts:
+              - { name: shared, mountPath: /shared }
+              - { name: scripts, mountPath: /scripts, readOnly: true }
+              - { name: home, mountPath: /tmp }
+        volumes:
+          - { name: shared, emptyDir: {} }
+          - { name: home, emptyDir: {} }
+          - name: scripts
+            configMap: { name: scan-pipeline-scripts, defaultMode: 0755 }

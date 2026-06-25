@@ -1,0 +1,59 @@
+# The reference work queue: a single Redis (durable enough for at-least-once with reserve/ack).
+# Swappable glue — replace with NATS/SQS without touching houba. Lists used:
+#   houba:scan:work        the worklist (LPUSH by the enqueuer, BRPOPLPUSH by each Job)
+#   houba:scan:processing  in-flight reservations (LREM on success)
+#   houba:scan:dead        DLQ (after N failures)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scan-queue-redis
+  labels:
+    app.kubernetes.io/name: scan-queue-redis
+    app.kubernetes.io/component: scan-pipeline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: scan-queue-redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: scan-queue-redis
+        app.kubernetes.io/component: scan-pipeline
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ["--save", "60", "1", "--appendonly", "yes"]
+          ports:
+            - { name: redis, containerPort: 6379 }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scan-queue-redis
+  labels:
+    app.kubernetes.io/name: scan-queue-redis
+spec:
+  selector:
+    app.kubernetes.io/name: scan-queue-redis
+  ports:
+    - { name: redis, port: 6379, targetPort: redis }
