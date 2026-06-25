@@ -250,3 +250,90 @@ def test_check_sbom_matches_cyclonedx_too() -> None:
     )
     by = {o.image_ref: o for o in report.outcomes}
     assert by[f"{_REPO}:7.1"].sbom is True
+
+
+def test_limit_caps_the_walk() -> None:
+    report = audit_coverage(
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba", limit=1
+    )
+    assert len(report.outcomes) == 1
+    assert report.counts.scanned == 1
+
+
+def test_limit_above_total_returns_all() -> None:
+    report = audit_coverage(
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba", limit=99
+    )
+    assert report.counts.scanned == 2
+
+
+def test_limit_none_is_unbounded() -> None:
+    report = audit_coverage(
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba", limit=None
+    )
+    assert report.counts.scanned == 2
+
+
+def test_limit_short_circuits_before_second_registry() -> None:
+    """islice stops the generator inside the first registry, so ensure_registry_session
+    is never called for the second host — its session is never established.
+
+    Non-vacuousness: a companion call with limit=None confirms that WITHOUT the cap,
+    both hosts DO get a session (both appear in reg.configured).
+    """
+    _HOST1 = "reg1.example"
+    _HOST2 = "reg2.example"
+    _REPO1 = f"{_HOST1}/lib/redis"
+    _REPO2 = f"{_HOST2}/lib/nginx"
+
+    roster = {
+        "reg1": RegistryConfig(host=_HOST1, username="u1", password="p1"),
+        "reg2": RegistryConfig(host=_HOST2, username="u2", password="p2"),
+    }
+
+    def _make_reg() -> FakeRegistryPort:
+        return FakeRegistryPort(
+            repositories={
+                _HOST1: ["lib/redis"],
+                _HOST2: ["lib/nginx"],
+            },
+            tags={
+                _REPO1: ["7.1", "7.2"],  # two images — limit=1 stops here
+                _REPO2: ["1.25"],
+            },
+            annotations={
+                f"{_REPO1}:7.1": {"io.houba.policy": "redis"},
+                f"{_REPO1}:7.2": {},
+                f"{_REPO2}:1.25": {},
+            },
+        )
+
+    # With limit=1: only the first image from HOST1 is scanned;
+    # HOST2's session is never established.
+    reg_limited = _make_reg()
+    report = audit_coverage(
+        registry=reg_limited,
+        roster=roster,
+        only_registry=None,
+        label_prefix="io.houba",
+        limit=1,
+    )
+    assert report.counts.scanned == 1
+    configured_hosts_limited = [host for host, _tls, _ca in reg_limited.configured]
+    assert _HOST1 in configured_hosts_limited, "first host must have a session"
+    assert _HOST2 not in configured_hosts_limited, (
+        "second host must NOT be logged in when limit cuts inside the first"
+    )
+
+    # Non-vacuousness: without the cap, BOTH hosts get sessions.
+    reg_full = _make_reg()
+    audit_coverage(
+        registry=reg_full,
+        roster=roster,
+        only_registry=None,
+        label_prefix="io.houba",
+        limit=None,
+    )
+    configured_hosts_full = [host for host, _tls, _ca in reg_full.configured]
+    assert _HOST1 in configured_hosts_full
+    assert _HOST2 in configured_hosts_full, "without a limit, the second host IS logged in"

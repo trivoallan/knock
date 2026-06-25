@@ -5,6 +5,8 @@ structurally a sibling of `use_cases/purge.py`.
 
 from __future__ import annotations
 
+import itertools
+from collections.abc import Iterator
 from typing import Any
 
 from pydantic import BaseModel
@@ -107,6 +109,7 @@ def audit_coverage(
     label_prefix: str,
     check_signed: bool = False,
     check_sbom: bool = False,
+    limit: int | None = None,
 ) -> CoverageReport:
     if only_registry is not None:
         name, cfg = resolve_registry(only_registry, roster)
@@ -114,22 +117,30 @@ def audit_coverage(
     else:
         targets = list(roster.items())
 
-    outcomes: list[CoverageOutcome] = []
     logged_in: set[str] = set()
-    for _name, cfg in targets:
-        ensure_registry_session(registry, cfg, logged_in)
-        for repo in registry.list_repositories(cfg.host):
-            repo_ref = f"{cfg.host}/{repo}"
-            for tag in registry.list_tags(repo_ref):
-                outcomes.append(
-                    _classify(
-                        f"{repo_ref}:{tag}",
-                        registry=registry,
-                        label_prefix=label_prefix,
-                        check_signed=check_signed,
-                        check_sbom=check_sbom,
-                    )
-                )
+
+    def _image_refs() -> Iterator[str]:
+        for _name, cfg in targets:
+            ensure_registry_session(registry, cfg, logged_in)
+            for repo in registry.list_repositories(cfg.host):
+                repo_ref = f"{cfg.host}/{repo}"
+                for tag in registry.list_tags(repo_ref):
+                    yield f"{repo_ref}:{tag}"
+
+    refs: Iterator[str] = _image_refs()
+    if limit is not None:
+        refs = itertools.islice(refs, limit)
+
+    outcomes: list[CoverageOutcome] = [
+        _classify(
+            ref,
+            registry=registry,
+            label_prefix=label_prefix,
+            check_signed=check_signed,
+            check_sbom=check_sbom,
+        )
+        for ref in refs
+    ]
 
     counts = CoverageCounts(
         scanned=len(outcomes),
