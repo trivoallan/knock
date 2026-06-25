@@ -14,6 +14,7 @@ from scripts.scan_queue import coverage_gap, should_dead_letter
 WORK = os.environ.get("REDIS_WORK_STREAM", "houba:scan:work")
 DEAD = os.environ.get("REDIS_DEAD_STREAM", "houba:scan:dead")
 CONFIRMED = os.environ.get("REDIS_CONFIRMED_ZSET", "houba:scan:confirmed")
+PLACED = os.environ.get("REDIS_PLACED_SET", "houba:scan:placed")
 GROUP = os.environ.get("REDIS_GROUP", "scan")
 
 
@@ -35,6 +36,8 @@ def ensure_group(r: redis.Redis, stream: str = WORK, group: str = GROUP) -> None
 def enqueue(r: redis.Redis, stream: str, refs: list[str]) -> None:
     for ref in refs:
         r.xadd(stream, {"ref": ref})
+        if "@" in ref:
+            r.sadd(PLACED, ref.split("@", 1)[1])  # placed-set for the coverage convergence check
 
 
 def reserve(r, consumer, stream=WORK, group=GROUP, block_ms=5000):

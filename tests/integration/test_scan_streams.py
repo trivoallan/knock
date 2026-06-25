@@ -114,3 +114,10 @@ def test_dlq_replay_moves_back_to_work(redis_server):
     assert moved == 1
     assert r.xlen(DEAD) == 0
     assert [m[1]["ref"] for m in r.xrange(WORK)] == ["repo@sha256:x"]
+
+
+def test_enqueue_records_placed_set(redis_server):
+    r = redis_server
+    scan_streams.ensure_group(r, WORK, GROUP)
+    scan_streams.enqueue(r, WORK, ["repo@sha256:a", "repo@sha256:b"])
+    assert r.smembers("houba:scan:placed") == {"sha256:a", "sha256:b"}

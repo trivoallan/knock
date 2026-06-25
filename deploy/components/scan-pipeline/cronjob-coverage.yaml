@@ -28,13 +28,11 @@ spec:
             - name: coverage
               image: houba
               imagePullPolicy: IfNotPresent
-              command: ["bash", "-c", "HOUBA_LOG_FORMAT=json houba reconcile --report-only | python3 /scripts/scan-coverage.py"]
+              command: ["python3", "/scripts/scan-coverage.py"]
               env:
                 - { name: REDIS_ADDR, value: "scan-queue-redis:6379" }
                 - { name: SCAN_MAX_AGE_S, value: "604800" }
                 - { name: PYTHONPATH, value: "/" }
-              envFrom:
-                - secretRef: { name: houba-registries }
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
