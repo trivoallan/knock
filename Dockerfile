@@ -32,6 +32,9 @@ COPY --from=build /src/dist/*.whl /tmp/
 # here, add a builder stage with build-base+rust and copy the venv across.
 RUN pip install --no-cache-dir /tmp/*.whl && rm /tmp/*.whl
 
+# scan-pipeline scripts talk to Redis Streams via redis-py (image-only; houba-core stays zero-new-dep)
+RUN pip install --no-cache-dir "redis>=5.0"
+
 # houba's own deployment runs hardened (runAsNonRoot + readOnlyRootFilesystem).
 # Run as a NUMERIC non-root uid: kubelet can only satisfy runAsNonRoot from a
 # numeric image USER (a username string is rejected), and the manifests set no
