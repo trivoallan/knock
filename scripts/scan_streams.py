@@ -60,7 +60,7 @@ def _trim_minid(r, stream=WORK, group=GROUP):
     else:
         last = r.xinfo_groups(stream)[0]["last-delivered-id"]
         if last != "0-0":
-            ts, seq = last.split("-")
+            ts, _seq = last.split("-")
             r.xtrim(stream, minid=f"{int(ts) + 1}-0", approximate=False)
 
 
@@ -79,23 +79,29 @@ def dead_letter(r, msg_id, ref, reason, stream=WORK, group=GROUP, dead=DEAD):
     r.xack(stream, group, msg_id)
 
 
-def reaper(r, consumer, min_idle_ms, max_deliveries, reason=None,
-           stream=WORK, group=GROUP):
+def reaper(r, consumer, min_idle_ms, max_deliveries, reason=None, stream=WORK, group=GROUP):
     """Claim entries idle > min_idle_ms (a dead worker, OR a slow-alive scan past the
     window — the claim is purely idle-based). Past max_deliveries, route to the dead
     stream. Trim after."""
     cursor = "0-0"
     claimed: list[str] = []
     while True:
-        cursor, msgs, _deleted = r.xautoclaim(stream, group, consumer, min_idle_ms,
-                                               start_id=cursor, count=50)
+        cursor, msgs, _deleted = r.xautoclaim(
+            stream, group, consumer, min_idle_ms, start_id=cursor, count=50
+        )
         for msg_id, fields in msgs:
             claimed.append(msg_id)
             rng = r.xpending_range(stream, group, min=msg_id, max=msg_id, count=1)
             delivered = rng[0]["times_delivered"] if rng else 1
             if should_dead_letter(delivered, max_deliveries):
-                dead_letter(r, msg_id, fields.get("ref", ""),
-                            reason or {"error": "max retries"}, stream, group)
+                dead_letter(
+                    r,
+                    msg_id,
+                    fields.get("ref", ""),
+                    reason or {"error": "max retries"},
+                    stream,
+                    group,
+                )
         if cursor == "0-0":
             break
     _trim_minid(r, stream, group)
