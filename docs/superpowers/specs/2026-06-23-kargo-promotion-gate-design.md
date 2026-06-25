@@ -47,6 +47,40 @@ governs only what flows through promotion — a direct `kubectl apply` / out-of-
 bypasses it entirely. **Kargo cannot replace Kyverno** and is not a security control. Dropping
 Kyverno "because Kargo covers it" would be a security regression.
 
+### 3.1 Nor a doublon with the Warehouse — shared only on the subscription primitive
+
+A second "isn't this duplicated?" objection lands one layer down, on the **declarative resources**:
+houba's `MirrorPolicy` and Kargo's `Warehouse` both subscribe to an upstream image source and apply
+**semver / tag-selection** rules (`import.tags` ≈ `subscriptions[].image`). That single shared
+primitive is the whole recouvrement; on everything else they are orthogonal:
+
+| | `MirrorPolicy` (houba) | `Warehouse` (Kargo) |
+|---|---|---|
+| Centre of gravity | **fabrication + placement** — rebuild/harden, stamp, SBOM, variants, destinations | **environment progression** — pin digests as Freight, promote Stage → Stage |
+| The subscription decides… | which upstream tags **enter the front door**, rebuilt how, landing where | which versions become **promotable** |
+| Moves registry bytes? | **yes** (copy / rebuild → destination) | **no** (references digests, mutates desired state in git) |
+| Knows about environments? | **no** — places a digest once | **its entire reason for being** |
+
+**Benign iff the topology is chained, not parallel.** The shared primitive is harmless precisely when
+the two resources sit at different links of one pipeline: `MirrorPolicy` subscribes to the **real
+upstream** and produces stamped digests in the internal registry; the `Warehouse` subscribes to that
+**stamped registry, never upstream** (§7's "A" positioning), so Kargo's input *is* houba's output —
+the primitive is repeated, the responsibility is not.
+
+**Failure mode — a `Warehouse` pointed at upstream is a second front door.** It would create Freight
+for digests that never came through the stamper, routing around the mandate this project exists to
+enforce ("single front door", "coverage gates value"). The invariant is therefore load-bearing:
+
+> **`MirrorPolicy` ⟂ `Warehouse`** — overlap only on the semver-subscription primitive; benign **iff**
+> every `Warehouse` subscribes to the **stamped** registry. A `Warehouse` subscribed to an upstream
+> already covered by a `MirrorPolicy` is a second front door = mandate regression.
+
+**Do not unify them.** Different controllers, lifecycles, CRD owners; they share a *concept*, not a
+*runtime*. Emitting `Warehouse`s from houba, or driving `reconcile` from a Kargo step, recreates the
+scanstep overreach ([[scanstep-design]]). A guard-rail that *detects* an upstream-subscribed
+`Warehouse` under mandate (a `houba audit` walk or a Kyverno policy) is the "coverage gates value"
+answer — but it is YAGNI until the documented invariant is observed to leak.
+
 ## 4. The decisive pain is feedback *timing* — which has two halves
 
 The team's pain is the **moment of feedback** (shift-left), not enforcement coverage. That makes the
