@@ -50,14 +50,18 @@ def reserve(r, consumer, stream=WORK, group=GROUP, block_ms=5000):
 
 def _trim_minid(r, stream=WORK, group=GROUP):
     """Reclaim stream memory WITHOUT evicting an un-acked entry: trim below the oldest
-    still-pending id. NEVER MAXLEN (evicts un-acked under backlog), NEVER per-entry XDEL."""
+    still-pending id. NEVER MAXLEN (evicts un-acked under backlog), NEVER per-entry XDEL.
+
+    MINID semantics: XTRIM MINID X keeps entries where id >= X. When there are no pending
+    entries, all delivered entries are acked — trim at last-delivered+1ms to remove them all."""
     pend = r.xpending(stream, group)
     if pend["pending"]:
         r.xtrim(stream, minid=pend["min"], approximate=False)
     else:
         last = r.xinfo_groups(stream)[0]["last-delivered-id"]
         if last != "0-0":
-            r.xtrim(stream, minid=last, approximate=False)
+            ts, seq = last.split("-")
+            r.xtrim(stream, minid=f"{int(ts) + 1}-0", approximate=False)
 
 
 def ack(r, msg_id, digest, attested_at, stream=WORK, group=GROUP, confirmed=CONFIRMED):
