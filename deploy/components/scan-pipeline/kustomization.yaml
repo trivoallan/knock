@@ -7,3 +7,17 @@ kind: Component
 
 resources:
   - redis.yaml
+
+patches:
+  - path: patch-reconcile-enqueuer.yaml
+    target:
+      kind: CronJob
+      name: houba-reconcile
+
+configMapGenerator:
+  - name: scan-pipeline-scripts
+    files:
+      - enqueue-out-digests.py=../../../scripts/enqueue-out-digests.py
+
+generatorOptions:
+  disableNameSuffixHash: true

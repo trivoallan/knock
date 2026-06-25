@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: houba-reconcile
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: houba
+              # Emit the JSON machine report to the shared dir, then a sentinel.
+              args:
+                - 'set -e; HOUBA_LOG_FORMAT=json exec_out=/shared/report.json;
+                   houba reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX"
+                   --shard-count "$SHARD_COUNT" > /shared/report.json;
+                   touch /shared/reconcile.done'
+              volumeMounts:
+                - { name: scan-shared, mountPath: /shared }
+            - name: enqueuer
+              image: houba   # rewritten by the kustomize images transformer; has python3
+              command: ["/bin/sh", "-c"]
+              args:
+                - 'until [ -f /shared/reconcile.done ]; do sleep 2; done;
+                   python3 /scripts/enqueue-out-digests.py < /shared/report.json'
+              env:
+                - { name: REDIS_ADDR, value: "scan-queue-redis:6379" }
+              envFrom:
+                - secretRef: { name: houba-registries }
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }
+              volumeMounts:
+                - { name: scan-shared, mountPath: /shared }
+                - { name: scan-scripts, mountPath: /scripts, readOnly: true }
+          volumes:
+            - name: scan-shared
+              emptyDir: {}
+            - name: scan-scripts
+              configMap: { name: scan-pipeline-scripts, defaultMode: 0755 }
