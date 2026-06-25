@@ -15,6 +15,7 @@ resources:
 components:
   - ../../components/buildkitd
   - ../../components/dependency-track
+  - ../../components/scan-pipeline
 
 generatorOptions:
   disableNameSuffixHash: true
