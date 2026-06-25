@@ -103,6 +103,7 @@ $ houba audit [OPTIONS]
 * `--signed`: Also probe each stamped image for a signed attestation referrer.
 * `--fail-on-unsigned`: Exit non-zero if any stamped image is unsigned (implies --signed).
 * `--sbom`: Also probe each stamped image for a package SBOM referrer.
+* `--limit INTEGER`: Stop after N images — bounded smoke-check / walk benchmark over a slice.
 * `--help`: Show this message and exit.
 
 ## `houba gc`
