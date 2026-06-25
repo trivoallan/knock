@@ -18,6 +18,10 @@ spec:
                 - { name: scan-shared, mountPath: /shared }
             - name: enqueuer
               image: houba   # rewritten by the kustomize images transformer; has python3
+              # Explicit: kind-loaded image, never pull from a registry. Without this the
+              # field defaults to Always for an untagged image and that value persists in
+              # the CronJob even after the tag is fixed, forcing a doomed docker.io pull.
+              imagePullPolicy: IfNotPresent
               command: ["/bin/sh", "-c"]
               # Best-effort + bounded: wait up to 5 min for the sentinel, then enqueue
               # and ALWAYS exit 0 — the enqueuer can never fail or hang the reconcile Job.

@@ -3,8 +3,8 @@
 
 Reads the reconcile report tree (run -> policies -> targets -> variants -> operations),
 collects every operation with applied=true and a non-null out_digest, and pushes
-"<host>/<repo>@<out_digest>" refs onto REDIS_WORK_LIST. Registry host comes from the
-single-entry roster (HOUBA_REGISTRIES) unless SCAN_REGISTRY names one.
+"<dest_repo>@<out_digest>" refs onto REDIS_WORK_LIST. TargetReport.dest_repo is already
+host-qualified (e.g. registry.example:5000/demo/busybox), so no roster lookup is needed.
 """
 import json
 import os
@@ -20,37 +20,28 @@ def _resp(*args: str) -> bytes:
     return b"".join(out)
 
 
-def _host() -> str:
-    roster = json.loads(os.environ["HOUBA_REGISTRIES"])
-    name = os.environ.get("SCAN_REGISTRY") or (next(iter(roster)) if len(roster) == 1 else "")
-    if not name:
-        sys.exit(f"SCAN_REGISTRY must be one of {sorted(roster)} (more than one configured)")
-    return str(roster[name]["host"])
-
-
-def _refs(report: dict, host: str) -> list[str]:
+def _refs(report: dict) -> list[str]:
     """Placed digests = applied operations carrying an out_digest.
 
-    Verified against report.py: the report tree is run -> policies[] -> targets[] ->
-    variants[] -> operations[]; the destination repo is TargetReport.dest_repo (Operation
-    has out_tag/out_digest but NO out_repo). Target-level operations are deletions/marks,
-    which carry no out_digest, so only variant operations yield placed images.
+    Verified against report.py + a live run: the tree is run -> policies[] -> targets[] ->
+    variants[] -> operations[]; the destination repo is TargetReport.dest_repo, which is
+    ALREADY host-qualified (Operation has out_tag/out_digest but NO out_repo). Target-level
+    operations are deletions/marks (no out_digest), so only variant operations yield placed
+    images.
     """
     refs: list[str] = []
     for policy in report.get("policies", []):
         for target in policy.get("targets", []):
-            dest_repo = target["dest_repo"]
+            dest_repo = target["dest_repo"]  # already <host>/<repo>
             for variant in target.get("variants", []):
                 for op in variant.get("operations", []):
                     if op.get("applied") and op.get("out_digest"):
-                        refs.append(f"{host}/{dest_repo}@{op['out_digest']}")
+                        refs.append(f"{dest_repo}@{op['out_digest']}")
     return refs
 
 
 def main() -> int:
-    report = json.load(sys.stdin)
-    host = _host()
-    refs = _refs(report, host)
+    refs = _refs(json.load(sys.stdin))
     if not refs:
         print("enqueue: no applied out_digests", file=sys.stderr)
         return 0
