@@ -1,0 +1,130 @@
+# loglens — a tiny HTTP endpoint that serves an AnalysisRun gate Job's logs to the kargo UI.
+#
+# kargo's AnalysisRun log streaming is "out of band": kargo GETs a URL (api.rollouts.logs.urlTemplate)
+# and expects the Job's logs back, because the Job may run in a different cluster. On this
+# single-cluster demo there is no log store, so the UI shows "log streaming is not configured".
+# loglens closes that gap: given GET /<jobNamespace>/<jobName>/<container>, it finds the Pod by the
+# Job's `batch.kubernetes.io/job-name` label and proxies that Pod's logs from the Kubernetes API.
+# stdlib only (python:3.12-slim), least-privilege RBAC (read Pods + Pods/log in houba).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kargo-loglens
+  namespace: houba
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kargo-loglens
+  namespace: houba
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kargo-loglens
+  namespace: houba
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-loglens
+subjects:
+  - kind: ServiceAccount
+    name: kargo-loglens
+    namespace: houba
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kargo-loglens
+  namespace: houba
+data:
+  loglens.py: |
+    #!/usr/bin/env python3
+    """Serve a Job's pod logs by job-name. GET /<ns>/<jobName>[/<container>] -> log text."""
+    import json
+    import os
+    import ssl
+    import urllib.parse
+    import urllib.request
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    SA = "/var/run/secrets/kubernetes.io/serviceaccount"
+    API = f"https://{os.environ['KUBERNETES_SERVICE_HOST']}:{os.environ['KUBERNETES_SERVICE_PORT']}"
+    CTX = ssl.create_default_context(cafile=f"{SA}/ca.crt")
+
+    def kget(path: str) -> str:
+        token = open(f"{SA}/token").read().strip()
+        req = urllib.request.Request(API + path, headers={"Authorization": f"Bearer {token}"})
+        return urllib.request.urlopen(req, context=CTX, timeout=20).read().decode()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            parts = [p for p in urllib.parse.urlparse(self.path).path.split("/") if p]
+            if len(parts) < 2:
+                self.send_response(400); self.end_headers(); self.wfile.write(b"usage: /<ns>/<job>[/<container>]"); return
+            ns, job = parts[0], parts[1]
+            container = parts[2] if len(parts) > 2 else None
+            try:
+                sel = urllib.parse.quote(f"batch.kubernetes.io/job-name={job}")
+                pods = json.loads(kget(f"/api/v1/namespaces/{ns}/pods?labelSelector={sel}"))
+                items = pods.get("items", [])
+                if not items:
+                    self.send_response(404); self.end_headers(); self.wfile.write(b"no pod for job"); return
+                pod = items[0]["metadata"]["name"]
+                q = f"?container={urllib.parse.quote(container)}" if container else ""
+                body = kget(f"/api/v1/namespaces/{ns}/pods/{pod}/log{q}")
+            except Exception as e:  # noqa: BLE001 — demo proxy, surface the error as the body
+                self.send_response(502); self.end_headers(); self.wfile.write(str(e).encode()); return
+            self.send_response(200); self.send_header("Content-Type", "text/plain"); self.end_headers()
+            self.wfile.write(body.encode())
+
+        def log_message(self, *a):  # quiet
+            return
+
+    HTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kargo-loglens
+  namespace: houba
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: kargo-loglens }
+  template:
+    metadata:
+      labels: { app: kargo-loglens }
+    spec:
+      serviceAccountName: kargo-loglens
+      containers:
+        - name: loglens
+          image: python:3.12-slim
+          command: ["python3", "/app/loglens.py"]
+          ports: [{ containerPort: 8080 }]
+          volumeMounts:
+            - { name: app, mountPath: /app, readOnly: true }
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        - name: app
+          configMap: { name: kargo-loglens, defaultMode: 0755 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kargo-loglens
+  namespace: houba
+spec:
+  selector: { app: kargo-loglens }
+  ports: [{ port: 80, targetPort: 8080 }]

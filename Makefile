@@ -144,7 +144,13 @@ kargo: cert-manager ## Install kargo ($(KARGO_VERSION)) — promotion gate opera
 	       --namespace kargo --create-namespace \
 	       --version $(KARGO_VERSION) \
 	       --set api.adminAccount.passwordHash='$$2b$$10$$V3i/1rDaLYm4Dhp5wiP8NOKbMgaHvfIAB2tIGbnwygGQbHWGYGIeq' \
-	       --set api.adminAccount.tokenSigningKey=demotokensigningkeyabc123
+	       --set api.adminAccount.tokenSigningKey=demotokensigningkeyabc123 \
+	       --set api.rollouts.logs.enabled=true \
+	       --set-string 'api.rollouts.logs.urlTemplate=http://kargo-loglens.houba.svc.cluster.local/$${{jobNamespace}}/$${{jobName}}/$${{container}}'
+	@# api.rollouts.logs points kargo's AnalysisRun log view at the in-cluster `kargo-loglens`
+	@# proxy (deploy/components/kargo-loglens), which serves a gate Job's pod logs by job-name —
+	@# kargo streams logs "out of band" and won't read pod logs directly. Apply loglens separately
+	@# (it lives in the houba namespace): `kubectl apply -f deploy/components/kargo-loglens/`.
 	@# passwordHash above is bcrypt("houba-demo-admin") — the password `make kargo-ui` prints.
 	@# Same demo password as DT (DT_ADMIN_PASSWORD); keep the two in sync if you change it.
 	$(KUBECTL) -n kargo rollout status deploy/kargo-api --timeout=300s
@@ -405,8 +411,11 @@ demo-teams: ## (opt-in) Two teams, each a policy in docs/examples/teams/ with it
 	  | $(UV) run python deploy/scripts/extract-job.py houba-scan-attach houba-scan-attach-teams "platform/busybox data/debian-xz" \
 	  | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-scan-attach-teams --timeout=300s
+	@# loglens makes the gate AnalysisRun logs viewable in the kargo UI (houba namespace).
+	$(KUBECTL) apply -f deploy/components/kargo-loglens/
 	@# Apply the per-team kargo pipelines — the structural integration: each team's policy → its own
-	@# Warehouse/Stage/gate, coexisting with the reference pipeline (distinct names).
+	@# Warehouse/Stage/gate, coexisting with the reference pipeline (distinct names). Auto-promotion
+	@# (projectconfig.yaml) flows Freight to the gated prod Stages so the AnalysisRun gate runs.
 	$(KUBECTL) apply -f deploy/components/kargo-teams/
 	@# Assert the contrast the same way the reference demo does (beat 3a): `houba verify` per team,
 	@# host-side via a registry port-forward + the key from `make cosign-keygen`. (The demo doesn't
