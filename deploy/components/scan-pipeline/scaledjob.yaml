@@ -1,0 +1,83 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: scan-worker
+  labels:
+    app.kubernetes.io/name: scan-worker
+    app.kubernetes.io/component: scan-pipeline
+spec:
+  pollingInterval: 15          # check the queue every 15s
+  maxReplicaCount: 8           # the scan ceiling — tune to regis/grype capacity
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  triggers:
+    - type: redis
+      metadata:
+        address: scan-queue-redis:6379
+        listName: houba:scan:work
+        listLength: "1"        # one waiting digest => one Job (up to maxReplicaCount)
+        enableTLS: "false"
+  jobTargetRef:
+    backoffLimit: 0
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/name: scan-worker
+      spec:
+        serviceAccountName: houba
+        restartPolicy: Never
+        securityContext:
+          runAsNonRoot: true
+          seccompProfile: { type: RuntimeDefault }
+        initContainers:
+          - name: reserve            # BRPOPLPUSH one digest -> /shared/digest
+            image: houba
+            command: ["python3", "/scripts/scan-queue-reserve.py"]
+            env:
+              - { name: REDIS_ADDR, value: "scan-queue-redis:6379" }
+            volumeMounts:
+              - { name: shared, mountPath: /shared }
+              - { name: scripts, mountPath: /scripts, readOnly: true }
+          - name: fetch-sbom         # pull the reserved digest's CycloneDX SBOM (houba image: regctl)
+            image: houba
+            command: ["bash", "/scripts/scan-one.sh", "fetch"]
+            env:
+              - { name: HOME, value: /tmp }
+            envFrom:
+              - secretRef: { name: houba-registries }
+            volumeMounts:
+              - { name: shared, mountPath: /shared }
+              - { name: scripts, mountPath: /scripts, readOnly: true }
+              - { name: home, mountPath: /tmp }
+          - name: scan               # grype the SBOM -> SARIF (unmodified analyzer, no creds)
+            image: anchore/grype:latest
+            command: ["sh", "-eu", "-c"]
+            args:
+              - 'grype "sbom:/shared/sbom.json" -o sarif > /shared/scan.sarif'
+            volumeMounts:
+              - { name: shared, mountPath: /shared }
+        containers:
+          - name: attach-publish     # houba attach the SARIF + push the SBOM to DT
+            image: houba
+            command: ["bash", "/scripts/scan-one.sh", "attach-publish"]
+            env:
+              - { name: HOME, value: /tmp }
+              - { name: DT_URL, value: "http://dependency-track-apiserver:8080" }
+              - name: DT_API_KEY
+                valueFrom:
+                  secretKeyRef: { name: dt-api-key, key: DT_API_KEY, optional: true }
+            envFrom:
+              - secretRef: { name: houba-registries }
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            volumeMounts:
+              - { name: shared, mountPath: /shared }
+              - { name: scripts, mountPath: /scripts, readOnly: true }
+              - { name: home, mountPath: /tmp }
+        volumes:
+          - { name: shared, emptyDir: {} }
+          - { name: home, emptyDir: {} }
+          - name: scripts
+            configMap: { name: scan-pipeline-scripts, defaultMode: 0755 }
