@@ -1,6 +1,7 @@
 from scripts import scan_streams
 
 WORK = "houba:scan:work"
+DEAD = "houba:scan:dead"
 GROUP = "scan"
 
 
@@ -31,3 +32,35 @@ def test_reserve_returns_none_on_empty(redis_server):
     r = redis_server
     scan_streams.ensure_group(r, WORK, GROUP)
     assert scan_streams.reserve(r, "worker-1", block_ms=50) is None
+
+
+import time
+
+MIN_IDLE_MS = 300
+
+
+def test_reaper_reclaims_dropped_not_alive(redis_server):
+    r = redis_server
+    scan_streams.ensure_group(r, WORK, GROUP)
+    scan_streams.enqueue(r, WORK, ["repo@sha256:a"])
+    msg_id, _ = scan_streams.reserve(r, "worker-dead")
+    claimed = scan_streams.reaper(r, "reaper", min_idle_ms=MIN_IDLE_MS, max_deliveries=3)
+    assert claimed == []
+    time.sleep((MIN_IDLE_MS + 200) / 1000)
+    claimed = scan_streams.reaper(r, "reaper", min_idle_ms=MIN_IDLE_MS, max_deliveries=3)
+    assert claimed == [msg_id]
+    rng = r.xpending_range(WORK, GROUP, min=msg_id, max=msg_id, count=1)
+    assert rng[0]["times_delivered"] == 2
+
+
+def test_reaper_dead_letters_past_max(redis_server):
+    r = redis_server
+    scan_streams.ensure_group(r, WORK, GROUP)
+    scan_streams.enqueue(r, WORK, ["repo@sha256:poison"])
+    scan_streams.reserve(r, "w")
+    for _ in range(4):
+        time.sleep((MIN_IDLE_MS + 50) / 1000)
+        scan_streams.reaper(r, "reaper", min_idle_ms=MIN_IDLE_MS, max_deliveries=3,
+                            reason={"error": "503"})
+    assert r.xlen(DEAD) == 1
+    assert r.xpending(WORK, GROUP)["pending"] == 0
