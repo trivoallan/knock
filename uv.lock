@@ -239,6 +239,11 @@ dependencies = [
     { name = "typer" },
 ]
 
+[package.optional-dependencies]
+scan = [
+    { name = "redis" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "hypothesis" },
@@ -260,9 +265,11 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pydantic-settings", specifier = ">=2.3" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "redis", marker = "extra == 'scan'", specifier = ">=8" },
     { name = "structlog", specifier = ">=24.1" },
     { name = "typer", specifier = ">=0.12" },
 ]
+provides-extras = ["scan"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -271,7 +278,7 @@ dev = [
     { name = "mypy", specifier = ">=1.10" },
     { name = "pytest", specifier = ">=8.2" },
     { name = "pytest-cov", specifier = ">=5.0" },
-    { name = "redis", specifier = ">=5.0" },
+    { name = "redis", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.5" },
     { name = "syrupy", specifier = ">=4.6" },
     { name = "types-pyyaml", specifier = ">=6.0" },
