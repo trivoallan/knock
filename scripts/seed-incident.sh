@@ -43,51 +43,11 @@ regctl image copy "${HOST}/upstream/debian-xz:5.6.1" "${HOST}/bypassed/debian-xz
 
 echo "» seeded upstream/debian-xz:5.6.1 (houba will rebuild it) + bypassed/debian-xz:5.6.1" >&2
 
-# ---------------------------------------------------------------------------
-# Mongo corpus (brownfield Act 1)
-# ---------------------------------------------------------------------------
-# Copy two mongobleed-affected tags from Docker Hub into the demo Zot so that:
-#   upstream/mongo:8.0.15 + :8.0.16         — houba reconcile will copy these
-#                                              through the front door (stamp + SBOM)
-#   team-data-platform/mongo:8.0.15 + :8.0.16 — raw copy, never through houba (the
-#                                              "before" world; the owner is only
-#                                              *guessable* from the first path
-#                                              segment "team-data-platform")
-#   team-data-platform/mongo:8.0            — re-pointed alias: first → 8.0.15,
-#                                              then → 8.0.16 — so a tag-only query
-#                                              is ambiguous in the "before" world
-#
-# The path segment "team-data-platform" deliberately echoes (imperfectly) the
-# declared owner "group:default/data-platform": the before-world query guesses
-# the team from the repo path, while the after-world reads the authoritative
-# io.houba.owners label off the houba'd copy.
-#
-# Note: houba's policy (docs/examples/brownfield/mongo.yml) sources directly
-# from docker.io/library/mongo, NOT from upstream/mongo in the Zot.  The
-# upstream/ copies below exist purely to have a local stand-in in air-gapped
-# demo environments; remove them if the cluster has Docker Hub access.
-# ---------------------------------------------------------------------------
-
-# Idempotent: skip the Hub pull when the tag is already present (re-runs are
-# fast and don't trip Docker Hub rate limits at demo time).
-for TAG in 8.0.15 8.0.16; do
-  for DEST in upstream/mongo team-data-platform/mongo; do
-    if ! regctl manifest head "${HOST}/${DEST}:${TAG}" >/dev/null 2>&1; then
-      echo "» copying docker.io/library/mongo:${TAG} → ${HOST}/${DEST}:${TAG}" >&2
-      regctl image copy "docker.io/library/mongo:${TAG}" "${HOST}/${DEST}:${TAG}"
-    else
-      echo "» ${HOST}/${DEST}:${TAG} already present, skipping" >&2
-    fi
-  done
-done
-
-# Re-point the 8.0 alias: first pin it to 8.0.15, then advance to 8.0.16.
-# This creates the ambiguity: a query on team-data-platform/mongo:8.0 today sees
-# 8.0.16 but yesterday it saw 8.0.15 — the "before" world is tag-ambiguous.
-echo "» pointing ${HOST}/team-data-platform/mongo:8.0 → 8.0.15 (first placement)" >&2
-regctl image copy "${HOST}/team-data-platform/mongo:8.0.15" "${HOST}/team-data-platform/mongo:8.0"
-
-echo "» re-pointing ${HOST}/team-data-platform/mongo:8.0 → 8.0.16 (tag now ambiguous)" >&2
-regctl image copy "${HOST}/team-data-platform/mongo:8.0.16" "${HOST}/team-data-platform/mongo:8.0"
-
-echo "» seeded upstream/mongo:8.0.15+8.0.16 + team-data-platform/mongo:8.0.15+8.0.16 (8.0 alias → 8.0.16)" >&2
+# Mongo corpus (brownfield Act 1) is NOT seeded here. houba's policy
+# (docs/examples/brownfield/mongo.yml) sources mongo directly from
+# docker.io/library/mongo, so `houba reconcile` pulls + places it (stamp + SBOM)
+# → demo/mongo. We deliberately do not pre-copy it into the Zot: the official
+# mongo image is large and multi-arch, and a redundant seed copy floods a fresh
+# kind node's disk. The tag-only "before" world (an un-houba'd mirror under a
+# project-named repo, owner only guessable from the path) is illustrated in the
+# how-to (docs/how-to/brownfield-drop-in.md), not seeded.

@@ -1,0 +1,51 @@
+# LOCAL-BROWNFIELD overlay — the runtime for `make demo-mongobleed`.
+#
+# It is the `overlays/local` stack MINUS the dependency-track and scan-pipeline
+# components: the brownfield demo is the copy-path intake + the SBOM-inventory query
+# (Act 1) + the XZ `attach --fail-on` gate (Act 2), and uses neither Dependency-Track
+# nor the Redis/KEDA scan pipeline (that is the "Reference B / at-scale" path, kept out
+# of the brownfield headline).
+#
+# Dropping scan-pipeline also drops its KEDA `ScaledJob`, which a bare kind cluster (no
+# operators) cannot apply — so this overlay reconciles cleanly on a fresh cluster and in
+# CI, where overlays/local's apply errors on the missing ScaledJob CRD and leaves the
+# registry undeployed. Reuses overlays/local's registry / secret / suspend manifests so
+# there is one source of truth.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: houba
+
+resources:
+  - ../../base
+  - ../local/registry.yaml
+  - ../local/secret-registries.yaml
+
+components:
+  - ../../components/buildkitd   # needed: the XZ Act-2 fixture is built in-cluster via buildkitd
+
+images:
+  - name: houba
+    newName: houba
+    newTag: dev
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: houba-config
+    behavior: merge
+    literals:
+      - POLICY_DIR=/policies/current/docs/examples/brownfield
+      - BLAST_REPOS=demo/mongo
+
+patches:
+  - path: ../local/patch-suspend.yaml
+  # gc is suspended in the brownfield loop too — never auto-deletes during a demo.
+  - target:
+      kind: CronJob
+      name: houba-gc
+    patch: |-
+      - op: add
+        path: /spec/suspend
+        value: true
