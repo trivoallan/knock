@@ -1,4 +1,4 @@
-from scripts.scan_queue import (
+from houba.domain.scan_queue import (
     classify_failure,
     coverage_gap,
     enqueue_refs,

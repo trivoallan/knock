@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+from typing import Any
 
 
-def enqueue_refs(report: dict) -> list[str]:
+def enqueue_refs(report: dict[str, Any]) -> list[str]:
     """Placed digests = applied variant operations carrying an out_digest.
 
     Tree: run -> policies[] -> targets[] -> variants[] -> operations[]. The ref is

@@ -2,7 +2,7 @@ import json
 import sys
 
 from scripts import scan_streams
-from scripts.scan_queue import enqueue_refs
+from houba.domain.scan_queue import enqueue_refs
 
 r = scan_streams.connect()
 scan_streams.ensure_group(r)
