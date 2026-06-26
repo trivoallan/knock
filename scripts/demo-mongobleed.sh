@@ -34,6 +34,7 @@ in_range() {
 }
 
 echo "== Act 1: scanners vs the houba inventory =="
+found=0
 for tag in 7.0.13 7.0.14; do
   ref="${REG}/${REPO}:${tag}"
 
@@ -54,11 +55,13 @@ for tag in 7.0.13 7.0.14; do
            | jq -r --arg p "${PKG}" 'first(.components[]? | select(.name==$p)).version // "-"')
 
   hit="no"
-  [ "${pkgver}" != "-" ] && in_range "${pkgver}" && hit="YES"
+  [ "${pkgver}" != "-" ] && in_range "${pkgver}" && hit="YES" && found=1
 
   printf '  %-10s digest=%s owners=%s %s@%s mongobleed=%s\n' \
     "${tag}" "${digest:0:19}" "${owners}" "${PKG}" "${pkgver}" "${hit}"
 done
+
+[ "${found}" -eq 1 ] || { echo "FAIL — no placed image showed mongobleed in the SBOM inventory (SBOM format mismatch, missing referrer, or wrong tags)." >&2; exit 1; }
 
 echo ""
 echo "== the scanner contrast (the beat) =="

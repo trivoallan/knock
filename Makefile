@@ -250,6 +250,7 @@ demo-mongobleed: up-local seed-incident ## Brownfield demo end-to-end: mongo cor
 	  done; \
 	  echo ">> reconciling docs/examples/brownfield (copy path: mongo:7.0.13 + 7.0.14 → $(LOCAL_REG)/demo/mongo) …"; \
 	  HOUBA_REGISTRIES='$(LOCAL_HOUBA_REGISTRIES)' \
+	    HOUBA_SBOM_FORMATS='["spdx-json","cyclonedx-json"]' \
 	    uv run houba reconcile docs/examples/brownfield; \
 	  echo ">> Act 1 — scanner blind spot vs. the SBOM inventory"; \
 	  REG=$(LOCAL_REG) scripts/demo-mongobleed.sh; \
