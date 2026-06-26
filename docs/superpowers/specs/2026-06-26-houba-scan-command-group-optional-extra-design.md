@@ -241,6 +241,20 @@ Door 2 (one-way, surface):  public `houba scan dlq` operator CLI, once the bound
 Door 0 / Door 1 must keep the Redis major-bump (server + CI service + client) on **one locus** so a
 Door 1 rollback can't split majors. (#189 already moved the server image to v8.)
 
+> **As-built (Door 1, shipped).** Two refinements landed during implementation, captured in
+> [ADR 0043](../../architecture/decisions/0043-houba-scan-command-group-optional-extra.md):
+> 1. **The worker is split into `houba scan reserve` + `houba scan attach`**, not a single
+>    `houba scan worker`. The #188 ScaledJob runs the scanner (grype) as a separate init-container
+>    *between* reserve and attach, so a single in-process loop can't own reserve→ack; instead
+>    `reserve` (initContainer) persists the reservation (digest + opaque stream token) to `/shared`,
+>    and `attach` (final container) reads it back plus the scanner's `/shared/scan.sarif`, attaches,
+>    and acks. The worker therefore **reads a pre-produced SARIF and does not run a scanner** (faithful
+>    to "houba ≠ scanner"); D7's "worker drives the scanner" is deferred. Door 1 ships
+>    `houba scan reserve/attach/enqueue/reaper`.
+> 2. **`coverage` and `dlq` are Door 2.** They stay the existing `scripts/` (still on flat `REDIS_*`)
+>    until the public operator CLI lands; the loud-migration guard only fires on `houba scan` pods,
+>    which carry `HOUBA_SCAN_REDIS` exclusively.
+
 ## Key design decisions (rationale)
 
 - **`attested_at` is `clock.now()`, threaded via `ScanOutcome` — not a port extension.** Verified:
