@@ -8,7 +8,9 @@ Commands that actually need Redis call ``_adapter()`` which imports lazily.
 from __future__ import annotations
 
 import json
+import os
 import sys
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -36,17 +38,39 @@ def _adapter() -> Any:
 
 
 @scan_app.command()
-def worker(
-    max_deliveries: int = typer.Option(3, "--max-deliveries", help="Dead-letter threshold."),
-) -> None:
-    """Reserve, scan-attach, and ack entries from the work stream until it is empty."""
-    from houba.cli._di import build_scan_and_attach
-    from houba.use_cases.scan_worker import run_worker
+def reserve() -> None:
+    """Reserve one placed digest from the queue and write it to /shared for the
+    scanner + attach steps. Exits 75 (EX_TEMPFAIL) when the queue is empty."""
+    res = _adapter().reserve()
+    if res is None:
+        typer.echo("scan queue empty", err=True)
+        raise typer.Exit(code=75)
+    Path(os.environ.get("HOUBA_SCAN_DIGEST_PATH", "/shared/digest")).write_text(res.ref)
+    Path(os.environ.get("HOUBA_SCAN_TOKEN_PATH", "/shared/reservation-token")).write_text(
+        res.token
+    )
+    typer.echo(res.ref)
 
-    adapter = _adapter()
-    saa = build_scan_and_attach()
-    handled = run_worker(adapter, scan_and_attach=saa, max_deliveries=max_deliveries)
-    typer.echo(f"scan worker: handled {handled} entr{'y' if handled == 1 else 'ies'}")
+
+@scan_app.command()
+def attach() -> None:
+    """Read the reserved digest + the scanner's SARIF, attach the result, and ack.
+    A missing/empty SARIF or a transient failure leaves the entry pending (the
+    reaper retries); a permanent failure dead-letters it."""
+    from houba.cli._di import build_scan_and_attach
+    from houba.ports.queue import Reservation
+    from houba.use_cases.scan_worker import handle_reservation
+
+    ref = (
+        Path(os.environ.get("HOUBA_SCAN_DIGEST_PATH", "/shared/digest")).read_text().strip()
+    )
+    token = (
+        Path(os.environ.get("HOUBA_SCAN_TOKEN_PATH", "/shared/reservation-token"))
+        .read_text()
+        .strip()
+    )
+    res = Reservation(token=token, ref=ref)
+    handle_reservation(_adapter(), res, scan_and_attach=build_scan_and_attach())
 
 
 @scan_app.command()

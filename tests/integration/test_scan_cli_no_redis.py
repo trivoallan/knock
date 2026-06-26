@@ -26,13 +26,17 @@ def test_scan_help_works_without_redis():
     result = _run("['scan','--help']")
     out = result.stdout
     assert "EXIT 0" in out
-    assert "worker" in out
+    # worker is gone; reserve, attach, enqueue, reaper must be listed
+    assert "reserve" in out
+    assert "attach" in out
+    assert "enqueue" in out
+    assert "reaper" in out
     # the install-missing error hint must NOT appear on help (only on actual commands)
     assert "redis-py is not installed" not in out
 
 
-def test_scan_worker_without_redis_prints_install_hint():
-    result = _run("['scan','worker']")
+def test_scan_reserve_without_redis_prints_install_hint():
+    result = _run("['scan','reserve']")
     out = result.stdout
     # CliRunner mixes stderr (where the err=True hint goes) into r.output by design.
     assert "pip install houba[scan]" in out

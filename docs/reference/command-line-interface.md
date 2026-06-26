@@ -179,23 +179,40 @@ $ houba scan [OPTIONS] COMMAND [ARGS]...
 
 **Commands**:
 
-* `worker`: Reserve, scan-attach, and ack entries from...
+* `reserve`: Reserve one placed digest from the queue...
+* `attach`: Read the reserved digest + the scanner's...
 * `enqueue`: Read a reconcile JSON report from stdin...
 * `reaper`: Claim idle entries and route...
 
-### `houba scan worker`
+### `houba scan reserve`
 
-Reserve, scan-attach, and ack entries from the work stream until it is empty.
+Reserve one placed digest from the queue and write it to /shared for the
+scanner + attach steps. Exits 75 (EX_TEMPFAIL) when the queue is empty.
 
 **Usage**:
 
 ```console
-$ houba scan worker [OPTIONS]
+$ houba scan reserve [OPTIONS]
 ```
 
 **Options**:
 
-* `--max-deliveries INTEGER`: Dead-letter threshold.  [default: 3]
+* `--help`: Show this message and exit.
+
+### `houba scan attach`
+
+Read the reserved digest + the scanner's SARIF, attach the result, and ack.
+A missing/empty SARIF or a transient failure leaves the entry pending (the
+reaper retries); a permanent failure dead-letters it.
+
+**Usage**:
+
+```console
+$ houba scan attach [OPTIONS]
+```
+
+**Options**:
+
 * `--help`: Show this message and exit.
 
 ### `houba scan enqueue`

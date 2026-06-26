@@ -1,6 +1,11 @@
-"""scan_worker — the in-process reserve -> scan -> attach -> ack loop.
+"""scan_worker — reserve → scan → attach → ack, split across containers.
 
-Failure routing:
+The ScaledJob init-container topology means:
+  1. ``houba scan reserve``  — reserves one digest and writes token + ref to /shared
+  2. [fetch-sbom + grype in separate containers, reading /shared/digest]
+  3. ``houba scan attach``   — reads the reservation from /shared, attaches, acks
+
+Failure routing (both halves):
 - success          → ack with digest + attest timestamp
 - permanent failure → dead_letter (image gone / manifest 404)
 - transient failure → do NOTHING; leave the entry pending for the reaper
@@ -25,25 +30,23 @@ class _Outcome(Protocol):
     timestamp: Any  # datetime
 
 
-def process_one(
+def handle_reservation(
     queue: QueuePort,
+    res: Reservation,
     *,
     scan_and_attach: Callable[[str], _Outcome | None],
-    max_deliveries: int,
-) -> bool:
-    """Process at most one reserved ref. Returns False when the queue is empty."""
-    res = queue.reserve()
-    if res is None:
-        return False
+) -> None:
+    """Scan-result -> attach -> ack for an already-reserved entry. Success acks;
+    a permanent failure dead-letters; a transient failure (incl. missing SARIF)
+    is left pending — the reaper redelivers it and dead-letters past max_deliveries."""
     try:
         outcome = scan_and_attach(res.ref)
-    except Exception as exc:
+    except Exception as exc:  # routed via classify, never swallowed
         _route(queue, res, classify_exception("attach", type(exc).__name__, str(exc)))
-        return True
-    if outcome is None:  # no SBOM referrer yet — transient, leave pending
-        return True
+        return
+    if outcome is None:  # no SARIF yet — transient, leave pending
+        return
     queue.ack(res, digest=outcome.subject_digest, attested_at=outcome.timestamp.isoformat())
-    return True
 
 
 def _route(queue: QueuePort, res: Reservation, failure: Any) -> None:
@@ -56,20 +59,6 @@ def _route(queue: QueuePort, res: Reservation, failure: Any) -> None:
     # transient: do nothing — the reaper redelivers and eventually dead-letters.
 
 
-def run_worker(
-    queue: QueuePort,
-    *,
-    scan_and_attach: Callable[[str], _Outcome | None],
-    max_deliveries: int = 3,
-) -> int:
-    """Drain the queue: process entries until reserve() returns None. Returns the
-    number handled. KEDA spawns a ScaledJob pod per batch; this drains it and exits."""
-    handled = 0
-    while process_one(queue, scan_and_attach=scan_and_attach, max_deliveries=max_deliveries):
-        handled += 1
-    return handled
-
-
 def make_scan_and_attach(
     *,
     registry: Any,
@@ -79,7 +68,7 @@ def make_scan_and_attach(
     roster: Any = None,
     attestor: Any = None,
 ) -> Callable[[str], ScanOutcome | None]:
-    """Return a scan_and_attach(ref) closure for run_worker.
+    """Return a scan_and_attach(ref) closure for handle_reservation.
 
     Reads the SARIF file the separate scanner step wrote at ``sarif_path``. If the
     file is missing or empty the scanner has not finished yet — returns ``None``
