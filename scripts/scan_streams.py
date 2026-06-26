@@ -132,26 +132,40 @@ def coverage_check(r, placed, max_age_s, now, confirmed=CONFIRMED):
     return coverage_gap(set(placed), fresh)
 
 
+def ref_matches(ref, selector):
+    """Match a dead-entry ref against an operator selector. Accepts the full digest
+    (`sha256:hex`) OR the bare hex (what an operator naturally copies from `scan-dlq list`).
+    `--all` matches everything; an empty selector matches nothing (never a silent match-all)."""
+    if selector == "--all":
+        return True
+    if not selector or "@" not in ref:
+        return False
+    digest = ref.split("@", 1)[1]  # "sha256:hex"
+    return digest == selector or digest.split(":")[-1] == selector.split(":")[-1]
+
+
 def dlq_list(r, dead=DEAD):
     return [{"id": mid, **fields} for mid, fields in r.xrange(dead)]
 
 
-def dlq_replay(r, digest, dead=DEAD, work=WORK):
-    """Re-enqueue every dead entry whose ref ends with @<digest> (or all if digest=='--all');
-    remove it from the dead stream."""
+def dlq_replay(r, selector, dead=DEAD, work=WORK):
+    """Re-enqueue every dead entry matching the selector (full digest, bare hex, or
+    `--all`); remove it from the dead stream. Returns the count moved."""
     moved = 0
     for mid, fields in r.xrange(dead):
-        if digest == "--all" or fields.get("ref", "").endswith("@" + digest):
+        if ref_matches(fields.get("ref", ""), selector):
             r.xadd(work, {"ref": fields["ref"]})
             r.xdel(dead, mid)
             moved += 1
     return moved
 
 
-def dlq_drop(r, digest, dead=DEAD):
+def dlq_drop(r, selector, dead=DEAD):
+    """Permanently drop every dead entry matching the selector (full digest or bare hex).
+    Returns the count dropped."""
     dropped = 0
     for mid, fields in r.xrange(dead):
-        if fields.get("ref", "").endswith("@" + digest):
+        if ref_matches(fields.get("ref", ""), selector):
             r.xdel(dead, mid)
             dropped += 1
     return dropped

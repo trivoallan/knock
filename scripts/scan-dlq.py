@@ -13,15 +13,26 @@ if cmd == "list":
             f"err={e.get('error', '?')[:60]}  deliveries={e.get('delivery_count', '?')}"
         )
 elif cmd == "show":
+    found = False
     for e in scan_streams.dlq_list(r):
-        if e.get("ref", "").endswith("@" + arg):
+        if scan_streams.ref_matches(e.get("ref", ""), arg):
+            found = True
             for k, v in e.items():
-                print(f"{k}: {v}")
+                if k != "suggested_action":
+                    print(f"{k}: {v}")
             print(f"suggested_action: {e.get('suggested_action', '(none recorded)')}")
+    if not found:
+        print(f"no dead entry matched {arg!r}", file=sys.stderr)
 elif cmd == "replay":
-    print(f"replayed {scan_streams.dlq_replay(r, arg)} entr(y/ies) to work")
+    n = scan_streams.dlq_replay(r, arg)
+    print(f"replayed {n} entr(y/ies) to work")
+    if n == 0:
+        print(f"warning: no dead entry matched {arg!r}", file=sys.stderr)
 elif cmd == "drop":
-    print(f"dropped {scan_streams.dlq_drop(r, arg)} entr(y/ies)")
+    n = scan_streams.dlq_drop(r, arg)
+    print(f"dropped {n} entr(y/ies)")
+    if n == 0:
+        print(f"warning: no dead entry matched {arg!r}", file=sys.stderr)
 else:
     print(
         "usage: scan-dlq.py list | show <digest> | replay <digest|--all> | drop <digest>",
