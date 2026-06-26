@@ -70,18 +70,19 @@ jobs:
 
       - name: Install kind
         run: |
-          curl -sSfL https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64 \
-            -o /usr/local/bin/kind && chmod +x /usr/local/bin/kind
+          curl -sSfL https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64 -o /tmp/kind
+          sudo install -m 0755 /tmp/kind /usr/local/bin/kind   # runner pre-ships a root-owned kind
 
       - name: Install kubectl
         run: |
-          curl -sSfL "https://dl.k8s.io/release/v1.32.0/bin/linux/amd64/kubectl" \
-            -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
+          curl -sSfL "https://dl.k8s.io/release/v1.32.0/bin/linux/amd64/kubectl" -o /tmp/kubectl
+          sudo install -m 0755 /tmp/kubectl /usr/local/bin/kubectl
 
       - name: Install kustomize
         run: |
           curl -sSfL "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \
-            | bash -s -- 5.6.0 /usr/local/bin
+            | bash -s -- 5.6.0 /tmp
+          sudo install -m 0755 /tmp/kustomize /usr/local/bin/kustomize
 
       - name: Install regctl
         run: |
