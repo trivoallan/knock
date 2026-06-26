@@ -291,6 +291,12 @@ class ScanRedisConfig(BaseModel):
     placed: str = "houba:scan:placed"
     group: str = "scan"
 
+    @model_validator(mode="after")
+    def _addr_has_port(self) -> ScanRedisConfig:
+        if ":" not in self.addr:
+            raise ValueError("addr must be host:port")
+        return self
+
 
 def scan_redis_from_env() -> ScanRedisConfig:
     """Parse ``HOUBA_SCAN_REDIS`` (JSON blob) into a :class:`ScanRedisConfig`.

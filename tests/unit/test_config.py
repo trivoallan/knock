@@ -447,3 +447,14 @@ def test_stale_flat_redis_var_is_loud(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("REDIS_ADDR", "old:6379")
     with pytest.raises(ConfigError, match="REDIS_ADDR set but ignored"):
         scan_redis_from_env()
+
+
+def test_scan_redis_addr_without_port_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    from pydantic import ValidationError
+
+    for v in ("REDIS_ADDR", "REDIS_WORK_STREAM", "REDIS_DEAD_STREAM",
+              "REDIS_CONFIRMED_ZSET", "REDIS_PLACED_SET", "REDIS_GROUP"):
+        monkeypatch.delenv(v, raising=False)
+    monkeypatch.setenv("HOUBA_SCAN_REDIS", '{"addr": "localhost"}')
+    with pytest.raises(ValidationError, match="addr must be host:port"):
+        scan_redis_from_env()

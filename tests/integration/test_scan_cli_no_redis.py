@@ -34,4 +34,6 @@ def test_scan_help_works_without_redis():
 def test_scan_worker_without_redis_prints_install_hint():
     result = _run("['scan','worker']")
     out = result.stdout
+    # CliRunner mixes stderr (where the err=True hint goes) into r.output by design.
     assert "pip install houba[scan]" in out
+    assert "EXIT 3" in out

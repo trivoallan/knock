@@ -17,6 +17,7 @@ from typing import Any, Protocol
 
 from houba.domain.scan_queue import classify_exception
 from houba.ports.queue import QueuePort, Reservation
+from houba.use_cases.attach import ScanOutcome, attach_scan
 
 
 class _Outcome(Protocol):
@@ -77,22 +78,20 @@ def make_scan_and_attach(
     sarif_path: str,
     roster: Any = None,
     attestor: Any = None,
-) -> Callable[[str], _Outcome | None]:
+) -> Callable[[str], ScanOutcome | None]:
     """Return a scan_and_attach(ref) closure for run_worker.
 
     Reads the SARIF file the separate scanner step wrote at ``sarif_path``. If the
     file is missing or empty the scanner has not finished yet — returns ``None``
     (transient) so the entry stays pending and is redelivered by the reaper.
     """
+    p = Path(sarif_path)  # fixed at factory time; close over it
 
-    def _scan_and_attach(ref: str) -> _Outcome | None:
-        p = Path(sarif_path)
+    def _scan_and_attach(ref: str) -> ScanOutcome | None:
         if not p.exists() or p.stat().st_size == 0:
             return None
         report_bytes = p.read_bytes()
-        from houba.use_cases.attach import attach_scan
-
-        return attach_scan(  # type: ignore[return-value]
+        return attach_scan(
             ref,
             report_bytes,
             registry=registry,

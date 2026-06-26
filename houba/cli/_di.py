@@ -67,7 +67,7 @@ def build_scan_adapter() -> Any:
     cfg = scan_redis_from_env()
     host, port = cfg.addr.rsplit(":", 1)
     client = redis.Redis(host=host, port=int(port), decode_responses=True)
-    consumer = os.environ.get("HOSTNAME", "worker")
+    consumer = os.environ.get("HOSTNAME", "worker")  # HOSTNAME = pod name in k8s
     return RedisStreamsAdapter(
         client,
         consumer=consumer,
