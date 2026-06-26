@@ -1,7 +1,7 @@
 ---
 title: "Operate the scan pipeline"
 description: "Run, monitor, and triage the incremental Redis-Streams scan pipeline: first green scan, daily signals, and runbooks for a stuck queue, a growing dead-letter stream, and a coverage gap."
-sidebar_position: 10
+sidebar_position: 11
 ---
 
 The scan pipeline is **incremental and reconcile-fed**: `houba reconcile` places a digest into the
