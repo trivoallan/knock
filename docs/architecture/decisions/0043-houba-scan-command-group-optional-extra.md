@@ -4,7 +4,7 @@ Date: 2026-06-26
 
 ## Status
 
-Proposed (draft) — refines ADR 0042
+Accepted — refines ADR 0042
 
 ## Context
 
