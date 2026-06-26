@@ -12,6 +12,7 @@ Do NOT call enqueue for retries.
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, Protocol
 
 from houba.domain.scan_queue import classify_exception
@@ -66,3 +67,39 @@ def run_worker(
     while process_one(queue, scan_and_attach=scan_and_attach, max_deliveries=max_deliveries):
         handled += 1
     return handled
+
+
+def make_scan_and_attach(
+    *,
+    registry: Any,
+    clock: Any,
+    label_prefix: str,
+    sarif_path: str,
+    roster: Any = None,
+    attestor: Any = None,
+) -> Callable[[str], _Outcome | None]:
+    """Return a scan_and_attach(ref) closure for run_worker.
+
+    Reads the SARIF file the separate scanner step wrote at ``sarif_path``. If the
+    file is missing or empty the scanner has not finished yet — returns ``None``
+    (transient) so the entry stays pending and is redelivered by the reaper.
+    """
+
+    def _scan_and_attach(ref: str) -> _Outcome | None:
+        p = Path(sarif_path)
+        if not p.exists() or p.stat().st_size == 0:
+            return None
+        report_bytes = p.read_bytes()
+        from houba.use_cases.attach import attach_scan
+
+        return attach_scan(  # type: ignore[return-value]
+            ref,
+            report_bytes,
+            registry=registry,
+            clock=clock,
+            label_prefix=label_prefix,
+            roster=roster,
+            attestor=attestor,
+        )
+
+    return _scan_and_attach

@@ -17,6 +17,7 @@ from houba.cli.audit import audit as audit_cmd
 from houba.cli.gc import gc as gc_cmd
 from houba.cli.purge import purge as purge_cmd
 from houba.cli.reconcile import reconcile as reconcile_cmd
+from houba.cli.scan import scan_app
 from houba.cli.verify import verify as verify_cmd
 from houba.errors import HoubaError, exit_code_for
 
@@ -29,6 +30,7 @@ app.command(name="attach")(attach_cmd)
 app.command(name="audit")(audit_cmd)
 app.command(name="gc")(gc_cmd)
 app.command(name="verify")(verify_cmd)
+app.add_typer(scan_app, name="scan")
 
 
 @app.command()

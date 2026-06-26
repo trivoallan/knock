@@ -23,6 +23,7 @@ $ houba [OPTIONS] COMMAND [ARGS]...
 * `gc`: Garbage-collect superseded scan-result...
 * `verify`: Read houba's facts for a digest and gate...
 * `version`: Print the CLI version.
+* `scan`: Platform scan-pipeline commands (requires...
 
 ## `houba reconcile`
 
@@ -160,4 +161,69 @@ $ houba version [OPTIONS]
 
 **Options**:
 
+* `--help`: Show this message and exit.
+
+## `houba scan`
+
+Platform scan-pipeline commands (requires `pip install houba[scan]`).
+
+**Usage**:
+
+```console
+$ houba scan [OPTIONS] COMMAND [ARGS]...
+```
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+**Commands**:
+
+* `worker`: Reserve, scan-attach, and ack entries from...
+* `enqueue`: Read a reconcile JSON report from stdin...
+* `reaper`: Claim idle entries and route...
+
+### `houba scan worker`
+
+Reserve, scan-attach, and ack entries from the work stream until it is empty.
+
+**Usage**:
+
+```console
+$ houba scan worker [OPTIONS]
+```
+
+**Options**:
+
+* `--max-deliveries INTEGER`: Dead-letter threshold.  [default: 3]
+* `--help`: Show this message and exit.
+
+### `houba scan enqueue`
+
+Read a reconcile JSON report from stdin and enqueue the placed image refs.
+
+**Usage**:
+
+```console
+$ houba scan enqueue [OPTIONS]
+```
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+### `houba scan reaper`
+
+Claim idle entries and route past-threshold ones to the dead stream.
+
+**Usage**:
+
+```console
+$ houba scan reaper [OPTIONS]
+```
+
+**Options**:
+
+* `--min-idle-ms INTEGER`: Idle threshold in ms.  [default: 600000]
+* `--max-deliveries INTEGER`: Dead-letter threshold.  [default: 3]
 * `--help`: Show this message and exit.
