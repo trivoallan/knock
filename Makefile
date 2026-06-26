@@ -32,9 +32,16 @@ ARGOCD_VERSION  ?= v2.12.4
 # the agent-injector / csi-provider pods the chart also creates.
 OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+$$' | head -1)
 
+# Host-side port-forward address for the local Zot (registry svc/registry 5000).
+# Used by demo-mongobleed and any host-side regctl/houba invocation.
+LOCAL_REG ?= localhost:5000
+# HOUBA_REGISTRIES roster for host-side access (port-forward to the local Zot).
+LOCAL_HOUBA_REGISTRIES ?= {"local":{"host":"$(LOCAL_REG)","tls_verify":false}}
+
 .PHONY: help reference docs-serve cluster image up-local local local-run \
         argocd demo demo-run openbao-seed seed-incident incident-deploy \
-        blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui argocd-ui docker-auth logs down
+        blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui argocd-ui docker-auth logs down \
+        demo-mongobleed
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort \
@@ -220,3 +227,32 @@ scan: ## Run the scan-attach Job (grype on the SBOM -> houba attach) over the pl
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
 	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-scan-attach --timeout=300s
 	$(KUBECTL) -n $(NS) logs job/houba-scan-attach --all-containers
+
+# ---- BROWNFIELD DEMO ---------------------------------------------------------
+# Demonstrates the mongobleed gap (CVE-2025-14847): grype + trivy both miss it
+# on the official `mongo` image; the package-level SBOM inventory catches it.
+# Act 1: houba reconcile copies mongo:7.0.13+7.0.14 with stamp + SBOM, then
+#         demo-mongobleed.sh shows the scanner blind spot vs. the SBOM query.
+# Act 2: demo-gate.sh runs grype on the XZ image and shows houba attach blocking it.
+#
+# Reconcile strategy: run `houba reconcile docs/examples/brownfield` directly on the
+# host against the port-forwarded Zot (LOCAL_REG=localhost:5000). This sidesteps the
+# in-cluster CronJob's fixed POLICY_DIR without mutating the shared houba-config
+# ConfigMap — consistent with how the demo scripts themselves access the registry.
+demo-mongobleed: up-local seed-incident ## Brownfield demo end-to-end: mongo corpus → Act 1 (scanner blind spot) + Act 2 (XZ gate)
+	@echo ">> port-forwarding the local Zot to $(LOCAL_REG) for host-side reconcile + demo scripts …"
+	$(KUBECTL) -n $(NS) port-forward svc/registry 5000:5000 >/dev/null 2>&1 & \
+	  PF_PID=$$!; \
+	  trap 'kill $$PF_PID 2>/dev/null' EXIT; \
+	  for i in $$(seq 1 20); do \
+	    python3 -c "import urllib.request; urllib.request.urlopen('http://$(LOCAL_REG)/v2/')" \
+	      >/dev/null 2>&1 && break; sleep 0.5; \
+	  done; \
+	  echo ">> reconciling docs/examples/brownfield (copy path: mongo:7.0.13 + 7.0.14 → $(LOCAL_REG)/demo/mongo) …"; \
+	  HOUBA_REGISTRIES='$(LOCAL_HOUBA_REGISTRIES)' \
+	    uv run houba reconcile docs/examples/brownfield; \
+	  echo ">> Act 1 — scanner blind spot vs. the SBOM inventory"; \
+	  REG=$(LOCAL_REG) scripts/demo-mongobleed.sh; \
+	  echo ">> Act 2 — the front door blocks a vulnerable image at intake"; \
+	  REG=$(LOCAL_REG) HOUBA_REGISTRIES='$(LOCAL_HOUBA_REGISTRIES)' \
+	    scripts/demo-gate.sh
