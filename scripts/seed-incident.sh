@@ -42,3 +42,52 @@ echo "» copying the same bits directly to ${HOST}/bypassed/debian-xz:5.6.1 (nev
 regctl image copy "${HOST}/upstream/debian-xz:5.6.1" "${HOST}/bypassed/debian-xz:5.6.1"
 
 echo "» seeded upstream/debian-xz:5.6.1 (houba will rebuild it) + bypassed/debian-xz:5.6.1" >&2
+
+# ---------------------------------------------------------------------------
+# Mongo corpus (brownfield Act 1)
+# ---------------------------------------------------------------------------
+# Copy two mongobleed-affected tags from Docker Hub into the demo Zot so that:
+#   upstream/mongo:7.0.13 + :7.0.14         — houba reconcile will copy these
+#                                              through the front door (stamp + SBOM)
+#   team-data-platform/mongo:7.0.13 + :7.0.14 — raw copy, never through houba (the
+#                                              "before" world; the owner is only
+#                                              *guessable* from the first path
+#                                              segment "team-data-platform")
+#   team-data-platform/mongo:7.0            — re-pointed alias: first → 7.0.13,
+#                                              then → 7.0.14 — so a tag-only query
+#                                              is ambiguous in the "before" world
+#
+# The path segment "team-data-platform" deliberately echoes (imperfectly) the
+# declared owner "group:default/data-platform": the before-world query guesses
+# the team from the repo path, while the after-world reads the authoritative
+# io.houba.owners label off the houba'd copy.
+#
+# Note: houba's policy (docs/examples/brownfield/mongo.yml) sources directly
+# from docker.io/library/mongo, NOT from upstream/mongo in the Zot.  The
+# upstream/ copies below exist purely to have a local stand-in in air-gapped
+# demo environments; remove them if the cluster has Docker Hub access.
+# ---------------------------------------------------------------------------
+
+# Idempotent: skip the Hub pull when the tag is already present (re-runs are
+# fast and don't trip Docker Hub rate limits at demo time).
+for TAG in 7.0.13 7.0.14; do
+  for DEST in upstream/mongo team-data-platform/mongo; do
+    if ! regctl manifest head "${HOST}/${DEST}:${TAG}" >/dev/null 2>&1; then
+      echo "» copying docker.io/library/mongo:${TAG} → ${HOST}/${DEST}:${TAG}" >&2
+      regctl image copy "docker.io/library/mongo:${TAG}" "${HOST}/${DEST}:${TAG}"
+    else
+      echo "» ${HOST}/${DEST}:${TAG} already present, skipping" >&2
+    fi
+  done
+done
+
+# Re-point the 7.0 alias: first pin it to 7.0.13, then advance to 7.0.14.
+# This creates the ambiguity: a query on team-data-platform/mongo:7.0 today sees
+# 7.0.14 but yesterday it saw 7.0.13 — the "before" world is tag-ambiguous.
+echo "» pointing ${HOST}/team-data-platform/mongo:7.0 → 7.0.13 (first placement)" >&2
+regctl image copy "${HOST}/team-data-platform/mongo:7.0.13" "${HOST}/team-data-platform/mongo:7.0"
+
+echo "» re-pointing ${HOST}/team-data-platform/mongo:7.0 → 7.0.14 (tag now ambiguous)" >&2
+regctl image copy "${HOST}/team-data-platform/mongo:7.0.14" "${HOST}/team-data-platform/mongo:7.0"
+
+echo "» seeded upstream/mongo:7.0.13+7.0.14 + team-data-platform/mongo:7.0.13+7.0.14 (7.0 alias → 7.0.14)" >&2
