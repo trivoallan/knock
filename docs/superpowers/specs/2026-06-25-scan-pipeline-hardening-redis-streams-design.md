@@ -347,22 +347,29 @@ folded as design — it is a doc deliverable (P2), tracked as a task.
 
 ## 11. e2e outcomes (kind, 2026-06-25)
 
-Run against the live `houba-demo` kind cluster (KEDA 2.20.1, in-cluster Redis 7.4.9). The full
-deploy-via-ArgoCD e2e is gated on merging the branch (the demo syncs from git); what was validated
-directly:
+Run against a fresh `houba-demo` kind cluster (KEDA 2.20.1, in-cluster Redis 7.4.9), deployed **from the
+branch via `make local`** (the `deploy/overlays/local` path — no ArgoCD, since the Argo apps hardcode
+`targetRevision: main`; KEDA is a manual prereq). The **full Loop-A flow passed end to end**:
 
-- **Scripts vs. the real cluster Redis (7.4.9).** `scan-enqueue.py` and `scan-coverage.py` run correctly
-  against the in-cluster `scan-queue-redis` (port-forwarded, probe keys): enqueue `XADD`s + `SADD`s the
-  placed-set; coverage returns the right gap. Confirms the Redis version meets the ≥6.2 floor
-  (XAUTOCLAIM / XTRIM MINID) and that the real entrypoints work, not just the test module.
-- **KEDA scaler bug caught + fixed (§3.1).** A probe `ScaledJob` proved `pendingEntriesCount` (the
-  original config) **never scales a worker for fresh work**: `XPENDING` is 0 for an un-read entry, so the
-  metric is always 0 → cold-start deadlock (the pipeline would process nothing). The same probe with
-  **`streamLength`** fired immediately. The scaler is now `streamLength`. `kustomize build` could not
-  have caught this — only the e2e did.
+- **reconcile → enqueue → scale → scan → attach → ack → confirmed.** `houba reconcile` placed 5 images;
+  the enqueuer `XADD`'d them + `SADD`'d `houba:scan:placed`; the KEDA **`streamLength`** scaler spawned
+  scan-worker Jobs; each worker reserved (`XREADGROUP`), ran grype, `houba attach`ed the signed SARIF
+  referrer, and acked. End state: `work=0` (trimmed), `placed=5`, `confirmed=5`, `dead=0`, `pending=0`;
+  the coverage check returned `{"coverage_gap": 0}`. **This is the proof the `streamLength` fix matters:
+  with the original `pendingEntriesCount` no worker would have spawned and `confirmed` would be 0.**
+- **AOF survives a container restart.** `appendonly yes` is live; `redis-cli SHUTDOWN` → the kubelet
+  restarts the container and `confirmed`/`placed` reload from the AOF (5 → 5). emptyDir-backed: survives
+  a container restart, not a pod reschedule — PVC is the documented prod hardening (§6).
+- **dead-letter → `scan-dlq` triage — and the e2e found a DX papercut.** `scan-dlq list/show/drop`
+  operate on the real dead stream; but `show`/`drop`/`replay` only matched the *full* `sha256:…` digest,
+  so the bare hex an operator copies from `list` silently matched nothing (`dropped 0`, no warning).
+  Fixed: the selector now accepts the full digest **or** the bare hex, and a zero-match warns (no silent
+  no-op for a tired operator).
 
-Still e2e-pending (on merge / a full deploy): the worker reserve→scan→attach→ack ordering across
-containers, AOF surviving a pod restart, and the dead-letter→`scan-dlq` triage path.
+The KEDA scaler bug (§3.1) was first isolated by a probe `ScaledJob` (`pendingEntriesCount` never fired
+on `XLEN=1`/`XPENDING=0`; `streamLength` did). **None of the four findings — the scaler cold-start
+deadlock, the earlier trim data-loss and coverage false-green, and this dlq papercut — were visible to
+`kustomize build` or CI; only running it on real KEDA + Redis surfaced them.**
 
 ---
 
