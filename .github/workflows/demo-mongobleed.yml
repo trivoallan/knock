@@ -34,8 +34,9 @@ jobs:
 
       - name: Install trivy
         run: |
-          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin v0.63.0
+          curl -sSfL "https://github.com/aquasecurity/trivy/releases/download/v0.63.0/trivy_0.63.0_Linux-64bit.tar.gz" -o /tmp/trivy.tgz
+          tar -xzf /tmp/trivy.tgz -C /usr/local/bin trivy
+          trivy --version
 
       - name: Install syft
         run: |
@@ -99,8 +100,9 @@ jobs:
 
       - name: Install trivy
         run: |
-          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin v0.63.0
+          curl -sSfL "https://github.com/aquasecurity/trivy/releases/download/v0.63.0/trivy_0.63.0_Linux-64bit.tar.gz" -o /tmp/trivy.tgz
+          tar -xzf /tmp/trivy.tgz -C /usr/local/bin trivy
+          trivy --version
 
       - name: Prime grype DB
         run: GRYPE_DB_AUTO_UPDATE=true grype db update
