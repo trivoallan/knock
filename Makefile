@@ -261,5 +261,5 @@ demo-mongobleed: up-brownfield seed-incident ## Brownfield demo end-to-end: mong
 	  echo ">> Act 1 — scanner blind spot vs. the SBOM inventory"; \
 	  REG=$(LOCAL_REG) scripts/demo-mongobleed.sh; \
 	  echo ">> Act 2 — the front door blocks a vulnerable image at intake"; \
-	  REG=$(LOCAL_REG) HOUBA_REGISTRIES='$(LOCAL_HOUBA_REGISTRIES)' \
+	  REG=$(LOCAL_REG) HOUBA_REGISTRIES='$(LOCAL_HOUBA_REGISTRIES)' HOUBA='uv run houba' \
 	    scripts/demo-gate.sh

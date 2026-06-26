@@ -62,7 +62,9 @@ if [ ! -s "$WORK/scan.sarif" ]; then
 fi
 echo "» SARIF written — attaching and gating …"
 
-houba attach "${REF}" --report "$WORK/scan.sarif" --fail-on "${THRESHOLD}"; rc=$?
+# ${HOUBA} is "houba" inside the houba image (on PATH); on a host without houba
+# installed, the caller sets HOUBA="uv run houba" (unquoted → word-splits to 3 args).
+${HOUBA:-houba} attach "${REF}" --report "$WORK/scan.sarif" --fail-on "${THRESHOLD}"; rc=$?
 case "$rc" in
   1) echo "GATED ✓ — attach --fail-on ${THRESHOLD} exited 1: the front door said no.";;
   2) echo "FAIL — exit 2 (AdapterError): registry WRITE failed. attach writes a referrer before gating; check write creds."; exit 2;;
