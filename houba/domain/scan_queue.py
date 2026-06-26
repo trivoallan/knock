@@ -58,6 +58,28 @@ def classify_failure(stage: str, exit_code: int, stderr: str) -> Failure:
     )
 
 
+# Exception-type names whose presence alone marks a signer failure, regardless of
+# message text (the attach stage raises these by type, not stderr).
+_SIGNER_TYPES = ("CosignError",)
+
+
+def classify_exception(stage: str, exc_type: str, message: str) -> Failure:
+    """Failure policy for the in-process stages that raise typed exceptions instead
+    of producing CLI stderr. Shares the transient/permanent verdict strings with
+    classify_failure. Domain stays import-free of the adapter error classes: callers
+    pass type(exc).__name__ and str(exc)."""
+    s = message.lower()
+    if any(m in s for m in _PERMANENT):
+        return Failure("permanent", f"{stage}: image gone (manifest 404) -> drop, do not retry")
+    if exc_type in _SIGNER_TYPES or any(m in s for m in _SIGNER):
+        return Failure(
+            "transient", f"{stage}: signer error -> check HOUBA_ATTEST_SIGNER, then replay"
+        )
+    return Failure(
+        "transient", f"{stage} raised {exc_type} -> likely transient (registry 5xx); replay"
+    )
+
+
 def coverage_gap(placed: set[str], fresh_confirmed: set[str]) -> list[str]:
     """The supply-chain anchor: digests placed but not freshly scan-confirmed.
     A non-empty result = images the pipe silently dropped (or whose scan went stale)."""
