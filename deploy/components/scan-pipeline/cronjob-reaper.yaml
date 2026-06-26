@@ -32,12 +32,11 @@ spec:
           containers:
             - name: reaper
               image: houba
-              command: ["python3", "/scripts/scan-reaper.py"]
+              command: ["houba", "scan", "reaper"]
+              args: ["--min-idle-ms", "1800000", "--max-deliveries", "5"]
               env:
-                - { name: REDIS_ADDR, value: "scan-queue-redis:6379" }
-                - { name: REAP_MIN_IDLE_MS, value: "1800000" }
-                - { name: MAX_DELIVERIES, value: "5" }
-                - { name: PYTHONPATH, value: "/" }
+                - name: HOUBA_SCAN_REDIS
+                  value: '{"addr":"scan-queue-redis:6379","work":"houba:scan:work","dead":"houba:scan:dead","confirmed":"houba:scan:confirmed","placed":"houba:scan:placed","group":"scan"}'
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
@@ -46,8 +45,3 @@ spec:
               resources:
                 requests: { cpu: 10m, memory: 32Mi }
                 limits: { memory: 128Mi }
-              volumeMounts:
-                - { name: scripts, mountPath: /scripts, readOnly: true }
-          volumes:
-            - name: scripts
-              configMap: { name: scan-pipeline-scripts, defaultMode: 0755 }
