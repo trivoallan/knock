@@ -45,6 +45,7 @@ $ houba reconcile [OPTIONS] DIRECTORY
 * `-j, --concurrency INTEGER RANGE`: Max parallel tag operations (overrides HOUBA_MAX_CONCURRENCY; 1 = sequential).  [x>=1]
 * `--shard-index INTEGER RANGE`: This shard's 0-based index (pass $JOB_COMPLETION_INDEX in an Indexed Job).  [default: 0; x>=0]
 * `--shard-count INTEGER RANGE`: Total shards N (1 = process all policies).  [default: 1; x>=1]
+* `--report-json`: Emit the reconcile report as JSON to stdout (for piping to `houba scan enqueue`).
 * `--help`: Show this message and exit.
 
 ## `houba purge`

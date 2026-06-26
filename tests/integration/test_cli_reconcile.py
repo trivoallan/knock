@@ -169,6 +169,25 @@ def test_reconcile_rejects_index_ge_count(
     assert result.exit_code != 0  # index must be < count
 
 
+def test_reconcile_report_json_flag_emits_parseable_json_regardless_of_log_format(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    """--report-json writes a JSON RunReport to stdout even when HOUBA_LOG_FORMAT=text."""
+    import json
+
+    _env(monkeypatch)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "empty")
+    # Explicitly keep log format as text (the default) to prove --report-json overrides it.
+    monkeypatch.setenv("HOUBA_LOG_FORMAT", "text")
+    (tmp_path / "redis.yml").write_text(POLICY)
+    result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "--dry-run", "--report-json"])
+    assert result.exit_code == 0, result.stdout
+    # stdout must parse as JSON
+    payload = json.loads(result.stdout)
+    assert payload["mode"] == "dry-run"
+    assert payload["status"] == "ok"
+
+
 def test_cli_threads_global_deletion_mode(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
 ) -> None:
