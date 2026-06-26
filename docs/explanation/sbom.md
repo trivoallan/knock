@@ -1,7 +1,7 @@
 ---
 title: "Package-level SBOM"
 description: "The inventory houba attaches to every placed image (copy and rebuild) so a CVE becomes one query, and why presence precedes signing."
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 houba's provenance stamp carries **lineage** — `base.digest`, the transform steps, the owners.
