@@ -8,6 +8,8 @@ from houba.errors import (
     HoubaError,
     InternalError,
     PolicyValidationError,
+    QueueError,
+    QueueUnavailableError,
     RegctlError,
     ScanReportError,
     UnknownFormatError,
@@ -63,3 +65,13 @@ def test_scan_report_error_is_domain_exit_1() -> None:
 def test_unknown_format_error_is_domain_exit_1() -> None:
     assert issubclass(UnknownFormatError, DomainError)
     assert exit_code_for(UnknownFormatError("nope")) == 1
+
+
+def test_queue_error_is_adapter_error_exit_2():
+    assert issubclass(QueueError, AdapterError)
+    assert exit_code_for(QueueError("boom")) == 2
+
+
+def test_queue_unavailable_has_distinct_exit_5():
+    assert issubclass(QueueUnavailableError, QueueError)
+    assert exit_code_for(QueueUnavailableError("redis down")) == 5
