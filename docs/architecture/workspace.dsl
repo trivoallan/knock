@@ -253,12 +253,12 @@ workspace "houba" "Single front door / stamper for external container images." {
         # buildkit→packageMirror) are auto-replicated from the model; only the infrastructure-node
         # edges are declared per environment.
 
-        # ── The reference deployment — the Argo App-of-Apps that IS the demo. On kind it is
-        #    the demo (`make demo`); the same App-of-Apps adopts to a real cluster (swap repo,
-        #    vault, registry, image). Thesis-minimum operators: ESO + OpenBao (wave 0), houba +
-        #    buildkitd (wave 1). KEDA + Prometheus autoscaling is an optional add-on
+        # ── Greenfield — the full GitOps Argo App-of-Apps (Reference B, advanced). On kind it
+        #    is the demo (`make demo`); the same App-of-Apps adopts to a real cluster (swap
+        #    repo, vault, registry, image). Thesis-minimum operators: ESO + OpenBao (wave 0),
+        #    houba + buildkitd (wave 1). KEDA + Prometheus autoscaling is an optional add-on
         #    (components/keda-buildkitd), deliberately NOT on this path.
-        refEnv = deploymentEnvironment "Reference — Argo App-of-Apps (the demo)" {
+        refEnv = deploymentEnvironment "Greenfield — full GitOps platform (Reference B, advanced)" {
             deploymentNode "Git host" "github.com/trivoallan/houba (or a fork) — deploy/argocd/" "Git server" {
                 rfRepo = infrastructureNode "Manifests repo" "root.yaml + apps/ + sources/* — a merged PR is the front door" "git / GitOps"
                 rfPolicyRepo = infrastructureNode "Policy repo (org)" "POLICY_REPO_URL — git-sync clones it; POLICY_DIR=docs/examples/reference (busybox copy + debian rebuild). ArgoCD never touches policies." "git / GitOps"
@@ -311,11 +311,11 @@ workspace "houba" "Single front door / stamper for external container images." {
             rfGc -> rfDest "Collects superseded scan referrers" "regctl" "DataCoupling"
         }
 
-        # ── The local inner-loop overlay — the escape hatch (`make local`, kubectl apply -k).
-        #    Self-contained: buildkitd + a throwaway registry:2, a plain-secret roster, NO
-        #    operators. Reconciles the SAME reference policy (busybox copy + debian rebuild) and
-        #    renders local, uncommitted manifests (the App-of-Apps reads children from git).
-        localEnv = deploymentEnvironment "Local — inner-loop overlay (make local)" {
+        # ── Brownfield — drop-in to an existing intake (make demo-mongobleed / make local).
+        #    Self-contained: kubectl apply -k, plain Zot, no Argo/ESO. Reconciles the SAME
+        #    reference policy (busybox copy + debian rebuild) and renders local, uncommitted
+        #    manifests. This is the brownfield-simple headline runtime.
+        localEnv = deploymentEnvironment "Brownfield — drop-in to existing intake (make demo-mongobleed / make local)" {
             deploymentNode "Operator host" "Laptop / CI runner: runs kind, holds the policy clone" "macOS / Linux" {
                 loRepo = infrastructureNode "Policy repo" "docs/examples/reference — busybox copy + debian rebuild (git-sync'd)" "git / GitOps"
                 deploymentNode "kind cluster" "Single-node Kubernetes — overlay local (self-contained: buildkitd, no operators)" "kind" {
@@ -381,11 +381,11 @@ workspace "houba" "Single front door / stamper for external container images." {
 
         # Two deployment views: the Argo reference (which is the demo) and the local
         # inner-loop overlay. The same kustomize base underlies both — the demo IS the blueprint.
-        deployment houba "Reference — Argo App-of-Apps (the demo)" "DeployReference" "The single reference: an Argo App-of-Apps that is both the production blueprint and the kind demo. ESO + OpenBao (wave 0), houba + buildkitd (wave 1); the reference policy (busybox copy + debian rebuild); a throwaway Zot (registry + built-in UI) applied out-of-band. KEDA/Prometheus autoscaling is an optional add-on, not on this path." {
+        deployment houba "Greenfield — full GitOps platform (Reference B, advanced)" "DeployReference" "The greenfield reference (Reference B): an Argo App-of-Apps that is both the production blueprint and the kind demo. ESO + OpenBao (wave 0), houba + buildkitd (wave 1); the reference policy (busybox copy + debian rebuild); a throwaway Zot (registry + built-in UI) applied out-of-band. KEDA/Prometheus autoscaling is an optional add-on, not on this path." {
             include *
             autolayout lr
         }
-        deployment houba "Local — inner-loop overlay (make local)" "DeployLocal" "The inner-loop escape hatch: kubectl apply -k overlays/local — buildkitd + a throwaway Zot (registry + built-in UI), a plain-secret roster, no operators. Reconciles the same reference policy (copy + rebuild) and renders local, uncommitted manifests." {
+        deployment houba "Brownfield — drop-in to existing intake (make demo-mongobleed / make local)" "DeployLocal" "The brownfield headline runtime: kubectl apply -k, plain Zot, no Argo/ESO operators. Drop-in to an existing cluster intake. Reconciles the same reference policy (copy + rebuild) and renders local, uncommitted manifests." {
             include *
             autolayout lr
         }
