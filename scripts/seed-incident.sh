@@ -42,3 +42,12 @@ echo "» copying the same bits directly to ${HOST}/bypassed/debian-xz:5.6.1 (nev
 regctl image copy "${HOST}/upstream/debian-xz:5.6.1" "${HOST}/bypassed/debian-xz:5.6.1"
 
 echo "» seeded upstream/debian-xz:5.6.1 (houba will rebuild it) + bypassed/debian-xz:5.6.1" >&2
+
+# Mongo corpus (brownfield Act 1) is NOT seeded here. houba's policy
+# (docs/examples/brownfield/mongo.yml) sources mongo directly from
+# docker.io/library/mongo, so `houba reconcile` pulls + places it (stamp + SBOM)
+# → demo/mongo. We deliberately do not pre-copy it into the Zot: the official
+# mongo image is large and multi-arch, and a redundant seed copy floods a fresh
+# kind node's disk. The tag-only "before" world (an un-houba'd mirror under a
+# project-named repo, owner only guessable from the path) is illustrated in the
+# how-to (docs/how-to/brownfield-drop-in.md), not seeded.
