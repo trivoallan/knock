@@ -88,8 +88,8 @@ def test_ack_score_is_epoch_from_iso_string(redis_server):
 
 
 def test_reserve_returns_none_on_empty(redis_server):
-    _make_adapter(redis_server)
-    assert _make_adapter(redis_server, consumer="worker-2").reserve(block_ms=50) is None
+    adapter = _make_adapter(redis_server)
+    assert adapter.reserve(block_ms=50) is None
 
 
 def test_reaper_reclaims_dropped_not_alive(redis_server):

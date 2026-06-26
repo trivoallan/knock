@@ -32,7 +32,10 @@ def _wrap[T](fn: Callable[..., T]) -> Callable[..., T]:
 
 
 def _iso_to_epoch(iso: str) -> float:
-    return datetime.fromisoformat(iso).timestamp()
+    dt = datetime.fromisoformat(iso)
+    if dt.tzinfo is None:
+        raise ValueError(f"attested_at must be timezone-aware: {iso!r}")
+    return dt.timestamp()
 
 
 class RedisStreamsAdapter:
@@ -95,17 +98,20 @@ class RedisStreamsAdapter:
         self._r.xack(self._work, self._group, res.token)
         self._trim_minid()
 
+    def _dead_letter_no_trim(self, token: str, ref: str, reason: dict[str, str]) -> None:
+        # XADD dead (durable) BEFORE XACK on work — invariant preserved.
+        payload = {"ref": ref, **{k: str(v) for k, v in reason.items()}}
+        self._r.xadd(self._dead, payload)
+        self._r.xack(self._work, self._group, token)
+
     @_wrap
     def dead_letter(self, res: Reservation, *, ref: str, reason: dict[str, str]) -> None:
-        """INVARIANT: XADD to dead (durable) BEFORE XACK on work. A crash between them
-        re-delivers and re-dead-letters (a dedupable duplicate) — never a loss.
-        NOTE: this method does NOT trim the work stream (the reaper trims after its loop).
-        A standalone caller (e.g. a worker dead-lettering a classify_failure "permanent" verdict)
-        must call _trim_minid itself, or processed entries on the work stream will not be
-        reclaimed."""
-        payload: dict[str, str] = {"ref": ref, **{k: str(v) for k, v in reason.items()}}
-        self._r.xadd(self._dead, payload)
-        self._r.xack(self._work, self._group, res.token)
+        """Route a failed entry to the dead stream. INVARIANT: XADD dead (durable)
+        BEFORE XACK on work — a crash between them re-delivers and re-dead-letters
+        (a dedupable duplicate), never a loss. Trim is encapsulated here (the work
+        stream's processed entries are reclaimed), so callers never manage trimming."""
+        self._dead_letter_no_trim(res.token, ref, reason)
+        self._trim_minid()
 
     def _trim_minid(self) -> None:
         """Reclaim fully-processed entries WITHOUT evicting an un-acked OR un-read entry.
@@ -152,12 +158,8 @@ class RedisStreamsAdapter:
                 )
                 delivered: int = int(rng[0]["times_delivered"]) if rng else 1
                 if should_dead_letter(delivered, max_deliveries):
-                    # Call Redis ops directly — we are already inside a @_wrap context so errors
-                    # propagate up correctly; avoid double-wrapping via self.dead_letter.
                     ref = str(fields.get("ref", ""))
-                    payload: dict[str, str] = {"ref": ref, "error": "max retries"}
-                    self._r.xadd(self._dead, payload)
-                    self._r.xack(self._work, self._group, str(msg_id))
+                    self._dead_letter_no_trim(str(msg_id), ref, {"error": "max retries"})
             if cursor == "0-0":
                 break
         self._trim_minid()
