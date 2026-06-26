@@ -23,6 +23,7 @@ $ houba [OPTIONS] COMMAND [ARGS]...
 * `gc`: Garbage-collect superseded scan-result...
 * `verify`: Read houba's facts for a digest and gate...
 * `version`: Print the CLI version.
+* `scan`: Platform scan-pipeline commands (requires...
 
 ## `houba reconcile`
 
@@ -45,6 +46,7 @@ $ houba reconcile [OPTIONS] DIRECTORY
 * `-j, --concurrency INTEGER RANGE`: Max parallel tag operations (overrides HOUBA_MAX_CONCURRENCY; 1 = sequential).  [x>=1]
 * `--shard-index INTEGER RANGE`: This shard's 0-based index (pass $JOB_COMPLETION_INDEX in an Indexed Job).  [default: 0; x>=0]
 * `--shard-count INTEGER RANGE`: Total shards N (1 = process all policies).  [default: 1; x>=1]
+* `--report-json`: Emit the reconcile report as JSON to stdout (for piping to `houba scan enqueue`).
 * `--help`: Show this message and exit.
 
 ## `houba purge`
@@ -159,4 +161,86 @@ $ houba version [OPTIONS]
 
 **Options**:
 
+* `--help`: Show this message and exit.
+
+## `houba scan`
+
+Platform scan-pipeline commands (requires `pip install houba[scan]`).
+
+**Usage**:
+
+```console
+$ houba scan [OPTIONS] COMMAND [ARGS]...
+```
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+**Commands**:
+
+* `reserve`: Reserve one placed digest from the queue...
+* `attach`: Read the reserved digest + the scanner's...
+* `enqueue`: Read a reconcile JSON report from stdin...
+* `reaper`: Claim idle entries and route...
+
+### `houba scan reserve`
+
+Reserve one placed digest from the queue and write it to /shared for the
+scanner + attach steps. Exits 75 (EX_TEMPFAIL) when the queue is empty.
+
+**Usage**:
+
+```console
+$ houba scan reserve [OPTIONS]
+```
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+### `houba scan attach`
+
+Read the reserved digest + the scanner's SARIF, attach the result, and ack.
+A missing/empty SARIF or a transient failure leaves the entry pending (the
+reaper retries); a permanent failure dead-letters it.
+
+**Usage**:
+
+```console
+$ houba scan attach [OPTIONS]
+```
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+### `houba scan enqueue`
+
+Read a reconcile JSON report from stdin and enqueue the placed image refs.
+
+**Usage**:
+
+```console
+$ houba scan enqueue [OPTIONS]
+```
+
+**Options**:
+
+* `--help`: Show this message and exit.
+
+### `houba scan reaper`
+
+Claim idle entries and route past-threshold ones to the dead stream.
+
+**Usage**:
+
+```console
+$ houba scan reaper [OPTIONS]
+```
+
+**Options**:
+
+* `--min-idle-ms INTEGER`: Idle threshold in ms.  [default: 600000]
+* `--max-deliveries INTEGER`: Dead-letter threshold.  [default: 3]
 * `--help`: Show this message and exit.

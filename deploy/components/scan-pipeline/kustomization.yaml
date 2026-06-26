@@ -20,12 +20,8 @@ patches:
 configMapGenerator:
   - name: scan-pipeline-scripts
     files:
-      - scan_queue.py=../../../scripts/scan_queue.py
       - scan_streams.py=../../../scripts/scan_streams.py
-      - scan-enqueue.py=../../../scripts/scan-enqueue.py
-      - scan-reserve.py=../../../scripts/scan-reserve.py
       - scan-ack.py=../../../scripts/scan-ack.py
-      - scan-reaper.py=../../../scripts/scan-reaper.py
       - scan-dlq.py=../../../scripts/scan-dlq.py
       - scan-coverage.py=../../../scripts/scan-coverage.py
       - scan-one.sh=../../../scripts/scan-one.sh

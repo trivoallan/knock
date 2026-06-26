@@ -31,6 +31,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     cliAttach = component "attach" "The attach command: ingests an upstream scan report and attaches it as a stamped OCI referrer." "Typer"
                     cliGc = component "gc" "The gc command: catalog-walks the registry and deletes superseded scan-result referrers, keeping the N newest per (tool, format) older than a grace window." "Typer"
                     cliVerify = component "verify" "The verify command: reads houba's facts for a digest (signed scan attestation, stamp, SBOM referrer) and produces a single exit-0/1 gate verdict." "Typer"
+                    cliScan = component "scan" "The scan command group (houba[scan] optional extra): reserve, attach, enqueue, reaper sub-commands for the incremental scan pipeline." "Typer"
                     cliRender = component "render" "Formats the RunReport to stdout (text / JSON)." "Python"
                     cliDi = component "_di" "Composition root: wires ports to adapters." "Python"
                 }
@@ -42,6 +43,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     ucAttach = component "attach (use case)" "Resolves the subject digest, summarizes the ingested scan report, and puts it as a stamped OCI referrer." "Python"
                     ucGc = component "gc (use case)" "Catalog-walks the registry for scan-result referrers and collects the superseded ones (keep N newest per (tool, format) older than a grace window); pure temporal decision, no usage oracle. Dry-run by default." "Python"
                     ucVerify = component "verify (use case)" "Resolves stamp annotations, SBOM referrers, and verified scan predicates for a digest; delegates to domain evaluate(); returns a VerifyReport. Read-only." "Python"
+                    ucScanWorker = component "scan_worker" "handle_reservation + make_scan_and_attach: claims a digest from the queue, runs the scan-and-attach pipeline, and ACKs or NACKs the reservation." "Python"
                     ucReport = component "report" "RunReport contract + worst-wins exit code." "Pydantic"
                     ucRegistrySession = component "registry_session" "Shared use-case helper: configure TLS/CA + login once per host (idempotent via caller-owned logged_in set). Used by reconcile, audit, and attach." "Python"
                 }
@@ -55,6 +57,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     domScan = component "scan ingestion" "Detects the scan-report format, parses it (e.g. SARIF), and summarizes it into stamp annotations." "Pure Python" "Domain"
                     domSbom = component "SBOM facts" "SBOM format media-types and referrer annotation builder (domain/sbom.py)." "Pure Python" "Domain"
                     domVerify = component "verify logic" "Pure gate evaluation: Requirement enum; evaluate() maps stamp/sbom presence and verified scan predicates to a VerifyReport (pass/fail + detail per requirement). Reuses gate_breached; fail-closed on missing/stale/unverifiable attestation." "Pure Python" "Domain"
+                    domScanQueue = component "scan queue logic" "Pure scan decision logic (domain/scan_queue.py): determines whether a placed digest needs scanning, deduplicates, and builds the ScanOutcome payload. No I/O. Under the ≥90 % domain gate + mypy --strict." "Pure Python" "Domain"
                 }
                 group "Ports" {
                     portRegistry = component "RegistryPort" "OCI registry ops: list, inspect, copy, annotate, delete, login, referrer list/put/delete; list_repositories (catalog walk for purge)." "typing.Protocol" "Port"
@@ -64,6 +67,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     portUsageOracle = component "UsageOraclePort" "Was this image digest seen in prod since a given timestamp? (stateless, point-in-time query)." "typing.Protocol" "Port"
                     portAttestor = component "AttestorPort" "Sign an in-toto Statement (DSSE) + attach it as an OCI referrer. Verify: cosign verify-attestation over a predicate type → list[VerifiedPredicate]." "typing.Protocol" "Port"
                     portSbomGenerator = component "SbomGeneratorPort" "Generate package-level SBOM(s) for a placed image by digest; returns one document per format." "typing.Protocol" "Port"
+                    portQueue = component "QueuePort" "Enqueue a placed-image digest for scanning; claim the next Reservation (XAUTOCLAIM semantics); ACK or NACK. Optional — only present when houba[scan] is installed." "typing.Protocol" "Port"
                 }
                 group "Adapters" {
                     adRegctl = component "RegctlAdapter" "Drives the regctl CLI via subprocess." "regctl" "Adapter"
@@ -73,6 +77,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     adUsageOracle = component "CommandUsageAdapter" "Shells out to HOUBA_USAGE_ORACLE_CMD; passes digest + idle window via stdin (JSON); expects {last_seen} on stdout." "subprocess" "Adapter"
                     adCosign = component "CosignAdapter" "Drives the cosign CLI via subprocess (keyless | kms | key)." "cosign" "Adapter"
                     adSyft = component "SyftAdapter" "Drives the syft CLI via subprocess; config-file auth/TLS; lazy binary resolution." "syft" "Adapter"
+                    adRedisStreams = component "RedisStreamsAdapter" "Drives redis-py 8 Streams (XADD / XAUTOCLAIM / XACK / XTRIM); consumer-group semantics; RESP3. Part of the houba[scan] optional extra." "redis-py 8" "Adapter"
                 }
                 config = component "config" "Reads HOUBA_* settings + roster resolvers — the only os.environ reader." "Pydantic Settings"
 
@@ -86,6 +91,8 @@ workspace "houba" "Single front door / stamper for external container images." {
                 layAdapters = component "adapters" "Implement the ports; reach the external systems (subprocess / stdlib)." "driven side" "Layer,Adapter"
             }
         }
+
+        redisBroker = softwareSystem "Redis (Streams)" "Message broker for the scan pipeline: reconcile enqueues placed-image digests; scan workers claim reservations via XAUTOCLAIM (consumer groups). Optional — only required when the houba[scan] extra is installed." "External"
 
         sourceRegistries = softwareSystem "Source Registries" "External public OCI registries (Docker Hub, Quay, GHCR) the images originate from." "External"
         destRegistries = softwareSystem "Destination Registries" "The organization's private OCI registries — any dist-spec registry (Harbor, Zot, …); destination for the stamped images, addressed generically via regctl." "External"
@@ -113,6 +120,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         houba -> signingService "Signs in-toto attestations (DSSE)" "cosign"
         houba -> transparencyLog "Records the signature (optional; blank => skipped)" "cosign / rekor"
         upstreamScanner -> houba "Produces scan reports ingested by" "SARIF / file"
+        houba -> redisBroker "Enqueues placed-image digests; scan workers claim reservations (houba[scan] optional)" "redis-py 8 / RESP3 Streams"
         argocd -> houba "Syncs the install manifests from git into the cluster (App-of-Apps reference)" "GitOps"
 
         # Component-level relationships — the source of truth for the Component view.
@@ -127,6 +135,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         cliMain -> cliAttach "Registers the command" "Typer"
         cliMain -> cliGc "Registers the command" "Typer"
         cliMain -> cliVerify "Registers the command" "Typer"
+        cliMain -> cliScan "Registers the command group (houba[scan])" "Typer"
         cliAudit -> cliDi "Builds the composition root" "Python"
         cliAudit -> ucAudit "Runs the audit" "Python"
         ucAudit -> domCoverage "Classifies each image" "Python"
@@ -208,6 +217,16 @@ workspace "houba" "Single front door / stamper for external container images." {
         ucReconcile -> portSbomGenerator "Generates SBOM(s) after placing each image (both paths)" "Protocol"
         adSyft -> destRegistries "Scans the placed image by digest" "syft"
 
+        cliScan -> cliDi "Builds the composition root" "Python"
+        cliScan -> ucScanWorker "Runs reserve / attach / reaper" "Python"
+        cliScan -> portQueue "Enqueues (enqueue sub-command)" "Protocol"
+        ucScanWorker -> domScanQueue "Pure scan decision logic" "Python"
+        ucScanWorker -> portQueue "Claims and ACKs/NACKs reservations" "Protocol"
+        ucScanWorker -> ucAttach "Runs the scan-and-attach pipeline per reservation" "Python"
+        cliDi -> adRedisStreams "Wires (houba[scan] only)" "DI"
+        adRedisStreams -> portQueue "Implements" "Protocol"
+        adRedisStreams -> redisBroker "XADD / XAUTOCLAIM / XACK / XTRIM via RESP3" "redis-py 8"
+
         # Coarse hexagon relationships — rendered only in the synthetic "Hexagon" view.
         platformEng -> layCli "Runs / schedules reconcile" "CLI"
         productTeam -> layCli "Provides MirrorPolicy files" "YAML"
@@ -223,6 +242,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         layAdapters -> usageOracle "Queries prod usage (purge)" "subprocess"
         layAdapters -> signingService "Signs attestations" "cosign"
         layAdapters -> transparencyLog "Records the signature (optional)" "cosign"
+        layAdapters -> redisBroker "Enqueues / claims scan reservations (houba[scan] optional)" "redis-py 8"
 
         # Deployments — one environment per worked example, each scoped to the kind overlay
         # that runs it (the demo IS the blueprint), plus the production blueprint. The old
@@ -349,7 +369,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         }
 
         component houbaCli "Hexagon" "Synthetic hexagonal overview: cli → use cases → domain, with ports ← adapters making the dependency inversion explicit (use cases and adapters both point at the ports). The driven adapters reach the external systems." {
-            include layCli layUc layDomain layPorts layAdapters config platformEng productTeam sourceRegistries destRegistries buildkit usageOracle signingService transparencyLog
+            include layCli layUc layDomain layPorts layAdapters config platformEng productTeam sourceRegistries destRegistries buildkit usageOracle signingService transparencyLog redisBroker
             autolayout lr
         }
 

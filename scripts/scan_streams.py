@@ -9,7 +9,7 @@ import os
 
 import redis
 
-from scripts.scan_queue import coverage_gap, should_dead_letter
+from houba.domain.scan_queue import coverage_gap, should_dead_letter
 
 WORK = os.environ.get("REDIS_WORK_STREAM", "houba:scan:work")
 DEAD = os.environ.get("REDIS_DEAD_STREAM", "houba:scan:dead")

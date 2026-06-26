@@ -414,3 +414,65 @@ def test_match_registry_by_host_no_host_returns_none() -> None:
 
 def test_match_registry_by_host_empty_roster_returns_none() -> None:
     assert match_registry_by_host("harbor.corp/x:1", {}) is None
+
+
+# ---------------------------------------------------------------------------
+# Task 9 — HOUBA_SCAN_REDIS config + loud flat-REDIS_* migration error
+# ---------------------------------------------------------------------------
+
+
+from houba.config import ScanRedisConfig, scan_redis_from_env  # noqa: E402, F401
+
+
+def test_scan_redis_parsed_from_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    for v in (
+        "REDIS_ADDR",
+        "REDIS_WORK_STREAM",
+        "REDIS_DEAD_STREAM",
+        "REDIS_CONFIRMED_ZSET",
+        "REDIS_PLACED_SET",
+        "REDIS_GROUP",
+    ):
+        monkeypatch.delenv(v, raising=False)
+    monkeypatch.setenv("HOUBA_SCAN_REDIS", '{"addr": "r:6379", "group": "scan"}')
+    cfg = scan_redis_from_env()
+    assert cfg.addr == "r:6379" and cfg.group == "scan"
+
+
+def test_scan_redis_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    for v in (
+        "REDIS_ADDR",
+        "REDIS_WORK_STREAM",
+        "REDIS_DEAD_STREAM",
+        "REDIS_CONFIRMED_ZSET",
+        "REDIS_PLACED_SET",
+        "REDIS_GROUP",
+    ):
+        monkeypatch.delenv(v, raising=False)
+    monkeypatch.delenv("HOUBA_SCAN_REDIS", raising=False)
+    cfg = scan_redis_from_env()
+    assert cfg.addr == "scan-queue-redis:6379" and cfg.work == "houba:scan:work"
+
+
+def test_stale_flat_redis_var_is_loud(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOUBA_SCAN_REDIS", '{"addr": "r:6379"}')
+    monkeypatch.setenv("REDIS_ADDR", "old:6379")
+    with pytest.raises(ConfigError, match="REDIS_ADDR set but ignored"):
+        scan_redis_from_env()
+
+
+def test_scan_redis_addr_without_port_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    from pydantic import ValidationError
+
+    for v in (
+        "REDIS_ADDR",
+        "REDIS_WORK_STREAM",
+        "REDIS_DEAD_STREAM",
+        "REDIS_CONFIRMED_ZSET",
+        "REDIS_PLACED_SET",
+        "REDIS_GROUP",
+    ):
+        monkeypatch.delenv(v, raising=False)
+    monkeypatch.setenv("HOUBA_SCAN_REDIS", '{"addr": "localhost"}')
+    with pytest.raises(ValidationError, match="addr must be host:port"):
+        scan_redis_from_env()

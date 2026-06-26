@@ -14,6 +14,8 @@ __all__ = [
     "HoubaError",
     "InternalError",
     "PolicyValidationError",
+    "QueueError",
+    "QueueUnavailableError",
     "RegctlError",
     "ScanReportError",
     "SyftError",
@@ -67,6 +69,15 @@ class UsageOracleError(AdapterError):
     """Usage-oracle invocation error (external command unreachable or invalid output)."""
 
 
+class QueueError(AdapterError):
+    """Scan-queue adapter error (Redis Streams reserve/ack/reap/dlq)."""
+
+
+class QueueUnavailableError(QueueError):
+    """The scan queue (Redis) is unreachable — a distinct exit code so the
+    pod-restart alert can tell a benign broker flap from a real failure storm."""
+
+
 class ConfigError(HoubaError):
     """Invalid or missing configuration (exit 3)."""
 
@@ -83,6 +94,7 @@ _EXIT_CODES: dict[type[HoubaError], int] = {
     AdapterError: 2,
     ConfigError: 3,
     InternalError: 4,
+    QueueUnavailableError: 5,
 }
 
 

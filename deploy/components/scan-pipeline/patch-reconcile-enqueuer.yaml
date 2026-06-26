@@ -27,10 +27,10 @@ spec:
               # and ALWAYS exit 0 — the enqueuer can never fail or hang the reconcile Job.
               args:
                 - 'i=0; while [ ! -f /shared/reconcile.done ] && [ "$i" -lt 150 ]; do sleep 2; i=$((i+1)); done;
-                   python3 /scripts/scan-enqueue.py < /shared/report.json || true; exit 0'
+                   houba scan enqueue < /shared/report.json || true; exit 0'
               env:
-                - { name: REDIS_ADDR, value: "scan-queue-redis:6379" }
-                - { name: PYTHONPATH, value: "/" }
+                - name: HOUBA_SCAN_REDIS
+                  value: '{"addr":"scan-queue-redis:6379","work":"houba:scan:work","dead":"houba:scan:dead","confirmed":"houba:scan:confirmed","placed":"houba:scan:placed","group":"scan"}'
               envFrom:
                 - secretRef: { name: houba-registries }
               securityContext:
@@ -39,9 +39,6 @@ spec:
                 capabilities: { drop: ["ALL"] }
               volumeMounts:
                 - { name: scan-shared, mountPath: /shared }
-                - { name: scan-scripts, mountPath: /scripts, readOnly: true }
           volumes:
             - name: scan-shared
               emptyDir: {}
-            - name: scan-scripts
-              configMap: { name: scan-pipeline-scripts, defaultMode: 0755 }

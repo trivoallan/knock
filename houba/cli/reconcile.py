@@ -46,6 +46,13 @@ def reconcile(
         int,
         typer.Option("--shard-count", min=1, help="Total shards N (1 = process all policies)."),
     ] = 1,
+    report_json: Annotated[
+        bool,
+        typer.Option(
+            "--report-json",
+            help="Emit the reconcile report as JSON to stdout (for piping to `houba scan enqueue`).",  # noqa: E501
+        ),
+    ] = False,
 ) -> None:
     """Reconcile all MirrorPolicy files under DIRECTORY against their destinations."""
     container = build_container()
@@ -81,5 +88,6 @@ def reconcile(
         sbom_generator=container.sbom_generator,
         sbom_formats=container.settings.sbom_formats,
     )
-    render_report(report, fmt=container.settings.log_format, verbose=verbose, stream=sys.stdout)
+    fmt = "json" if report_json else container.settings.log_format
+    render_report(report, fmt=fmt, verbose=verbose, stream=sys.stdout)
     raise typer.Exit(report_exit_code(report))

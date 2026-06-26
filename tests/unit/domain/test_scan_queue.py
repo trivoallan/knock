@@ -1,4 +1,5 @@
-from scripts.scan_queue import (
+from houba.domain.scan_queue import (
+    classify_exception,
     classify_failure,
     coverage_gap,
     enqueue_refs,
@@ -78,3 +79,19 @@ def test_gap_by_owner_counts_per_owner_ref():
 
 def test_gap_by_owner_unknown_owner_bucket():
     assert gap_by_owner(["sha256:z"], {}) == {"<unknown>": 1}
+
+
+def test_classify_exception_signer_is_transient():
+    f = classify_exception("attach", "CosignError", "no signer configured")
+    assert f.kind == "transient"
+    assert "signer" in f.suggested_action.lower()
+
+
+def test_classify_exception_registry_404_is_permanent():
+    f = classify_exception("attach", "RegctlError", "manifest unknown: 404")
+    assert f.kind == "permanent"
+
+
+def test_classify_exception_other_is_transient():
+    f = classify_exception("attach", "RegctlError", "registry 503 service unavailable")
+    assert f.kind == "transient"
