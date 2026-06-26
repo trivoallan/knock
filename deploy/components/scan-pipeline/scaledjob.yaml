@@ -38,15 +38,14 @@ spec:
           runAsNonRoot: true
           seccompProfile: { type: RuntimeDefault }
         initContainers:
-          - name: reserve            # XREADGROUP one digest -> /shared/msgid + /shared/digest
+          - name: reserve            # XREADGROUP one digest -> /shared/reservation-token + /shared/digest
             image: houba
-            command: ["python3", "/scripts/scan-reserve.py"]
+            command: ["houba", "scan", "reserve"]
             env:
-              - { name: REDIS_ADDR, value: "scan-queue-redis:6379" }
-              - { name: PYTHONPATH, value: "/" }
+              - name: HOUBA_SCAN_REDIS
+                value: '{"addr":"scan-queue-redis:6379","work":"houba:scan:work","dead":"houba:scan:dead","confirmed":"houba:scan:confirmed","placed":"houba:scan:placed","group":"scan"}'
             volumeMounts:
               - { name: shared, mountPath: /shared }
-              - { name: scripts, mountPath: /scripts, readOnly: true }
           - name: fetch-sbom         # pull the reserved digest's CycloneDX SBOM (houba image: regctl)
             image: houba
             command: ["bash", "/scripts/scan-one.sh", "fetch"]
@@ -75,12 +74,13 @@ spec:
               - { name: shared, mountPath: /shared }
               - { name: home, mountPath: /tmp }
         containers:
-          - name: attach             # houba attach the SARIF verdict referrer + ack
+          - name: attach             # houba scan attach: reads /shared/digest + /shared/reservation-token + /shared/scan.sarif
             image: houba
-            command: ["bash", "/scripts/scan-one.sh", "attach"]
+            command: ["houba", "scan", "attach"]
             env:
               - { name: HOME, value: /tmp }
-              - { name: PYTHONPATH, value: "/" }
+              - name: HOUBA_SCAN_REDIS
+                value: '{"addr":"scan-queue-redis:6379","work":"houba:scan:work","dead":"houba:scan:dead","confirmed":"houba:scan:confirmed","placed":"houba:scan:placed","group":"scan"}'
             envFrom:
               - secretRef: { name: houba-registries }
             securityContext:
@@ -89,7 +89,6 @@ spec:
               capabilities: { drop: ["ALL"] }
             volumeMounts:
               - { name: shared, mountPath: /shared }
-              - { name: scripts, mountPath: /scripts, readOnly: true }
               - { name: home, mountPath: /tmp }
         volumes:
           - { name: shared, emptyDir: {} }

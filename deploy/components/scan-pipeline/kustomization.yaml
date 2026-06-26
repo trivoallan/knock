@@ -21,7 +21,6 @@ configMapGenerator:
   - name: scan-pipeline-scripts
     files:
       - scan_streams.py=../../../scripts/scan_streams.py
-      - scan-reserve.py=../../../scripts/scan-reserve.py
       - scan-ack.py=../../../scripts/scan-ack.py
       - scan-dlq.py=../../../scripts/scan-dlq.py
       - scan-coverage.py=../../../scripts/scan-coverage.py
