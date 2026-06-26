@@ -308,9 +308,7 @@ def scan_redis_from_env() -> ScanRedisConfig:
     """
     stale = [v for v in _FLAT_REDIS_VARS if os.environ.get(v)]
     if stale:
-        raise ConfigError(
-            f"{', '.join(stale)} set but ignored; use HOUBA_SCAN_REDIS (JSON)"
-        )
+        raise ConfigError(f"{', '.join(stale)} set but ignored; use HOUBA_SCAN_REDIS (JSON)")
     raw = os.environ.get("HOUBA_SCAN_REDIS", "{}")
     return ScanRedisConfig.model_validate_json(raw)
 

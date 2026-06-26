@@ -46,9 +46,7 @@ def reserve() -> None:
         typer.echo("scan queue empty", err=True)
         raise typer.Exit(code=75)
     Path(os.environ.get("HOUBA_SCAN_DIGEST_PATH", "/shared/digest")).write_text(res.ref)
-    Path(os.environ.get("HOUBA_SCAN_TOKEN_PATH", "/shared/reservation-token")).write_text(
-        res.token
-    )
+    Path(os.environ.get("HOUBA_SCAN_TOKEN_PATH", "/shared/reservation-token")).write_text(res.token)
     typer.echo(res.ref)
 
 
@@ -61,9 +59,7 @@ def attach() -> None:
     from houba.ports.queue import Reservation
     from houba.use_cases.scan_worker import handle_reservation
 
-    ref = (
-        Path(os.environ.get("HOUBA_SCAN_DIGEST_PATH", "/shared/digest")).read_text().strip()
-    )
+    ref = Path(os.environ.get("HOUBA_SCAN_DIGEST_PATH", "/shared/digest")).read_text().strip()
     token = (
         Path(os.environ.get("HOUBA_SCAN_TOKEN_PATH", "/shared/reservation-token"))
         .read_text()
