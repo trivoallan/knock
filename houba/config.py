@@ -6,6 +6,7 @@ See spec §6.1.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Literal
 
@@ -262,6 +263,50 @@ class Settings(BaseSettings):
         ge=1,
         description="Idle window `houba purge` requires before reaping a marked tag.",
     )
+
+
+_FLAT_REDIS_VARS = (
+    "REDIS_ADDR",
+    "REDIS_WORK_STREAM",
+    "REDIS_DEAD_STREAM",
+    "REDIS_CONFIRMED_ZSET",
+    "REDIS_PLACED_SET",
+    "REDIS_GROUP",
+)
+
+
+class ScanRedisConfig(BaseModel):
+    """Redis connection + stream config for the scan worker queue.
+
+    Passed as a single JSON blob in ``HOUBA_SCAN_REDIS``; defaults cover a
+    standard in-cluster deployment.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    addr: str = "scan-queue-redis:6379"
+    work: str = "houba:scan:work"
+    dead: str = "houba:scan:dead"
+    confirmed: str = "houba:scan:confirmed"
+    placed: str = "houba:scan:placed"
+    group: str = "scan"
+
+
+def scan_redis_from_env() -> ScanRedisConfig:
+    """Parse ``HOUBA_SCAN_REDIS`` (JSON blob) into a :class:`ScanRedisConfig`.
+
+    Raises :class:`~houba.errors.ConfigError` loudly when any of the stale
+    flat ``REDIS_*`` vars from the pre-#188 manifests is still set — those
+    variables are not read by houba and would otherwise be silently ignored,
+    causing a confusing misconfiguration.
+    """
+    stale = [v for v in _FLAT_REDIS_VARS if os.environ.get(v)]
+    if stale:
+        raise ConfigError(
+            f"{', '.join(stale)} set but ignored; use HOUBA_SCAN_REDIS (JSON)"
+        )
+    raw = os.environ.get("HOUBA_SCAN_REDIS", "{}")
+    return ScanRedisConfig.model_validate_json(raw)
 
 
 def resolve_registry(
