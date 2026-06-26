@@ -2,8 +2,8 @@ import json
 import os
 import time
 
-from scripts import scan_streams
 from houba.domain.scan_queue import gap_by_owner
+from scripts import scan_streams
 
 r = scan_streams.connect()
 placed = r.smembers(scan_streams.PLACED)
