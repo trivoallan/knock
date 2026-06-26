@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # demo-mongobleed.sh — Act 1: the signed SBOM inventory catches CVE-2025-14847
-# ("mongobleed", MongoDB 7.0.0–7.0.27) that grype + trivy both miss.
+# ("mongobleed", MongoDB 8.0.0–8.0.16) that grype + trivy both miss.
 #
 # Reads the demo registry directly via regctl; imports no houba-core.
 # houba attaches a CycloneDX SBOM referrer to every placed image; this script
@@ -23,8 +23,8 @@ REG="${REG:?set REG to the demo registry host, e.g. localhost:5000}"
 REPO="${REPO:-demo/mongo}"
 PKG="mongodb-org-server"
 CVE="CVE-2025-14847"   # mongobleed
-LO="7.0.0"
-HI="7.0.27"   # mongobleed-affected range (inclusive)
+LO="8.0.0"
+HI="8.0.16"   # mongobleed-affected range (inclusive)
 
 # in_range: true when $1 is between LO and HI (inclusive) by version sort.
 # Uses the same "put LO, candidate, HI in order; sort -V -c requires that order"
@@ -35,7 +35,7 @@ in_range() {
 
 echo "== Act 1: scanners vs the houba inventory =="
 found=0
-for tag in 7.0.13 7.0.14; do
+for tag in 8.0.15 8.0.16; do
   ref="${REG}/${REPO}:${tag}"
 
   # Read the digest from the registry.
@@ -71,10 +71,10 @@ for s in grype trivy; do
   # non-zero (cold DB, pull failure) would propagate through the pipe and could
   # abort the loop mid-run — yielding 0 keeps the demo alive.
   if [ "${s}" = grype ]; then
-    n=$(grype "${REG}/${REPO}:7.0.14" -o json 2>/dev/null \
+    n=$(grype "${REG}/${REPO}:8.0.16" -o json 2>/dev/null \
         | jq -r '[.matches[] | select(.vulnerability.id=="'"$CVE"'")] | length' 2>/dev/null || echo 0)
   else
-    n=$(trivy image --quiet --scanners vuln --format json "${REG}/${REPO}:7.0.14" 2>/dev/null \
+    n=$(trivy image --quiet --scanners vuln --format json "${REG}/${REPO}:8.0.16" 2>/dev/null \
         | jq -r '[.Results[]?.Vulnerabilities[]? | select(.VulnerabilityID=="'"$CVE"'")] | length' 2>/dev/null || echo 0)
   fi
   echo "  ${s} reports ${CVE}: ${n:-0}  →  $([ "${n:-0}" -eq 0 ] && echo 'CLEAN (the blind spot)' || echo 'matched')"

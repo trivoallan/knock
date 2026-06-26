@@ -23,7 +23,7 @@
 #
 set -uo pipefail
 
-MONGO_IMG="${MONGO_IMG:-mongo:7.0.14}"          # any 7.0.0-7.0.27 is mongobleed-affected
+MONGO_IMG="${MONGO_IMG:-mongo:8.0.16}"          # any 8.0.0-8.0.16 is mongobleed-affected
 MONGO_CVE="${MONGO_CVE:-CVE-2025-14847}"
 MONGO_PKG="${MONGO_PKG:-mongodb-org-server}"
 XZ_IMG="${XZ_IMG:-demo/debian-xz:5.6.1}"        # Act 2 gate target (scanner-clean: liblzma deb)

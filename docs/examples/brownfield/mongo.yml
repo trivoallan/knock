@@ -1,12 +1,12 @@
 # Brownfield demo — Act 1 corpus: MongoDB images placed through the copy path.
-# CVE-2025-14847 ("mongobleed") affects mongodb-org-server 7.0.0–7.0.27.
+# CVE-2025-14847 ("mongobleed") affects mongodb-org-server 8.0.0–8.0.16.
 # grype and trivy both miss this CVE on the official `mongo` image because
 # mongodb-org-server ships from MongoDB's own apt repo (not a distro feed).
 # syft *does* catalog the package, so the package-level SBOM produced here
 # is what makes the post-disclosure blast-radius query answerable.
 #
-# The `7.0` alias is deliberately re-pointed by `make seed-incident` (from
-# 7.0.13 → 7.0.14) so that a tag-only query on the "before" copy is ambiguous
+# The `8.0` alias is deliberately re-pointed by `make seed-incident` (from
+# 8.0.15 → 8.0.16) so that a tag-only query on the "before" copy is ambiguous
 # while a digest-bound query on the houba copy is exact.
 #
 #   uv run houba reconcile docs/examples/brownfield --dry-run
@@ -26,9 +26,9 @@ spec:
       owners:
         - group:default/data-platform    # stamped as io.houba.owners
       tags:
-        includeRegex: "^7\\.0\\.(13|14)$"   # both mongobleed-affected tags for the Act-1 corpus
+        includeRegex: "^8\\.0\\.(15|16)$"   # both mongobleed-affected tags for the Act-1 corpus
         aliases:
-          - "7.0"                            # moving alias → highest matched tag (7.0.14)
+          - "8.0"                            # moving alias → highest matched tag (8.0.16)
       destinations:
         # `registry` omitted → resolves to the single configured registry ("local").
         - project: demo
