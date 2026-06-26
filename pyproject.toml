@@ -21,6 +21,7 @@ dev = [
     "mypy>=1.10",
     "pytest>=8.2",
     "pytest-cov>=5.0",
+    "redis>=5.0",
     "ruff>=0.5",
     "syrupy>=4.6",
     "types-pyyaml>=6.0",
@@ -51,6 +52,13 @@ ignore = ["S101"]  # assert OK dans tests
 # Operational demo glue (reference deployment): intentional subprocess + internal-HTTP calls.
 "scripts/dt-bootstrap.py" = ["S"]
 "scripts/extract_sbom.py" = ["S"]
+"scripts/scan-enqueue.py" = ["S"]
+"scripts/scan-reserve.py" = ["S"]
+"scripts/scan-ack.py" = ["S"]
+"scripts/scan-reaper.py" = ["S"]
+"scripts/scan-dlq.py" = ["S"]
+"scripts/scan-coverage.py" = ["S"]
+"scripts/scan_streams.py" = ["S"]
 
 [tool.mypy]
 python_version = "3.13"

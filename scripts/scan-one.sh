@@ -30,12 +30,12 @@ case "$MODE" in
     [ -s /shared/sbom.json ] || { echo "no SBOM referrer for $REF" >&2; exit 1; }
     ;;
   attach)
-    # Loop A = scan + attach ONLY. The SBOM -> Dependency-Track push is Loop B
-    # (the existing publish-sbom Job), independent of the scan (the SBOM is made at
-    # placement, not by the scan). Keeping them separate matches the spec and avoids
-    # coupling a scan worker to DT's availability.
+    # Loop A = scan + attach ONLY (SBOM->DT is Loop B). After attach, record the signed
+    # attested_at for the confirmed-set, then ack via Streams.
     houba attach "$REF" --report /shared/scan.sarif
-    python3 /scripts/scan-queue-ack.py ok
+    houba verify "$REF" --field attested_at > /shared/attested_at 2>/dev/null \
+      || date +%s > /shared/attested_at   # fallback: now, if verify can't surface it
+    python3 /scripts/scan-ack.py
     ;;
   *) echo "unknown mode $MODE" >&2; exit 2;;
 esac

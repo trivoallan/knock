@@ -50,6 +50,16 @@ jobs:
   test:
     name: test (pytest + coverage gates)
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
@@ -66,6 +76,8 @@ jobs:
         run: uv sync --frozen
 
       - name: pytest (global coverage ≥ 80%)
+        env:
+          REDIS_TEST_ADDR: 127.0.0.1:6379
         run: uv run pytest -v --cov=houba --cov-report=term-missing --cov-fail-under=80
 
       - name: pytest domain (coverage ≥ 90%)
