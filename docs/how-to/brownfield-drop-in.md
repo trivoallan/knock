@@ -7,7 +7,7 @@ sidebar_position: 10
 # Drop houba into an existing Jenkins/skopeo/Harbor intake
 
 :::note
-This page is the decision view: the two queries and the honest pitch. The step-by-step `make demo-mongobleed` walkthrough is added alongside the demo.
+This page is the decision view: the two queries and the honest pitch. The step-by-step `make demo-mongobleed` walkthrough is in the [**Run it**](#run-it) section below.
 :::
 
 This is for a platform team that already mirrors external images (skopeo → Harbor) from a per-image YAML, adds OCI labels, and queries them in PowerBI/Datadog. houba replaces the intake step: same per-image policy, but every placed image now carries **digest-pinned** provenance, a first-class **owner** label, and a package **SBOM** — so the incident-time question becomes one query.
@@ -53,3 +53,16 @@ $ trivy image --quiet mongo:7.0.14 | grep CVE-2025-14847   # (nothing)
 Both report clean. But `mongodb-org-server` ships from MongoDB's **own apt repo**, not a distro feed — so neither scanner's CVE matcher fires on it. houba's syft SBOM **catalogs the package**, so the inventory query above finds the blast radius your scanners missed. That gap is exactly why a signed package **inventory** — not a scanner verdict — is what you query at incident time.
 
 To find and fetch the SBOM behind that inventory query, see [Inspect an image's SBOM](./inspect-sbom.md).
+
+## Run it
+
+```bash
+make demo-mongobleed
+```
+
+This seeds two mongobleed-affected MongoDB images (with a re-pointed `7.0` tag), runs them through houba's copy-path intake (`houba reconcile docs/examples/brownfield`), then:
+
+- **Act 1** — the inventory query (`scripts/demo-mongobleed.sh`): the SBOM finds `mongodb-org-server` in the affected range with its owner and digest, while `grype` and `trivy` both report the image clean.
+- **Act 2** — the gate (`scripts/demo-gate.sh`): `houba attach --fail-on high` blocks the vulnerable XZ image at intake (exit 1).
+
+The maintainability win lives here too: the intake is now a declarative `MirrorPolicy` (`docs/examples/brownfield/mongo.yml`) under the houba core (≥90% tested, `mypy --strict`) — not a monolithic untested Groovy library.

@@ -13,6 +13,8 @@ git-sync'd policy repo. There are **two** entry points, and they share the same 
   overlay (no Argo, no operators) that renders your **local, uncommitted** manifests. Run it with
   `make local`.
 
+If your team already runs a skopeo → Harbor intake and wants to drop houba in without a Kubernetes migration first, see [Drop houba into an existing Jenkins/skopeo/Harbor intake](./brownfield-drop-in.md) — `make demo-mongobleed` is the headline path for that case. The Argo App-of-Apps described here is the greenfield "Reference B" for GitOps-native platforms.
+
 The Argo reference reads its children **from git**, so it reflects what is *pushed*; `make local`
 is what you reach for to iterate on a local branch. Design rationale:
 [the spec](https://github.com/trivoallan/houba/blob/main/docs/superpowers/specs/2026-06-11-reference-deployment-design.md) and the C4
