@@ -1,7 +1,7 @@
 ---
 title: "Transforms & signed attestations"
 description: "The hardening primitives and the SLSA / in-toto signing model."
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 ## Transform vocabulary
