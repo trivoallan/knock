@@ -105,6 +105,8 @@ workspace "houba" "Single front door / stamper for external container images." {
         transparencyLog = softwareSystem "Transparency log (Rekor)" "Optional append-only signature log; blank in air-gapped orgs. houba can point at one but never deploys it." "External,Downstream"
         upstreamScanner = softwareSystem "Upstream Scanner" "Produces vulnerability / EOL scan reports (CI pipeline, registry-native scanner, or scan service). houba ingests the report; it never calls the scanner." "External"
         argocd = softwareSystem "ArgoCD" "GitOps controller: the App-of-Apps that syncs the houba install from git. This IS the reference deployment — and the demo on kind. The kubectl apply -k overlays/local path is the inner-loop escape hatch, not a separate blueprint." "External"
+        backstage = softwareSystem "Backstage portal" "Developer portal (TechInsights). Walks the service image's base.digest chain + consumes the houba coverage audit to score per-service coverage at the consumption point (stamp survives replication; SBOM/signature referrers may not); the 'onboard' action scaffolds MirrorPolicy PRs (bottom-up demand signal). Designed, not yet wired." "External,Downstream"
+        dependencyTrack = softwareSystem "Dependency-Track" "OWASP SBOM analysis platform: ingests SBOMs and continuously matches components against vuln feeds. The portal drills into it for per-image vuln posture. Designed, not yet wired." "External,Downstream"
 
         platformEng -> houba "Configures the hardening policy + registry roster, runs / schedules reconcile" "CLI"
         productTeam -> houba "Declares its imports as MirrorPolicy files" "YAML"
@@ -122,6 +124,11 @@ workspace "houba" "Single front door / stamper for external container images." {
         upstreamScanner -> houba "Produces scan reports ingested by" "SARIF / file"
         houba -> redisBroker "Enqueues placed-image digests; scan workers claim reservations (houba[scan] optional)" "redis-py 8 / RESP3 Streams"
         argocd -> houba "Syncs the install manifests from git into the cluster (App-of-Apps reference)" "GitOps"
+        backstage -> houba "Consumes the coverage audit (CoverageReport JSON)" "houba audit"
+        backstage -> houba "Scaffolds onboarding PRs against the MirrorPolicy repo" "git PR"
+        backstage -> dependencyTrack "Deep-links by digest to DT's frontend for vuln posture (owner clicks through; no embedded card, no findings API in Backstage)" "deep-link"
+        productTeam -> backstage "Sees coverage; requests onboarding for dark images" "Web UI"
+        dependencyTrack -> destRegistries "Ingests SBOM referrers" "OCI referrers API" "DataCoupling"
 
         # Component-level relationships — the source of truth for the Component view.
         # Structurizr implies the container/system-level edges for the views above
