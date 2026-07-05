@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.9.0](https://github.com/trivoallan/houba/compare/v0.8.0...v0.9.0) (2026-07-05)
+
+
+### Features
+
+* **cli:** houba audit --limit — bound the catalog walk for slice benchmarks ([#186](https://github.com/trivoallan/houba/issues/186)) ([b9a2b5a](https://github.com/trivoallan/houba/commit/b9a2b5a8a438e384e088091af73510b1e3c8c2b6))
+* **cli:** houba scan command group as an optional houba[scan] extra (Door 1) ([#190](https://github.com/trivoallan/houba/issues/190)) ([c4b717b](https://github.com/trivoallan/houba/commit/c4b717baf7bd865011409a5e2c1a41022bf4bba7))
+* **cli:** houba verify — read-side gate over signed scan, stamp, and SBOM ([#182](https://github.com/trivoallan/houba/issues/182)) ([6fd93ae](https://github.com/trivoallan/houba/commit/6fd93ae6fe781e52321ac0ee8fdb73053abd8393))
+* **image:** platform-internal scan/SBOM pipeline — incremental, reconcile-fed reference deployment ([#187](https://github.com/trivoallan/houba/issues/187)) ([43538c5](https://github.com/trivoallan/houba/commit/43538c5292d49ccbcf6e429d4a0a730bc2a2b58f))
+* **image:** rebuild the scan pipeline on Redis Streams (trim-safe, coverage-convergent, operator-triageable) ([#188](https://github.com/trivoallan/houba/issues/188)) ([c46d824](https://github.com/trivoallan/houba/commit/c46d824735b69a3642184f9a7f5f750b240658a8))
+
+
+### Documentation
+
+* **docs:** pin the MirrorPolicy ⟂ Warehouse boundary in the Kargo gate spec ([#185](https://github.com/trivoallan/houba/issues/185)) ([11679a8](https://github.com/trivoallan/houba/commit/11679a8a694f69994b3c694206c2e2ec6ae38b35))
+* **docs:** spec for Kargo promotion gate (houba as a third reader) ([#175](https://github.com/trivoallan/houba/issues/175)) ([238032e](https://github.com/trivoallan/houba/commit/238032e73ac40a78d310defd051c145e2a7e613d))
+* **docs:** spec migration-parity demonstrable proof ([#179](https://github.com/trivoallan/houba/issues/179)) ([b18be28](https://github.com/trivoallan/houba/commit/b18be28a6e6d083d65b76e03b64f623f49350c8a))
+* **explanation:** add Features-at-a-glance overview page ([#194](https://github.com/trivoallan/houba/issues/194)) ([ab90c87](https://github.com/trivoallan/houba/commit/ab90c871fde9e0a28a3d56bebef786bcc485a66c))
+* **roadmap:** scope the near-term increment (post-0.8.0) ([#176](https://github.com/trivoallan/houba/issues/176)) ([b5aee30](https://github.com/trivoallan/houba/commit/b5aee30b36b665cad8200cd41700485ef52e4750))
+* **specs:** draft spec for renaming houba → knock (clean break) ([#202](https://github.com/trivoallan/houba/issues/202)) ([1741793](https://github.com/trivoallan/houba/commit/1741793adb151ce611c813bb60c8bb7b82994f85))
+
 ## [0.8.0](https://github.com/trivoallan/houba/compare/v0.7.0...v0.8.0) (2026-06-23)
 
 
