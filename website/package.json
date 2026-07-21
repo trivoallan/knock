@@ -23,7 +23,7 @@
     "@docusaurus/types": "^3.10.1",
     "docusaurus-plugin-llms": "^0.5.0",
     "remark-code-import": "^1.2.0",
-    "typescript": "~6.0.0"
+    "typescript": "~7.0.0"
   },
   "overrides": {
     "serialize-javascript": "^7.0.5",
