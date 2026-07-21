@@ -1,17 +1,17 @@
-# houba — C4 architecture model
+# knock — C4 architecture model
 
-[`workspace.dsl`](workspace.dsl) is the [C4 model](https://c4model.com) of houba, written in
+[`workspace.dsl`](workspace.dsl) is the [C4 model](https://c4model.com) of knock, written in
 [Structurizr DSL](https://docs.structurizr.com/dsl). One model, five structural views plus one
 deployment view per worked example (and the production blueprint):
 
-- **[System Landscape](_export/structurizr-Landscape.mmd)** — houba in its enterprise context, all
+- **[System Landscape](_export/structurizr-Landscape.mmd)** — knock in its enterprise context, all
   the way to incident-time blast-radius. This carries the product thesis: the provenance *stamp* is
-  read downstream by the observability / CMDB stack — houba never calls it, the coupling is the data.
-- **[System Context](_export/structurizr-Context.mmd)** — houba and the systems it integrates with
+  read downstream by the observability / CMDB stack — knock never calls it, the coupling is the data.
+- **[System Context](_export/structurizr-Context.mmd)** — knock and the systems it integrates with
   directly (source registries, destination registries, BuildKit, and the internal package mirror
   the hardening rebuild pulls from).
-- **[Container](_export/structurizr-Container.mmd)** — houba is a single deployable unit: the
-  `houba` CLI (the reconcile engine; the runtime image bundles `regctl` + `buildctl`). This view
+- **[Container](_export/structurizr-Container.mmd)** — knock is a single deployable unit: the
+  `knock` CLI (the reconcile engine; the runtime image bundles `regctl` + `buildctl`). This view
   draws the system boundary around that one container and the external systems it drives.
 - **[Hexagon](_export/structurizr-Hexagon.mmd)** — a synthetic overview of the same CLI: the six
   layers (**cli** → **use cases** → **domain**, with **ports** ← **adapters**) as single boxes. The
@@ -27,7 +27,7 @@ deployment view per worked example (and the production blueprint):
   collapses to two views — the same kustomize base underlies both, so the demo IS the blueprint:
   - **[Reference · Argo App-of-Apps](_export/structurizr-DeployReference.mmd)** — the single
     reference, which on kind is the demo (`make demo`) and adopts unchanged to a real cluster: an
-    Argo App-of-Apps brings up ESO + OpenBao (wave 0) then houba + `buildkitd` (wave 1), reconciles
+    Argo App-of-Apps brings up ESO + OpenBao (wave 0) then knock + `buildkitd` (wave 1), reconciles
     the reference policy (busybox copy + debian rebuild) git-sync'd from the policy repo, pushes to
     a throwaway Zot (registry + built-in UI) applied out-of-band, and uploads each rebuilt image's
     SBOM to an off-the-shelf Dependency-Track — the worked-example currency consumer (ADR 0035).
@@ -46,15 +46,15 @@ deployment view per worked example (and the production blueprint):
 
 This model is the **source of truth** for the context and landscape levels (kept in sync with the
 specs — see the [maintenance contract](#maintenance-contract)). The Container, Hexagon, and
-Component views document houba's internal structure **as built**; keep them in step with the code when the
+Component views document knock's internal structure **as built**; keep them in step with the code when the
 layering, ports, or adapters change.
 
 The **Upstream Scanner** system (CI pipeline, registry-native scanner, or scan service) is
-modelled as an external producer: it generates the scan report and hands it to houba via
-`houba attach`. The relationship is explicitly scanner → houba (ingest-only); houba never
+modelled as an external producer: it generates the scan report and hands it to knock via
+`knock attach`. The relationship is explicitly scanner → knock (ingest-only); knock never
 calls or discovers the scanner, keeping the coupling to a file hand-off at the boundary.
-The houba→Signing service edge (introduced for the rebuild path in #49) now also covers
-`houba attach` signing the scan referrer (`https://houba.dev/predicate/scan/v1`) — no new
+The knock→Signing service edge (introduced for the rebuild path in #49) now also covers
+`knock attach` signing the scan referrer (`https://knock.dev/predicate/scan/v1`) — no new
 model element; the same Signing service and Transparency log systems are reused.
 
 The prose companion to this model — the problem framing, the hexagon, the policy schema, the
@@ -62,7 +62,7 @@ reconcile loop, the provenance stamp — lives in [`design.md`](design.md).
 
 ## Documentation & decisions
 
-The workspace also embeds two documentation panes (attached to the `houba` software system, so
+The workspace also embeds two documentation panes (attached to the `knock` software system, so
 they render in the interactive viewer):
 
 - **Documentation** — [`design.md`](design.md), via `!docs`.
@@ -92,7 +92,7 @@ Use the consolidated `structurizr/structurizr` image. (The older `structurizr/cl
 deprecated and no longer functional — its entrypoint only prints a migration banner.)
 
 Validate the DSL and run the model inspections — a good CI gate for the maintenance contract
-below. Gate on `error,warning`; the one known false-positive (`model.element.noview` on houba,
+below. Gate on `error,warning`; the one known false-positive (`model.element.noview` on knock,
 which is only ever a view *subject*/boundary, never a plain element) is downgraded to `ignore` in
 `workspace.dsl`, so the gate exits cleanly:
 
@@ -133,7 +133,7 @@ date + the decision, linking to the full spec) in the same change — so the Dec
 complete.
 
 The **Container**, **Hexagon**, and **Component** views track the *code* rather than the specs:
-when houba grows a new port/adapter pair, a new domain concern, or a changed layer boundary, update
+when knock grows a new port/adapter pair, a new domain concern, or a changed layer boundary, update
 them in the same change as the code.
 
 The same rule lives in the repository [`CLAUDE.md`](../../CLAUDE.md) so every session sees it.

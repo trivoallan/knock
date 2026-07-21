@@ -1,6 +1,6 @@
-from houba.domain.mirror_policy import TransformStep
-from houba.domain.transforms.base import ResolvedResource, ResolvedStep
-from houba.domain.transforms.render import transform_version
+from knock.domain.mirror_policy import TransformStep
+from knock.domain.transforms.base import ResolvedResource, ResolvedStep
+from knock.domain.transforms.render import transform_version
 
 
 def _steps(cert_content: str = "PEM", apt: str = "https://m") -> list[ResolvedStep]:

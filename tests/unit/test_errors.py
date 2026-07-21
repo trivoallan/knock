@@ -1,12 +1,12 @@
 import pytest
 
-from houba.errors import (
+from knock.errors import (
     AdapterError,
     BuildkitError,
     ConfigError,
     DomainError,
-    HoubaError,
     InternalError,
+    KnockError,
     PolicyValidationError,
     QueueError,
     QueueUnavailableError,
@@ -18,10 +18,10 @@ from houba.errors import (
 
 
 def test_hierarchy() -> None:
-    assert issubclass(DomainError, HoubaError)
-    assert issubclass(AdapterError, HoubaError)
-    assert issubclass(ConfigError, HoubaError)
-    assert issubclass(InternalError, HoubaError)
+    assert issubclass(DomainError, KnockError)
+    assert issubclass(AdapterError, KnockError)
+    assert issubclass(ConfigError, KnockError)
+    assert issubclass(InternalError, KnockError)
     assert issubclass(RegctlError, AdapterError)
     assert issubclass(BuildkitError, AdapterError)
 
@@ -37,7 +37,7 @@ def test_hierarchy() -> None:
         (InternalError("x"), 4),
     ],
 )
-def test_exit_codes(exc: HoubaError, expected_code: int) -> None:
+def test_exit_codes(exc: KnockError, expected_code: int) -> None:
     assert exit_code_for(exc) == expected_code
 
 
@@ -52,7 +52,7 @@ def test_policy_validation_error_is_domain_error_exit_1() -> None:
 
 
 def test_cosign_error_is_adapter_exit_2() -> None:
-    from houba.errors import CosignError, exit_code_for
+    from knock.errors import CosignError, exit_code_for
 
     assert exit_code_for(CosignError("boom")) == 2
 

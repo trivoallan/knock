@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from houba.domain.attestation import (
+from knock.domain.attestation import (
     PREDICATE_TYPE,
     SIGNING_CONFIG_MEDIA_TYPE,
     STATEMENT_TYPE,
@@ -21,7 +21,7 @@ def _statement() -> dict:
         variant="default",
         source="docker.io/library/redis",
         source_digest="sha256:src",
-        builder_id="https://houba.example/builders/main",
+        builder_id="https://knock.example/builders/main",
         created="2026-06-11T00:00:00+00:00",
         transform_version="sha256:tv",
         steps=[("injectCA", {"certs": ["corp"]}), ("rewritePackageSources", {"mirror": "corp"})],
@@ -32,7 +32,7 @@ def _statement() -> dict:
 def test_statement_envelope_uses_frozen_types() -> None:
     s = _statement()
     assert s["_type"] == STATEMENT_TYPE == "https://in-toto.io/Statement/v1"
-    assert s["predicateType"] == PREDICATE_TYPE == "https://houba.dev/predicate/transform/v1"
+    assert s["predicateType"] == PREDICATE_TYPE == "https://knock.dev/predicate/transform/v1"
 
 
 def test_subject_is_output_digest_in_intoto_shape() -> None:
@@ -45,11 +45,11 @@ def test_subject_is_output_digest_in_intoto_shape() -> None:
 def test_predicate_carries_lineage_with_public_import_key() -> None:
     pred = _statement()["predicate"]
     assert pred["policy"] == "redis-hardened"
-    assert pred["import"] == "v7"  # public spelling, via alias (mirrors io.houba.import)
+    assert pred["import"] == "v7"  # public spelling, via alias (mirrors io.knock.import)
     assert pred["variant"] == "default"
     assert pred["source"] == "docker.io/library/redis"
     assert pred["source_digest"] == "sha256:src"
-    assert pred["builder_id"] == "https://houba.example/builders/main"
+    assert pred["builder_id"] == "https://knock.example/builders/main"
     assert pred["created"] == "2026-06-11T00:00:00+00:00"
     assert pred["transform_version"] == "sha256:tv"
     assert pred["steps"] == [
@@ -112,7 +112,7 @@ def test_copy_statement_marks_transformed_false_with_no_steps() -> None:
         variant="default",
         source="docker.io/library/redis",
         source_digest="sha256:src",
-        builder_id="https://houba.example/builders/main",
+        builder_id="https://knock.example/builders/main",
         created="2026-06-15T00:00:00+00:00",
         transform_version="",
         steps=[],
@@ -132,7 +132,7 @@ def test_published_schema_is_stable_and_documents_import_alias() -> None:
 
 
 def test_signing_config_empty_is_air_gapped() -> None:
-    cfg = build_signing_config(fulcio_url="", rekor_url="", operator="houba")
+    cfg = build_signing_config(fulcio_url="", rekor_url="", operator="knock")
     assert cfg == {
         "mediaType": SIGNING_CONFIG_MEDIA_TYPE,
         "rekorTlogConfig": {},
@@ -142,13 +142,13 @@ def test_signing_config_empty_is_air_gapped() -> None:
 
 
 def test_signing_config_rekor_adds_tlog_service() -> None:
-    cfg = build_signing_config(fulcio_url="", rekor_url="https://rekor.corp", operator="houba")
+    cfg = build_signing_config(fulcio_url="", rekor_url="https://rekor.corp", operator="knock")
     assert cfg["rekorTlogUrls"] == [
         {
             "url": "https://rekor.corp",
             "majorApiVersion": 1,
             "validFor": {"start": "1970-01-01T00:00:00Z"},
-            "operator": "houba",
+            "operator": "knock",
         }
     ]
     assert cfg["rekorTlogConfig"] == {"selector": "ANY"}
@@ -173,7 +173,7 @@ def test_signing_config_both_services_present() -> None:
     cfg = build_signing_config(
         fulcio_url="https://fulcio.corp",
         rekor_url="https://rekor.corp",
-        operator="houba",
+        operator="knock",
     )
     assert "caUrls" in cfg
     assert "rekorTlogUrls" in cfg

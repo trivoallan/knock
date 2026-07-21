@@ -1,4 +1,4 @@
-"""Boundary test: the `houba scan` sub-app must be importable and show help
+"""Boundary test: the `knock scan` sub-app must be importable and show help
 even when redis-py is absent; commands that need Redis must print the install hint."""
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ def _run(args_line: str) -> subprocess.CompletedProcess:
         "    return _imp(name,*a,**k)\n"
         "builtins.__import__=block\n"
         "from typer.testing import CliRunner\n"
-        "from houba.cli.main import app\n"
+        "from knock.cli.main import app\n"
         f"r=CliRunner().invoke(app, {args_line})\n"
         "import sys as _s; print('EXIT', r.exit_code); print(r.output); _s.exit(0)\n"
     )
@@ -39,5 +39,5 @@ def test_scan_reserve_without_redis_prints_install_hint():
     result = _run("['scan','reserve']")
     out = result.stdout
     # CliRunner mixes stderr (where the err=True hint goes) into r.output by design.
-    assert "pip install houba[scan]" in out
+    assert "pip install knock-oci[scan]" in out
     assert "EXIT 3" in out

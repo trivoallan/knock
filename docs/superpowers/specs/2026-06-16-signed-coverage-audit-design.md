@@ -7,9 +7,9 @@ unblocked by complete attestation coverage (ADR 0019).
 
 ## Problem
 
-`houba audit` today classifies each registry image as `covered` / `uncovered` from the
+`knock audit` today classifies each registry image as `covered` / `uncovered` from the
 *annotation stamp* alone (`domain/coverage.py:is_stamped` → `{prefix}.policy`, read via the
-lightweight `RegistryPort.get_annotations`). A stamp is cheap to forge or copy; it proves houba
+lightweight `RegistryPort.get_annotations`). A stamp is cheap to forge or copy; it proves knock
 *touched* the image, not that the provenance is *trustworthy*. Now that every path (copy, rebuild,
 backfill) carries a **signed** attestation, the audit can distinguish *signed* from *merely
 stamped* — turning the verifiable front door into a trustworthy one without misleading.
@@ -24,7 +24,7 @@ stays as cheap as today (one read per image).
 An image is **signed** iff it carries a cosign attestation referrer — exactly the heuristic
 `reconcile` already uses for idempotent backfill: `list_referrers(ref,
 COSIGN_ATTESTATION_ARTIFACT_TYPE)` non-empty ⇒ signed. No pull+verify (same documented ceiling as
-reconcile: a present cosign bundle ⇒ "houba signed this digest"). The test is `bool(referrers)` —
+reconcile: a present cosign bundle ⇒ "knock signed this digest"). The test is `bool(referrers)` —
 no dedicated domain predicate is added.
 
 ### Use case (`use_cases/audit.py`)
@@ -72,6 +72,6 @@ unchanged. Sequential, like the rest of audit/purge (concurrency stays deferred)
 ## Docs / C4
 
 No new actor, external system, port, or adapter (reuses `RegistryPort.list_referrers`). **C4
-model: unchanged.** Update the `houba audit` walkthrough in `docs/examples/README.md` (replace the
+model: unchanged.** Update the `knock audit` walkthrough in `docs/examples/README.md` (replace the
 "signed-attestation coverage is a later tier" note with the delivered `--signed` flow) and add a
 thin ADR (0025) linking here.

@@ -11,17 +11,17 @@ Builds on [6. SLSA / in-toto attestation](0006-slsa-attestation.md) and
 
 ## Context
 
-houba's value lands at incident time via signed provenance: *the label is the product*, and
+knock's value lands at incident time via signed provenance: *the label is the product*, and
 *coverage gates value*. The single-front-door mandate has been confirmed by the platform/security
-team. Today only the **rebuild** path signs an in-toto attestation — images that houba **copies**
-(no transform) or **skips** (already mirrored, digest-stable) carry the OCI / `io.houba.*`
-annotation stamp but no signed attestation. The coverage audit (`houba audit`) surfaces this gap;
+team. Today only the **rebuild** path signs an in-toto attestation — images that knock **copies**
+(no transform) or **skips** (already mirrored, digest-stable) carry the OCI / `io.knock.*`
+annotation stamp but no signed attestation. The coverage audit (`knock audit`) surfaces this gap;
 while two of three paths are unsigned, a signed-coverage query cannot be relied upon for
 enforcement.
 
 ## Decision
 
-**Every image houba fronts must carry a signed houba attestation**, computed idempotently so each
+**Every image knock fronts must carry a signed knock attestation**, computed idempotently so each
 digest is signed once, not re-signed on every reconcile.
 
 1. **Domain (`domain/reconcile.py`).** `MirrorArtifact` gains `attested: bool` (default `True` —
@@ -51,11 +51,11 @@ existing `RegistryPort.list_referrers` and `AttestorPort.attest`.
 
 ## Consequences
 
-- Every image houba fronts carries a signed attestation after the first reconcile post-upgrade.
+- Every image knock fronts carries a signed attestation after the first reconcile post-upgrade.
   In steady state the cost is one extra `list_referrers` read per already-mirrored tag; once a
   digest is signed it is never re-signed (digest immutability ⇒ `attested == True` forever after)
   — no KMS / Rekor storm, no unbounded referrer growth.
-- `houba audit` can be extended in a follow-up to a signed-vs-unsigned coverage tier once all
+- `knock audit` can be extended in a follow-up to a signed-vs-unsigned coverage tier once all
   paths emit attestations.
 - Re-signing on predicate-schema bumps and stamping/backfilling annotations placed by another
   tool are explicitly out of scope (YAGNI, separate future concern).

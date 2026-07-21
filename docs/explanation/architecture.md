@@ -1,36 +1,36 @@
 ---
 title: "Architecture at a glance"
-description: "The hexagon, the two placement paths, and why the stamp + SBOM is the product — a narrative overview of how houba is built."
+description: "The hexagon, the two placement paths, and why the stamp + SBOM is the product — a narrative overview of how knock is built."
 sidebar_position: 1
 ---
 
-houba is the single front door for external images: it places them (copy or rebuild-and-harden), stamps portable provenance, and attaches a package-level SBOM. This page tells the story of how it's built; for the full rationale and the C4 model, see the deep-dive links at the foot.
+knock is the single front door for external images: it places them (copy or rebuild-and-harden), stamps portable provenance, and attaches a package-level SBOM. This page tells the story of how it's built; for the full rationale and the C4 model, see the deep-dive links at the foot.
 
 ## The landscape
 
-A platform or security engineer owns the policy and registry roster; app teams declare `MirrorPolicy` files and pull hardened images from the destination registry. houba talks to source registries (Docker Hub, Quay, GHCR…), a BuildKit daemon for rebuilds, a signer or KMS for attestations, an upstream scanner that hands houba its scan reports, and a usage oracle that `purge` consults before deleting anything.
+A platform or security engineer owns the policy and registry roster; app teams declare `MirrorPolicy` files and pull hardened images from the destination registry. knock talks to source registries (Docker Hub, Quay, GHCR…), a BuildKit daemon for rebuilds, a signer or KMS for attestations, an upstream scanner that hands knock its scan reports, and a usage oracle that `purge` consults before deleting anything.
 
 ```mermaid
 flowchart LR
     eng([Platform / Security<br/>Engineer]):::person
     team([App / Product<br/>Team]):::person
     src[(Source registries<br/>Docker Hub · Quay · GHCR)]:::ext
-    houba{{houba<br/>single front door · stamper}}:::core
+    knock{{knock<br/>single front door · stamper}}:::core
     dst[(Destination registries<br/>Harbor · Zot · …)]:::ext
     bk[BuildKit]:::ext
     signer[Signer / KMS · Fulcio]:::ext
     scanner[Upstream scanner]:::ext
     oracle[Usage oracle / observability]:::ext
 
-    eng -->|policy + roster| houba
-    team -->|MirrorPolicy files| houba
-    src -->|pull| houba
-    houba -->|rebuild / harden| bk
-    houba -->|sign attestations| signer
-    scanner -->|scan reports| houba
-    houba -->|place + stamp + SBOM| dst
+    eng -->|policy + roster| knock
+    team -->|MirrorPolicy files| knock
+    src -->|pull| knock
+    knock -->|rebuild / harden| bk
+    knock -->|sign attestations| signer
+    scanner -->|scan reports| knock
+    knock -->|place + stamp + SBOM| dst
     team -->|pull hardened images| dst
-    houba -->|usage query at purge| oracle
+    knock -->|usage query at purge| oracle
 
     classDef person fill:#52606d,stroke:#39434c,color:#fff;
     classDef core fill:#1f6feb,stroke:#154da4,color:#fff;
@@ -64,12 +64,12 @@ flowchart TD
 
 ## The two placement paths
 
-houba selects the path from the policy itself: with no `transform` declared, the image is copied byte-for-byte via `regctl` and stamped; when a `transform` is present, houba rebuilds it through BuildKit (inject CA, rewrite package sources) and stamps the result. Both paths receive a syft SBOM attached as an OCI referrer; both can be signed with cosign.
+knock selects the path from the policy itself: with no `transform` declared, the image is copied byte-for-byte via `regctl` and stamped; when a `transform` is present, knock rebuilds it through BuildKit (inject CA, rewrite package sources) and stamps the result. Both paths receive a syft SBOM attached as an OCI referrer; both can be signed with cosign.
 
 A `MirrorPolicy` is the single declarative artifact: it names an upstream `source`, the tags to admit, and where to place them. The optional `transform` is the switch that flips an import from copy to rebuild:
 
 ```yaml
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis
@@ -81,7 +81,7 @@ spec:
   imports:
     - name: v7
       owners:
-        - group:default/data-platform  # stamped as io.houba.owners
+        - group:default/data-platform  # stamped as io.knock.owners
       tags:
         includeRegex: "^7\.2\."         # which upstream tags to admit
       # transform:                       # ← omit → copy path; declare → rebuild path
@@ -115,7 +115,7 @@ To walk the rebuild path step by step, see [Rebuild & harden an image](../how-to
 
 ## Why the label is the product
 
-The value lands at incident time, not placement time. The provenance stamp carries lineage and owners; the SBOM carries the package inventory; both ride the image digest as OCI referrers so they travel with every copy. When a CVE drops, "which images ship package P, and who owns them?" becomes one query in the org's own observability stack. houba produces the facts — it never runs the query itself.
+The value lands at incident time, not placement time. The provenance stamp carries lineage and owners; the SBOM carries the package inventory; both ride the image digest as OCI referrers so they travel with every copy. When a CVE drops, "which images ship package P, and who owns them?" becomes one query in the org's own observability stack. knock produces the facts — it never runs the query itself.
 
 ```mermaid
 flowchart LR
@@ -127,14 +127,14 @@ flowchart LR
     stamp -->|who owns them?| q
     q --> answer[Owner + affected image list<br/>in one query]
 
-    classDef houba fill:#1f6feb,stroke:#154da4,color:#fff;
-    class stamp,sbomref houba;
+    classDef knock fill:#1f6feb,stroke:#154da4,color:#fff;
+    class stamp,sbomref knock;
 ```
 
 ## Go deeper
 
-- [Architecture & design](https://github.com/trivoallan/houba/blob/main/docs/architecture/design.md) — full rationale, design decisions, and trade-offs
-- [The full C4 model (Structurizr views)](https://github.com/trivoallan/houba/tree/main/docs/architecture) — System Landscape, Context, Container, Hexagon, Component, and Deployment views
-- [Decision records](https://github.com/trivoallan/houba/tree/main/docs/architecture/decisions) — ADRs linked to specs
+- [Architecture & design](https://github.com/trivoallan/knock/blob/main/docs/architecture/design.md) — full rationale, design decisions, and trade-offs
+- [The full C4 model (Structurizr views)](https://github.com/trivoallan/knock/tree/main/docs/architecture) — System Landscape, Context, Container, Hexagon, Component, and Deployment views
+- [Decision records](https://github.com/trivoallan/knock/tree/main/docs/architecture/decisions) — ADRs linked to specs
 
 For in-depth coverage of specific subsystems, see [transforms and signed attestations](attestations.md), [SBOM generation and attachment](sbom.md), and [deletion and retention policy](deletion-and-retention.md).

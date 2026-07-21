@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from houba.domain.mirror_policy import Archive
-from houba.domain.retention import (
+from knock.domain.mirror_policy import Archive
+from knock.domain.retention import (
     DEFAULT_KEEP,
     DEFAULT_OLDER_THAN_DAYS,
     ResolvedRetention,
@@ -50,7 +50,7 @@ def test_resolve_archive_keep_falls_through_to_constant_default() -> None:
 
 from datetime import UTC, datetime, timedelta  # noqa: E402
 
-from houba.domain.retention import select_retention_excess  # noqa: E402
+from knock.domain.retention import select_retention_excess  # noqa: E402
 
 _UTC = UTC
 _NOW = datetime(2026, 6, 14, tzinfo=_UTC)

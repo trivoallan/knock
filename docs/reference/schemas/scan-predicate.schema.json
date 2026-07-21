@@ -2,7 +2,7 @@
   "$defs": {
     "Scanner": {
       "additionalProperties": false,
-      "description": "The upstream scanner that produced the report (houba did not run it).",
+      "description": "The upstream scanner that produced the report (knock did not run it).",
       "properties": {
         "name": {
           "title": "Name",
@@ -22,7 +22,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "houba's normalized scan summary \u2014 the signed, verifiable form of `io.houba.scan.*`.",
+  "description": "knock's normalized scan summary \u2014 the signed, verifiable form of `io.knock.scan.*`.",
   "properties": {
     "scanner": {
       "$ref": "#/$defs/Scanner"
@@ -43,7 +43,7 @@
       "type": "string"
     },
     "attested_at": {
-      "description": "ISO-8601 timestamp of when houba attached and signed this scan. The freshness clock: an admission controller enforces a max-age policy against it (admit only if now - attested_at <= max-age). This signed field is the only trustworthy freshness source \u2014 not the unsigned scan-timestamp annotation (the HOUBA_LABEL_PREFIX-prefixed key, e.g. io.houba.scan.timestamp), which exists only for gc.",
+      "description": "ISO-8601 timestamp of when knock attached and signed this scan. The freshness clock: an admission controller enforces a max-age policy against it (admit only if now - attested_at <= max-age). This signed field is the only trustworthy freshness source \u2014 not the unsigned scan-timestamp annotation (the KNOCK_LABEL_PREFIX-prefixed key, e.g. io.knock.scan.timestamp), which exists only for gc.",
       "title": "Attested At",
       "type": "string"
     },

@@ -1,0 +1,49 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-fresh-knock-scan
+  annotations:
+    policies.kyverno.io/title: Require a fresh knock scan attestation
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/description: >-
+      Admit a Pod only if every image carries a knock-signed scan attestation
+      (predicate https://knock.dev/predicate/scan/v1) whose attested_at is within
+      the configured max-age. Freshness/provenance only — vulnerability currency
+      is Dependency-Track's job (knock ADR 0032).
+spec:
+  validationFailureAction: Enforce
+  background: false  # image verification needs the admission/pull context; it cannot run on background scans
+  rules:
+    - name: scan-attestation-max-age
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      verifyImages:
+        # Scope to your front-door registry — images that entered through knock.
+        - imageReferences:
+            - "registry.example.internal/*"
+          attestations:
+            - type: https://knock.dev/predicate/scan/v1
+              attestors:
+                - entries:
+                    - keys:
+                        # Replace with knock's cosign public key (the KNOCK_ATTEST_SIGNER identity).
+                        publicKeys: |-
+                          -----BEGIN PUBLIC KEY-----
+                          REPLACE_WITH_KNOCK_COSIGN_PUBLIC_KEY
+                          -----END PUBLIC KEY-----
+              conditions:
+                - all:
+                    # Admit only if attested_at is newer than (now - 720h = 30 days).
+                    # Kyverno time filters — VALIDATE both against your Kyverno version:
+                    #   (a) only the whole key is wrapped in {{ }} — field names within the
+                    #       expression are bare JMESPath identifiers (e.g. attested_at), NOT each
+                    #       wrapped in its own nested {{ }};
+                    #   (b) time_add with a negative Go duration ('-720h') — some versions instead
+                    #       want time_since(attested_at) <= '720h0m0s'.
+                    # Docs: https://kyverno.io/docs/writing-policies/jmespath/
+                    - key: "{{ time_after(attested_at, time_add(time_now_utc(), '-720h')) }}"
+                      operator: Equals
+                      value: true

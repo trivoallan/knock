@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from houba.domain.scan.formats.registry import DEFAULT_REGISTRY
-from houba.domain.scan.formats.sarif import SarifMapper
-from houba.errors import UnknownFormatError
+from knock.domain.scan.formats.registry import DEFAULT_REGISTRY
+from knock.domain.scan.formats.sarif import SarifMapper
+from knock.errors import UnknownFormatError
 
 
 def test_default_registry_has_sarif() -> None:

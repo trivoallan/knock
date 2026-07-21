@@ -9,4 +9,4 @@ Shows how `{major}.{minor}` aliases track the highest patch within each minor st
 ```yaml title="docs/examples/redis/redis.yml" file=../../examples/redis/redis.yml
 ```
 
-Run it: `uv run houba reconcile docs/examples/redis`
+Run it: `uv run knock reconcile docs/examples/redis`

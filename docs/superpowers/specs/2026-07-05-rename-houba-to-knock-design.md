@@ -13,7 +13,15 @@ change on a dedicated branch, landed as one merge into `main`, tagged `0.9.0`.
 ## Why "knock"
 
 Short, memorable, CLI-friendly (`knock reconcile`, `knock attach`, `knock audit`). Evocative of the
-product thesis: knock is the single front door — every external image knocks before it enters.
+product thesis: knock is the single front door — every external image knocks before it enters. A
+second register reinforces it: Jules Romains' *Knock ou le Triomphe de la médecine* (1923), whose
+Dr. Knock runs a town on *« tout homme bien portant est un malade qui s'ignore »* and screens
+everyone — which is the coverage thesis exactly (no image is presumed clean until screened and
+stamped). It also retires the interim "nok", which collides with "not OK" and the NOK currency code.
+
+This spec is mirrored by [ADR 0045](../../architecture/decisions/0045-rename-houba-to-knock.md),
+which records the as-built refinements (distribution `knock-oci`; the one open read-side follow-up
+on frozen predicate URIs).
 
 ## Problem & context
 
@@ -56,12 +64,12 @@ Everything below ships in **one branch, one merge, one tag**.
 |---|---|---|
 | Package directory | `houba/` | `knock/` |
 | All `import houba` / `from houba` | `houba` | `knock` |
-| `pyproject.toml` name | `houba` | `knock` |
+| `pyproject.toml` name | `houba` | `knock-oci` (bare `knock` is taken on PyPI; command + import stay `knock`) |
 | Script entry point | `houba = "houba.cli.main:_run"` | `knock = "knock.cli.main:_run"` |
 | `setuptools.packages` | `["houba"]` | `["knock"]` |
 | Error root class | `HoubaError` | `KnockError` |
 | Typer app name | `name="houba"` | `name="knock"` |
-| `importlib.metadata.version("houba")` | `"houba"` | `"knock"` |
+| `importlib.metadata.version("houba")` | `"houba"` | `"knock-oci"` (distribution name) |
 
 ~421 import statements across ~149 files. Mechanical find/replace.
 

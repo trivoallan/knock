@@ -1,5 +1,5 @@
 [project]
-name = "houba"
+name = "knock-oci"
 version = "0.8.0"
 description = "Stamp external OCI images with portable provenance through a hardening policy"
 requires-python = ">=3.13"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-houba = "houba.cli.main:_run"
+knock = "knock.cli.main:_run"
 
 [project.optional-dependencies]
 scan = ["redis>=8"]
@@ -38,7 +38,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["houba"]
+packages = ["knock"]
 
 [tool.ruff]
 line-length = 100
@@ -66,10 +66,10 @@ ignore = ["S101"]  # assert OK dans tests
 [tool.mypy]
 python_version = "3.13"
 strict = true
-files = ["houba"]
+files = ["knock"]
 
 [[tool.mypy.overrides]]
-module = ["houba.adapters.*", "houba.cli.*"]
+module = ["knock.adapters.*", "knock.cli.*"]
 disallow_untyped_calls = false  # plus laxiste sur les couches I/O
 
 [tool.pytest.ini_options]
@@ -78,8 +78,8 @@ addopts = "-ra --strict-markers"
 
 [tool.coverage.run]
 branch = true
-source = ["houba"]
-omit = ["houba/cli/_di.py"]
+source = ["knock"]
+omit = ["knock/cli/_di.py"]
 
 [tool.coverage.report]
 fail_under = 80

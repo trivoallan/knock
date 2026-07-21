@@ -11,7 +11,7 @@ Extends [4. Reference deployment (kind)](0004-reference-deployment.md)
 
 ## Context
 
-houba ran as a single CronJob, one pod reconciling all policies (`concurrencyPolicy: Forbid`) —
+knock ran as a single CronJob, one pod reconciling all policies (`concurrencyPolicy: Forbid`) —
 safe but not horizontally scalable. The threading model is the scale-up axis (parallel tags
 within a pod); this is the scale-out axis (parallel policies across pods).
 

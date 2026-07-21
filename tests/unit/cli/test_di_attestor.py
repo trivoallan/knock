@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from houba.adapters.cosign_cli import CosignAdapter
-from houba.cli._di import build_container
-from houba.config import Settings
+from knock.adapters.cosign_cli import CosignAdapter
+from knock.cli._di import build_container
+from knock.config import Settings
 
 
 def test_no_attestor_when_signer_empty() -> None:

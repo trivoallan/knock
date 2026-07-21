@@ -6,9 +6,9 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from houba.ports.registry import ImageInfo
-from houba.use_cases.attach import ScanOutcome
-from houba.use_cases.scan_worker import make_scan_and_attach
+from knock.ports.registry import ImageInfo
+from knock.use_cases.attach import ScanOutcome
+from knock.use_cases.scan_worker import make_scan_and_attach
 from tests.fakes.clock import FakeClock
 from tests.fakes.registry import FakeRegistryPort
 
@@ -44,7 +44,7 @@ def _make(sarif_path: str) -> ...:  # type: ignore[return]
     return make_scan_and_attach(
         registry=_registry(),
         clock=FakeClock(TS),
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         sarif_path=sarif_path,
     )
 

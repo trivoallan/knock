@@ -15,9 +15,9 @@ spec:
       metadata:
         # FQDN, not the bare name: the KEDA operator resolves this from the `keda`
         # namespace, so a same-namespace short name (scan-queue-redis) does not resolve.
-        # The worker pods run in `houba` and keep the bare REDIS_ADDR.
-        address: scan-queue-redis.houba.svc.cluster.local:6379
-        stream: houba:scan:work
+        # The worker pods run in `knock` and keep the bare REDIS_ADDR.
+        address: scan-queue-redis.knock.svc.cluster.local:6379
+        stream: knock:scan:work
         # streamLength (XLEN) scales on OUTSTANDING work. NOT pendingEntriesCount: XPENDING is 0 for
         # un-read entries, so it would never spawn a worker for fresh work — a cold-start deadlock,
         # proven in the kind e2e (KEDA 2.20.1: pendingEntriesCount never fired, streamLength did).
@@ -32,27 +32,27 @@ spec:
         labels:
           app.kubernetes.io/name: scan-worker
       spec:
-        serviceAccountName: houba
+        serviceAccountName: knock
         restartPolicy: Never
         securityContext:
           runAsNonRoot: true
           seccompProfile: { type: RuntimeDefault }
         initContainers:
           - name: reserve            # XREADGROUP one digest -> /shared/reservation-token + /shared/digest
-            image: houba
-            command: ["houba", "scan", "reserve"]
+            image: knock
+            command: ["knock", "scan", "reserve"]
             env:
-              - name: HOUBA_SCAN_REDIS
-                value: '{"addr":"scan-queue-redis:6379","work":"houba:scan:work","dead":"houba:scan:dead","confirmed":"houba:scan:confirmed","placed":"houba:scan:placed","group":"scan"}'
+              - name: KNOCK_SCAN_REDIS
+                value: '{"addr":"scan-queue-redis:6379","work":"knock:scan:work","dead":"knock:scan:dead","confirmed":"knock:scan:confirmed","placed":"knock:scan:placed","group":"scan"}'
             volumeMounts:
               - { name: shared, mountPath: /shared }
-          - name: fetch-sbom         # pull the reserved digest's CycloneDX SBOM (houba image: regctl)
-            image: houba
+          - name: fetch-sbom         # pull the reserved digest's CycloneDX SBOM (knock image: regctl)
+            image: knock
             command: ["bash", "/scripts/scan-one.sh", "fetch"]
             env:
               - { name: HOME, value: /tmp }
             envFrom:
-              - secretRef: { name: houba-registries }
+              - secretRef: { name: knock-registries }
             volumeMounts:
               - { name: shared, mountPath: /shared }
               - { name: scripts, mountPath: /scripts, readOnly: true }
@@ -74,15 +74,15 @@ spec:
               - { name: shared, mountPath: /shared }
               - { name: home, mountPath: /tmp }
         containers:
-          - name: attach             # houba scan attach: reads /shared/digest + /shared/reservation-token + /shared/scan.sarif
-            image: houba
-            command: ["houba", "scan", "attach"]
+          - name: attach             # knock scan attach: reads /shared/digest + /shared/reservation-token + /shared/scan.sarif
+            image: knock
+            command: ["knock", "scan", "attach"]
             env:
               - { name: HOME, value: /tmp }
-              - name: HOUBA_SCAN_REDIS
-                value: '{"addr":"scan-queue-redis:6379","work":"houba:scan:work","dead":"houba:scan:dead","confirmed":"houba:scan:confirmed","placed":"houba:scan:placed","group":"scan"}'
+              - name: KNOCK_SCAN_REDIS
+                value: '{"addr":"scan-queue-redis:6379","work":"knock:scan:work","dead":"knock:scan:dead","confirmed":"knock:scan:confirmed","placed":"knock:scan:placed","group":"scan"}'
             envFrom:
-              - secretRef: { name: houba-registries }
+              - secretRef: { name: knock-registries }
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: true

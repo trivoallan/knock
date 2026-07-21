@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from houba.errors import SyftError
+from knock.errors import SyftError
 from tests.fakes.sbom_generator import FakeSbomGenerator
 
 

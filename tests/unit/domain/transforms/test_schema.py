@@ -1,7 +1,7 @@
 import json
 
-from houba.domain.mirror_policy import mirror_policy_json_schema
-from houba.domain.transforms.schema import transform_steps_schema
+from knock.domain.mirror_policy import mirror_policy_json_schema
+from knock.domain.transforms.schema import transform_steps_schema
 
 
 def test_transform_steps_schema_is_oneof_of_single_key_maps() -> None:

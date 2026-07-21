@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from houba.config import CACertSource, PackageMirror, RegistryConfig
-from houba.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
-from houba.ports.registry import ImageInfo
-from houba.use_cases.reconcile import reconcile_policies
-from houba.use_cases.report import RunReport
+from knock.config import CACertSource, PackageMirror, RegistryConfig
+from knock.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
+from knock.ports.registry import ImageInfo
+from knock.use_cases.reconcile import reconcile_policies
+from knock.use_cases.report import RunReport
 from tests.fakes.attestor import FakeAttestor
 from tests.fakes.image_builder import FakeImageBuilder
 from tests.fakes.registry import FakeRegistryPort
@@ -35,7 +35,7 @@ def _sbom_attestations(attestor: FakeAttestor) -> list[tuple[str, dict]]:
 def _copy_policy() -> MirrorPolicy:
     return parse_mirror_policy(
         """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: busybox-copy }
 spec:
@@ -78,7 +78,7 @@ def _run(policy: MirrorPolicy, registry: FakeRegistryPort, **over: object) -> Ru
         package_mirrors={"corp": PackageMirror(apt="https://mirror.corp")},
         build_platform="linux/amd64",
         now=NOW,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         dry_run_tags=False,
         dry_run_deletions=False,
         reporter=FakeReporter(),
@@ -152,7 +152,7 @@ def test_sbom_referrer_records_tool_version() -> None:
     subject = f"reg.local/demo/busybox@{out_digest}"
     # artifact_referrers entries: (image_ref, artifact_type, media_type, blob, annotations)
     ann = next(r[4] for r in registry.artifact_referrers if r[0] == subject)
-    assert ann.get("io.houba.sbom.tool.version") == FAKE_SYFT_VERSION
+    assert ann.get("io.knock.sbom.tool.version") == FAKE_SYFT_VERSION
 
 
 def test_no_formats_means_no_sbom_calls() -> None:
@@ -225,7 +225,7 @@ def test_skipped_uncovered_tag_is_sbom_backfilled_once() -> None:
 
 def test_skipped_covered_tag_is_not_resbomed() -> None:
     # SBOM referrer already on the mirror tag => sbom_covered => no generate call (converged).
-    from houba.ports.registry import Referrer
+    from knock.ports.registry import Referrer
 
     src = "docker.io/library/busybox"
     dest_repo = "reg.local/demo/busybox"

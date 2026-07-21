@@ -9,17 +9,17 @@ The reference deployment must demonstrate the **package-level blast-radius loop*
 end-to-end with a *real* observability-stack consumer, not just the lineage-level toy
 (`blast-radius.sh`). Concretely:
 
-> houba rebuilds an image → buildkit attaches an SPDX SBOM → Dependency-Track (DT)
+> knock rebuilds an image → buildkit attaches an SPDX SBOM → Dependency-Track (DT)
 > ingests it → an operator answers *"which images ship the vulnerable package X?"* in DT.
 
 DT is the org's concrete instance of the roadmap's abstract "observability stack" /
 "vuln platform" consumer (ADR 0032). It is **off-the-shelf software wired in by demo
-glue** — it is *not* a houba feature.
+glue** — it is *not* a knock feature.
 
 ### Non-goals (YAGNI)
 
-- No houba `DependencyTrack` adapter / use case / port. houba core is untouched.
-- No change to houba's SBOM format (buildkit-native SPDX stays).
+- No knock `DependencyTrack` adapter / use case / port. knock core is untouched.
+- No change to knock's SBOM format (buildkit-native SPDX stays).
 - No re-implemented DT query CLI (`make blast-radius-dt`). DT's UI/API is the query surface.
 - No production-grade DT (external Postgres, HA, TLS, SSO). Demo footprint only.
 - No air-gapped vuln-feed seeding. The online-feed requirement is documented, not solved.
@@ -27,7 +27,7 @@ glue** — it is *not* a houba feature.
 
 ## Constraints that shaped the design
 
-1. **DT is CycloneDX-only.** SPDX support was dropped in the DT v4.x line. houba emits
+1. **DT is CycloneDX-only.** SPDX support was dropped in the DT v4.x line. knock emits
    SPDX (buildkit's native syft scanner). → the glue **must convert SPDX → CycloneDX**
    before upload. This is the one genuinely hard part of the integration.
 2. **Both targets, reduced footprint.** DT runs in *both* `DeployReference` (cluster
@@ -38,7 +38,7 @@ glue** — it is *not* a houba feature.
    external system in the Context/Container/Landscape C4 views. It *may* appear in the
    **Deployment** views — those are worked examples and already name concrete tools (kind,
    openbao, eso). ADR 0035 records this refinement.
-4. **No houba core change** ⇒ no Pydantic model change ⇒ no `make reference` regen, no
+4. **No knock core change** ⇒ no Pydantic model change ⇒ no `make reference` regen, no
    coverage-gate impact. The entire change lives in `deploy/`, `scripts/`, `docs/`.
 
 ## Architecture
@@ -58,17 +58,17 @@ workload manifests, an ArgoCD source referencing them, and an ArgoCD `Applicatio
   - `networkpolicy.yaml` — same posture as the buildkitd NetworkPolicy.
   - `kustomization.yaml`.
 - `deploy/argocd/sources/dependency-track/kustomization.yaml` — references the component
-  manifests (one source of truth), `namespace: houba`.
-- `deploy/argocd/apps/dependency-track.yaml` — `Application` `houba-dependency-track`,
+  manifests (one source of truth), `namespace: knock`.
+- `deploy/argocd/apps/dependency-track.yaml` — `Application` `knock-dependency-track`,
   `sync-wave: "1"` (an infra dependency, like buildkitd), automated sync.
 
 ### The publish glue — SPDX → CycloneDX → DT
 
 The reference *producer-side* twin of `blast-radius.sh`. Generic, stock tooling, no
-houba coupling:
+knock coupling:
 
 - `scripts/publish-sbom.sh` — canonical, runnable standalone (same contract as
-  `blast-radius.sh`: reads `HOUBA_REGISTRIES` + `BLAST_REPOS`, walks the same repos).
+  `blast-radius.sh`: reads `KNOCK_REGISTRIES` + `BLAST_REPOS`, walks the same repos).
   For each image: `regctl` pulls the attached **SPDX SBOM attestation** →
   **`syft convert` SPDX→CycloneDX** (syft is the same engine buildkit uses — the most
   faithful converter) → `curl -X POST /api/v1/bom` to DT with the project name set to the
@@ -76,14 +76,14 @@ houba coupling:
   (same "coverage gap" semantics as `blast-radius.sh`).
 - `deploy/base/job-publish-sbom.yaml` — twin of `job-blast-radius.yaml`. Mounts the script
   via a configMap added in `deploy/base/kustomization.yaml`
-  (`publish-sbom.sh=../../scripts/publish-sbom.sh`), reads `HOUBA_REGISTRIES`, `BLAST_REPOS`,
+  (`publish-sbom.sh=../../scripts/publish-sbom.sh`), reads `KNOCK_REGISTRIES`, `BLAST_REPOS`,
   and the DT API key Secret.
 
-**Container packaging.** The houba runtime image is *not* bloated with a demo-only
+**Container packaging.** The knock runtime image is *not* bloated with a demo-only
 converter. The publish step is a chain of init/main containers using **stock images** over
 a shared `emptyDir`:
 
-1. init `houba` (has regctl + python3): pull the SPDX attestation → `/work/<ref>.spdx.json`.
+1. init `knock` (has regctl + python3): pull the SPDX attestation → `/work/<ref>.spdx.json`.
 2. init `anchore/syft`: `syft convert` each SPDX → `/work/<ref>.cdx.json`.
 3. main `curlimages/curl`: `POST` each CycloneDX to DT with the API key.
 
@@ -101,8 +101,8 @@ this:
   1. Wait for the DT API to be ready (init container poll with timeout).
   2. `POST /api/v1/user/login` as `admin/admin`; on forced change, set a demo password.
   3. Create (or fetch) an API key for a team with `BOM_UPLOAD` + `PROJECT_CREATION`.
-  4. Write the key into a k8s Secret `dt-api-key` in the `houba` namespace.
-- RBAC: a dedicated ServiceAccount with `create`/`patch` on `secrets` in `houba`.
+  4. Write the key into a k8s Secret `dt-api-key` in the `knock` namespace.
+- RBAC: a dedicated ServiceAccount with `create`/`patch` on `secrets` in `knock`.
 - Ordering via ArgoCD **sync-waves**: DT (wave 1) → bootstrap (wave 2) → publish runs after
   reconcile, reading `dt-api-key`.
 
@@ -137,7 +137,7 @@ Consistent with the house "no retry" stance:
 
 ## Testing
 
-The glue is bash and lives outside houba core. `blast-radius.sh` has **no test** (verified),
+The glue is bash and lives outside knock core. `blast-radius.sh` has **no test** (verified),
 so this stays at **parity**:
 
 - Validated end-to-end by `make local` running the full loop.
@@ -145,7 +145,7 @@ so this stays at **parity**:
   against `regctl`/`syft`/`curl` fake-bins asserting a CycloneDX POST — but only once
   `blast-radius.sh` gains an equivalent, to keep the demo scripts symmetric.)
 
-houba core is untouched, so the existing coverage gates (≥80 % global, ≥90 % `domain`) are
+knock core is untouched, so the existing coverage gates (≥80 % global, ≥90 % `domain`) are
 unaffected.
 
 ## Docs & C4 obligations (CLAUDE.md)
@@ -163,8 +163,8 @@ Landed in the same change:
   DT-UI steps and the offline-feed caveat.
 - `docs/roadmap.md` — note that the reference deployment now *demonstrates* the loop closure
   via an off-the-shelf consumer, while currency/continuous-correlation remains **out of
-  houba's product scope** (no contradiction with the "out of scope" entries — the demo wires
-  a third-party tool, houba does not own it).
+  knock's product scope** (no contradiction with the "out of scope" entries — the demo wires
+  a third-party tool, knock does not own it).
 
 ## File-change summary
 
@@ -186,4 +186,4 @@ Edited:
 - `docs/architecture/workspace.dsl` + `docs/architecture/_export/*`
 - `docs/architecture/README.md`, `deploy/overlays/local/README.md`, `docs/roadmap.md`
 
-Untouched: all of `houba/` (no core change), `make reference` output.
+Untouched: all of `knock/` (no core change), `make reference` output.

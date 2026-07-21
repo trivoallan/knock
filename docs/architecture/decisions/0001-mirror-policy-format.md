@@ -8,17 +8,17 @@ Accepted
 
 ## Context
 
-houba is a stamper / single front door for external OCI artifacts: it pulls upstream
+knock is a stamper / single front door for external OCI artifacts: it pulls upstream
 images, optionally rebuilds them through a hardening policy, and stamps them with
 portable provenance. It needs a declarative, per-product contract describing what to
 mirror, where to, and how — plus a deterministic command to apply it.
 
 ## Decision
 
-Adopt a declarative `MirrorPolicy` YAML schema (`apiVersion: houba.io/v1alpha1`) as the
+Adopt a declarative `MirrorPolicy` YAML schema (`apiVersion: knock.io/v1alpha1`) as the
 product's public API: `source` + `imports` (tag selection → destinations) + optional
-`transform`, with named-registry resolution from an env-roster (`HOUBA_REGISTRIES`).
-`houba reconcile <dir>` loads and applies these policies. The Pydantic models are the
+`transform`, with named-registry resolution from an env-roster (`KNOCK_REGISTRIES`).
+`knock reconcile <dir>` loads and applies these policies. The Pydantic models are the
 single source of truth; the JSON Schema is derived from them, never hand-written.
 
 ## Consequences

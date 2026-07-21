@@ -6,11 +6,11 @@ from pydantic import ValidationError
 from pydantic_settings import SettingsError
 from typer.testing import CliRunner
 
-from houba.cli.main import _run, app
-from houba.errors import AdapterError, ConfigError, DomainError, PolicyValidationError
+from knock.cli.main import _run, app
+from knock.errors import AdapterError, ConfigError, DomainError, PolicyValidationError
 
 
-def test_houba_version_outputs_version_string() -> None:
+def test_knock_version_outputs_version_string() -> None:
     runner = CliRunner()
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
@@ -19,7 +19,7 @@ def test_houba_version_outputs_version_string() -> None:
     assert re.match(r"^\d+\.\d+", result.stdout.strip())
 
 
-def test_houba_help_lists_subcommands() -> None:
+def test_knock_help_lists_subcommands() -> None:
     runner = CliRunner()
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
@@ -33,21 +33,21 @@ def test_run_maps_validation_error_to_exit_3() -> None:
     def _raise() -> None:
         raise ValidationError.from_exception_data("Settings", [])
 
-    with patch("houba.cli.main.app", side_effect=_raise):
+    with patch("knock.cli.main.app", side_effect=_raise):
         with pytest.raises(SystemExit) as excinfo:
             _run()
     assert excinfo.value.code == 3
 
 
 def test_run_maps_settings_error_to_exit_3() -> None:
-    """SettingsError (ex. HOUBA_REGISTRIES au JSON malformé) → exit 3 (config)."""
+    """SettingsError (ex. KNOCK_REGISTRIES au JSON malformé) → exit 3 (config)."""
 
     def _raise() -> None:
         raise SettingsError(
             "error parsing value for field 'registries' from source 'EnvSettingsSource'"
         )
 
-    with patch("houba.cli.main.app", side_effect=_raise):
+    with patch("knock.cli.main.app", side_effect=_raise):
         with pytest.raises(SystemExit) as excinfo:
             _run()
     assert excinfo.value.code == 3
@@ -62,11 +62,11 @@ def test_run_maps_settings_error_to_exit_3() -> None:
         (PolicyValidationError("bad"), 1),
     ],
 )
-def test_run_maps_houba_errors_to_exit_codes(exc: Exception, expected_code: int) -> None:
+def test_run_maps_knock_errors_to_exit_codes(exc: Exception, expected_code: int) -> None:
     def _raise() -> None:
         raise exc
 
-    with patch("houba.cli.main.app", side_effect=_raise):
+    with patch("knock.cli.main.app", side_effect=_raise):
         with pytest.raises(SystemExit) as excinfo:
             _run()
     assert excinfo.value.code == expected_code

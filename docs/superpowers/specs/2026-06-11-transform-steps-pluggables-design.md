@@ -6,11 +6,11 @@
 
 ## 1. Context
 
-PR #24 shipped houba's **rebuild path**: a `MirrorPolicy` variant carrying a non-empty
+PR #24 shipped knock's **rebuild path**: a `MirrorPolicy` variant carrying a non-empty
 `transform` is re-built through a generated hardening Dockerfile and stamped with transform
 lineage, instead of byte-copied. It delivered two primitives (`injectCA`,
-`rewritePackageSources`), env-roster resolution by name (`HOUBA_TRANSFORM_CA_CERTS`,
-`HOUBA_TRANSFORM_PACKAGE_MIRRORS`), a content-hash `transform_version`, two-axis change
+`rewritePackageSources`), env-roster resolution by name (`KNOCK_TRANSFORM_CA_CERTS`,
+`KNOCK_TRANSFORM_PACKAGE_MIRRORS`), a content-hash `transform_version`, two-axis change
 detection, and the copy/build branch in `reconcile`.
 
 It is **functional but monolithic.** Adding one step today touches **five sites**:
@@ -44,7 +44,7 @@ explicitly deferred and that CLAUDE.md mandates ("JSON Schema, systematically").
 
 **Out of scope (already done in #24, kept as-is):** the rebuild engine, the env rosters and
 name resolution, the `transform_version` *semantics*, two-axis change detection, the copy/build
-branch, the stamp lineage (`io.houba.transform.steps` / `.version`), single-platform rebuild.
+branch, the stamp lineage (`io.knock.transform.steps` / `.version`), single-platform rebuild.
 
 **Out of scope (deferred):** further primitives (`setLabel`, Java keystore, deb822
 `rewritePackageSources`), new resource kinds, third-party entry-point plugins, a `run`
@@ -112,7 +112,7 @@ subclass stays concretely typed.
 `domain/transform.py` (flat file) becomes a package:
 
 ```
-houba/domain/transforms/
+knock/domain/transforms/
   base.py       # ResourceRef, ResolvedResource, ContextFile, Fragment, TransformStepCompiler
   steps.py      # InjectCA, RewritePackageSources, SetTimezone + their Params models
   registry.py   # BUILTIN_STEPS, Registry (get/names), DEFAULT_REGISTRY
@@ -218,7 +218,7 @@ example/README.
   resolved values); `schema` (well-formed `oneOf`). App-layer `resolve_ref` keeps its existing
   use-case tests (unknown name / unreadable file → `ConfigError`). Migrate #24's
   `tests/unit/domain/test_transform.py` to the package. **Domain still has no I/O ⇒ no fakes.**
-  Coverage gates unchanged (≥ 80 % global, ≥ 90 % `houba.domain`).
+  Coverage gates unchanged (≥ 80 % global, ≥ 90 % `knock.domain`).
 - **C4:** no impact — internal refactor, no new actor/external system/integration. (#24 already
   updated `workspace.dsl` for the transform integration.)
 

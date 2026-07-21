@@ -1,9 +1,9 @@
 ---
-sidebar_label: Why houba?
+sidebar_label: Why knock?
 sidebar_position: 0
 ---
 
-# Why houba?
+# Why knock?
 
 ## 2 a.m. A critical CVE drops.
 
@@ -39,23 +39,23 @@ images byte-for-byte and do it well. The problem is that images arrive with
 **no consistent, queryable, portable provenance** — so at incident time you
 have bytes, but no answers.
 
-houba is **not** another mirror. It is a **stamper**: a single front door
+knock is **not** another mirror. It is a **stamper**: a single front door
 through which every external image passes, gets hardened where you ask (internal
 CAs, internal package mirrors), and — always — gets stamped with the *same*
 standardized provenance and a signed attestation.
 
 ## The bet: one front door, one query
 
-Because every image that entered came through houba and carries the *same* stamp
+Because every image that entered came through knock and carries the *same* stamp
 **and a package-level SBOM** (SPDX and/or CycloneDX, on every placed image — copy
 and rebuild alike), the 2 a.m. question collapses into **one query in the tools you
 already run** — Datadog, Wiz, Dependency-Track, whatever reads OCI annotations and
-SPDX/CycloneDX. houba produces the provenance; your tools answer the question.
+SPDX/CycloneDX. knock produces the provenance; your tools answer the question.
 
 ## The proof is the label — and the SBOM
 
-houba writes two portable, standard facts onto every image it rebuilds. No magic,
-no houba-only database.
+knock writes two portable, standard facts onto every image it rebuilds. No magic,
+no knock-only database.
 
 **The label** — OCI-standard annotations any scanner already reads. Identity,
 lineage, ownership:
@@ -68,19 +68,19 @@ $ regctl manifest get registry.example.com/redis:7.2 --format '{{ jsonPretty .An
   "org.opencontainers.image.base.name":   "docker.io/library/redis:7.2",
   "org.opencontainers.image.base.digest": "sha256:1f3c...",
   "org.opencontainers.image.created":     "2026-06-16T01:53:00Z",
-  "io.houba.artifact.type":               "derived",
-  "io.houba.policy":                      "datastores",
-  "io.houba.import":                      "redis",
-  "io.houba.variant":                     "hardened",
-  "io.houba.owners":                      "group:platform-data,group:sre",
-  "io.houba.transform.steps":             "injectCA,rewritePackageSources",
-  "io.houba.transform.version":           "3"
+  "io.knock.artifact.type":               "derived",
+  "io.knock.policy":                      "datastores",
+  "io.knock.import":                      "redis",
+  "io.knock.variant":                     "hardened",
+  "io.knock.owners":                      "group:platform-data,group:sre",
+  "io.knock.transform.steps":             "injectCA,rewritePackageSources",
+  "io.knock.transform.version":           "3"
 }
 ```
 
 It answers the base-image question and tells you who to page: *"every image whose
 `org.opencontainers.image.base.digest` is `sha256:1f3c…`, grouped by
-`io.houba.owners`."*
+`io.knock.owners`."*
 
 **The SBOM** — for **every placed image** (copy *and* rebuild), an SPDX and/or
 CycloneDX inventory of what's *actually inside*, down to the application dependency
@@ -90,15 +90,15 @@ Grype, Dependency-Track) to discover and read.
 
 That's what answers the question your scanners can't, at the granularity that
 matters: *"every image whose SBOM contains `log4j-core 2.14.1`."* Join it to
-`io.houba.owners` and you have the affected images **and** their owners, in one
-pass. houba produced both facts at ingestion; your tools run the query — houba
+`io.knock.owners` and you have the affected images **and** their owners, in one
+pass. knock produced both facts at ingestion; your tools run the query — knock
 never does. (Still a stamper, not a query engine.)
 
 ## The catch — and we'll say it plainly
 
 A stamp on 40 % of your fleet is **useless** in an incident: the blind spots
-are exactly where the next vulnerability hides. houba's value is proportional
-to it being the **mandatory** path for external images. Adopting houba means
+are exactly where the next vulnerability hides. knock's value is proportional
+to it being the **mandatory** path for external images. Adopting knock means
 making it the single front door, not one option among several.
 
 That is a real ask. We think it's the right one — a blast-radius answer you
@@ -106,13 +106,13 @@ can only half-trust is not an answer.
 
 ## Why this is safe to mandate
 
-You are not betting on houba the tool. You are adopting a **label**, and the
+You are not betting on knock the tool. You are adopting a **label**, and the
 label is built from **OCI-standard annotation keys** — the same
 `org.opencontainers.image.*` fields the ecosystem already standardized. Any
-scanner, registry, or policy engine reads them for free; the houba-specific
-facts live under a prefix you choose (`io.houba.*`, or none at all).
+scanner, registry, or policy engine reads them for free; the knock-specific
+facts live under a prefix you choose (`io.knock.*`, or none at all).
 
-So the exit cost is near zero: **if houba disappears tomorrow, every image you
+So the exit cost is near zero: **if knock disappears tomorrow, every image you
 already stamped stays exactly as readable** — the annotations are OCI-standard,
 the SBOM is SPDX and/or CycloneDX, all open. The provenance is portable by
 construction, not locked inside a product. The label *is* the product — and it
@@ -122,4 +122,4 @@ outlives the tool that wrote it.
 
 *Convinced, or want to see it run? → [Getting started](tutorials/getting-started.md)
 · [Example policies](/examples) · [Reference](reference/schemas/mirror-policy.md)
-· [The provenance contract](https://github.com/trivoallan/houba/blob/main/docs/architecture/design.md)*
+· [The provenance contract](https://github.com/trivoallan/knock/blob/main/docs/architecture/design.md)*

@@ -1,10 +1,10 @@
-# Kargo promotion gate — design (houba as a third reader)
+# Kargo promotion gate — design (knock as a third reader)
 
 > **Status:** pre-implementation design, exploration. The riskiest assumption (§6) is **untested** —
-> the terminal step after validating it is either `writing-plans` (if `houba verify` earns its
-> place, §5) or "close as docs/demo only" (if it does not). No houba-core code is implied yet.
-> Builds on the provenance stamp (`houba/domain/stamp.py`), the OCI **referrers** model, and the
-> scan-result ingestion verb (`houba attach`, see [2026-06-12-attach-scan-result-design.md](2026-06-12-attach-scan-result-design.md)).
+> the terminal step after validating it is either `writing-plans` (if `knock verify` earns its
+> place, §5) or "close as docs/demo only" (if it does not). No knock-core code is implied yet.
+> Builds on the provenance stamp (`knock/domain/stamp.py`), the OCI **referrers** model, and the
+> scan-result ingestion verb (`knock attach`, see [2026-06-12-attach-scan-result-design.md](2026-06-12-attach-scan-result-design.md)).
 
 ## 1. Context & motivation
 
@@ -13,23 +13,23 @@
 set of digests — which it promotes **Stage → Stage** (dev → stage → prod) through promotion
 pipelines, with verification gates (Argo Rollouts `AnalysisTemplate` / `AnalysisRun`) between stages.
 
-Kargo and houba sit on **different layers and stack** — they do not compete. Kargo *moves* digests
-between environments; houba decides *which* digests may exist and carries their provenance / SBOM /
+Kargo and knock sit on **different layers and stack** — they do not compete. Kargo *moves* digests
+between environments; knock decides *which* digests may exist and carries their provenance / SBOM /
 scan facts. A validated platform/security team already runs multi-env promotion, so the integration
 surface has a real client (not feature-parity exploration).
 
 ## 2. The framing that keeps the boundary intact
 
-houba **does not integrate with Kargo**. houba adds a **third reader** to the same signed-referrer
+knock **does not integrate with Kargo**. knock adds a **third reader** to the same signed-referrer
 substrate it already publishes to:
 
 1. **Kyverno** reads the stamp / signature → **admission** gate
 2. **regis / SARIF** verdict published as a referrer → **governance** ([[scanstep-design]] pivot)
 3. **Kargo** reads the same fact → **promotion** gate
 
-This is the proven *"houba publishes, the enforcer reads"* pattern, instantiated a third time. The
-gate is a Kargo `AnalysisTemplate` that **reads** a referrer; houba never executes inside Kargo's
-loop. A "houba promotion step" (a verb in the pipeline) is **explicitly rejected** — that is the
+This is the proven *"knock publishes, the enforcer reads"* pattern, instantiated a third time. The
+gate is a Kargo `AnalysisTemplate` that **reads** a referrer; knock never executes inside Kargo's
+loop. A "knock promotion step" (a verb in the pipeline) is **explicitly rejected** — that is the
 scanstep overreach returning ([[scanstep-design]]).
 
 ## 3. Not a doublon with Kyverno — only if the facts are split by nature
@@ -50,11 +50,11 @@ Kyverno "because Kargo covers it" would be a security regression.
 ### 3.1 Nor a doublon with the Warehouse — shared only on the subscription primitive
 
 A second "isn't this duplicated?" objection lands one layer down, on the **declarative resources**:
-houba's `MirrorPolicy` and Kargo's `Warehouse` both subscribe to an upstream image source and apply
+knock's `MirrorPolicy` and Kargo's `Warehouse` both subscribe to an upstream image source and apply
 **semver / tag-selection** rules (`import.tags` ≈ `subscriptions[].image`). That single shared
 primitive is the whole recouvrement; on everything else they are orthogonal:
 
-| | `MirrorPolicy` (houba) | `Warehouse` (Kargo) |
+| | `MirrorPolicy` (knock) | `Warehouse` (Kargo) |
 |---|---|---|
 | Centre of gravity | **fabrication + placement** — rebuild/harden, stamp, SBOM, variants, destinations | **environment progression** — pin digests as Freight, promote Stage → Stage |
 | The subscription decides… | which upstream tags **enter the front door**, rebuilt how, landing where | which versions become **promotable** |
@@ -64,7 +64,7 @@ primitive is the whole recouvrement; on everything else they are orthogonal:
 **Benign iff the topology is chained, not parallel.** The shared primitive is harmless precisely when
 the two resources sit at different links of one pipeline: `MirrorPolicy` subscribes to the **real
 upstream** and produces stamped digests in the internal registry; the `Warehouse` subscribes to that
-**stamped registry, never upstream** (§7's "A" positioning), so Kargo's input *is* houba's output —
+**stamped registry, never upstream** (§7's "A" positioning), so Kargo's input *is* knock's output —
 the primitive is repeated, the responsibility is not.
 
 **Failure mode — a `Warehouse` pointed at upstream is a second front door.** It would create Freight
@@ -76,9 +76,9 @@ enforce ("single front door", "coverage gates value"). The invariant is therefor
 > already covered by a `MirrorPolicy` is a second front door = mandate regression.
 
 **Do not unify them.** Different controllers, lifecycles, CRD owners; they share a *concept*, not a
-*runtime*. Emitting `Warehouse`s from houba, or driving `reconcile` from a Kargo step, recreates the
+*runtime*. Emitting `Warehouse`s from knock, or driving `reconcile` from a Kargo step, recreates the
 scanstep overreach ([[scanstep-design]]). A guard-rail that *detects* an upstream-subscribed
-`Warehouse` under mandate (a `houba audit` walk or a Kyverno policy) is the "coverage gates value"
+`Warehouse` under mandate (a `knock audit` walk or a Kyverno policy) is the "coverage gates value"
 answer — but it is YAGNI until the documented invariant is observed to leak.
 
 ## 4. The decisive pain is feedback *timing* — which has two halves
@@ -90,7 +90,7 @@ promotion gate worth building on top of Kyverno — but "timing" is two problems
   event**: "do not *advance* a digest whose verdict is already failing."
 - **C — feedback when the world changes under stable Freight.** The worst case — image promoted clean,
   CVE drops later on something *already in prod* — triggers **no promotion**, so B says nothing. This
-  case lives in the **blast-radius query** (`houba audit` + the demo's digest join, gaining a Kargo
+  case lives in the **blast-radius query** (`knock audit` + the demo's digest join, gaining a Kargo
   Stage/env leg).
 
 **B and C are the two halves of feedback timing, not lead vs follow-on.** "Feedback solved" requires
@@ -98,29 +98,29 @@ both; the worst case is in C.
 
 ### 4.1 Freshness without re-scan (a trap inside B)
 
-The verdict the gate reads is only as fresh as the last `houba attach`. Shift-left a stale verdict =
+The verdict the gate reads is only as fresh as the last `knock attach`. Shift-left a stale verdict =
 false confidence. Therefore the gate must check **verdict age, not just severity** → fail-closed on
-stale ("re-scan before promoting"). houba must **not** re-scan at promotion time — that is scanstep
+stale ("re-scan before promoting"). knock must **not** re-scan at promotion time — that is scanstep
 redux. Freshness comes from an **external scan cadence (regis)** plus a **referrer-age check** in the
-`AnalysisTemplate`. houba reads; it never scans.
+`AnalysisTemplate`. knock reads; it never scans.
 
 ### 4.2 Sequence — the two gates on one digest
 
 The promotion gate (B, fail-closed on stale verdict) and the admission boundary (Kyverno, on the
-immutable stamp) are independent and read the **same** referrer substrate houba publishes out-of-band.
-houba never appears as an executing step — it only publishes the fact others read.
+immutable stamp) are independent and read the **same** referrer substrate knock publishes out-of-band.
+knock never appears as an executing step — it only publishes the fact others read.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Reg as regis (scan / governance)
-    participant H as houba attach
+    participant H as knock attach
     participant OCI as Registry (digest + referrers)
     participant K as Kargo (Warehouse to Stage)
     participant AT as AnalysisTemplate
     participant KV as Kyverno admission
 
-    Note over Reg,OCI: Out-of-band cadence -- houba publishes a fact, never scans
+    Note over Reg,OCI: Out-of-band cadence -- knock publishes a fact, never scans
     Reg->>H: scan verdict for «digest»
     H->>OCI: attach signed verdict referrer
 
@@ -147,18 +147,18 @@ sequenceDiagram
     end
 ```
 
-## 5. Open product question — does `houba verify` earn its place? (YAGNI gate)
+## 5. Open product question — does `knock verify` earn its place? (YAGNI gate)
 
 The gate needs to read "current scan verdict + its age for this digest." Today the CLI is
 `reconcile · purge · attach · audit · version` — there is **no `verify`**. `attach --fail-on` is
 write+gate at *ingestion* (wrong moment for a promotion); `audit` is fleet-wide coverage, not a
 single-digest pass/fail.
 
-Candidate primitive: **`houba verify <digest> --require stamp,scan-pass,sbom`** → exit 0/1,
+Candidate primitive: **`knock verify <digest> --require stamp,scan-pass,sbom`** → exit 0/1,
 read-only, exposes **verdict + age**, never scans or rebuilds (does not cross the scanstep line). It
 is the read-side symmetric counterpart of `attach`.
 
-- **For:** clean gate primitive; encapsulates houba's annotation / referrer conventions so each gate
+- **For:** clean gate primitive; encapsulates knock's annotation / referrer conventions so each gate
   (Kargo, Kyverno sidecar, CI) does not re-assemble them — the same argument that justifies `attach`.
 - **Against (rung 1 of the ladder):** `cosign verify-attestation` + `regctl referrers` already do the
   raw work; the only added value is convention encapsulation.
@@ -169,33 +169,33 @@ use case → triggers the C4 / ADR / example sync (§8).
 ## 6. Riskiest assumption & cheapest test
 
 **Riskiest:** Kargo's verification mechanism can read an OCI-referenced fact (verdict + age) with
-**no change to houba**.
+**no change to knock**.
 
 **Cheapest test:** one `AnalysisTemplate` on a single Stage transition that reads **verdict + age** of
 a digest and fail-closes on stale. Red/green cleanly → validates B *and* exhibits the need for C, with
-**zero houba-core code**. Only then revisit §5.
+**zero knock-core code**. Only then revisit §5.
 
 ### 6.1 Maquette — the `AnalysisTemplate`
 
 Argo Rollouts `AnalysisTemplate` (what Kargo runs as a verification gate), `job` provider. The job
 **only reads** the scan attestation — never scans, never rebuilds — and **fail-closes** on anything
-missing, unverifiable, too severe, or stale. Tooling image bundles `cosign` + `jq` (not the houba
+missing, unverifiable, too severe, or stale. Tooling image bundles `cosign` + `jq` (not the knock
 runtime image, which carries none of jq/curl by design).
 
-The values below are **pinned from houba's code**, not illustrative:
-- the scan result is a **signed in-toto attestation**, predicateType `https://houba.dev/predicate/scan/v1`
-  (referrer artifactType `application/vnd.houba.scan.result.v1`);
+The values below are **pinned from knock's code**, not illustrative:
+- the scan result is a **signed in-toto attestation**, predicateType `https://knock.dev/predicate/scan/v1`
+  (referrer artifactType `application/vnd.knock.scan.result.v1`);
 - severity facts live in `predicate.summary` as `vuln.<bucket>` **counts** (`critical|high|medium|low|unknown`),
-  gated exactly like houba's `gate_breached` (any count > 0 at/above the threshold ⇒ fail);
-- **freshness is the signed `predicate.attested_at`** — *not* the unsigned `io.houba.scan.timestamp`
-  annotation, which `houba/domain/scan/attestation.py` documents as gc-only ("the only trustworthy
+  gated exactly like knock's `gate_breached` (any count > 0 at/above the threshold ⇒ fail);
+- **freshness is the signed `predicate.attested_at`** — *not* the unsigned `io.knock.scan.timestamp`
+  annotation, which `knock/domain/scan/attestation.py` documents as gc-only ("the only trustworthy
   freshness source"). `cosign verify-attestation` discovers, verifies, and yields the predicate in one.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
-  name: houba-scan-gate
+  name: knock-scan-gate
 spec:
   args:
     - name: image                      # full ref incl. @sha256:… — injected by Kargo from Freight
@@ -221,14 +221,14 @@ spec:
                       - { name: IMAGE,           value: "{{args.image}}" }
                       - { name: MAX_SEVERITY,    value: "{{args.max-severity}}" }
                       - { name: MAX_AGE_SECONDS, value: "{{args.max-age-seconds}}" }
-                      - { name: PREDICATE_TYPE,  value: "https://houba.dev/predicate/scan/v1" }
+                      - { name: PREDICATE_TYPE,  value: "https://knock.dev/predicate/scan/v1" }
                       - { name: SIGNER_ID,       value: "https://github.com/your-org/.*" }  # cosign identity regexp
                       - { name: OIDC_ISSUER,     value: "https://token.actions.githubusercontent.com" }
                     command: ["sh", "-eu", "-c"]
                     args:
                       - |
                         # 1. Verify ALL scan attestations, then pick the FRESHEST by attested_at
-                        #    (houba accumulates referrers — re-attaching is scan history; latest wins).
+                        #    (knock accumulates referrers — re-attaching is scan history; latest wins).
                         raw=$(cosign verify-attestation --type "$PREDICATE_TYPE" \
                                 --certificate-identity-regexp "$SIGNER_ID" \
                                 --certificate-oidc-issuer "$OIDC_ISSUER" \
@@ -268,21 +268,21 @@ the Freight digest as the `image` arg.
 spec:
   verification:
     analysisTemplates:
-      - name: houba-scan-gate
+      - name: knock-scan-gate
     args:
       - name: image
         value: ${{ imageFrom("registry.example/app").RepoDigest }}   # pinned Freight digest
 ```
 
-**The §5 fork, made concrete.** If `houba verify` lands, steps 1–3 collapse to one line — the whole
+**The §5 fork, made concrete.** If `knock verify` lands, steps 1–3 collapse to one line — the whole
 point of the primitive being that it encapsulates predicate discovery, verification, and the
 `gate_breached` + `attested_at` evaluation:
 
 ```sh
-houba verify "$IMAGE" --require scan-pass --max-severity "$MAX_SEVERITY" --max-age "${MAX_AGE_SECONDS}s"
+knock verify "$IMAGE" --require scan-pass --max-severity "$MAX_SEVERITY" --max-age "${MAX_AGE_SECONDS}s"
 ```
 
-The maquette deliberately ships the raw-tools version first (zero houba code) so the §6 test can run
+The maquette deliberately ships the raw-tools version first (zero knock code) so the §6 test can run
 before that build/no-build decision is taken.
 
 ## 7. Scope
@@ -291,17 +291,17 @@ before that build/no-build decision is taken.
 folded into the existing Argo demo; the Warehouse subscribing to the **stamped** registry, not
 upstream (free positioning — "A"); a Kargo Stage/env leg on the blast-radius demo (C).
 
-**Out of scope:** a houba promotion *step* (scanstep redux); houba re-scanning at promotion;
-replacing Kyverno with Kargo. `houba verify` is **conditional** on §5/§6.
+**Out of scope:** a knock promotion *step* (scanstep redux); knock re-scanning at promotion;
+replacing Kyverno with Kargo. `knock verify` is **conditional** on §5/§6.
 
 ## 8. C4 / ADR / examples sync obligation
 
 Per `CLAUDE.md`, a committed spec that shifts architecture must update `workspace.dsl` (+ ADR +
 examples) **in the same change**. This spec adds **Kargo as a new external reader** at context level
-(sibling to Kyverno) and, conditionally, the `houba verify` verb.
+(sibling to Kyverno) and, conditionally, the `knock verify` verb.
 
 **Recommendation:** defer the C4 / ADR / example edits until the §6 maquette validates feasibility —
-the spec deliberately makes all houba-side implementation conditional and the integration is
+the spec deliberately makes all knock-side implementation conditional and the integration is
 untested, so modelling it now would be speculative. The obligation **fires when implementation is
 green-lit** (the maquette passes and/or `verify` is approved). This deferral is itself recorded here
 so the model is not silently left to drift.
@@ -311,17 +311,17 @@ so the model is not silently left to drift.
 The diagram below is what the deferred `workspace.dsl` change would encode at **context** level: it
 documents the delta now (so the deferral is concrete), and is **not** the source of truth — the
 canonical C4 update lands when implementation is green-lit. The only structural addition is **Kargo
-as a new external reader of the referrer substrate**, sibling to the existing Kyverno reader; houba's
+as a new external reader of the referrer substrate**, sibling to the existing Kyverno reader; knock's
 role is unchanged (it publishes, it does not execute in any reader's loop).
 
 ```mermaid
 C4Context
-    title System Context -- houba, with the Kargo promotion gate in focus
+    title System Context -- knock, with the Kargo promotion gate in focus
 
     Person(dev, "Developer", "Self-service promotion; receives fail-closed feedback")
     Person(platform, "Platform / Security engineer", "Owns the front-door mandate")
 
-    System(houba, "houba", "Front door / stamper -- publishes stamp, SBOM and scan-verdict referrers; never scans, never gates")
+    System(knock, "knock", "Front door / stamper -- publishes stamp, SBOM and scan-verdict referrers; never scans, never gates")
 
     System_Ext(regis, "regis", "Scanner / governance -- produces scan verdicts on a cadence")
     System_Ext(registry, "OCI Registry", "Holds digests + signed referrers (the shared substrate)")
@@ -329,9 +329,9 @@ C4Context
     System_Ext(kyverno, "Kyverno", "Admission control -- existing reader: gates on the immutable stamp")
     System_Ext(argocd, "Argo CD", "GitOps deploy")
 
-    Rel(platform, houba, "Configures policy, runs reconcile / attach")
-    Rel(regis, houba, "Scan verdict")
-    Rel(houba, registry, "Publishes referrers (stamp / SBOM / verdict)")
+    Rel(platform, knock, "Configures policy, runs reconcile / attach")
+    Rel(regis, knock, "Scan verdict")
+    Rel(knock, registry, "Publishes referrers (stamp / SBOM / verdict)")
 
     Rel(dev, kargo, "Promotes Freight")
     Rel(kargo, registry, "Reads verdict + age at promotion (gate B)")
@@ -347,8 +347,8 @@ C4Context
 ## 9. Experiment results — VALIDATED (2026-06-24)
 
 The §6 maquette was run end-to-end on a disposable kind cluster (Kargo v1.10.7 + Argo Rollouts
-2.40.6), with **houba used as-is** (`uv run houba attach`, 0.7.0) — **no houba code changed**.
-Subject: a local image carrying houba's signed scan attestation; the Kargo Stage ran the §6.1
+2.40.6), with **knock used as-is** (`uv run knock attach`, 0.7.0) — **no knock code changed**.
+Subject: a local image carrying knock's signed scan attestation; the Kargo Stage ran the §6.1
 `AnalysisTemplate` (`job` provider, `cosign verify-attestation` + `jq`, reads only).
 
 | Scenario | Setup | AnalysisRun | Gate message (captured in the tooling image) |
@@ -357,9 +357,9 @@ Subject: a local image carrying houba's signed scan attestation; the Kargo Stage
 | **B** newer + failing | `vuln.critical=1` attached newer | **Failed** | `FAIL: 1 finding(s) at critical (>= high)` |
 | **C** fresh + passing, SLA 2s | passing scan, waited > 2s | **Failed** | `FAIL: attested 123s ago > 2s SLA -> re-scan` |
 
-⇒ **B (the promotion gate) is validated.** A Kargo verification gate reads houba's signed scan
+⇒ **B (the promotion gate) is validated.** A Kargo verification gate reads knock's signed scan
 predicate (severity via the `gate_breached` semantics, freshness via the signed `attested_at`),
-picks the freshest of accumulated attestations, and fail-closes on stale — with zero houba change.
+picks the freshest of accumulated attestations, and fail-closes on stale — with zero knock change.
 Scenario C confirms §4.1: the gate fails on **staleness alone**, severity passing.
 
 ### 9.1 Gotchas the live run surfaced (fold into the how-to)
@@ -377,13 +377,13 @@ Scenario C confirms §4.1: the gate fails on **staleness alone**, severity passi
    is disabled on this controller"). Install Argo Rollouts *first*, or `kubectl rollout restart
    deploy/kargo-controller` afterwards; re-run with `kargo verify stage`.
 
-### 9.2 Decision on `houba verify` (§5)
+### 9.2 Decision on `knock verify` (§5)
 
 The raw-tools gate works, but getting it right took four non-obvious pieces: `--insecure-ignore-tlog`
 for key mode, slurping + `max_by(.attested_at)` over accumulated attestations, replicating the
 `gate_breached` at-or-above-threshold loop, and ISO-8601 age math (GNU `date -d`, absent on
 busybox/macOS). Every gate (Kargo, a Kyverno sidecar, CI) re-implementing that is exactly the
-duplication `attach` exists to avoid. **Recommendation: lean BUILD `houba verify`** (read-only,
+duplication `attach` exists to avoid. **Recommendation: lean BUILD `knock verify`** (read-only,
 exit 0/1, exposes verdict + age) — but it stays the maintainer's call; this section records the
 evidence, not a commitment.
 

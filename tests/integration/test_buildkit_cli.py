@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from houba.adapters.buildkit_cli import BuildkitAdapter
-from houba.errors import BuildkitError
-from houba.ports.image_builder import BuildRequest
+from knock.adapters.buildkit_cli import BuildkitAdapter
+from knock.errors import BuildkitError
+from knock.ports.image_builder import BuildRequest
 
 
 def _request(tmp_path: Path) -> BuildRequest:

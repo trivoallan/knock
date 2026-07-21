@@ -3,7 +3,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: houba-dt-bootstrap
+  name: knock-dt-bootstrap
   annotations:
     argocd.argoproj.io/sync-wave: "2"   # after DT (wave 1) is synced
 spec:
@@ -12,7 +12,7 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: houba
+        app.kubernetes.io/name: knock
         app.kubernetes.io/component: dt-bootstrap
     spec:
       serviceAccountName: dt-bootstrap
@@ -23,7 +23,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: bootstrap
-          image: houba # rewritten by the kustomize images transformer; has python3
+          image: knock # rewritten by the kustomize images transformer; has python3
           command: ["python3", "/scripts/dt-bootstrap.py"]
           env:
             - name: POD_NAMESPACE
@@ -42,5 +42,5 @@ spec:
       volumes:
         - name: script
           configMap:
-            name: houba-dt-bootstrap
+            name: knock-dt-bootstrap
             defaultMode: 0755

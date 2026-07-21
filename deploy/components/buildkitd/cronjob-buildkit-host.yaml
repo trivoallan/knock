@@ -1,15 +1,15 @@
-# Point houba's buildctl client at the in-cluster buildkitd.
+# Point knock's buildctl client at the in-cluster buildkitd.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: houba-reconcile
+  name: knock-reconcile
 spec:
   jobTemplate:
     spec:
       template:
         spec:
           containers:
-            - name: houba
+            - name: knock
               env:
                 - name: BUILDKIT_HOST
-                  value: tcp://buildkitd.houba.svc.cluster.local:1234
+                  value: tcp://buildkitd.knock.svc.cluster.local:1234

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-from houba.ports.reporter import Counts, ErrorInfo
-from houba.use_cases.report import (
+from knock.ports.reporter import Counts, ErrorInfo
+from knock.use_cases.report import (
     Operation,
     PolicyReport,
     RunReport,

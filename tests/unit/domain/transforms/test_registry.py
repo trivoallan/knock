@@ -1,8 +1,8 @@
 import pytest
 
-from houba.domain.transforms.registry import BUILTIN_STEPS, DEFAULT_REGISTRY
-from houba.domain.transforms.steps import InjectCA, RewritePackageSources, SetTimezone
-from houba.errors import PolicyValidationError
+from knock.domain.transforms.registry import BUILTIN_STEPS, DEFAULT_REGISTRY
+from knock.domain.transforms.steps import InjectCA, RewritePackageSources, SetTimezone
+from knock.errors import PolicyValidationError
 
 
 def test_builtin_steps_are_the_three_primitives() -> None:

@@ -4,13 +4,13 @@
 
 This walkthrough shows a single end-to-end loop: from a disclosed CVE to
 *which images ship it*, *where they run*, and *who owns them* — joined on
-the image digest. The three legs are: houba (the stamped front door that
+the image digest. The three legs are: knock (the stamped front door that
 attaches a signed package-level SBOM as an OCI referrer to every placed
 image), Dependency-Track (the CVE-to-image leg, fed by those SBOMs), and a
-blast-radius consumer script (the image-to-runtime-to-owner join). houba is
+blast-radius consumer script (the image-to-runtime-to-owner join). knock is
 one leg; the other two are commodity. The fixture is `xz-utils 5.6.1-1` and
 `CVE-2024-3094`. A second image, `bypassed/debian-xz`, was pushed directly
-into the registry — never through houba. The demo makes both the coverage
+into the registry — never through knock. The demo makes both the coverage
 and its blind spot visible at the same time.
 
 The three legs, joined on the image digest:
@@ -20,15 +20,15 @@ flowchart LR
   eng([Platform / Security<br/>Engineer]):::person
   cve[(CVE-2024-3094<br/>OSV Debian feed)]:::feed
   src[(Source registries<br/>upstream debian-xz)]:::ext
-  houba{{houba<br/>stamped front door}}:::core
+  knock{{knock<br/>stamped front door}}:::core
   reg[(Demo registry · Zot<br/>placed + bypassed images)]:::ext
   dt[Dependency-Track<br/>CVE to image]:::ext
   blast[blast-radius consumer<br/>image to runtime to owner]:::ext
   runtime[Runtime<br/>team-a · team-b · team-c]:::ext
 
   eng -->|which images ship it, where, who owns them?| blast
-  src -->|pull| houba
-  houba -->|place · stamp · signed SBOM| reg
+  src -->|pull| knock
+  knock -->|place · stamp · signed SBOM| reg
   reg -->|SBOM referrers| dt
   cve -->|vuln data| dt
   dt -->|flags affected images| blast
@@ -42,7 +42,7 @@ flowchart LR
   classDef feed fill:#fde2e1,stroke:#b42318,color:#7a271a;
 ```
 
-houba is one leg; Dependency-Track and the blast-radius consumer are commodity.
+knock is one leg; Dependency-Track and the blast-radius consumer are commodity.
 The deployment that runs this is in [step 1](#1-bring-the-stack-up).
 
 ---
@@ -53,12 +53,12 @@ The deployment that runs this is in [step 1](#1-bring-the-stack-up).
 make local
 ```
 
-`make local` builds the houba runtime image, creates a kind cluster, and
-brings up four components inside the `houba` namespace:
+`make local` builds the knock runtime image, creates a kind cluster, and
+brings up four components inside the `knock` namespace:
 
-- **houba** — the reconcile CronJob (fires immediately via `local-run`)
-- **Zot** — the throwaway OCI registry (`registry.houba.svc.cluster.local:5000`)
-- **buildkitd** — the in-cluster build daemon houba drives for the rebuild path
+- **knock** — the reconcile CronJob (fires immediately via `local-run`)
+- **Zot** — the throwaway OCI registry (`registry.knock.svc.cluster.local:5000`)
+- **buildkitd** — the in-cluster build daemon knock drives for the rebuild path
 - **Dependency-Track** (apiserver + frontend) — the SCA platform that receives the SBOMs
 
 `make local` is the inner-loop shortcut (`kubectl apply -k`, no operators). The
@@ -70,8 +70,8 @@ The deployed topology — and the incident loop running through it:
 ```mermaid
 flowchart LR
   subgraph kind["kind cluster"]
-    subgraph nshouba["ns: houba"]
-      houba["houba reconcile<br/>CronJob"]:::houba
+    subgraph nsknock["ns: knock"]
+      knock["knock reconcile<br/>CronJob"]:::knock
       bk["buildkitd"]
       zot["Zot<br/>demo registry"]:::ext
       dt["Dependency-Track<br/>apiserver + frontend"]:::ext
@@ -91,21 +91,21 @@ flowchart LR
   end
 
   seed -->|push upstream + bypassed| zot
-  houba -->|read upstream/debian-xz| zot
-  houba -->|rebuild setTimezone| bk
-  houba -->|stamp + signed SBOM to demo/debian-xz| zot
+  knock -->|read upstream/debian-xz| zot
+  knock -->|rebuild setTimezone| bk
+  knock -->|stamp + signed SBOM to demo/debian-xz| zot
   pub -->|upload CycloneDX SBOM| dt
   blast -->|read stamps| zot
   blast -.->|join on digest| pa
   blast -.->|join on digest| pb
   blast -.->|coverage gap| pc
 
-  classDef houba fill:#1f6feb,stroke:#154da4,color:#fff;
+  classDef knock fill:#1f6feb,stroke:#154da4,color:#fff;
   classDef ext fill:#eef1f5,stroke:#69707a,color:#1f2933;
   classDef bypass fill:#fde2e1,stroke:#b42318,color:#7a271a;
 ```
 
-The `bypassed/debian-xz` path (red) never touches houba — no stamp, no SBOM — so
+The `bypassed/debian-xz` path (red) never touches knock — no stamp, no SBOM — so
 it surfaces only as the coverage gap in step 7.
 
 > **RAM:** Dependency-Track requires a 4 GB heap. Give your kind/Docker VM
@@ -115,11 +115,11 @@ it surfaces only as the coverage gap in step 7.
 
 ## 2. Parity beat
 
-houba replaces the legacy CI + registry-replication intake. One important
+knock replaces the legacy CI + registry-replication intake. One important
 difference: registry replication strips OCI 1.1 referrers (Harbor ≤ 2.15.x
 silently drops them on replication). The SBOM and cosign signature that make
 this demo work would not survive a replication hop; they survive here because
-every image comes through houba's front door.
+every image comes through knock's front door.
 
 See [Migrate from replication](../../../how-to/migrate-from-replication.md)
 for the cut-over how-to.
@@ -139,8 +139,8 @@ This builds a Dockerfile fixture in-cluster (via buildkitd) that installs
 `xz-utils 5.6.1-1` from a Debian sid snapshot. The job pushes two repos into
 the demo Zot:
 
-- `upstream/debian-xz:5.6.1` — the pretend-upstream source (what houba reads)
-- `bypassed/debian-xz:5.6.1` — the same image pushed directly, bypassing houba
+- `upstream/debian-xz:5.6.1` — the pretend-upstream source (what knock reads)
+- `bypassed/debian-xz:5.6.1` — the same image pushed directly, bypassing knock
 
 ---
 
@@ -150,12 +150,12 @@ the demo Zot:
 make local-run
 ```
 
-`local-run` fires a one-shot reconcile from the suspended CronJob. houba reads
+`local-run` fires a one-shot reconcile from the suspended CronJob. knock reads
 `xz.yml` (the `MirrorPolicy` in this directory), matches tag `5.6.1`, and for
 each placed image:
 
 1. Rebuilds it through the `setTimezone` transform (the front-door hardens)
-2. Stamps it with OCI-standard + `io.houba.*` provenance annotations
+2. Stamps it with OCI-standard + `io.knock.*` provenance annotations
    (`owners: group:default/platform`, policy identity, transform lineage)
 3. Attaches a **signed CycloneDX SBOM** as an OCI referrer (via syft + cosign)
 4. Pushes the result to `demo/debian-xz:5.6.1` in the demo Zot
@@ -218,7 +218,7 @@ uploaded, because it has no SBOM referrer.
 make blast-radius
 ```
 
-The blast-radius consumer script reads the houba stamp from each digest in the
+The blast-radius consumer script reads the knock stamp from each digest in the
 registry, then joins against the runtime inventory (the namespace/pod list
 from step 5). The report has three sections:
 
@@ -239,7 +239,7 @@ BY OWNER       group:default/platform: 1 image (2 running instances)
 **Coverage gap** — images with no stamp in the registry:
 
 ```
-⚠  bypassed/debian-xz:5.6.1  carries NO houba stamp — no owner, no SBOM
+⚠  bypassed/debian-xz:5.6.1  carries NO knock stamp — no owner, no SBOM
    RUNNING IN: team-c
 ```
 
@@ -251,11 +251,11 @@ disclosure day that is the ungovernable exposure.
 
 ## 8. Guardrail
 
-houba **never detects or blocks the backdoor.** Nothing did, pre-disclosure.
-houba rebuilds faithfully from its mirror; the value is that on disclosure day
+knock **never detects or blocks the backdoor.** Nothing did, pre-disclosure.
+knock rebuilds faithfully from its mirror; the value is that on disclosure day
 *"which images ship xz 5.6.0–5.6.1?"* is one query with an answer — including
 third-party images — because they came through the front door with a signed
-package inventory. Any claim that houba detects or prevents the backdoor is
+package inventory. Any claim that knock detects or prevents the backdoor is
 wrong.
 
 ---
@@ -271,7 +271,7 @@ source (e.g. a CMDB, a fleet agent, or a CI label).
 **(b) Pause pods, not the real image.** The workloads in step 5 are pause pods
 annotated with the placed/bypass digests — not a live pull of the image from
 the in-cluster Zot. The in-cluster registry is not node-pullable in this demo
-setup. The digest join is real: the annotation carries the exact digest houba
+setup. The digest join is real: the annotation carries the exact digest knock
 pushed, and the blast-radius script joins on that. In production the same
 join runs against a real runtime inventory (node image lists, admission
 webhook records, or a runtime scanner feed) using the same digest.

@@ -3,9 +3,9 @@ from __future__ import annotations
 import io
 import json
 
-from houba.cli.render import render_report
-from houba.ports.reporter import Counts, ErrorInfo
-from houba.use_cases.report import (
+from knock.cli.render import render_report
+from knock.ports.reporter import Counts, ErrorInfo
+from knock.use_cases.report import (
     Operation,
     PolicyReport,
     RunReport,

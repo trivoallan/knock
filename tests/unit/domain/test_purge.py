@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from houba.domain.purge import PurgeDecision, decide_purge, usage_window_start
+from knock.domain.purge import PurgeDecision, decide_purge, usage_window_start
 
 
 def test_window_start_subtracts_idle() -> None:

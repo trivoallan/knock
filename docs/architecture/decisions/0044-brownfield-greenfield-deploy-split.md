@@ -15,8 +15,8 @@ The C4 model carries two deployment views:
 
 - **DeployLocal** — `kubectl apply -k`, plain Zot, no Argo/ESO operators. The original intent was
   "inner-loop escape hatch"; post brownfield-demo reframe it is the primary audience path: any
-  team that already runs a cluster can drop houba in without adopting a full GitOps stack.
-- **DeployReference** — the Argo App-of-Apps (ESO + OpenBao wave-0, houba + buildkitd wave-1).
+  team that already runs a cluster can drop knock in without adopting a full GitOps stack.
+- **DeployReference** — the Argo App-of-Apps (ESO + OpenBao wave-0, knock + buildkitd wave-1).
   The original title called it "the demo", which made it appear to be the only recommended path.
 
 The brownfield demo reframe (2026-06-26) established that the *simpler* path is the headline —

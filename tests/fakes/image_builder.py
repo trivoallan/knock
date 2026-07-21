@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from houba.errors import BuildkitError
-from houba.ports.image_builder import BuildRequest
+from knock.errors import BuildkitError
+from knock.ports.image_builder import BuildRequest
 
 
 class FakeImageBuilder:

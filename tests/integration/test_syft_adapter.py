@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from houba.adapters.syft_cli import SyftAdapter
-from houba.errors import SyftError
+from knock.adapters.syft_cli import SyftAdapter
+from knock.errors import SyftError
 
 DIGEST_REF = "reg.example.com/x@sha256:" + "a" * 64
 
@@ -84,7 +84,7 @@ def test_generate_raises_syfterror_on_failure(
 
 
 def test_generate_rejects_unknown_format(fake_bin_path: Path) -> None:
-    from houba.errors import UnknownFormatError
+    from knock.errors import UnknownFormatError
 
     with pytest.raises(UnknownFormatError):
         SyftAdapter().generate(DIGEST_REF, ["bogus"])

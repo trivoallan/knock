@@ -2,7 +2,7 @@ import json
 import os
 import time
 
-from houba.domain.scan_queue import gap_by_owner
+from knock.domain.scan_queue import gap_by_owner
 from scripts import scan_streams
 
 r = scan_streams.connect()

@@ -14,7 +14,7 @@ produces a digest that diverges from the one the tag finally resolves to, strand
 different digest.
 
 **That hypothesis is refuted by direct evidence.** A faithful end-to-end reproduction — the real
-`houba reconcile` rebuild path, a real `buildkitd` producing the provenance index, real `syft`,
+`knock reconcile` rebuild path, a real `buildkitd` producing the provenance index, real `syft`,
 against Zot v2.1.17 (the demo registry) — placed both variants as OCI indexes and the SBOM landed on
 exactly the digest the tag resolves to, discoverable via `regctl artifact list <tag>`. `regctl image
 mod --replace` *does* change the digest (push → annotated), but it **re-points the tag** onto the new
@@ -43,16 +43,16 @@ missing signature.** Coverage becomes self-healing instead of import-only.
 
 ## What it is not (scope)
 
-- **No scan backfill.** houba does not run scanners; scan results come from `houba attach` (external,
-  upstream). houba cannot regenerate a scan, so an externally-attached scan orphaned by a past tag
+- **No scan backfill.** knock does not run scanners; scan results come from `knock attach` (external,
+  upstream). knock cannot regenerate a scan, so an externally-attached scan orphaned by a past tag
   move is out of scope. In the demo, the SCAN column is healed by re-running `make scan` against the
-  now-stable live digest — no houba code. (Per [ADR 0032](../../architecture/decisions/0032-attach-is-scan-provenance-not-a-store.md):
+  now-stable live digest — no knock code. (Per [ADR 0032](../../architecture/decisions/0032-attach-is-scan-provenance-not-a-store.md):
   attach is scan provenance, not a store.)
 - **No import-atomicity change.** Making `_do_import` refuse to "place" an image whose SBOM/sign step
   failed (to prevent *new* orphans) is a separate hardening, not needed here: the backfill heals the
   gap regardless of how it arose, and converges.
-- **No new config knob.** The backfill rides the existing `HOUBA_SBOM_FORMATS` /
-  `HOUBA_ATTEST_SIGNER` exactly as the import path does. SBOM off ⇒ nothing to backfill.
+- **No new config knob.** The backfill rides the existing `KNOCK_SBOM_FORMATS` /
+  `KNOCK_ATTEST_SIGNER` exactly as the import path does. SBOM off ⇒ nothing to backfill.
 - **No policy-schema field, no `docs/reference/` regen.** `sbom_covered` is internal reconcile
   state, not a `MirrorPolicy` field.
 - **Detection keys on the SBOM *referrer*, not its signed twin.** `sbom_covered` is true when every
@@ -65,7 +65,7 @@ missing signature.** Coverage becomes self-healing instead of import-only.
 
 ## Mechanism — mirror the signature backfill, one probe, shared attach
 
-### Domain (`houba/domain/reconcile.py`)
+### Domain (`knock/domain/reconcile.py`)
 
 - `MirrorArtifact` gains `sbom_covered: bool = True` — does the kept digest already carry every
   required SBOM referrer? Default `True` keeps SBOM-less configs and existing call sites unchanged.
@@ -80,7 +80,7 @@ missing signature.** Coverage becomes self-healing instead of import-only.
 Signature-backfill behavior is unchanged: `to_sign` is still driven by `attested`, computed exactly
 as before.
 
-### Ports (`houba/ports/registry.py` + adapter + fake)
+### Ports (`knock/ports/registry.py` + adapter + fake)
 
 - `list_referrers(image_ref, artifact_type: str | None = None)`: when `artifact_type is None`, return
   **all** referrers — one probe yields every `artifactType` present on the digest. Backward
@@ -88,7 +88,7 @@ as before.
 - `RegctlAdapter.list_referrers`: omit `--filter-artifact-type` when `artifact_type is None`.
 - `FakeRegistryPort.list_referrers`: return all seeded referrers when `artifact_type is None`.
 
-### Use-case (`houba/use_cases/reconcile.py`)
+### Use-case (`knock/use_cases/reconcile.py`)
 
 - In `_apply_plan`'s per-existing-tag loop, replace the cosign-only `attested` probe with **one
   unfiltered** `list_referrers(tag)`; let `present = {r.artifact_type for r in refs}`. Then:
@@ -108,7 +108,7 @@ as before.
   Emits an `Operation` of kind `"sbom"`. Runs as its own stage after the `_do_sign` backfill, with the
   same executor/barrier and per-variant report reassembly as `to_sign` (`sbom_by_variant`).
 
-### Reporting (`houba/ports/reporter.py` + report)
+### Reporting (`knock/ports/reporter.py` + report)
 
 - Add `"sbom"` to `OperationKind` and `sbom: int = 0` to `Counts`; extend `_counts_of` /
   `_merge_counts` and the text/JSON report rendering to surface the new kind.

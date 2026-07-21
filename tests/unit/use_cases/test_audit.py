@@ -4,11 +4,11 @@ import json
 
 import pytest
 
-from houba.config import RegistryConfig
-from houba.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE
-from houba.errors import ConfigError
-from houba.ports.registry import Referrer
-from houba.use_cases.audit import (
+from knock.config import RegistryConfig
+from knock.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE
+from knock.errors import ConfigError
+from knock.ports.registry import Referrer
+from knock.use_cases.audit import (
     audit_coverage,
     audit_exit_code,
     coverage_report_json_schema,
@@ -34,7 +34,7 @@ def _reg(**kw: object) -> FakeRegistryPort:
         repositories={_HOST: ["lib/redis"]},
         tags={_REPO: ["7.1", "7.2"]},
         annotations={
-            f"{_REPO}:7.1": {"io.houba.policy": "redis"},  # covered
+            f"{_REPO}:7.1": {"io.knock.policy": "redis"},  # covered
             f"{_REPO}:7.2": {},  # uncovered
         },
         **kw,
@@ -43,7 +43,7 @@ def _reg(**kw: object) -> FakeRegistryPort:
 
 def test_reports_covered_and_uncovered() -> None:
     report = audit_coverage(
-        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.knock"
     )
     by = {o.image_ref: o for o in report.outcomes}
     assert by[f"{_REPO}:7.1"].covered is True
@@ -62,10 +62,10 @@ def test_all_covered_passes_the_gate() -> None:
     reg = FakeRegistryPort(
         repositories={_HOST: ["lib/redis"]},
         tags={_REPO: ["7.1"]},
-        annotations={f"{_REPO}:7.1": {"io.houba.policy": "redis"}},
+        annotations={f"{_REPO}:7.1": {"io.knock.policy": "redis"}},
     )
     report = audit_coverage(
-        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.knock"
     )
     assert report.counts.uncovered == 0
     assert audit_exit_code(report, fail_on_uncovered=True) == 0
@@ -74,7 +74,7 @@ def test_all_covered_passes_the_gate() -> None:
 def test_read_error_recorded_and_reddens_exit_without_blocking_siblings() -> None:
     reg = _reg(fail_get={f"{_REPO}:7.1"})
     report = audit_coverage(
-        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.knock"
     )
     errs = [o for o in report.outcomes if o.error is not None]
     assert [o.image_ref for o in errs] == [f"{_REPO}:7.1"]
@@ -86,7 +86,7 @@ def test_read_error_recorded_and_reddens_exit_without_blocking_siblings() -> Non
 
 def test_only_registry_restricts_to_one_host() -> None:
     report = audit_coverage(
-        registry=_reg(), roster=_ROSTER, only_registry="harbor", label_prefix="io.houba"
+        registry=_reg(), roster=_ROSTER, only_registry="harbor", label_prefix="io.knock"
     )
     assert report.registries == ["harbor.example"]
 
@@ -94,14 +94,14 @@ def test_only_registry_restricts_to_one_host() -> None:
 def test_unknown_only_registry_raises_config_error() -> None:
     with pytest.raises(ConfigError):
         audit_coverage(
-            registry=_reg(), roster=_ROSTER, only_registry="nope", label_prefix="io.houba"
+            registry=_reg(), roster=_ROSTER, only_registry="nope", label_prefix="io.knock"
         )
 
 
 def test_configure_and_login_once_per_host() -> None:
     reg = _reg()
     roster = {"harbor": RegistryConfig(host=_HOST, username="robot", password="s3cret")}
-    audit_coverage(registry=reg, roster=roster, only_registry=None, label_prefix="io.houba")
+    audit_coverage(registry=reg, roster=roster, only_registry=None, label_prefix="io.knock")
     assert reg.configured == [(_HOST, True, None)]
     assert reg.logins == [(_HOST, "robot", True)]
 
@@ -112,7 +112,7 @@ def test_json_schema_is_stable_and_serializable() -> None:
 
 def test_check_signed_off_leaves_signed_none() -> None:
     report = audit_coverage(
-        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.knock"
     )
     assert all(o.signed is None for o in report.outcomes)
     assert report.counts.signed == 0
@@ -125,7 +125,7 @@ def test_check_signed_probes_only_covered_images() -> None:
         registry=reg,
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         check_signed=True,
     )
     by = {o.image_ref: o for o in report.outcomes}
@@ -140,7 +140,7 @@ def test_check_signed_covered_without_referrer_is_unsigned() -> None:
         registry=_reg(),  # no referrers seeded
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         check_signed=True,
     )
     by = {o.image_ref: o for o in report.outcomes}
@@ -154,7 +154,7 @@ def test_fail_on_unsigned_gate() -> None:
         registry=_reg(),  # 7.1 covered-but-unsigned, 7.2 uncovered
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         check_signed=True,
     )
     assert report.counts.unsigned == 1
@@ -168,7 +168,7 @@ def test_read_error_dominates_unsigned_gate() -> None:
         registry=reg,
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         check_signed=True,
     )
     # AdapterError -> 2 wins over the unsigned gate's 1
@@ -178,7 +178,7 @@ def test_read_error_dominates_unsigned_gate() -> None:
 def test_outcomes_carry_the_digest() -> None:
     reg = _reg(digests={f"{_REPO}:7.1": "sha256:d71", f"{_REPO}:7.2": "sha256:d72"})
     report = audit_coverage(
-        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.knock"
     )
     by = {o.image_ref: o for o in report.outcomes}
     assert by[f"{_REPO}:7.1"].digest == "sha256:d71"  # covered carries it
@@ -188,7 +188,7 @@ def test_outcomes_carry_the_digest() -> None:
 def test_read_error_leaves_digest_none() -> None:
     reg = _reg(fail_get={f"{_REPO}:7.1"})
     report = audit_coverage(
-        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+        registry=reg, roster=_ROSTER, only_registry=None, label_prefix="io.knock"
     )
     by = {o.image_ref: o for o in report.outcomes}
     assert by[f"{_REPO}:7.1"].error is not None
@@ -201,7 +201,7 @@ def _sbom_ref(subject: str, fmt: str = "application/spdx+json") -> Referrer:
 
 def test_check_sbom_off_leaves_sbom_none() -> None:
     report = audit_coverage(
-        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba"
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.knock"
     )
     assert all(o.sbom is None for o in report.outcomes)
     assert report.counts.with_sbom == 0
@@ -214,7 +214,7 @@ def test_check_sbom_probes_only_covered() -> None:
         registry=reg,
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         check_sbom=True,
     )
     by = {o.image_ref: o for o in report.outcomes}
@@ -229,7 +229,7 @@ def test_check_sbom_covered_without_referrer_is_without_sbom() -> None:
         registry=_reg(),
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         check_sbom=True,
     )
     by = {o.image_ref: o for o in report.outcomes}
@@ -245,7 +245,7 @@ def test_check_sbom_matches_cyclonedx_too() -> None:
         registry=reg,
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         check_sbom=True,
     )
     by = {o.image_ref: o for o in report.outcomes}
@@ -254,7 +254,7 @@ def test_check_sbom_matches_cyclonedx_too() -> None:
 
 def test_limit_caps_the_walk() -> None:
     report = audit_coverage(
-        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba", limit=1
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.knock", limit=1
     )
     assert len(report.outcomes) == 1
     assert report.counts.scanned == 1
@@ -262,14 +262,14 @@ def test_limit_caps_the_walk() -> None:
 
 def test_limit_above_total_returns_all() -> None:
     report = audit_coverage(
-        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba", limit=99
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.knock", limit=99
     )
     assert report.counts.scanned == 2
 
 
 def test_limit_none_is_unbounded() -> None:
     report = audit_coverage(
-        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.houba", limit=None
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.knock", limit=None
     )
     assert report.counts.scanned == 2
 
@@ -302,7 +302,7 @@ def test_limit_short_circuits_before_second_registry() -> None:
                 _REPO2: ["1.25"],
             },
             annotations={
-                f"{_REPO1}:7.1": {"io.houba.policy": "redis"},
+                f"{_REPO1}:7.1": {"io.knock.policy": "redis"},
                 f"{_REPO1}:7.2": {},
                 f"{_REPO2}:1.25": {},
             },
@@ -315,7 +315,7 @@ def test_limit_short_circuits_before_second_registry() -> None:
         registry=reg_limited,
         roster=roster,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         limit=1,
     )
     assert report.counts.scanned == 1
@@ -331,7 +331,7 @@ def test_limit_short_circuits_before_second_registry() -> None:
         registry=reg_full,
         roster=roster,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         limit=None,
     )
     configured_hosts_full = [host for host, _tls, _ca in reg_full.configured]

@@ -13,7 +13,7 @@ if [ "$1" = "verify-attestation" ]; then
             b64=$(python3 -c "
 import base64, json
 pred = json.loads('${FAKE_COSIGN_PRED:-}') if '${FAKE_COSIGN_PRED:-}' else {'summary': {'vuln.critical': '0'}, 'attested_at': '2026-06-24T00:00:00+00:00'}
-stmt = {'predicateType': 'https://houba.dev/predicate/scan/v1', 'predicate': pred}
+stmt = {'predicateType': 'https://knock.dev/predicate/scan/v1', 'predicate': pred}
 print(base64.b64encode(json.dumps(stmt).encode()).decode())
 ")
             echo "{\"payloadType\":\"application/vnd.in-toto+json\",\"payload\":\"${b64}\",\"signatures\":[]}"

@@ -1,7 +1,7 @@
 import pytest
 
-from houba.domain.mirror_policy import TransformStep
-from houba.domain.transforms.base import (
+from knock.domain.mirror_policy import TransformStep
+from knock.domain.transforms.base import (
     ContextFile,
     Fragment,
     ResolvedResource,

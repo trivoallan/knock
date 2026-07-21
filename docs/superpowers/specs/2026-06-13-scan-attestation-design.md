@@ -1,4 +1,4 @@
-# Scan attestation — design (sign the `houba attach` scan referrer)
+# Scan attestation — design (sign the `knock attach` scan referrer)
 
 > **Status:** pre-implementation design, all forks resolved (§2, §10). Realizes the deferred
 > signing seam (§11) of the attach-scan spec, now that the `AttestorPort` + `cosign` adapter
@@ -6,45 +6,45 @@
 
 ## 1. Context & motivation
 
-`houba attach` (PR #42) ingests an upstream scan report and attaches it as a portable OCI
-**referrer** on the image's digest, with an `io.houba.scan.*` annotation summary. That referrer is
+`knock attach` (PR #42) ingests an upstream scan report and attaches it as a portable OCI
+**referrer** on the image's digest, with an `io.knock.scan.*` annotation summary. That referrer is
 **unsigned** — useful for a query, not for *enforcement*.
 
 PR #49 delivered the heavy, signed provenance layer for the rebuild path: a generic
 **`AttestorPort`** that signs an in-toto Statement (DSSE, via `cosign`) and attaches it as a
-referrer, plus `AttestSettings` (`HOUBA_ATTEST_*`, off by default) and DI wiring
+referrer, plus `AttestSettings` (`KNOCK_ATTEST_*`, off by default) and DI wiring
 (`Container.attestor: AttestorPort | None`). The attach-scan spec explicitly reserved signing as a
 future seam (§11) precisely because that port did not exist yet.
 
-It exists now. This spec **signs the scan result**: houba emits a signed in-toto attestation whose
+It exists now. This spec **signs the scan result**: knock emits a signed in-toto attestation whose
 subject is the image digest and whose predicate carries the normalized scan summary. That turns
 "this image was scanned" from a queryable annotation into a **cryptographically verifiable** fact —
 what lets a downstream admission controller *require* a signed scan, closing the coverage-gate loop
 the roadmap cares about (*coverage gates value*).
 
-houba remains a **stamper, not a scanner**: the scan still runs upstream and is ingested. The
-attestation is houba **vouching** "this scan result, for this image digest, was attached at time T",
-recording the upstream scanner's identity — it is not a claim that houba performed the scan.
+knock remains a **stamper, not a scanner**: the scan still runs upstream and is ingested. The
+attestation is knock **vouching** "this scan result, for this image digest, was attached at time T",
+recording the upstream scanner's identity — it is not a claim that knock performed the scan.
 
 ## 2. Decisions taken (the load-bearing forks)
 
 | Fork | Decision | Why |
 |---|---|---|
-| **Predicate content** | **A houba scan predicate** — `https://houba.dev/predicate/scan/v1`, a pure-domain builder mirroring #49's transform predicate. | Carries houba's normalized value-add (the `io.houba.scan.*` summary); idiomatic (sibling of `TransformPredicate`); JSON Schema derived & frozen at `/v1`. Not cosign's generic vuln type, which drops the normalized summary; not the raw SARIF, which isn't an in-toto predicate. |
+| **Predicate content** | **A knock scan predicate** — `https://knock.dev/predicate/scan/v1`, a pure-domain builder mirroring #49's transform predicate. | Carries knock's normalized value-add (the `io.knock.scan.*` summary); idiomatic (sibling of `TransformPredicate`); JSON Schema derived & frozen at `/v1`. Not cosign's generic vuln type, which drops the normalized summary; not the raw SARIF, which isn't an in-toto predicate. |
 | **Relationship to the unsigned referrer** | **Additive** — always attach the raw SARIF referrer; *also* attach a signed attestation when a signer is configured. The predicate references the report referrer digest. | The raw report stays queryable (the `attach` value), and signing adds verifiability on top — mirrors #49 (signed attestation *alongside* the annotation stamp), not a replacement. |
-| **Trigger** | **Config-driven, off by default** — sign iff `HOUBA_ATTEST_SIGNER` is set (the already-injected `attestor` is non-`None`). No new flag, no new env var. | Parity with #49's rebuild path; empty signer ⇒ no attestation (mirrors empty `HOUBA_LABEL_PREFIX` ⇒ no labels). Purely additive, safe behind config. |
+| **Trigger** | **Config-driven, off by default** — sign iff `KNOCK_ATTEST_SIGNER` is set (the already-injected `attestor` is non-`None`). No new flag, no new env var. | Parity with #49's rebuild path; empty signer ⇒ no attestation (mirrors empty `KNOCK_LABEL_PREFIX` ⇒ no labels). Purely additive, safe behind config. |
 | **Signing-failure semantics** | **Fail the attach (exit 2).** Scan findings still exit 0; a signing failure is a `CosignError` (`AdapterError` → exit 2) that propagates. | No silent coverage gap — exactly #49's "inside the try" stance. "Found vulns" (informational, exit 0) and "couldn't sign" (infra error, exit 2) are different outcomes. |
 | **Port reuse** | **Reuse `AttestorPort` / `CosignAdapter` / `AttestSettings` / `FakeAttestor` unchanged.** `attest(subject_ref, statement: dict)` is already generic. | The novel work is a *pure domain* statement builder; signing + attaching is the unchanged I/O port. Minimal surface. |
 
 ## 3. Scope (v1)
 
 **In:**
-- `houba/domain/scan/attestation.py` (pure): a `ScanPredicate` Pydantic model + `build_scan_statement(...)` returning the in-toto Statement dict, and `scan_predicate_json_schema()`.
+- `knock/domain/scan/attestation.py` (pure): a `ScanPredicate` Pydantic model + `build_scan_statement(...)` returning the in-toto Statement dict, and `scan_predicate_json_schema()`.
 - Wire `attestor: AttestorPort | None` into `attach_scan` (use case) and the `attach` CLI command; record the result on `ScanOutcome`; render it.
 - The published scan-predicate JSON Schema; a signed `docs/examples/` walkthrough variant; a short ADR; the C4 rationale note.
 
 **Out / deferred:**
-- **Verification / admission** — houba produces the attestation; consuming it is downstream (per the roadmap and #49's scope).
+- **Verification / admission** — knock produces the attestation; consuming it is downstream (per the roadmap and #49's scope).
 - **New scanner formats** — SARIF remains the only v1 format; signing applies to it.
 - **Signing the copy/no-scan paths** — attestation attaches only where `attach` runs.
 - **Any change to the `AttestorPort` / cosign trust models** — reused as-is (keyless / kms / key).
@@ -54,15 +54,15 @@ recording the upstream scanner's identity — it is not a claim that houba perfo
 media_type=mapper.report_media_type)` and uses the returned referrer digest as the predicate's
 `report_digest`. This spec assumes #52 has merged.
 
-## 4. The scan predicate (`https://houba.dev/predicate/scan/v1`)
+## 4. The scan predicate (`https://knock.dev/predicate/scan/v1`)
 
 Pure-domain, `mypy --strict`, ≥ 90 % coverage. A Pydantic model with `extra="forbid"` so its JSON
 Schema is derived (never hand-written) and frozen as public API at `/v1` — exactly the
-`TransformPredicate` pattern (`houba/domain/attestation.py`).
+`TransformPredicate` pattern (`knock/domain/attestation.py`).
 
 ```python
-# houba/domain/scan/attestation.py
-SCAN_PREDICATE_TYPE = "https://houba.dev/predicate/scan/v1"
+# knock/domain/scan/attestation.py
+SCAN_PREDICATE_TYPE = "https://knock.dev/predicate/scan/v1"
 # in-toto Statement type is reused from domain/attestation.py: "https://in-toto.io/Statement/v1"
 
 class Scanner(BaseModel):          # extra="forbid"
@@ -72,10 +72,10 @@ class Scanner(BaseModel):          # extra="forbid"
 class ScanPredicate(BaseModel):    # extra="forbid"
     scanner: Scanner
     format: str                    # "sarif"
-    summary: dict[str, str]        # the io.houba.scan.* facts (vuln.critical, …), prefix-less keys
+    summary: dict[str, str]        # the io.knock.scan.* facts (vuln.critical, …), prefix-less keys
     report_digest: str             # digest of the raw SARIF referrer this attestation vouches for
-    attested_at: str               # ISO-8601, when houba attached/signed (clock port)
-    builder_id: str                # HOUBA_ATTEST_BUILDER_ID — houba as the attester/ingester
+    attested_at: str               # ISO-8601, when knock attached/signed (clock port)
+    builder_id: str                # KNOCK_ATTEST_BUILDER_ID — knock as the attester/ingester
 
 def build_scan_statement(
     *, subject_name: str, subject_digest: str,
@@ -88,7 +88,7 @@ def build_scan_statement(
 
 The subject is the **image digest** (the scanned artifact), shaped via the same `_subject_digest`
 helper convention as the transform statement. The predicate is **honest**: `scanner` records the
-upstream tool; `builder_id` records houba as the attester.
+upstream tool; `builder_id` records knock as the attester.
 
 ## 5. Architecture — wiring (mirrors #49's rebuild path)
 
@@ -115,7 +115,7 @@ adapters/cosign_cli.py (unchanged) ─ cosign attest --type <predicateType> --pr
 
 ## 6. Config
 
-**No new config.** Reuse `HOUBA_ATTEST_*` (`attest_signer`, `attest_builder_id`, trust-model fields)
+**No new config.** Reuse `KNOCK_ATTEST_*` (`attest_signer`, `attest_builder_id`, trust-model fields)
 and the existing `Container.attestor` wiring (`CosignAdapter(settings.attest) if settings.attest_signer
 else None`). Off by default.
 
@@ -136,25 +136,25 @@ else None`). Off by default.
   correct subject (`repo@digest`) and `report_digest` equal to the referrer digest; attestor `None` ⇒
   no attestation, raw referrer still attached, `outcome.attestation is None`; `FakeAttestor(fail=True)`
   ⇒ `CosignError` propagates (and the raw referrer was still attached first).
-- **CLI integration:** with `HOUBA_ATTEST_SIGNER=keyless` and the existing fake-bin
-  `tests/fake-bins/cosign` (shipped by #49) on PATH, `houba attach` signs — exit 0, attestation
+- **CLI integration:** with `KNOCK_ATTEST_SIGNER=keyless` and the existing fake-bin
+  `tests/fake-bins/cosign` (shipped by #49) on PATH, `knock attach` signs — exit 0, attestation
   rendered. The `CosignAdapter` is reused unchanged, so **no new adapter test** is needed.
 
 ## 9. Cross-cutting sync obligations (CLAUDE.md — same change)
 
 - **JSON Schema** — publish `scan_predicate_json_schema()` (derived), alongside the existing
-  `transform_predicate_json_schema` and the `io.houba.scan.*` annotation vocabulary.
-- **`docs/examples/`** — add a signed variant to the `scan/` walkthrough: set `HOUBA_ATTEST_*`, show
+  `transform_predicate_json_schema` and the `io.knock.scan.*` annotation vocabulary.
+- **`docs/examples/`** — add a signed variant to the `scan/` walkthrough: set `KNOCK_ATTEST_*`, show
   the resulting signed attestation referrer next to the raw report referrer.
 - **C4 / `workspace.dsl`** — #49 already models the *Signing service* / *Transparency log* external
-  systems and the houba→signer edge; scan-signing **reuses** them. No new model element — add one
+  systems and the knock→signer edge; scan-signing **reuses** them. No new model element — add one
   rationale sentence in `docs/architecture/README.md` that the signing edge now also covers `attach`.
 - **ADR** — a short decision record (sibling of ADR 0006) capturing the scan-predicate type and the
   additive/config-driven/fail-on-signing-error decisions.
 
 ## 10. Resolved decisions (carried into `writing-plans`)
 
-- **Predicate type → `https://houba.dev/predicate/scan/v1`** — project-branded vanity URI, frozen at
+- **Predicate type → `https://knock.dev/predicate/scan/v1`** — project-branded vanity URI, frozen at
   `/v1`, derived JSON Schema; same convention as the transform predicate.
 - **Additive, config-driven, off by default; signing failure → exit 2.** (§2.)
 - **`AttestorPort` reused unchanged** — only a pure domain builder + use-case/CLI wiring are added.

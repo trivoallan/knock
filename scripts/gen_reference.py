@@ -4,7 +4,7 @@
 The policy and scan-predicate pages come from the Pydantic schemas: for each, this writes
 a `*.schema.json` (the published, machine-readable contract — editor/CI validation)
 and renders a human `*.md` page with `json-schema-for-humans` under docs/reference/schemas/.
-The configuration page is a custom Markdown table of HOUBA_* vars derived from the
+The configuration page is a custom Markdown table of KNOCK_* vars derived from the
 Settings model. The CLI page is rendered from the live Typer app with Typer's own
 Markdown generator.
 Everything is committed; CI re-runs this and fails on any diff, so the reference
@@ -24,10 +24,10 @@ import typer
 import typer.main
 from typer.cli import get_docs_for_click
 
-from houba.cli.main import app as cli_app
-from houba.config import Settings, settings_json_schema
-from houba.domain.mirror_policy import mirror_policy_json_schema
-from houba.domain.scan.attestation import scan_predicate_json_schema
+from knock.cli.main import app as cli_app
+from knock.config import Settings, settings_json_schema
+from knock.domain.mirror_policy import mirror_policy_json_schema
+from knock.domain.scan.attestation import scan_predicate_json_schema
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "reference"
 SCHEMAS_OUT = OUT / "schemas"
@@ -147,7 +147,7 @@ def _write_config_table(out_dir: Path) -> None:
 
     # Always emit the machine-readable contract (published schema)
     schema = settings_json_schema()
-    schema["title"] = "houba configuration (HOUBA_*)"
+    schema["title"] = "knock configuration (KNOCK_*)"
     json_path = out_dir / "config.schema.json"
     json_path.write_text(json.dumps(schema, indent=2) + "\n")
     print("wrote config.schema.json")
@@ -157,7 +157,7 @@ def _write_config_table(out_dir: Path) -> None:
 
     rows: list[str] = []
     for field_name, field_info in Settings.model_fields.items():
-        var = f"HOUBA_{field_name.upper()}"
+        var = f"KNOCK_{field_name.upper()}"
         prop = properties.get(field_name, {})
         type_label = _type_label(prop, defs)
         default = _default_repr(field_name, field_info)
@@ -169,7 +169,7 @@ def _write_config_table(out_dir: Path) -> None:
     table = table_header + "\n" + "\n".join(rows)
 
     intro = (
-        "Each field is set as `HOUBA_<FIELD>` (the property name upper-cased). "
+        "Each field is set as `KNOCK_<FIELD>` (the property name upper-cased). "
         "JSON-typed fields (`registries`, `transform_ca_certs`, `transform_package_mirrors`, "
         "`retention`) take a JSON value whose shape is documented in the "
         "[schemas](schemas/) section. The machine-readable contract is "
@@ -189,8 +189,8 @@ def _write_cli() -> None:
     covers it like the schema pages. Sidebar position 3 = after schemas and config.
     """
     command = typer.main.get_command(cli_app)
-    ctx = typer.Context(command, info_name="houba")
-    body = get_docs_for_click(obj=command, ctx=ctx, name="houba", title="Command Line Interface")
+    ctx = typer.Context(command, info_name="knock")
+    body = get_docs_for_click(obj=command, ctx=ctx, name="knock", title="Command Line Interface")
     (OUT / "command-line-interface.md").write_text(
         f"---\nsidebar_position: 3\n---\n\n{body.strip()}\n"
     )

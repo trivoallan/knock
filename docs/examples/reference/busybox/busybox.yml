@@ -1,10 +1,10 @@
 # Smallest end-to-end example: mirror a few busybox tags into a local registry,
 # with derived moving-tag aliases. busybox is tiny, so the copy is fast.
 #
-#   uv run houba reconcile docs/examples/reference/busybox --dry-run
-#   uv run houba reconcile docs/examples/reference/busybox
+#   uv run knock reconcile docs/examples/reference/busybox --dry-run
+#   uv run knock reconcile docs/examples/reference/busybox
 #
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: busybox
@@ -16,7 +16,7 @@ spec:
   imports:
     - name: stable
       owners:
-        - group:default/platform     # stamped (comma-joined) as io.houba.owners
+        - group:default/platform     # stamped (comma-joined) as io.knock.owners
       tags:
         # Anchored to plain major.minor.patch ($): the -glibc/-musl/-uclibc image
         # variants parse as semver pre-releases, so without the anchor they leak in.

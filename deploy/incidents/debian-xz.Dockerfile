@@ -1,5 +1,5 @@
 # demo fixture — DELIBERATELY VULNERABLE (CVE-2024-3094, the XZ backdoor). Built ONLY to be
-# rebuilt + inventoried by houba: it represents an external upstream image that shipped the
+# rebuilt + inventoried by knock: it represents an external upstream image that shipped the
 # backdoored xz. The payload is inert here — it only triggers in a running sshd→systemd→liblzma
 # path, which this static image never executes. Built from public Debian archives.
 FROM debian:sid

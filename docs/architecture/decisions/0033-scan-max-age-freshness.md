@@ -6,7 +6,7 @@ Date: 2026-06-16
 
 Accepted.
 
-Builds on [15. Sign the houba attach scan referrer](0015-scan-attestation.md),
+Builds on [15. Sign the knock attach scan referrer](0015-scan-attestation.md),
 [32. `attach` is scan provenance, not a store](0032-attach-is-scan-provenance-not-a-store.md).
 
 ## Context
@@ -18,24 +18,24 @@ boundary — is a provenance-shaped **max-age** ("scanned recently"), never vuln
 
 ## Decision
 
-- **Locus = producer-side.** houba *produces* the freshness fact; the admission controller
-  *enforces* max-age against it. houba gains no audit-side freshness tier — an audit tier reports
+- **Locus = producer-side.** knock *produces* the freshness fact; the admission controller
+  *enforces* max-age against it. knock gains no audit-side freshness tier — an audit tier reports
   drift but cannot block a deploy, so it does not close the gap.
 - **Clock = the existing signed `ScanPredicate.attested_at`.** No new predicate field; the frozen
-  `/scan/v1` schema is unchanged. Semantics: *"houba (re)attached a scan at T."* Rejected: a scanner
+  `/scan/v1` schema is unchanged. Semantics: *"knock (re)attached a scan at T."* Rejected: a scanner
   report-time field (format-dependent, often absent, and a frozen-API mutation for marginal gain).
 - **Make the contract explicit and published.** A field description on `attested_at`, and the
   predicate schema is now rendered to `docs/reference/schemas/scan-predicate.md` (it was derivable but never
   published), bringing it under the CI drift gate.
-- **Precondition:** enforcement requires `HOUBA_ATTEST_SIGNER`; admission reads the *signed*
-  `attested_at`, never the unsigned `io.houba.scan.timestamp` annotation (which stays, for `gc`).
+- **Precondition:** enforcement requires `KNOCK_ATTEST_SIGNER`; admission reads the *signed*
+  `attested_at`, never the unsigned `io.knock.scan.timestamp` annotation (which stays, for `gc`).
 
 ## Consequences
 
 - No code change beyond a field description + the reference generator; no new domain logic, no schema
   field, no new CLI verb.
 - **Re-attaching an old report resets the clock** — accepted, mitigated by CI scan-then-attach
-  discipline; not houba's to police (non-goal).
+  discipline; not knock's to police (non-goal).
 - **No C4 change** (consistent with ADR 0032: admission stays the abstract consumer).
 - A Kyverno worked example demonstrates the gate (`docs/examples/admission/`).
 

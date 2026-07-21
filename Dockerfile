@@ -4,7 +4,7 @@ FROM python:3.13-alpine AS build
 
 WORKDIR /src
 COPY pyproject.toml uv.lock ./
-COPY houba ./houba
+COPY knock ./knock
 
 RUN pip install --no-cache-dir uv && uv build
 
@@ -13,27 +13,27 @@ FROM python:3.13-alpine AS runtime
 # buildctl comes from the official upstream image (static Go binary).
 COPY --from=moby/buildkit:v0.31.1 /usr/bin/buildctl /usr/bin/buildctl
 
-# regctl is houba's registry client (list/copy/annotate/delete/login/registry-set).
+# regctl is knock's registry client (list/copy/annotate/delete/login/registry-set).
 COPY --from=regclient/regctl:v0.11.5 /regctl /usr/bin/regctl
 
-# cosign signs the in-toto attestations on the rebuild path (HOUBA_ATTEST_*).
+# cosign signs the in-toto attestations on the rebuild path (KNOCK_ATTEST_*).
 COPY --from=ghcr.io/sigstore/cosign/cosign:v3.1.1 /ko-app/cosign /usr/bin/cosign
 
-# syft generates the package-level SBOM on both paths (HOUBA_SBOM_FORMATS).
+# syft generates the package-level SBOM on both paths (KNOCK_SBOM_FORMATS).
 COPY --from=anchore/syft:v1.46.0 /syft /usr/bin/syft
 
 # bash: the demo/ops Jobs (reconcile helpers, blast-radius, publish-sbom, scan-attach, seed-incident)
 # run bash scripts mounted into this image — Alpine ships only busybox sh, so add bash (regression
-# from the Alpine runtime rebase). houba itself (Python) does not need it.
+# from the Alpine runtime rebase). knock itself (Python) does not need it.
 RUN apk add --no-cache ca-certificates bash
 
 COPY --from=build /src/dist/*.whl /tmp/
 # ponytail: musl test — if pydantic-core (Rust) / pyyaml (C) fall to source build
 # here, add a builder stage with build-base+rust and copy the venv across.
-# [scan] installs redis-py for the scan-pipeline commands (houba scan worker/reaper/enqueue).
+# [scan] installs redis-py for the scan-pipeline commands (knock scan worker/reaper/enqueue).
 RUN whl=$(ls /tmp/*.whl) && pip install --no-cache-dir "${whl}[scan]" && rm "$whl"
 
-# houba's own deployment runs hardened (runAsNonRoot + readOnlyRootFilesystem).
+# knock's own deployment runs hardened (runAsNonRoot + readOnlyRootFilesystem).
 # Run as a NUMERIC non-root uid: kubelet can only satisfy runAsNonRoot from a
 # numeric image USER (a username string is rejected), and the manifests set no
 # runAsUser. HOME points at /tmp — the sole writable mount under a read-only
@@ -41,5 +41,5 @@ RUN whl=$(ls /tmp/*.whl) && pip install --no-cache-dir "${whl}[scan]" && rm "$wh
 ENV HOME=/tmp
 USER 65532:65532
 
-ENTRYPOINT ["houba"]
+ENTRYPOINT ["knock"]
 CMD ["--help"]

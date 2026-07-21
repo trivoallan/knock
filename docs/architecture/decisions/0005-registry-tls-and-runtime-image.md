@@ -10,9 +10,9 @@ Supports [2. Image transform / hardening — the rebuild path](0002-image-transf
 
 ## Context
 
-houba's whole runtime uses `regctl` as its registry client (list / inspect / copy /
+knock's whole runtime uses `regctl` as its registry client (list / inspect / copy /
 annotate / delete / login). Two gaps blocked real-world operation: the shipped image
-could not run `regctl`, and houba could not reach internal-CA or plain-HTTP registries.
+could not run `regctl`, and knock could not reach internal-CA or plain-HTTP registries.
 
 ## Decision
 

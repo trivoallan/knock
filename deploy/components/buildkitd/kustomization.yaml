@@ -1,4 +1,4 @@
-# Rebuild-path add-on: a rootless buildkitd plus the wiring that points houba at it.
+# Rebuild-path add-on: a rootless buildkitd plus the wiring that points knock at it.
 # Used by the full demo and the prod blueprint; the lite demo (copy path) omits it.
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
@@ -13,4 +13,4 @@ patches:
   - path: cronjob-buildkit-host.yaml
     target:
       kind: CronJob
-      name: houba-reconcile
+      name: knock-reconcile

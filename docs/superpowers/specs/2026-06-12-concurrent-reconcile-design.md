@@ -43,7 +43,7 @@ so per-pod execution stays single-policy-at-a-time by design.
 | D1 | **Granularity: per tag/variant, policies sequential.** | *Per-policy*: zero gain on the common "1 image / N tags" case (the cost is intra-policy). *Plan-phase only*: lowest payoff. |
 | D2 | **Primitive: `ThreadPoolExecutor` (bounded).** | *asyncio*: would force a rewrite of every adapter (`httpx` async, `asyncio.subprocess`) and the Reporter port — huge cost, nil benefit (work is already subprocess). *ProcessPoolExecutor*: builds/copies are already separate processes; adds pickling + reporting complexity for nothing. Threads give real parallelism because the subprocess/HTTP adapters release the GIL. |
 | D3 | **Failure: continue & collect (partial).** | *Fail-fast*: preserves current semantics but loses per-tag visibility at incident time. We accept a richer report model in exchange for partial results. |
-| D4 | **Limit: `HOUBA_MAX_CONCURRENCY` (default 4) + `--concurrency/-j` CLI override.** | *Default = `os.cpu_count()`*: risks saturating disk/network on a large runner, less predictable. *Config only (no flag)*: less ergonomic for tuning a single run. Builds are disk/network heavy → a low fixed default is safer. |
+| D4 | **Limit: `KNOCK_MAX_CONCURRENCY` (default 4) + `--concurrency/-j` CLI override.** | *Default = `os.cpu_count()`*: risks saturating disk/network on a large runner, less predictable. *Config only (no flag)*: less ergonomic for tuning a single run. Builds are disk/network heavy → a low fixed default is safer. |
 | D5 | **Reporter: thread-safe, interleaving accepted.** | *Buffer-and-flush ordered*: deterministic output but kills real-time feedback during multi-minute builds. Each event already carries `policy`/`variant`/`out_tag`, so interleaved lines stay attributable. |
 
 ## Architecture — scope & boundary
@@ -95,7 +95,7 @@ existing `VariantReport` / `TargetReport` tree.
 ## Failure model — continue & collect
 
 Each work unit returns a successful `Operation` **or** an `Operation` carrying an `ErrorInfo`
-(built via `houba.errors.exit_code_for`, catching broad `Exception` exactly like the current
+(built via `knock.errors.exit_code_for`, catching broad `Exception` exactly like the current
 policy-level handler).
 
 Model changes:
@@ -130,7 +130,7 @@ Model changes:
 
 ## Configuration & CLI
 
-- `config.py`: `max_concurrency: int = 4` (env `HOUBA_MAX_CONCURRENCY`), validated `>= 1`. This is the
+- `config.py`: `max_concurrency: int = 4` (env `KNOCK_MAX_CONCURRENCY`), validated `>= 1`. This is the
   only place the environment is read (house rule).
 - `cli/reconcile.py`: `--concurrency` / `-j` option that **overrides** the config value when supplied,
   passed into `reconcile_policies(max_concurrency=...)`.
@@ -138,7 +138,7 @@ Model changes:
 
 ## Thread-safety audit of the touched paths
 
-- `tempfile.TemporaryDirectory(prefix="houba-build-", dir=work_dir)` → unique dir per build → **safe**.
+- `tempfile.TemporaryDirectory(prefix="knock-build-", dir=work_dir)` → unique dir per build → **safe**.
   `work_dir.mkdir(parents=True, exist_ok=True)` under concurrency → `exist_ok=True` makes it safe.
 - The `source: dict[str, SourceArtifact]` is **read-only** during apply → safe.
 - CLI adapters are independent subprocesses. The **only** shared mutable state is the registry
@@ -183,7 +183,7 @@ Strict TDD per house rule: failing test → red → minimal impl → green → c
 - **C4 (`docs/architecture/workspace.dsl`):** no change. This adds no actor, external system, or
   integration — it is an internal execution-model change, invisible at context/landscape level.
 - **Examples (`docs/examples/`):** no new `MirrorPolicy` example. Concurrency is a runtime knob
-  (`HOUBA_MAX_CONCURRENCY` / `--concurrency`), not policy schema. If a CLI-usage doc lists flags, add
+  (`KNOCK_MAX_CONCURRENCY` / `--concurrency`), not policy schema. If a CLI-usage doc lists flags, add
   `--concurrency/-j` there.
 
 ## Relationship to horizontal scale-out

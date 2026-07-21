@@ -1,12 +1,12 @@
 from datetime import UTC, datetime, timedelta
 
-from houba.config import RegistryConfig
-from houba.domain.deletion_mode import DeletionMode
-from houba.domain.lifecycle import PENDING_DELETION_ARTIFACT_TYPE
-from houba.domain.mirror_policy import Archive, parse_mirror_policy
-from houba.ports.registry import ImageInfo, Referrer
-from houba.use_cases.reconcile import reconcile_policies
-from houba.use_cases.report import RunReport
+from knock.config import RegistryConfig
+from knock.domain.deletion_mode import DeletionMode
+from knock.domain.lifecycle import PENDING_DELETION_ARTIFACT_TYPE
+from knock.domain.mirror_policy import Archive, parse_mirror_policy
+from knock.ports.registry import ImageInfo, Referrer
+from knock.use_cases.reconcile import reconcile_policies
+from knock.use_cases.report import RunReport
 from tests.fakes.image_builder import FakeImageBuilder
 from tests.fakes.registry import FakeRegistryPort
 from tests.fakes.reporter import FakeReporter
@@ -14,7 +14,7 @@ from tests.fakes.reporter import FakeReporter
 _NOW = datetime(2026, 6, 12, tzinfo=UTC)
 
 _POLICY = """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis
@@ -72,7 +72,7 @@ def _run(reg: FakeRegistryPort, mode: str, *, global_mode: DeletionMode) -> RunR
         package_mirrors={},
         build_platform="linux/amd64",
         now=_NOW,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         dry_run_tags=False,
         dry_run_deletions=False,
         reporter=FakeReporter(),
@@ -86,7 +86,7 @@ def test_mark_mode_marks_obsolete_tag_and_does_not_delete() -> None:
     assert reg.deleted == []
     assert [m[0] for m in reg.marked] == ["harbor.corp/lib/redis:6.0.0"]
     assert reg.marked[0][1] == PENDING_DELETION_ARTIFACT_TYPE
-    assert reg.marked[0][2]["io.houba.lifecycle.state"] == "pending-deletion"
+    assert reg.marked[0][2]["io.knock.lifecycle.state"] == "pending-deletion"
 
 
 def test_mark_mode_is_idempotent_for_already_marked_tag() -> None:
@@ -143,7 +143,7 @@ def test_mark_failure_is_reported() -> None:
 
 
 _RETENTION_POLICY = """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis
@@ -166,7 +166,7 @@ spec:
 """
 
 _PLAIN_POLICY = """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis
@@ -231,7 +231,7 @@ def _run_retention(
         package_mirrors={},
         build_platform="linux/amd64",
         now=_NOW,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         dry_run_tags=False,
         dry_run_deletions=dry_run_deletions,
         reporter=FakeReporter(),
@@ -246,7 +246,7 @@ def test_retention_marks_old_excess_with_reason_and_never_deletes() -> None:
     marked = sorted(m[0] for m in reg.marked)
     assert marked == ["harbor.corp/lib/redis:7.2.0", "harbor.corp/lib/redis:7.2.1"]
     by_tag = {m[0]: m[2] for m in reg.marked}
-    assert by_tag["harbor.corp/lib/redis:7.2.0"]["io.houba.lifecycle.reason"] == "retention-excess"
+    assert by_tag["harbor.corp/lib/redis:7.2.0"]["io.knock.lifecycle.reason"] == "retention-excess"
     assert reg.deleted == []
 
 
@@ -269,7 +269,7 @@ def test_retention_unmarks_a_tag_no_longer_excess() -> None:
             Referrer(
                 digest="sha256:refR",
                 artifact_type=PENDING_DELETION_ARTIFACT_TYPE,
-                annotations={"io.houba.lifecycle.reason": "retention-excess"},
+                annotations={"io.knock.lifecycle.reason": "retention-excess"},
                 subject_tag="harbor.corp/lib/redis:7.2.3",
             )
         ]
@@ -285,7 +285,7 @@ def test_retention_keeps_existing_mark_when_still_excess() -> None:
             Referrer(
                 digest="sha256:ref0",
                 artifact_type=PENDING_DELETION_ARTIFACT_TYPE,
-                annotations={"io.houba.lifecycle.reason": "retention-excess"},
+                annotations={"io.knock.lifecycle.reason": "retention-excess"},
                 subject_tag="harbor.corp/lib/redis:7.2.0",
             )
         ]
@@ -309,13 +309,13 @@ def test_unmark_is_axis_scoped() -> None:
             Referrer(
                 digest="sha256:refS",
                 artifact_type=PENDING_DELETION_ARTIFACT_TYPE,
-                annotations={"io.houba.lifecycle.reason": "dropped-from-selection"},
+                annotations={"io.knock.lifecycle.reason": "dropped-from-selection"},
                 subject_tag="harbor.corp/lib/redis:7.2.0",
             ),
             Referrer(
                 digest="sha256:refR",
                 artifact_type=PENDING_DELETION_ARTIFACT_TYPE,
-                annotations={"io.houba.lifecycle.reason": "retention-excess"},
+                annotations={"io.knock.lifecycle.reason": "retention-excess"},
                 subject_tag="harbor.corp/lib/redis:7.2.0",
             ),
         ]

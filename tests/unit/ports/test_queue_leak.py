@@ -1,6 +1,6 @@
 import inspect
 
-from houba.ports.queue import QueuePort, Reservation
+from knock.ports.queue import QueuePort, Reservation
 
 _BANNED = ("xadd", "xack", "xautoclaim", "xtrim", "stream", "msg_id", "redis")
 

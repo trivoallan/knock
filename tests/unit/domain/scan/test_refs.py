@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from houba.domain.scan.refs import pin_to_digest, registry_host
+from knock.domain.scan.refs import pin_to_digest, registry_host
 
 D = "sha256:newdigest"
 

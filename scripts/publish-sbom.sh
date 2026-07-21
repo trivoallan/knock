@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # publish-sbom.sh — push each image's CycloneDX SBOM into Dependency-Track.
 #
-# houba attaches a package-level SBOM as an OCI referrer on every placed image — copy AND
-# rebuild — one referrer per HOUBA_SBOM_FORMATS entry (artifactType == the SBOM media type).
+# knock attaches a package-level SBOM as an OCI referrer on every placed image — copy AND
+# rebuild — one referrer per KNOCK_SBOM_FORMATS entry (artifactType == the SBOM media type).
 # With cyclonedx-json enabled, we fetch the CycloneDX referrer for each tag and upload it to DT.
-# No conversion, no glue image: just regctl + python3 (both in the houba runtime image).
-# Images with no CycloneDX referrer (e.g. the bypass image, never through houba) are skipped +
+# No conversion, no glue image: just regctl + python3 (both in the knock runtime image).
+# Images with no CycloneDX referrer (e.g. the bypass image, never through knock) are skipped +
 # logged — the same "coverage gap" semantics as blast-radius.sh.
 #
 # Inputs (environment):
-#   HOUBA_REGISTRIES  JSON roster (same secret houba uses)
+#   KNOCK_REGISTRIES  JSON roster (same secret knock uses)
 #   BLAST_REGISTRY    roster entry to scan (default: the sole entry)
 #   BLAST_REPOS       space/comma-separated repos to walk
 #   DT_URL            Dependency-Track apiserver base URL (default in-cluster service)
 #   DT_API_KEY        key with BOM_UPLOAD + PROJECT_CREATION_UPLOAD (from the dt-api-key Secret)
 set -euo pipefail
 
-: "${HOUBA_REGISTRIES:?set HOUBA_REGISTRIES (the registry roster JSON)}"
+: "${KNOCK_REGISTRIES:?set KNOCK_REGISTRIES (the registry roster JSON)}"
 : "${BLAST_REPOS:?set BLAST_REPOS (space/comma-separated repositories)}"
 export DT_URL="${DT_URL:-http://dependency-track-apiserver:8080}"
 if [ -z "${DT_API_KEY:-}" ]; then
@@ -28,7 +28,7 @@ fi
 read -r HOST TLS USER_NAME PASSWORD < <(
   BLAST_REGISTRY="${BLAST_REGISTRY:-}" python3 - <<'PY'
 import json, os, sys
-roster = json.loads(os.environ["HOUBA_REGISTRIES"])
+roster = json.loads(os.environ["KNOCK_REGISTRIES"])
 name = os.environ.get("BLAST_REGISTRY") or (next(iter(roster)) if len(roster) == 1 else "")
 if not name:
     sys.exit(f"BLAST_REGISTRY must be one of {sorted(roster)} (more than one configured)")
@@ -57,10 +57,10 @@ for repo in ${REPOS}; do
     ref="${ref_base}:${tag}"
     cdx="${WORK}/sbom.cdx.json"
 
-    # Fetch the CycloneDX SBOM referrer houba attached to this image (if any).
+    # Fetch the CycloneDX SBOM referrer knock attached to this image (if any).
     if ! regctl artifact get --subject "${ref}" --filter-artifact-type "${CDX_TYPE}" \
          > "${cdx}" 2>/dev/null || ! [ -s "${cdx}" ]; then
-      echo "» ${repo}:${tag} — no CycloneDX SBOM referrer (never through houba?) — skipped" >&2
+      echo "» ${repo}:${tag} — no CycloneDX SBOM referrer (never through knock?) — skipped" >&2
       continue
     fi
 

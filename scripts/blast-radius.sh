@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# blast-radius.sh — the reference *consumer* of houba's provenance stamp.
+# blast-radius.sh — the reference *consumer* of knock's provenance stamp.
 #
-# It reads nothing but the OCI annotations houba writes, and answers the two
+# It reads nothing but the OCI annotations knock writes, and answers the two
 # canonical incident-time questions:
 #
 #   1. "Which images derive from base digest X?"   (a CVE drops on an upstream base)
@@ -12,25 +12,25 @@
 # script is the minimal proof that the stamp alone is enough to compute blast radius.
 #
 # Inputs (environment):
-#   HOUBA_REGISTRIES   JSON roster, same secret houba uses: {"name":{"host":...,"tls_verify":...,"username":...,"password":...}}
+#   KNOCK_REGISTRIES   JSON roster, same secret knock uses: {"name":{"host":...,"tls_verify":...,"username":...,"password":...}}
 #   BLAST_REGISTRY     roster entry to scan (default: the sole entry)
 #   BLAST_REPOS        space/comma-separated repos to walk, e.g. "demo/busybox demo/redis"
 #   BLAST_BASE_DIGEST  (optional) filter the report to rows deriving from this base digest
 #   BLAST_OWNER        (optional) filter the report to rows owned by this owner (membership)
 #
 # Usage (standalone, against the local examples registry):
-#   HOUBA_REGISTRIES='{"local":{"host":"localhost:5001","tls_verify":false}}' \
+#   KNOCK_REGISTRIES='{"local":{"host":"localhost:5001","tls_verify":false}}' \
 #   BLAST_REPOS='demo/busybox' ./scripts/blast-radius.sh
 set -euo pipefail
 
-: "${HOUBA_REGISTRIES:?set HOUBA_REGISTRIES (the registry roster JSON)}"
+: "${KNOCK_REGISTRIES:?set KNOCK_REGISTRIES (the registry roster JSON)}"
 : "${BLAST_REPOS:?set BLAST_REPOS (space/comma-separated repositories to scan)}"
 
 # Resolve host + TLS + creds for the chosen registry from the roster.
 read -r HOST TLS USER_NAME PASSWORD < <(
   BLAST_REGISTRY="${BLAST_REGISTRY:-}" python3 - <<'PY'
 import json, os, sys
-roster = json.loads(os.environ["HOUBA_REGISTRIES"])
+roster = json.loads(os.environ["KNOCK_REGISTRIES"])
 name = os.environ.get("BLAST_REGISTRY") or (next(iter(roster)) if len(roster) == 1 else "")
 if not name:
     sys.exit(f"BLAST_REGISTRY must be one of {sorted(roster)} (more than one configured)")
@@ -55,7 +55,7 @@ REPOS=${BLAST_REPOS//,/ }
 ROWS_FILE=$(mktemp)
 
 # Runtime leg: list pods via the in-cluster kube API (gated on the SA token so standalone use
-# still works). Each marked pod carries houba.io/image-digest (annotation) + houba.io/cluster
+# still works). Each marked pod carries knock.io/image-digest (annotation) + knock.io/cluster
 # (label); we join those to each image's digest below. No kubectl binary needed.
 PODS_FILE=$(mktemp)
 SCAN_FILE=$(mktemp)
@@ -98,13 +98,13 @@ for repo in ${REPOS}; do
     # argv blows ARG_MAX. Empty file => no scan referrer on this digest.
     : > "${SCAN_FILE}"
     regctl artifact get --subject "${ref_base}:${tag}" \
-      --filter-artifact-type application/vnd.houba.scan.result.v1 > "${SCAN_FILE}" 2>/dev/null || true
+      --filter-artifact-type application/vnd.knock.scan.result.v1 > "${SCAN_FILE}" 2>/dev/null || true
     REF="${repo}:${tag}" DIGEST="${digest}" python3 - "${manifest}" "${SCAN_FILE}" >>"${ROWS_FILE}" <<'PY'
 import json, os, sys
 ann = (json.loads(sys.argv[1] or "{}") or {}).get("annotations", {}) or {}
 base = ann.get("org.opencontainers.image.base.digest", "-")
-owners = ann.get("io.houba.owners", "-")
-policy = ann.get("io.houba.policy", "-")
+owners = ann.get("io.knock.owners", "-")
+policy = ann.get("io.knock.policy", "-")
 def scan_summary(path):
     if not os.path.exists(path) or os.path.getsize(path) == 0:
         return "-"   # no scan referrer on this digest
@@ -143,8 +143,8 @@ pods = json.load(open(sys.argv[2])) if os.path.getsize(sys.argv[2]) else {}
 digest_clusters = {}
 for item in pods.get("items", []) or []:
     meta = item.get("metadata", {})
-    d = (meta.get("annotations", {}) or {}).get("houba.io/image-digest")
-    c = (meta.get("labels", {}) or {}).get("houba.io/cluster")
+    d = (meta.get("annotations", {}) or {}).get("knock.io/image-digest")
+    c = (meta.get("labels", {}) or {}).get("knock.io/cluster")
     if d and c:
         digest_clusters.setdefault(d, set()).add(c)
 
@@ -187,5 +187,5 @@ rollup_multi("clusters", "cluster (where it runs)")
 
 missing = [r["ref"] for r in rows if r["base"] == "-"]
 if missing:
-    print(f"\n⚠ {len(missing)} artifact(s) carry NO houba stamp (coverage gap): {', '.join(sorted(missing))}")
+    print(f"\n⚠ {len(missing)} artifact(s) carry NO knock stamp (coverage gap): {', '.join(sorted(missing))}")
 PY

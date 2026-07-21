@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from houba.domain.mirror_policy import Spec
-from houba.domain.policy_merge import ResolvedImport, resolve_imports
-from houba.errors import PolicyValidationError
+from knock.domain.mirror_policy import Spec
+from knock.domain.policy_merge import ResolvedImport, resolve_imports
+from knock.errors import PolicyValidationError
 
 
 def _spec(defaults: dict | None, imports: list[dict]) -> Spec:
@@ -243,7 +243,7 @@ def test_vendor_none_when_unset() -> None:
 
 def test_empty_owners_override_clears_defaults() -> None:
     # an explicit `owners: []` is present (not None), so it overrides the default
-    # wholesale → no owner (the stamp omits io.houba.owners).
+    # wholesale → no owner (the stamp omits io.knock.owners).
     spec = _spec(
         defaults={"owners": ["group:default/platform"]},
         imports=[{"name": "v", "tags": {}, "owners": []}],

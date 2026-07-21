@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from houba.domain.sbom import media_type_for
-from houba.errors import SyftError
-from houba.ports.sbom import SbomDocument
+from knock.domain.sbom import media_type_for
+from knock.errors import SyftError
+from knock.ports.sbom import SbomDocument
 
 FAKE_SYFT_VERSION = "9.9.9-fake"
 

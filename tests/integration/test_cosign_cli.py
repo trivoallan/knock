@@ -5,14 +5,14 @@ from pathlib import Path
 
 import pytest
 
-from houba.adapters.cosign_cli import CosignAdapter
-from houba.config import AttestSettings
-from houba.errors import CosignError
+from knock.adapters.cosign_cli import CosignAdapter
+from knock.config import AttestSettings
+from knock.errors import CosignError
 
 STATEMENT = {
     "_type": "https://in-toto.io/Statement/v1",
     "subject": [{"name": "reg/x:1", "digest": {"sha256": "out"}}],
-    "predicateType": "https://houba.dev/predicate/transform/v1",
+    "predicateType": "https://knock.dev/predicate/transform/v1",
     "predicate": {"policy": "p", "import": "i"},
 }
 SUBJECT = "reg.local/hardened/redis@sha256:out123"
@@ -37,13 +37,13 @@ def test_attest_uses_signing_config_not_service_flags(
     args = _log_text(log)
     assert "attest" in args
     assert SUBJECT in args
-    assert "--type https://houba.dev/predicate/transform/v1" in args
+    assert "--type https://knock.dev/predicate/transform/v1" in args
     assert "--predicate" in args
     assert "--signing-config" in args
     assert "--key" not in args  # keyless
     for flag in FORBIDDEN:
         assert flag not in args
-    assert ref.predicate_type == "https://houba.dev/predicate/transform/v1"
+    assert ref.predicate_type == "https://knock.dev/predicate/transform/v1"
     assert ref.referrer_digest.startswith("sha256:")
 
 
@@ -53,12 +53,12 @@ def test_kms_signer_passes_key_and_signing_config(
     log = tmp_path / "cosign.log"
     monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
     cfg = AttestSettings(
-        signer="kms", key_ref="awskms://alias/houba", rekor_url="https://rekor.corp"
+        signer="kms", key_ref="awskms://alias/knock", rekor_url="https://rekor.corp"
     )
     CosignAdapter(cfg).attest(SUBJECT, STATEMENT)
 
     args = _log_text(log)
-    assert "--key awskms://alias/houba" in args
+    assert "--key awskms://alias/knock" in args
     assert "--signing-config" in args
     for flag in FORBIDDEN:
         assert flag not in args
@@ -116,14 +116,14 @@ def test_signing_config_file_content_carries_operator_and_media_type(
     monkeypatch.setenv("FAKE_COSIGN_SCENARIO", "success")
     cfg = AttestSettings(
         signer="kms",
-        key_ref="awskms://alias/houba",
+        key_ref="awskms://alias/knock",
         rekor_url="https://rekor.corp",
-        builder_id="https://houba.example/builders/main",
+        builder_id="https://knock.example/builders/main",
     )
     CosignAdapter(cfg).attest(SUBJECT, STATEMENT)
 
     written = json.loads(captured.read_text())
     assert written["mediaType"] == "application/vnd.dev.sigstore.signingconfig.v0.2+json"
     assert written["rekorTlogUrls"][0]["url"] == "https://rekor.corp"
-    assert written["rekorTlogUrls"][0]["operator"] == "https://houba.example/builders/main"
+    assert written["rekorTlogUrls"][0]["operator"] == "https://knock.example/builders/main"
     assert written["rekorTlogConfig"] == {"selector": "ANY"}

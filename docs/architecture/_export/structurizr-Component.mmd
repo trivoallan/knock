@@ -1,35 +1,35 @@
 graph LR
   linkStyle default fill:#ffffff
 
-  subgraph diagram ["Component View: houba - houba CLI"]
+  subgraph diagram ["Component View: knock - knock CLI"]
     style diagram fill:#ffffff,stroke:#ffffff
 
-    1["<div style='font-weight: bold'>Platform / Security Engineer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Owns the hardening policy and<br />the registry roster; operates<br />houba as the single front<br />door for external images.</div>"]
+    1["<div style='font-weight: bold'>Platform / Security Engineer</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Owns the hardening policy and<br />the registry roster; operates<br />knock as the single front<br />door for external images.</div>"]
     style 1 fill:#52606d,stroke:#39434c,color:#ffffff
     2["<div style='font-weight: bold'>Product / Application Team</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Declares its imports as<br />MirrorPolicy files and<br />consumes the hardened,<br />stamped images.</div>"]
     style 2 fill:#52606d,stroke:#39434c,color:#ffffff
 
-    58("<div style='font-weight: bold'>Redis (Streams)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Message broker for the scan<br />pipeline: reconcile enqueues<br />placed-image digests; scan<br />workers claim reservations<br />via XAUTOCLAIM (consumer<br />groups). Optional — only<br />required when the houba[scan]<br />extra is installed.</div>")
+    58("<div style='font-weight: bold'>Redis (Streams)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Message broker for the scan<br />pipeline: reconcile enqueues<br />placed-image digests; scan<br />workers claim reservations<br />via XAUTOCLAIM (consumer<br />groups). Optional — only<br />required when the knock-oci[scan]<br />extra is installed.</div>")
     style 58 fill:#69707a,stroke:#494e55,color:#ffffff
     59("<div style='font-weight: bold'>Source Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>External public OCI<br />registries (Docker Hub, Quay,<br />GHCR) the images originate<br />from.</div>")
     style 59 fill:#69707a,stroke:#494e55,color:#ffffff
     60("<div style='font-weight: bold'>Destination Registries</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The organization's private<br />OCI registries — any<br />dist-spec registry (Harbor,<br />Zot, …); destination for the<br />stamped images, addressed<br />generically via regctl.</div>")
     style 60 fill:#69707a,stroke:#494e55,color:#ffffff
-    61("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
+    61("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine knock drives<br />to rebuild and harden images.</div>")
     style 61 fill:#69707a,stroke:#494e55,color:#ffffff
-    65("<div style='font-weight: bold'>Usage oracle / observability</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Answers 'was this image's<br />content seen in production<br />lately?' (e.g. Datadog).<br />Queried point-in-time by<br />houba purge; never owned by<br />houba.</div>")
+    65("<div style='font-weight: bold'>Usage oracle / observability</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Answers 'was this image's<br />content seen in production<br />lately?' (e.g. Datadog).<br />Queried point-in-time by<br />knock purge; never owned by<br />knock.</div>")
     style 65 fill:#69707a,stroke:#494e55,color:#ffffff
-    66("<div style='font-weight: bold'>Signing / Key service</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>KMS or Fulcio (keyless CA)<br />that houba's attestor uses to<br />sign in-toto attestations<br />(DSSE). Trust is org<br />configuration, not baked in.</div>")
+    66("<div style='font-weight: bold'>Signing / Key service</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>KMS or Fulcio (keyless CA)<br />that knock's attestor uses to<br />sign in-toto attestations<br />(DSSE). Trust is org<br />configuration, not baked in.</div>")
     style 66 fill:#69707a,stroke:#494e55,color:#ffffff
-    67("<div style='font-weight: bold'>Transparency log (Rekor)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Optional append-only<br />signature log; blank in<br />air-gapped orgs. houba can<br />point at one but never<br />deploys it.</div>")
+    67("<div style='font-weight: bold'>Transparency log (Rekor)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Optional append-only<br />signature log; blank in<br />air-gapped orgs. knock can<br />point at one but never<br />deploys it.</div>")
     style 67 fill:#0f766e,stroke:#0a524d,color:#ffffff
-    68("<div style='font-weight: bold'>Upstream Scanner</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces vulnerability / EOL<br />scan reports (CI pipeline,<br />registry-native scanner, or<br />scan service). houba ingests<br />the report; it never calls<br />the scanner.</div>")
+    68("<div style='font-weight: bold'>Upstream Scanner</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Produces vulnerability / EOL<br />scan reports (CI pipeline,<br />registry-native scanner, or<br />scan service). knock ingests<br />the report; it never calls<br />the scanner.</div>")
     style 68 fill:#69707a,stroke:#494e55,color:#ffffff
 
-    subgraph 4 ["houba"]
+    subgraph 4 ["knock"]
       style 4 fill:#ffffff,stroke:#154da4,color:#154da4
 
-      subgraph 5 ["houba CLI"]
+      subgraph 5 ["knock CLI"]
         style 5 fill:#ffffff,stroke:#19458c,color:#19458c
 
         subgraph group1 ["Adapters"]
@@ -43,13 +43,13 @@ graph LR
           style 46 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
           47("<div style='font-weight: bold'>SystemClock</div><div style='font-size: 70%; margin-top: 0px'>[Component: stdlib]</div><div style='font-size: 80%; margin-top:10px'>OS wall clock.</div>")
           style 47 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
-          48("<div style='font-weight: bold'>CommandUsageAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: subprocess]</div><div style='font-size: 80%; margin-top:10px'>Shells out to<br />HOUBA_USAGE_ORACLE_CMD;<br />passes digest + idle window<br />via stdin (JSON); expects<br />{last_seen} on stdout.</div>")
+          48("<div style='font-weight: bold'>CommandUsageAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: subprocess]</div><div style='font-size: 80%; margin-top:10px'>Shells out to<br />KNOCK_USAGE_ORACLE_CMD;<br />passes digest + idle window<br />via stdin (JSON); expects<br />{last_seen} on stdout.</div>")
           style 48 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
           49("<div style='font-weight: bold'>CosignAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: cosign]</div><div style='font-size: 80%; margin-top:10px'>Drives the cosign CLI via<br />subprocess (keyless | kms |<br />key).</div>")
           style 49 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
           50("<div style='font-weight: bold'>SyftAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: syft]</div><div style='font-size: 80%; margin-top:10px'>Drives the syft CLI via<br />subprocess; config-file<br />auth/TLS; lazy binary<br />resolution.</div>")
           style 50 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
-          51("<div style='font-weight: bold'>RedisStreamsAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: redis-py 8]</div><div style='font-size: 80%; margin-top:10px'>Drives redis-py 8 Streams<br />(XADD / XAUTOCLAIM / XACK /<br />XTRIM); consumer-group<br />semantics; RESP3. Part of the<br />houba[scan] optional extra.</div>")
+          51("<div style='font-weight: bold'>RedisStreamsAdapter</div><div style='font-size: 70%; margin-top: 0px'>[Component: redis-py 8]</div><div style='font-size: 80%; margin-top:10px'>Drives redis-py 8 Streams<br />(XADD / XAUTOCLAIM / XACK /<br />XTRIM); consumer-group<br />semantics; RESP3. Part of the<br />knock-oci[scan] optional extra.</div>")
           style 51 fill:#fed7aa,stroke:#b19676,color:#4a1b0c
         end
 
@@ -60,9 +60,9 @@ graph LR
           style 10 fill:#cdd5df,stroke:#8f959c,color:#1f2933
           11("<div style='font-weight: bold'>gc</div><div style='font-size: 70%; margin-top: 0px'>[Component: Typer]</div><div style='font-size: 80%; margin-top:10px'>The gc command: catalog-walks<br />the registry and deletes<br />superseded scan-result<br />referrers, keeping the N<br />newest per (tool, format)<br />older than a grace window.</div>")
           style 11 fill:#cdd5df,stroke:#8f959c,color:#1f2933
-          12("<div style='font-weight: bold'>verify</div><div style='font-size: 70%; margin-top: 0px'>[Component: Typer]</div><div style='font-size: 80%; margin-top:10px'>The verify command: reads<br />houba's facts for a digest<br />(signed scan attestation,<br />stamp, SBOM referrer) and<br />produces a single exit-0/1<br />gate verdict.</div>")
+          12("<div style='font-weight: bold'>verify</div><div style='font-size: 70%; margin-top: 0px'>[Component: Typer]</div><div style='font-size: 80%; margin-top:10px'>The verify command: reads<br />knock's facts for a digest<br />(signed scan attestation,<br />stamp, SBOM referrer) and<br />produces a single exit-0/1<br />gate verdict.</div>")
           style 12 fill:#cdd5df,stroke:#8f959c,color:#1f2933
-          13("<div style='font-weight: bold'>scan</div><div style='font-size: 70%; margin-top: 0px'>[Component: Typer]</div><div style='font-size: 80%; margin-top:10px'>The scan command group<br />(houba[scan] optional extra):<br />reserve, attach, enqueue,<br />reaper sub-commands for the<br />incremental scan pipeline.</div>")
+          13("<div style='font-weight: bold'>scan</div><div style='font-size: 70%; margin-top: 0px'>[Component: Typer]</div><div style='font-size: 80%; margin-top:10px'>The scan command group<br />(knock-oci[scan] optional extra):<br />reserve, attach, enqueue,<br />reaper sub-commands for the<br />incremental scan pipeline.</div>")
           style 13 fill:#cdd5df,stroke:#8f959c,color:#1f2933
           14("<div style='font-weight: bold'>render</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Formats the RunReport to<br />stdout (text / JSON).</div>")
           style 14 fill:#cdd5df,stroke:#8f959c,color:#1f2933
@@ -87,9 +87,9 @@ graph LR
           style 27 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
           28("<div style='font-weight: bold'>transform engine</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Pluggable transform-step<br />vocabulary: base, steps,<br />registry, render, version.</div>")
           style 28 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
-          29("<div style='font-weight: bold'>provenance stamp</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Builds the OCI-standard +<br />io.houba.* provenance<br />annotations.</div>")
+          29("<div style='font-weight: bold'>provenance stamp</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Builds the OCI-standard +<br />io.knock.* provenance<br />annotations.</div>")
           style 29 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
-          30("<div style='font-weight: bold'>coverage</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Pure stamp-presence<br />predicate: is the image<br />houba-stamped?</div>")
+          30("<div style='font-weight: bold'>coverage</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Pure stamp-presence<br />predicate: is the image<br />knock-stamped?</div>")
           style 30 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
           31("<div style='font-weight: bold'>attestation predicate</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pure Python]</div><div style='font-size: 80%; margin-top:10px'>Builds the in-toto transform<br />Statement (predicate type<br />/v1).</div>")
           style 31 fill:#b6e3d4,stroke:#7f9e94,color:#04342c
@@ -120,7 +120,7 @@ graph LR
           style 41 fill:#e9d8fd,stroke:#a397b1,color:#322659
           42("<div style='font-weight: bold'>SbomGeneratorPort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Generate package-level<br />SBOM(s) for a placed image by<br />digest; returns one document<br />per format.</div>")
           style 42 fill:#e9d8fd,stroke:#a397b1,color:#322659
-          43("<div style='font-weight: bold'>QueuePort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Enqueue a placed-image digest<br />for scanning; claim the next<br />Reservation (XAUTOCLAIM<br />semantics); ACK or NACK.<br />Optional — only present when<br />houba[scan] is installed.</div>")
+          43("<div style='font-weight: bold'>QueuePort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Enqueue a placed-image digest<br />for scanning; claim the next<br />Reservation (XAUTOCLAIM<br />semantics); ACK or NACK.<br />Optional — only present when<br />knock-oci[scan] is installed.</div>")
           style 43 fill:#e9d8fd,stroke:#a397b1,color:#322659
         end
 
@@ -149,7 +149,7 @@ graph LR
           style 25 fill:#cdd5df,stroke:#8f959c,color:#1f2933
         end
 
-        52("<div style='font-weight: bold'>config</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pydantic Settings]</div><div style='font-size: 80%; margin-top:10px'>Reads HOUBA_* settings +<br />roster resolvers — the only<br />os.environ reader.</div>")
+        52("<div style='font-weight: bold'>config</div><div style='font-size: 70%; margin-top: 0px'>[Component: Pydantic Settings]</div><div style='font-size: 80%; margin-top:10px'>Reads KNOCK_* settings +<br />roster resolvers — the only<br />os.environ reader.</div>")
         style 52 fill:#cdd5df,stroke:#8f959c,color:#1f2933
       end
 
@@ -178,7 +178,7 @@ graph LR
     7-. "<div>Runs reconciliation</div><div style='font-size: 70%'>[Python]</div>" .->17
     7-. "<div>Renders the report</div><div style='font-size: 70%'>[Python]</div>" .->14
     7-. "<div>Reads now()</div><div style='font-size: 70%'>[Protocol]</div>" .->39
-    15-. "<div>Reads HOUBA_* settings</div><div style='font-size: 70%'>[Pydantic Settings]</div>" .->52
+    15-. "<div>Reads KNOCK_* settings</div><div style='font-size: 70%'>[Pydantic Settings]</div>" .->52
     15-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->44
     15-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->45
     15-. "<div>Wires</div><div style='font-size: 70%'>[DI]</div>" .->46
@@ -212,7 +212,7 @@ graph LR
     44-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->59
     44-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->60
     45-. "<div>Submits the hardening rebuild<br />(internal CA trust, package<br />mirror)</div><div style='font-size: 70%'>[buildctl]</div>" .->61
-    48-. "<div>Queries prod usage<br />(HOUBA_USAGE_ORACLE_CMD)</div><div style='font-size: 70%'>[subprocess (stdin/stdout JSON)]</div>" .->65
+    48-. "<div>Queries prod usage<br />(KNOCK_USAGE_ORACLE_CMD)</div><div style='font-size: 70%'>[subprocess (stdin/stdout JSON)]</div>" .->65
     17-. "<div>Builds the transform<br />Statement (rebuild path)</div><div style='font-size: 70%'>[Python]</div>" .->31
     17-. "<div>Signs the transform + SBOM<br />predicates (both paths)</div><div style='font-size: 70%'>[Protocol]</div>" .->41
     17-. "<div>Builds SBOM referrer<br />annotations (both paths)</div><div style='font-size: 70%'>[Python]</div>" .->33
@@ -230,7 +230,7 @@ graph LR
     23-. "<div>Pure scan decision logic</div><div style='font-size: 70%'>[Python]</div>" .->35
     23-. "<div>Claims and ACKs/NACKs<br />reservations</div><div style='font-size: 70%'>[Protocol]</div>" .->43
     23-. "<div>Runs the scan-and-attach<br />pipeline per reservation</div><div style='font-size: 70%'>[Python]</div>" .->20
-    15-. "<div>Wires (houba[scan] only)</div><div style='font-size: 70%'>[DI]</div>" .->51
+    15-. "<div>Wires (knock-oci[scan] only)</div><div style='font-size: 70%'>[DI]</div>" .->51
     51-. "<div>Implements</div><div style='font-size: 70%'>[Protocol]</div>" .->43
     51-. "<div>XADD / XAUTOCLAIM / XACK /<br />XTRIM via RESP3</div><div style='font-size: 70%'>[redis-py 8]</div>" .->58
     2-. "<div>Pulls the hardened images</div><div style='font-size: 70%'>[docker pull (OCI)]</div>" .->60
@@ -242,7 +242,7 @@ graph LR
     6-. "<div>Registers the command</div><div style='font-size: 70%'>[Typer]</div>" .->10
     6-. "<div>Registers the command</div><div style='font-size: 70%'>[Typer]</div>" .->11
     6-. "<div>Registers the command</div><div style='font-size: 70%'>[Typer]</div>" .->12
-    6-. "<div>Registers the command group<br />(houba[scan])</div><div style='font-size: 70%'>[Typer]</div>" .->13
+    6-. "<div>Registers the command group<br />(knock-oci[scan])</div><div style='font-size: 70%'>[Typer]</div>" .->13
     9-. "<div>Builds the composition root</div><div style='font-size: 70%'>[Python]</div>" .->15
     9-. "<div>Runs the audit</div><div style='font-size: 70%'>[Python]</div>" .->19
     19-. "<div>Classifies each image</div><div style='font-size: 70%'>[Python]</div>" .->30

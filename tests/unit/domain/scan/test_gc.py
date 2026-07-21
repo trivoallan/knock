@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from houba.domain.scan.gc import select_superseded_referrers
-from houba.ports.registry import Referrer
+from knock.domain.scan.gc import select_superseded_referrers
+from knock.ports.registry import Referrer
 
 NOW = datetime(2026, 6, 16, tzinfo=UTC)
-PREFIX = "io.houba"
+PREFIX = "io.knock"
 
 
 def _ref(digest: str, *, tool: str, fmt: str, ts: datetime) -> Referrer:
     return Referrer(
         digest=digest,
-        artifact_type="application/vnd.houba.scan.result.v1",
+        artifact_type="application/vnd.knock.scan.result.v1",
         annotations={
             f"{PREFIX}.scan.tool": tool,
             f"{PREFIX}.scan.format": fmt,
@@ -61,13 +61,13 @@ def test_unparseable_or_missing_timestamp_is_ignored():
     good = _ref("sha256:good", tool="trivy", fmt="sarif", ts=NOW - timedelta(days=60))
     no_ts = Referrer(
         digest="sha256:nots",
-        artifact_type="application/vnd.houba.scan.result.v1",
+        artifact_type="application/vnd.knock.scan.result.v1",
         annotations={f"{PREFIX}.scan.tool": "trivy", f"{PREFIX}.scan.format": "sarif"},
         subject_tag="redis:7.2.0",
     )
     bad_ts = Referrer(
         digest="sha256:bad",
-        artifact_type="application/vnd.houba.scan.result.v1",
+        artifact_type="application/vnd.knock.scan.result.v1",
         annotations={
             f"{PREFIX}.scan.tool": "trivy",
             f"{PREFIX}.scan.format": "sarif",

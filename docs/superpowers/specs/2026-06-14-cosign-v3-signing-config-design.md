@@ -6,8 +6,8 @@
 
 ## Problem
 
-houba bundles **cosign v3.1.1** (Dockerfile, since #51). The `CosignAdapter`
-(`houba/adapters/cosign_cli.py`) was written against cosign v2 flags and is **broken with the
+knock bundles **cosign v3.1.1** (Dockerfile, since #51). The `CosignAdapter`
+(`knock/adapters/cosign_cli.py`) was written against cosign v2 flags and is **broken with the
 bundled binary** — i.e. the signing feature shipped in 0.4.0 does not work with its own cosign.
 
 Verified empirically against real cosign v3.1.1 (key signer, throwaway `registry:2`):
@@ -30,13 +30,13 @@ expressed via a `--signing-config` file.
 **Good news (verified, no change needed):** storage stays referrer-compatible. cosign v3 writes the
 attestation to the **OCI referrers fallback tag** `sha256-<digest>` (an OCI image index whose entries
 carry `artifactType: application/vnd.dev.sigstore.bundle.v0.3+json` and a `subject`), because
-`registry:2` does not implement the `/referrers/` API. `regctl` (houba's reader) resolves the
+`registry:2` does not implement the `/referrers/` API. `regctl` (knock's reader) resolves the
 fallback tag transparently, so **`audit` / `purge` / `attach` referrer reads are unaffected**.
 
 ## Decisions (from brainstorm)
 
 1. **Scope:** support **key / kms** fully (± optional Rekor), tested. **keyless is best-effort** —
-   `caUrls` is emitted, but keyless also needs an OIDC identity token houba does not supply, so it is
+   `caUrls` is emitted, but keyless also needs an OIDC identity token knock does not supply, so it is
    documented as unverified against v3 (not a tested path).
 2. **Construction:** a **pure domain function** builds the signing-config dict; the adapter writes it
    to a tempfile and passes `--signing-config`. (Not shelling out to `cosign signing-config create` —
@@ -74,7 +74,7 @@ Captured shapes this reproduces (from real `cosign signing-config create` v3.1.1
 - **rekor** — adds `rekorTlogUrls:[{url, majorApiVersion:1, validFor:{start}, operator}]` + `rekorTlogConfig:{selector:"ANY"}`
 - **fulcio (keyless)** — adds `caUrls:[{…same shape…}]`
 
-`operator` = `builder_id` if set, else the constant `"houba"`. `_EPOCH` is a constant so the function
+`operator` = `builder_id` if set, else the constant `"knock"`. `_EPOCH` is a constant so the function
 stays pure (no clock dependency).
 
 ### 2. `CosignAdapter.attest` rewrite
@@ -83,7 +83,7 @@ stays pure (no clock dependency).
   `--tlog-upload`).
 - **Keep** `--key <key_ref>` for `kms` / `key` signers (a key reference is *not* a service URL).
 - Build the signing-config dict via `build_signing_config(fulcio_url=cfg.fulcio_url,
-  rekor_url=cfg.rekor_url, operator=cfg.builder_id or "houba")`, write it as `signing-config.json`
+  rekor_url=cfg.rekor_url, operator=cfg.builder_id or "knock")`, write it as `signing-config.json`
   into the existing `TemporaryDirectory` (alongside `predicate.json`), and pass
   `--signing-config <path>`.
 
@@ -96,14 +96,14 @@ attest --yes --type <T> --predicate <pred.json> [--key <K>] --signing-config <cf
 Everything else (predicate tempfile, `--yes`, digest scrape from stderr/stdout, `CosignError` on
 non-zero exit, 300s timeout, lazy binary resolution) is unchanged.
 
-`AttestSettings` (config.py) is **unchanged** — the same `HOUBA_ATTEST_*` fields drive the new
+`AttestSettings` (config.py) is **unchanged** — the same `KNOCK_ATTEST_*` fields drive the new
 construction; `builder_id` is reused as the signing-config `operator`.
 
 ### 3. Tests (TDD)
 
 - **Unit (pure)** — `tests/unit/domain/test_attestation.py` (or a new module): `build_signing_config`
   for the three shapes (empty, rekor-only, fulcio+rekor), asserting the exact dict, including
-  `operator` fallback to `"houba"` and `builder_id` override.
+  `operator` fallback to `"knock"` and `builder_id` override.
 - **Integration (fake-bin)** — update `tests/fake-bins/cosign` to accept `--signing-config` / `--key`
   and log argv; `tests/integration/test_cosign_cli.py` asserts the new argv for key/kms (air-gapped)
   and the rekor case, and asserts the **forbidden** flags (`--fulcio-url`, `--rekor-url`,
@@ -119,7 +119,7 @@ construction; `builder_id` is reused as the signing-config `operator`.
 ## Out of scope / non-goals
 
 - Re-pinning cosign to v2.x (rejected in brainstorm — forward path chosen).
-- Migrating *verification* (`verify-attestation`) — houba only signs.
+- Migrating *verification* (`verify-attestation`) — knock only signs.
 - A guaranteed keyless flow (best-effort only; needs ambient OIDC).
 - TSA (timestamp authority) support — `tsaConfig` stays empty.
 
@@ -132,7 +132,7 @@ spec→ADR mirror is for architecture-shifting specs). Documentation touch: a on
 
 ## Verification (acceptance)
 
-- `uv run pytest` green; coverage gates hold (≥ 80 % global, ≥ 90 % on `houba.domain`).
-- `uv run ruff check . && uv run ruff format --check . && uv run mypy houba` clean.
+- `uv run pytest` green; coverage gates hold (≥ 80 % global, ≥ 90 % on `knock.domain`).
+- `uv run ruff check . && uv run ruff format --check . && uv run mypy knock` clean.
 - Manual (already done once, to be re-runnable via the opt-in test): real cosign v3.1.1
   `attest --key … --signing-config <empty> <ref>` → exit 0, referrer readable via `regctl`.

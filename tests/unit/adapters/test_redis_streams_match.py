@@ -1,6 +1,6 @@
 """Unit coverage for _ref_matches — the DLQ selector predicate. Pure, no Redis."""
 
-from houba.adapters.redis_streams import _ref_matches
+from knock.adapters.redis_streams import _ref_matches
 
 
 def test_full_digest_matches():

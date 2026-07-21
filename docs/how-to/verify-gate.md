@@ -1,10 +1,10 @@
 ---
-title: "Gate a promotion or CI step with houba verify"
-description: "Turn houba's signed scan attestation, provenance stamp, and SBOM referrer into a single exit-0/1 gate with houba verify."
+title: "Gate a promotion or CI step with knock verify"
+description: "Turn knock's signed scan attestation, provenance stamp, and SBOM referrer into a single exit-0/1 gate with knock verify."
 sidebar_position: 3
 ---
 
-`houba verify <ref>` is a **read-only gate**: it reads the facts that `attach` and `reconcile`
+`knock verify <ref>` is a **read-only gate**: it reads the facts that `attach` and `reconcile`
 already placed on a digest (signed scan attestation, provenance stamp, SBOM referrer) and
 produces a single pass/fail verdict. Exit 0 = every required fact passes. Exit 1 = at least one
 does not. It never scans, never writes, and never mutates the registry.
@@ -21,26 +21,26 @@ lives upstream where the scanner runs.
 
 | `--require` value | Source | Trust |
 |---|---|---|
-| `scan-pass` | the **signed** in-toto scan attestation (`houba/predicate/scan/v1`) | **signature-verified** via cosign; freshness from the signed `attested_at` |
-| `stamp` | manifest annotations | **presence** of `{HOUBA_LABEL_PREFIX}.artifact.type` |
+| `scan-pass` | the **signed** in-toto scan attestation (`knock/predicate/scan/v1`) | **signature-verified** via cosign; freshness from the signed `attested_at` |
+| `stamp` | manifest annotations | **presence** of `{KNOCK_LABEL_PREFIX}.artifact.type` |
 | `sbom` | OCI referrers | **presence** of an SPDX or CycloneDX referrer |
 
 Use `--require scan-pass,stamp,sbom` to require all three; any comma-separated subset is valid.
 
 ## 2. Gate a CI step on a signed scan
 
-Run a scan, attach it with `houba attach`, then call `houba verify` to gate the next step:
+Run a scan, attach it with `knock attach`, then call `knock verify` to gate the next step:
 
 ```bash
 # 1. Scan (run your scanner; example with Trivy)
 trivy image --format sarif --output scan.sarif.json registry.example.com/lib/redis@sha256:abc…
 
-# 2. Attach (sign and publish the attestation — needs HOUBA_ATTEST_SIGNER)
-export HOUBA_ATTEST_SIGNER=keyless
-houba attach registry.example.com/lib/redis@sha256:abc… --report scan.sarif.json
+# 2. Attach (sign and publish the attestation — needs KNOCK_ATTEST_SIGNER)
+export KNOCK_ATTEST_SIGNER=keyless
+knock attach registry.example.com/lib/redis@sha256:abc… --report scan.sarif.json
 
 # 3. Gate (exit 0 = pass, 1 = fail)
-houba verify registry.example.com/lib/redis@sha256:abc… \
+knock verify registry.example.com/lib/redis@sha256:abc… \
   --require scan-pass \
   --max-severity high \
   --max-age 7d
@@ -51,7 +51,7 @@ signature, a stale scan, or a severity breach all produce exit 1.
 
 ## 3. Wire it as a Kargo `AnalysisTemplate`
 
-[Kargo](https://kargo.io) runs an `AnalysisTemplate` as a promotion gate. Add `houba verify` as
+[Kargo](https://kargo.io) runs an `AnalysisTemplate` as a promotion gate. Add `knock verify` as
 a job-based analysis to block a promotion when the image's scan is absent, stale, or above your
 severity threshold:
 
@@ -59,7 +59,7 @@ severity threshold:
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
-  name: houba-scan-gate
+  name: knock-scan-gate
 spec:
   args:
     - name: image-ref     # the fully-qualified digest from the Kargo freight
@@ -74,7 +74,7 @@ spec:
                 restartPolicy: Never
                 containers:
                   - name: gate
-                    image: ghcr.io/trivoallan/houba:latest
+                    image: ghcr.io/trivoallan/knock:latest
                     args:
                       - verify
                       - "{{args.image-ref}}"
@@ -82,22 +82,22 @@ spec:
                       - --max-severity=high
                       - --max-age=7d
                     env:
-                      - name: HOUBA_ATTEST_SIGNER
+                      - name: KNOCK_ATTEST_SIGNER
                         value: keyless
-                      - name: HOUBA_ATTEST_VERIFY_IDENTITY
+                      - name: KNOCK_ATTEST_VERIFY_IDENTITY
                         valueFrom:
                           secretKeyRef:
-                            name: houba-attest
+                            name: knock-attest
                             key: verify-identity
-                      - name: HOUBA_ATTEST_VERIFY_OIDC_ISSUER
+                      - name: KNOCK_ATTEST_VERIFY_OIDC_ISSUER
                         valueFrom:
                           secretKeyRef:
-                            name: houba-attest
+                            name: knock-attest
                             key: verify-oidc-issuer
-                      - name: HOUBA_REGISTRIES
+                      - name: KNOCK_REGISTRIES
                         valueFrom:
                           secretKeyRef:
-                            name: houba-registries
+                            name: knock-registries
                             key: registries
 ```
 
@@ -106,54 +106,54 @@ Kargo freight so the gate is always digest-bound, never tag-based.
 
 ## 4. Keyless vs key/KMS verification
 
-`houba verify` inherits the same signer config as `houba attach`, selecting the verification
-mode from `HOUBA_ATTEST_SIGNER`.
+`knock verify` inherits the same signer config as `knock attach`, selecting the verification
+mode from `KNOCK_ATTEST_SIGNER`.
 
 ### Keyless (Sigstore / Fulcio)
 
 ```bash
-export HOUBA_ATTEST_SIGNER=keyless
-export HOUBA_ATTEST_VERIFY_IDENTITY=https://github.com/your-org/.github/workflows/sign.yml@refs/heads/main
-export HOUBA_ATTEST_VERIFY_OIDC_ISSUER=https://token.actions.githubusercontent.com
+export KNOCK_ATTEST_SIGNER=keyless
+export KNOCK_ATTEST_VERIFY_IDENTITY=https://github.com/your-org/.github/workflows/sign.yml@refs/heads/main
+export KNOCK_ATTEST_VERIFY_OIDC_ISSUER=https://token.actions.githubusercontent.com
 
-houba verify registry.example.com/lib/redis@sha256:abc… --require scan-pass
+knock verify registry.example.com/lib/redis@sha256:abc… --require scan-pass
 ```
 
-`HOUBA_ATTEST_VERIFY_IDENTITY` and `HOUBA_ATTEST_VERIFY_OIDC_ISSUER` scope the trust to the
+`KNOCK_ATTEST_VERIFY_IDENTITY` and `KNOCK_ATTEST_VERIFY_OIDC_ISSUER` scope the trust to the
 specific workflow and issuer that signed the attestation. Without them, cosign applies its
 default certificate-identity check.
 
 ### Key or KMS
 
 ```bash
-export HOUBA_ATTEST_SIGNER=key
-export HOUBA_ATTEST_KEY_REF=/etc/houba/cosign.pub   # or a KMS URI
+export KNOCK_ATTEST_SIGNER=key
+export KNOCK_ATTEST_KEY_REF=/etc/knock/cosign.pub   # or a KMS URI
 
-houba verify registry.example.com/lib/redis@sha256:abc… --require scan-pass
+knock verify registry.example.com/lib/redis@sha256:abc… --require scan-pass
 ```
 
-In key mode, `HOUBA_ATTEST_KEY_REF` points at the public key (file path or KMS reference
+In key mode, `KNOCK_ATTEST_KEY_REF` points at the public key (file path or KMS reference
 understood by cosign). The transparency-log check is skipped automatically when using a key
 (`--insecure-ignore-tlog` is set internally), so air-gapped setups work without a Rekor instance.
 
 ## 5. Roster-driven authentication
 
-`houba verify` uses the same `HOUBA_REGISTRIES` roster as all other commands.
+`knock verify` uses the same `KNOCK_REGISTRIES` roster as all other commands.
 
 ```bash
-export HOUBA_REGISTRIES='{
+export KNOCK_REGISTRIES='{
   "prod": {
     "host": "registry.example.com",
-    "username": "robot$houba",
+    "username": "robot$knock",
     "password": "s3cr3t"
   }
 }'
 
-# host-match: houba finds the roster entry for registry.example.com automatically
-houba verify registry.example.com/lib/redis@sha256:abc… --require scan-pass
+# host-match: knock finds the roster entry for registry.example.com automatically
+knock verify registry.example.com/lib/redis@sha256:abc… --require scan-pass
 
 # --registry override: force a specific roster entry
-houba verify registry.example.com/lib/redis@sha256:abc… --require scan-pass --registry prod
+knock verify registry.example.com/lib/redis@sha256:abc… --require scan-pass --registry prod
 ```
 
 With no `--registry` and no matching roster entry, `verify` falls back to ambient regctl config
@@ -165,7 +165,7 @@ With no `--registry` and no matching roster entry, `verify` falls back to ambien
 for downstream parsing in CI pipelines:
 
 ```bash
-houba verify registry.example.com/lib/redis@sha256:abc… \
+knock verify registry.example.com/lib/redis@sha256:abc… \
   --require scan-pass,stamp,sbom \
   --output json
 ```
@@ -175,7 +175,7 @@ houba verify registry.example.com/lib/redis@sha256:abc… \
   "passed": false,
   "outcomes": [
     {"requirement": "scan-pass", "passed": true, "detail": "severity <= high, attested 3600s ago"},
-    {"requirement": "stamp",     "passed": true, "detail": "houba stamp present"},
+    {"requirement": "stamp",     "passed": true, "detail": "knock stamp present"},
     {"requirement": "sbom",      "passed": false, "detail": "no SBOM referrer"}
   ]
 }
@@ -198,9 +198,9 @@ or unverifiable attestation is a gate failure (exit 1), not an error (exit 2).
 
 ## 8. Limiting scope
 
-`--require scan-pass` needs `HOUBA_ATTEST_SIGNER` configured; `--require stamp` and
+`--require scan-pass` needs `KNOCK_ATTEST_SIGNER` configured; `--require stamp` and
 `--require sbom` do not (they are presence checks, not signature verifications).
 
-`--require stamp` also needs a non-empty `HOUBA_LABEL_PREFIX` (the default is `io.houba`).
-With an empty prefix, houba emits only generic OCI annotation keys and there is no houba sentinel
+`--require stamp` also needs a non-empty `KNOCK_LABEL_PREFIX` (the default is `io.knock`).
+With an empty prefix, knock emits only generic OCI annotation keys and there is no knock sentinel
 key to check, so the requirement will always fail.

@@ -1,19 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: houba-buildkitd
+  name: knock-buildkitd
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
   source:
-    repoURL: https://github.com/trivoallan/houba
+    repoURL: https://github.com/trivoallan/knock
     targetRevision: main
     path: deploy/argocd/sources/buildkitd
   destination:
     server: https://kubernetes.default.svc
-    namespace: houba
+    namespace: knock
   syncPolicy:
     automated:
       prune: true

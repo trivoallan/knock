@@ -5,18 +5,18 @@ from pathlib import Path
 
 import pytest
 
-from houba.config import CACertSource, PackageMirror, RegistryConfig
-from houba.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
-from houba.domain.transforms.base import ResolvedResource, ResolvedStep
-from houba.domain.transforms.render import transform_version
-from houba.errors import ConfigError, PolicyValidationError, RegctlError
-from houba.ports.registry import ImageInfo
-from houba.use_cases.reconcile import (
+from knock.config import CACertSource, PackageMirror, RegistryConfig
+from knock.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
+from knock.domain.transforms.base import ResolvedResource, ResolvedStep
+from knock.domain.transforms.render import transform_version
+from knock.errors import ConfigError, PolicyValidationError, RegctlError
+from knock.ports.registry import ImageInfo
+from knock.use_cases.reconcile import (
     reconcile_policies,
     to_mirror_artifact,
     to_source_artifact,
 )
-from houba.use_cases.report import RunReport
+from knock.use_cases.report import RunReport
 from tests.fakes.image_builder import FakeImageBuilder
 from tests.fakes.registry import FakeRegistryPort
 from tests.fakes.reporter import FakeReporter
@@ -73,7 +73,7 @@ def test_to_mirror_artifact_none_when_unstamped() -> None:
 ROSTER = {"only": RegistryConfig(host="harbor.corp", username="robot", password="x")}
 
 POLICY = parse_mirror_policy("""
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: redis }
 spec:
@@ -101,7 +101,7 @@ def _run(policies, **kw):  # type: ignore[no-untyped-def]
         package_mirrors={},
         build_platform="linux/amd64",
         now=NOW,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         dry_run_tags=kw.pop("dry_run_tags", False),
         dry_run_deletions=kw.pop("dry_run_deletions", False),
         reporter=kw.pop("reporter", FakeReporter()),
@@ -118,7 +118,7 @@ def test_source_registry_in_roster_is_configured_before_listing() -> None:
     # the source `tag ls`. Source host differs from the destination host, so the config can
     # ONLY come from the source path (not the destination's apply-phase session).
     policy = parse_mirror_policy("""
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: src-insecure }
 spec:
@@ -145,7 +145,7 @@ spec:
         package_mirrors={},
         build_platform="linux/amd64",
         now=NOW,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         dry_run_tags=False,
         dry_run_deletions=False,
         reporter=FakeReporter(),
@@ -172,7 +172,7 @@ def test_reconcile_copies_new_tags_and_stamps() -> None:
     stamped = {ref: ann for ref, ann in fake.annotated}
     base_digest = stamped["harbor.corp/lib/redis:7.2.0"]["org.opencontainers.image.base.digest"]
     assert base_digest == "sha256:a"
-    assert stamped["harbor.corp/lib/redis:7.2.0"]["io.houba.owners"] == (
+    assert stamped["harbor.corp/lib/redis:7.2.0"]["io.knock.owners"] == (
         "group:default/platform-data"
     )
     assert stamped["harbor.corp/lib/redis:7.2.0"]["org.opencontainers.image.title"] == "redis"
@@ -197,7 +197,7 @@ def test_reconcile_dry_run_tags_skips_mutations() -> None:
 
 def test_reconcile_collision_raises_before_mutation() -> None:
     policy = parse_mirror_policy("""
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: redis }
 spec:
@@ -228,7 +228,7 @@ spec:
             package_mirrors={},
             build_platform="linux/amd64",
             now=NOW,
-            label_prefix="io.houba",
+            label_prefix="io.knock",
             dry_run_tags=False,
             dry_run_deletions=False,
             reporter=FakeReporter(),
@@ -295,7 +295,7 @@ def test_reconcile_deletes_orphan_stamped_tag() -> None:
 
 
 def test_reconcile_does_not_delete_unstamped_tag() -> None:
-    # An unstamped tag in the dest repo (no base.digest annotation) is NOT houba-managed
+    # An unstamped tag in the dest repo (no base.digest annotation) is NOT knock-managed
     # → it is invisible to reconcile and must never be deleted.
     fake = FakeRegistryPort(
         tags={
@@ -360,7 +360,7 @@ def test_reconcile_accumulate_and_continue_on_failure() -> None:
             return super().inspect(image_ref)
 
     boom = parse_mirror_policy("""
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: boom }
 spec:
@@ -446,7 +446,7 @@ def _run_hardened(
         package_mirrors={"corp": PackageMirror(apt="https://mirror.corp")},
         build_platform="linux/amd64",
         now=HARDENED_NOW,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         dry_run_tags=False,
         dry_run_deletions=False,
         reporter=FakeReporter(),
@@ -497,8 +497,8 @@ def test_rebuild_propagates_dest_tls_verify_to_builder() -> None:
     assert builder.requests[0].tls_verify is False
     assert registry.copied == []
     _ref, ann = registry.annotated[0]
-    assert ann["io.houba.transform.steps"] == "injectCA,rewritePackageSources"
-    assert ann["io.houba.transform.version"].startswith("sha256:")
+    assert ann["io.knock.transform.steps"] == "injectCA,rewritePackageSources"
+    assert ann["io.knock.transform.version"].startswith("sha256:")
 
 
 def test_report_op_on_rebuild_carries_transform_steps_and_out_digest() -> None:
@@ -566,7 +566,7 @@ def test_transformed_variant_skips_when_version_matches() -> None:
                 created=HARDENED_NOW,
                 annotations={
                     "org.opencontainers.image.base.digest": "sha256:src",
-                    "io.houba.transform.version": tv,
+                    "io.knock.transform.version": tv,
                 },
             ),
         },
@@ -602,7 +602,7 @@ def test_build_stages_under_work_dir(tmp_path: Path) -> None:
         },
     )
     builder = FakeImageBuilder()
-    wd = tmp_path / "houba-work"
+    wd = tmp_path / "knock-work"
     assert not wd.exists()
     _run_hardened(registry, builder, work_dir=wd)
     assert wd.exists()  # _build_variant created the configured work_dir
@@ -628,7 +628,7 @@ def test_missing_cert_file_raises_config_error_before_mutation() -> None:
 def _copy_policy() -> MirrorPolicy:
     return parse_mirror_policy(
         """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: busybox-copy
@@ -666,7 +666,7 @@ def test_configure_registry_called_once_per_host_before_copy() -> None:
         package_mirrors={},
         build_platform="linux/amd64",
         now=HARDENED_NOW,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         dry_run_tags=False,
         dry_run_deletions=False,
         reporter=FakeReporter(),
@@ -697,7 +697,7 @@ def test_reconcile_collects_partial_tag_failure() -> None:
     failed = [op for op in ops if op.error is not None]
     assert [op.out_tag for op in failed] == ["7.3.0"]
     assert failed[0].error.type == "RegctlError"
-    from houba.use_cases.report import report_exit_code
+    from knock.use_cases.report import report_exit_code
 
     assert report_exit_code(report) == 2
 
@@ -720,7 +720,7 @@ def test_reconcile_collects_alias_failure() -> None:
 
 
 CONCURRENCY_POLICY = parse_mirror_policy("""
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: redis }
 spec:
@@ -777,7 +777,7 @@ def test_reconcile_sequential_and_concurrent_agree() -> None:
 
 
 SECOND_POLICY = parse_mirror_policy("""
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: nginx }
 spec:
@@ -806,7 +806,7 @@ def _two_policy_registry() -> FakeRegistryPort:
 
 
 def test_shard_filter_applies_only_owned_policies() -> None:
-    from houba.domain.sharding import owns
+    from knock.domain.sharding import owns
 
     policies = [POLICY, SECOND_POLICY]
     owned0 = {
@@ -827,7 +827,7 @@ def test_shards_partition_the_policy_set() -> None:
 
 def test_dest_repo_collision_fails_before_any_mutation() -> None:
     clash = parse_mirror_policy("""
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: redis-clone }
 spec:

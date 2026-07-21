@@ -1,18 +1,18 @@
-# Scan-referrer garbage collection (`houba gc`) — design
+# Scan-referrer garbage collection (`knock gc`) — design
 
 *Status: design. Date: 2026-06-16.*
 
 ## Problem
 
-Every `houba attach` call writes a fresh scan-result referrer
-(`application/vnd.houba.scan.result.v1`) onto the subject image. Re-scanning the
+Every `knock attach` call writes a fresh scan-result referrer
+(`application/vnd.knock.scan.result.v1`) onto the subject image. Re-scanning the
 same image — the normal cadence as new CVEs land and CI re-runs — accumulates
 referrers without bound. Old scan results are *superseded* the moment a newer
 scan of the same kind lands, yet nothing ever removes them. This is the last
 remaining feature-side item on the roadmap (*Now — Scan-referrer GC*): it
 matters once `attach` volume grows.
 
-houba is a stamper, and the scan stamp is part of the product surface. GC keeps
+knock is a stamper, and the scan stamp is part of the product surface. GC keeps
 that surface clean: a subject should carry the *current* scan signal per scanner,
 not an ever-growing archive of stale ones.
 
@@ -28,7 +28,7 @@ not an ever-growing archive of stale ones.
 - Dry-run by default; `--apply` to delete. Per-subject failures redden the exit
   code without blocking siblings.
 - Registry-config parity with `reconcile` / `audit` / `purge` / `attach`
-  (`HOUBA_REGISTRIES` roster + `--registry` override).
+  (`KNOCK_REGISTRIES` roster + `--registry` override).
 
 ## Non-goals (v1)
 
@@ -71,7 +71,7 @@ cli/gc.py (Typer, thin)
 5. Aggregate a `GcReport` (per subject: kept / collected / errors), with the exit
    code derived as in `purge`.
 
-## Domain core — `houba/domain/scan/gc.py` (pure)
+## Domain core — `knock/domain/scan/gc.py` (pure)
 
 All decision logic lives here; testable without I/O, under the 90 % `domain`
 coverage bar.
@@ -106,7 +106,7 @@ A private `_ParsedReferrer(digest, tool, format, timestamp)` dataclass stays
 module-local. Dependency `domain/scan/gc.py → domain/retention.py` is
 domain→domain, allowed.
 
-## Use case — `houba/use_cases/gc.py`
+## Use case — `knock/use_cases/gc.py`
 
 Twin of `purge`'s walk, without the oracle.
 
@@ -136,7 +136,7 @@ def gc_referrers(*, registry, roster, only_registry, label_prefix,
   (today it lives in `attach.py`) so `attach` and `gc` share it without a
   use-case→use-case coupling.
 
-## CLI — `houba/cli/gc.py` (thin)
+## CLI — `knock/cli/gc.py` (thin)
 
 Flags: `--registry`, `--keep` (default 2), `--older-than-days` (default 30),
 `--apply` (dry-run by default), `--log-format`. Builds the composition root via
@@ -144,11 +144,11 @@ Flags: `--registry`, `--keep` (default 2), `--older-than-days` (default 30),
 exit code. New verb in the lineup: `reconcile · purge · attach · audit · version · gc`.
 
 No new env var: thresholds are flags; everything else is driven by the existing
-`HOUBA_REGISTRIES` / `HOUBA_LABEL_PREFIX`.
+`KNOCK_REGISTRIES` / `KNOCK_LABEL_PREFIX`.
 
 ## Errors & exit codes
 
-Reuse the established hierarchy. Per-subject `HoubaError` is captured into
+Reuse the established hierarchy. Per-subject `KnockError` is captured into
 `GcOutcome.error` via the shared `ErrorInfo(type, message, exit_code_for(exc))`
 pattern; `gc_exit_code` returns the worst per-candidate exit code, else 0 — a
 direct copy of `purge_exit_code`.
@@ -173,7 +173,7 @@ direct copy of `purge_exit_code`.
   **Hexagon** views; refresh the Mermaid exports under `docs/architecture/_export/`.
 - **ADR**: thin `docs/architecture/decisions/0028-scan-referrer-gc.md` linking to
   this spec.
-- **Examples**: a short `docs/examples/` page showing `houba gc` (dry-run vs
+- **Examples**: a short `docs/examples/` page showing `knock gc` (dry-run vs
   `--apply`) plus the README walkthrough.
 - **Roadmap**: move "Scan-referrer GC" from *Now* to *Delivered* in
   `docs/roadmap.md`.

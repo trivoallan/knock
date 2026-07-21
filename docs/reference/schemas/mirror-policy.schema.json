@@ -293,7 +293,7 @@
             }
           ],
           "default": null,
-          "description": "Owners as Backstage entity refs (stamped as `io.houba.owners`).",
+          "description": "Owners as Backstage entity refs (stamped as `io.knock.owners`).",
           "title": "Owners"
         },
         "vendor": {
@@ -321,7 +321,7 @@
       "additionalProperties": false,
       "properties": {
         "name": {
-          "description": "Policy name; stamped as `io.houba.policy` and used for collision checks.",
+          "description": "Policy name; stamped as `io.knock.policy` and used for collision checks.",
           "title": "Name",
           "type": "string"
         },
@@ -584,8 +584,8 @@
   "additionalProperties": false,
   "properties": {
     "apiVersion": {
-      "const": "houba.io/v1alpha1",
-      "description": "API version; pinned to `houba.io/v1alpha1`.",
+      "const": "knock.io/v1alpha1",
+      "description": "API version; pinned to `knock.io/v1alpha1`.",
       "title": "Apiversion",
       "type": "string"
     },

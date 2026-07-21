@@ -4,8 +4,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from houba.domain.expand import ExpandedImport, VariantPlan
-from houba.domain.reconcile import (
+from knock.domain.expand import ExpandedImport, VariantPlan
+from knock.domain.reconcile import (
     ImportReconcile,
     MirrorArtifact,
     SourceArtifact,
@@ -14,7 +14,7 @@ from houba.domain.reconcile import (
     reconcile_import,
     reconcile_variant,
 )
-from houba.domain.retention import ResolvedRetention
+from knock.domain.retention import ResolvedRetention
 
 NOW = datetime(2026, 6, 11, tzinfo=UTC)
 GRACE = timedelta(days=7)

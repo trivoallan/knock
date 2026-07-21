@@ -9,9 +9,9 @@
 The reference deployment ships two demo tiers and they sit at opposite ends of a wide gap:
 
 - **`local-lite`** — copy path only, into a throwaway in-cluster `registry:2` (anonymous HTTP). Fast, fully self-contained, no buildkitd. It never exercises a transform.
-- **`local-full`** — the rebuild path: buildkitd, `injectCA` + `rewritePackageSources`, pushing to a Harbor that the operator installs separately, and requiring org config (`HOUBA_TRANSFORM_CA_CERTS`, `HOUBA_TRANSFORM_PACKAGE_MIRRORS`).
+- **`local-full`** — the rebuild path: buildkitd, `injectCA` + `rewritePackageSources`, pushing to a Harbor that the operator installs separately, and requiring org config (`KNOCK_TRANSFORM_CA_CERTS`, `KNOCK_TRANSFORM_PACKAGE_MIRRORS`).
 
-There is **no lightweight way to see a transform actually run**. The moment a policy carries a `transform:` block, `reconcile` dispatches through `_build_variant(builder=…)` (buildkit) instead of `registry.copy` (`houba/use_cases/reconcile.py:206`), so transforms cannot run on the copy-only `local-lite` stack. Demonstrating one currently means standing up Harbor and supplying CA/mirror config — too much friction for "show me the rebuild + stamp story".
+There is **no lightweight way to see a transform actually run**. The moment a policy carries a `transform:` block, `reconcile` dispatches through `_build_variant(builder=…)` (buildkit) instead of `registry.copy` (`knock/use_cases/reconcile.py:206`), so transforms cannot run on the copy-only `local-lite` stack. Demonstrating one currently means standing up Harbor and supplying CA/mirror config — too much friction for "show me the rebuild + stamp story".
 
 ## Goal
 
@@ -48,7 +48,7 @@ Add a third tier, **`local-transform`**, that runs the **rebuild path** (buildki
 This example does double duty: it shows the rebuild path **and** the per-variant `suffix` feature. A single source tag (`bookworm-slim`) is fanned out into **two regional variants**, each with its own `setTimezone` and `suffix`. Both variants rebuild from the *same* source digest, so they share one `base.digest` but carry different `transform.version` — the blast-radius report shows **2 images → 1 `base.digest`**:
 
 ```yaml
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: debian-tz
@@ -78,18 +78,18 @@ spec:
           repository: debian
 ```
 
-Produces `demo/debian:bookworm-slim-eu` and `demo/debian:bookworm-slim-us`. (Per `houba/domain/variants.py`, an explicit variant uses its own `transform`; the suffix is applied to every output tag and alias of that variant during reconcile.) It must validate against the published policy JSON Schema (same gate as the other examples).
+Produces `demo/debian:bookworm-slim-eu` and `demo/debian:bookworm-slim-us`. (Per `knock/domain/variants.py`, an explicit variant uses its own `transform`; the suffix is applied to every output tag and alias of that variant during reconcile.) It must validate against the published policy JSON Schema (same gate as the other examples).
 
 ### New overlay — `deploy/overlays/local-transform/`
 
 Composition = **lite's registry plumbing + full's rebuild engine**:
 
 - `kustomization.yaml`
-  - `namespace: houba`
+  - `namespace: knock`
   - `resources: [../../base, registry.yaml, secret-registries.yaml]`
   - `components: [../../components/buildkitd]` (brings the buildkitd Deployment + Service + the `BUILDKIT_HOST` patch, same as `local-full`)
   - `patches: [patch-suspend.yaml, patch-buildkitd-insecure.yaml]`
-  - `configMapGenerator` (merge) overriding `houba-config`:
+  - `configMapGenerator` (merge) overriding `knock-config`:
     - `POLICY_DIR=/policies/current/docs/examples/timezone`
     - `BLAST_REPOS=demo/debian`
   - `configMapGenerator` for the buildkitd config (`buildkitd.toml`, see below)
@@ -97,12 +97,12 @@ Composition = **lite's registry plumbing + full's rebuild engine**:
 
 ### The one hard part — buildkit pushing to a plain-HTTP registry
 
-The buildkit adapter emits `--output=type=image,name=…,push=true` with **no** `registry.insecure` flag (`houba/adapters/buildkit_cli.py:41`), and the shared buildkitd Deployment mounts **no config**, so buildkitd defaults to HTTPS. Pushing the rebuilt image to `registry.houba.svc.cluster.local:5000` (anonymous HTTP) would fail with an HTTP-vs-HTTPS error.
+The buildkit adapter emits `--output=type=image,name=…,push=true` with **no** `registry.insecure` flag (`knock/adapters/buildkit_cli.py:41`), and the shared buildkitd Deployment mounts **no config**, so buildkitd defaults to HTTPS. Pushing the rebuilt image to `registry.knock.svc.cluster.local:5000` (anonymous HTTP) would fail with an HTTP-vs-HTTPS error.
 
 **Decision (chosen): overlay-local buildkitd config.** Mark the in-cluster registry as plain HTTP in a `buildkitd.toml` that lives **only in this overlay**:
 
 ```toml
-[registry."registry.houba.svc.cluster.local:5000"]
+[registry."registry.knock.svc.cluster.local:5000"]
   http = true
 ```
 
@@ -150,9 +150,9 @@ demo-transform: up-transform demo-transform-run ## Rebuild stack + one reconcile
 	$(MAKE) blast-radius OVERLAY=deploy/overlays/local-transform
 
 demo-transform-run: ## Fire a one-shot rebuild reconcile
-	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
-	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=600s
+	-$(KUBECTL) -n $(NS) delete job knock-reconcile-run --ignore-not-found
+	$(KUBECTL) -n $(NS) create job knock-reconcile-run --from=cronjob/knock-reconcile
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/knock-reconcile-run --timeout=600s
 ```
 
 `blast-radius` gains `OVERLAY ?= deploy/overlays/local-lite` so `demo-lite` keeps its current behaviour while `demo-transform` re-applies the transform overlay. `.PHONY` updated with the three new targets.
@@ -170,7 +170,7 @@ This tier is manifests + one example policy; there is no new application code, s
 1. **Schema** — `docs/examples/timezone/debian.yml` validates against the published policy JSON Schema (same check the other examples pass).
 2. **Kustomize build** — `kustomize build deploy/overlays/local-transform` renders without error; the rendered buildkitd Deployment mounts `buildkitd-config` at `/etc/buildkit`.
 3. **End-to-end** — `make demo-transform`:
-   - `houba-reconcile-run` Job reaches `Complete` (the rebuild + push to the HTTP registry succeeds — proves the `buildkitd.toml` `http = true` took effect).
+   - `knock-reconcile-run` Job reaches `Complete` (the rebuild + push to the HTTP registry succeeds — proves the `buildkitd.toml` `http = true` took effect).
    - Both variant tags exist: `demo/debian:bookworm-slim-eu` and `demo/debian:bookworm-slim-us` (proves suffix application).
    - Each rebuilt image carries the stamps: `…transform.steps` includes `setTimezone`, `…transform.version` is set, `…base.digest` equals the source digest — and the two variants share the **same** `base.digest` but differ in `transform.version`.
    - `docker run --rm demo/debian:bookworm-slim-eu date` shows CEST/CET (`Europe/Paris`) and `…-us date` shows EST/EDT (`America/New_York`) — the transforms are **effective**, not just stamped.
@@ -178,7 +178,7 @@ This tier is manifests + one example policy; there is no new application code, s
 
 ### Pre-merge verification caveat
 
-`git-sync` in the base CronJob clones `POLICY_REPO_REF` (default `main`) from `POLICY_REPO_URL`, so the deployed demo only sees `docs/examples/timezone/` **once it is on `main`**. To run `make demo-transform` from the feature branch before merge, override the ref in the overlay's `houba-config` `configMapGenerator` (`POLICY_REPO_REF=<feature-branch>`) — and revert it (or drop the override) before merging so the tier tracks `main` like the others. This is a verification-time concern only, not part of the shipped overlay.
+`git-sync` in the base CronJob clones `POLICY_REPO_REF` (default `main`) from `POLICY_REPO_URL`, so the deployed demo only sees `docs/examples/timezone/` **once it is on `main`**. To run `make demo-transform` from the feature branch before merge, override the ref in the overlay's `knock-config` `configMapGenerator` (`POLICY_REPO_REF=<feature-branch>`) — and revert it (or drop the override) before merging so the tier tracks `main` like the others. This is a verification-time concern only, not part of the shipped overlay.
 
 ## Risks
 

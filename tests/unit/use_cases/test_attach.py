@@ -5,11 +5,11 @@ from datetime import UTC, datetime
 
 import pytest
 
-from houba.config import RegistryConfig
-from houba.domain.scan.summary import Severity
-from houba.errors import ConfigError, CosignError, UnknownFormatError
-from houba.ports.registry import ImageInfo
-from houba.use_cases.attach import (
+from knock.config import RegistryConfig
+from knock.domain.scan.summary import Severity
+from knock.errors import ConfigError, CosignError, UnknownFormatError
+from knock.ports.registry import ImageInfo
+from knock.use_cases.attach import (
     SCAN_RESULT_ARTIFACT_TYPE,
     ScanOutcome,
     attach_exit_code,
@@ -48,7 +48,7 @@ def _registry() -> FakeRegistryPort:
 
 def test_attach_stamps_referrer_on_digest() -> None:
     reg = _registry()
-    outcome = attach_scan(REF, SARIF, registry=reg, clock=FakeClock(TS), label_prefix="io.houba")
+    outcome = attach_scan(REF, SARIF, registry=reg, clock=FakeClock(TS), label_prefix="io.knock")
     assert outcome.subject_digest == "sha256:abc"
     assert outcome.tool == "trivy"
     assert outcome.format == "sarif"
@@ -59,15 +59,15 @@ def test_attach_stamps_referrer_on_digest() -> None:
     assert atype == SCAN_RESULT_ARTIFACT_TYPE
     assert media == "application/sarif+json"
     assert blob == SARIF
-    assert annotations["io.houba.scan.vuln.critical"] == "1"
-    assert annotations["io.houba.scan.subject"] == "sha256:abc"
+    assert annotations["io.knock.scan.vuln.critical"] == "1"
+    assert annotations["io.knock.scan.subject"] == "sha256:abc"
     assert outcome.referrer_digest.startswith("sha256:")
 
 
 def test_attach_unknown_format_raises() -> None:
     reg = _registry()
     with pytest.raises(UnknownFormatError):
-        attach_scan(REF, b"not json", registry=reg, clock=FakeClock(TS), label_prefix="io.houba")
+        attach_scan(REF, b"not json", registry=reg, clock=FakeClock(TS), label_prefix="io.knock")
 
 
 def test_attach_signs_when_attestor_present() -> None:
@@ -78,23 +78,23 @@ def test_attach_signs_when_attestor_present() -> None:
         SARIF,
         registry=reg,
         clock=FakeClock(TS),
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         attestor=att,
-        builder_id="houba://ci",
+        builder_id="knock://ci",
     )
     assert outcome.attestation is not None
-    assert outcome.attestation.predicate_type == "https://houba.dev/predicate/scan/v1"
+    assert outcome.attestation.predicate_type == "https://knock.dev/predicate/scan/v1"
     assert len(att.attested) == 1
     subject, statement = att.attested[0]
     assert subject == "harbor.corp/lib/redis@sha256:abc"
-    assert statement["predicateType"] == "https://houba.dev/predicate/scan/v1"
+    assert statement["predicateType"] == "https://knock.dev/predicate/scan/v1"
     assert statement["predicate"]["report_digest"] == outcome.referrer_digest
     assert statement["predicate"]["scanner"]["name"] == "trivy"
 
 
 def test_attach_no_attestor_no_attestation() -> None:
     reg = _registry()
-    outcome = attach_scan(REF, SARIF, registry=reg, clock=FakeClock(TS), label_prefix="io.houba")
+    outcome = attach_scan(REF, SARIF, registry=reg, clock=FakeClock(TS), label_prefix="io.knock")
     assert outcome.attestation is None
     assert reg.artifact_referrers  # the raw referrer is still attached
 
@@ -108,7 +108,7 @@ def test_attach_signing_failure_propagates_after_referrer_attached() -> None:
             SARIF,
             registry=reg,
             clock=FakeClock(TS),
-            label_prefix="io.houba",
+            label_prefix="io.knock",
             attestor=att,
         )
     assert reg.artifact_referrers  # raw referrer attached before the signing attempt
@@ -148,7 +148,7 @@ def test_attach_runs_session_on_host_match() -> None:
         SARIF,
         registry=reg,
         clock=FakeClock(TS),
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         roster=_roster_for_attach(),
     )
     assert reg.configured == [("harbor.corp", True, None)]
@@ -162,7 +162,7 @@ def test_attach_no_session_when_host_not_in_roster() -> None:
         SARIF,
         registry=reg,
         clock=FakeClock(TS),
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         roster={},
     )
     assert reg.configured == []
@@ -177,7 +177,7 @@ def test_attach_registry_override_selects_entry() -> None:
         SARIF,
         registry=reg,
         clock=FakeClock(TS),
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         roster=roster,
         registry_override="other",
     )
@@ -192,7 +192,7 @@ def test_attach_unknown_registry_override_raises() -> None:
             SARIF,
             registry=reg,
             clock=FakeClock(TS),
-            label_prefix="io.houba",
+            label_prefix="io.knock",
             roster=_roster_for_attach(),
             registry_override="nope",
         )

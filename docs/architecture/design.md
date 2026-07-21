@@ -1,9 +1,9 @@
-# houba — Design Overview
+# knock — Design Overview
 
-## What houba is (and isn't)
+## What knock is (and isn't)
 
-houba is a **stamper** and **single front door** for external container images — *not* an
-image mirror. A mirror (`skopeo sync`, Harbor replication) makes a byte-for-byte copy. houba does
+knock is a **stamper** and **single front door** for external container images — *not* an
+image mirror. A mirror (`skopeo sync`, Harbor replication) makes a byte-for-byte copy. knock does
 more: it routes every external image through one declarative policy, optionally **rebuilds** it
 through a hardening transform (internal CAs, internal package mirrors), and **stamps** it with
 standardized, portable provenance — plus, on **every placed image** (copy and rebuild), a
@@ -12,14 +12,14 @@ OCI referrer.
 
 The value lands at incident time. When a critical CVE drops, the stamp (lineage, ownership) and the
 SBOM (package inventory) turn *"which images ship the vulnerable package, and who owns them?"* into a
-single query in the tools you already run. houba produces both facts; it never runs the query. Two
+single query in the tools you already run. knock produces both facts; it never runs the query. Two
 consequences drive the design:
 
-- **The label is the product.** houba's value flows through the stamp *and the SBOM* into someone
+- **The label is the product.** knock's value flows through the stamp *and the SBOM* into someone
   else's query tool, so the provenance surface (annotation schema + SPDX) is the public API:
   standardized, portable, trustworthy.
 - **Coverage gates value.** A stamp on part of the fleet yields a blast-radius query with blind
-  spots. houba's worth is proportional to it being the *mandatory* path for external images.
+  spots. knock's worth is proportional to it being the *mandatory* path for external images.
 
 See the [roadmap](../roadmap.md) for the product thesis in full.
 
@@ -36,7 +36,7 @@ In both paths the transformation is the means; the stamp is the deliverable.
 
 ## Architecture — hexagonal (ports & adapters)
 
-houba is a hexagonal Python application. The layering is load-bearing: it is what keeps the
+knock is a hexagonal Python application. The layering is load-bearing: it is what keeps the
 business logic pure and 100 % unit-testable with in-memory fakes, and the I/O
 integration-testable in isolation.
 
@@ -80,7 +80,7 @@ composition root).
    Binaries are resolved lazily, on first call.
 5. **`cli/` is thin** — parse args, build the composition root (`_di.py`), call the use case, map
    exceptions to exit codes.
-6. **Only `config.py` reads `os.environ`** (Pydantic Settings, all `HOUBA_*`). Everything else
+6. **Only `config.py` reads `os.environ`** (Pydantic Settings, all `KNOCK_*`). Everything else
    takes config as an explicit parameter.
 
 Adding a new external dependency always follows the same pattern: **port (Protocol + dataclass) →
@@ -95,7 +95,7 @@ as a **JSON Schema** (`mirror_policy_json_schema()`) so policy files get editor 
 Copy example (`docs/examples/reference/busybox`):
 
 ```yaml
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: busybox
@@ -107,7 +107,7 @@ spec:
   imports:
     - name: stable
       owners:
-        - group:default/platform   # stamped (comma-joined) as io.houba.owners
+        - group:default/platform   # stamped (comma-joined) as io.knock.owners
       tags:
         includeRegex: "^1\\.3[78]\\.\\d+$"   # $-anchored: skip the -glibc/-musl variants
         aliases:
@@ -143,7 +143,7 @@ transforms.
 
 **Transforms are named, portable references** — `injectCA: {certs: [corp]}`,
 `rewritePackageSources: {mirror: internal}` — not org-specific scripts. The names (`corp`,
-`internal`) resolve to org data (cert paths/PEM, mirror URLs) from `HOUBA_*` config at runtime,
+`internal`) resolve to org data (cert paths/PEM, mirror URLs) from `KNOCK_*` config at runtime,
 which is what keeps this public repo generic.
 
 ## Reconcile — plan then apply
@@ -160,13 +160,13 @@ which is what keeps this public repo generic.
 2. **Apply (per-policy isolated — a failure marks that policy `partial`, others continue).**
    Configure registry TLS / login once per host. For each target: read source state (`inspect`)
    and the recorded mirror state (the `org.opencontainers.image.base.digest` +
-   `io.houba.transform.version` annotations), then compute per-variant `to_import` / `to_update` /
+   `io.knock.transform.version` annotations), then compute per-variant `to_import` / `to_update` /
    `aliases` and the target `to_delete`. Each output tag goes copy or rebuild; both paths then
    `annotate` with the provenance stamp and, when a signer is configured, `attest` the stamped
    digest (back-filling a signature on an already-mirrored tag that predates signing). Aliases are
    `copy`; deletions are `delete_tag`.
 
-**Change detection is provenance-based.** houba compares the **recorded** `base.digest` against
+**Change detection is provenance-based.** knock compares the **recorded** `base.digest` against
 the current source digest — never mirror-vs-source (a rebuilt image's digest differs by
 construction). Two axes:
 
@@ -178,7 +178,7 @@ construction). Two axes:
 Moving-tag aliases are exempt from the grace window.
 
 **Concurrency & scale-out.** Within a run, tag operations execute in parallel, bounded by
-`HOUBA_MAX_CONCURRENCY` (or `--concurrency` / `-j`); set it to `1` for sequential runs. To scale
+`KNOCK_MAX_CONCURRENCY` (or `--concurrency` / `-j`); set it to `1` for sequential runs. To scale
 *across* processes, `domain/sharding.py` (`policy_shard` / `owns`) assigns each policy to a shard by
 stable SHA-256 hash, so several pods — a Kubernetes Indexed Job — reconcile disjoint subsets of the
 fleet without gaps or double-writes. Every reported operation records the transform steps it applied
@@ -208,8 +208,8 @@ resolution in the I/O layer.
 
 `domain/stamp.build_stamp_annotations(...)` builds the annotation dict baked onto every imported
 or derived image. Standard facts use **OCI-standard keys** (any scanner reads them for free); only
-the genuinely novel transformation lineage uses the `io.houba.*` namespace (prefix configurable
-via `HOUBA_LABEL_PREFIX`, default `io.houba`; an empty prefix ⇒ no houba labels at all).
+the genuinely novel transformation lineage uses the `io.knock.*` namespace (prefix configurable
+via `KNOCK_LABEL_PREFIX`, default `io.knock`; an empty prefix ⇒ no knock labels at all).
 
 Emitted (OCI standard; all but `.revision` are always present):
 
@@ -223,7 +223,7 @@ Emitted (OCI standard; all but `.revision` are always present):
   back)
 - `org.opencontainers.image.created`
 
-With a non-empty prefix (houba identity + lineage):
+With a non-empty prefix (knock identity + lineage):
 
 - `{prefix}.artifact.type`, `{prefix}.policy`, `{prefix}.import`, `{prefix}.variant`
 - `{prefix}.owners` (comma-joined list of Backstage entity-ref strings, e.g.
@@ -241,22 +241,22 @@ a signed DSSE attestation as an OCI referrer to the produced digest. Coverage is
 rebuild, and already-mirrored (backfill)**: every placed image is signed, not just the rebuilt ones,
 and a tag that was mirrored before signing was turned on is back-filled on the next reconcile (the
 `attested` flag on recorded mirror state drives that stage, so it costs one referrer probe only when
-signing is configured). `houba attach` likewise signs the scan result as an in-toto **scan**
-attestation when a signer is set. Signing is **off by default** (`HOUBA_ATTEST_SIGNER=""`) and
+signing is configured). `knock attach` likewise signs the scan result as an in-toto **scan**
+attestation when a signer is set. Signing is **off by default** (`KNOCK_ATTEST_SIGNER=""`) and
 supports `keyless` (Fulcio/Rekor), `kms`, and `key` signers — so a registry with no signing config
 still gets the annotation stamp, and turning attestation on adds the signed layer without changing
 the stamp. See the SLSA attestation spec under `docs/superpowers/specs/`.
 
 **Package-level SBOM (both paths).** Beyond the annotation stamp and the signed attestation, every
-image houba places carries a **package-level SBOM** — SPDX and/or CycloneDX — generated by a
+image knock places carries a **package-level SBOM** — SPDX and/or CycloneDX — generated by a
 standalone `syft` invocation after the image is placed (both the copy and the rebuild path know the
 placed digest at that point). syft scans the placed image by digest, emitting one document per
-configured format (`HOUBA_SBOM_FORMATS`, default `["spdx-json"]`, also accepts
+configured format (`KNOCK_SBOM_FORMATS`, default `["spdx-json"]`, also accepts
 `"cyclonedx-json"`); each document is attached as an **OCI referrer** (discoverable via the standard
 `list_referrers` API, `artifactType` = OCI media type of the SBOM format). The SBOM is what lifts
 blast-radius from base-image granularity (the `.base.digest` annotation) to **package** granularity
 — package inventory down to nested application dependencies (a `log4j-core` shaded in a fat-JAR is
-caught). Always-on on **both** paths; `HOUBA_SBOM_FORMATS` is validated non-empty so the knob
+caught). Always-on on **both** paths; `KNOCK_SBOM_FORMATS` is validated non-empty so the knob
 chooses format, never whether. See the SBOM-generation spec and ADRs 0029 + 0034.
 
 Fulcio/Rekor are passed to cosign via a generated **signing-config** file (cosign v3 enables the
@@ -285,12 +285,12 @@ The pure planning pipeline, all in `domain/`:
 
 ## Error model & exit codes
 
-`houba/errors.py` defines the `HoubaError` hierarchy; `exit_code_for(exc)` walks the exception's
+`knock/errors.py` defines the `KnockError` hierarchy; `exit_code_for(exc)` walks the exception's
 MRO and returns the first matching branch's code:
 
 ```mermaid
 flowchart LR
-    base["<b>HoubaError</b><br/><i>base</i>"]
+    base["<b>KnockError</b><br/><i>base</i>"]
     dom["<b>DomainError</b> — exit 1<br/>business / validation"]
     adp["<b>AdapterError</b> — exit 2<br/>infra / external dependency"]
     cfg["<b>ConfigError</b> — exit 3<br/>missing / invalid configuration"]
@@ -319,26 +319,26 @@ flowchart LR
     class pol,scan,fmt,reg,bk,cos,orc leaf;
 ```
 
-Anything not under `HoubaError` (e.g. a stray `KeyError`) ⇒ exit 4. Pydantic `ValidationError` /
+Anything not under `KnockError` (e.g. a stray `KeyError`) ⇒ exit 4. Pydantic `ValidationError` /
 settings errors ⇒ exit 3 (config). When `reconcile` accumulates per-policy failures, the process
 exit code is the **worst** (max) of the failed policies' codes (`report_exit_code`). There is no
 retry logic anywhere — the current adapters shell out and surface failures immediately.
 
 ## Configuration
 
-`config.py` is the only place `os.environ` is read (Pydantic Settings, prefix `HOUBA_`). Key vars:
+`config.py` is the only place `os.environ` is read (Pydantic Settings, prefix `KNOCK_`). Key vars:
 
-- `HOUBA_LABEL_PREFIX` (default `io.houba`)
-- `HOUBA_REGISTRIES` — a JSON roster mapping a logical name → registry (`host`, optional
+- `KNOCK_LABEL_PREFIX` (default `io.knock`)
+- `KNOCK_REGISTRIES` — a JSON roster mapping a logical name → registry (`host`, optional
   `username` / `password`, `tls_verify`, `ca_cert`)
-- `HOUBA_TRANSFORM_CA_CERTS`, `HOUBA_TRANSFORM_PACKAGE_MIRRORS` — JSON rosters the transform refs
+- `KNOCK_TRANSFORM_CA_CERTS`, `KNOCK_TRANSFORM_PACKAGE_MIRRORS` — JSON rosters the transform refs
   resolve against
-- `HOUBA_BUILD_PLATFORM` (default `linux/amd64`), `HOUBA_WORK_DIR`
-- `HOUBA_LOG_FORMAT` / `HOUBA_LOG_LEVEL`, `HOUBA_DRY_RUN_TAGS` / `HOUBA_DRY_RUN_DELETIONS`
-- `HOUBA_ATTEST_*` — SLSA/in-toto signing (off by default): `HOUBA_ATTEST_SIGNER`
-  (`""` | `keyless` | `kms` | `key`), `HOUBA_ATTEST_KEY_REF` (required for `kms`/`key`),
-  `HOUBA_ATTEST_FULCIO_URL` / `HOUBA_ATTEST_REKOR_URL` / `HOUBA_ATTEST_BUILDER_ID`
-- `HOUBA_PURGE_MIN_IDLE_DAYS` — the idle window `houba purge` requires before reaping a marked tag
+- `KNOCK_BUILD_PLATFORM` (default `linux/amd64`), `KNOCK_WORK_DIR`
+- `KNOCK_LOG_FORMAT` / `KNOCK_LOG_LEVEL`, `KNOCK_DRY_RUN_TAGS` / `KNOCK_DRY_RUN_DELETIONS`
+- `KNOCK_ATTEST_*` — SLSA/in-toto signing (off by default): `KNOCK_ATTEST_SIGNER`
+  (`""` | `keyless` | `kms` | `key`), `KNOCK_ATTEST_KEY_REF` (required for `kms`/`key`),
+  `KNOCK_ATTEST_FULCIO_URL` / `KNOCK_ATTEST_REKOR_URL` / `KNOCK_ATTEST_BUILDER_ID`
+- `KNOCK_PURGE_MIN_IDLE_DAYS` — the idle window `knock purge` requires before reaping a marked tag
 
 Nested registry / cert / mirror configs are JSON sub-objects inside their env var (not separate
 env prefixes). Resolver helpers (`resolve_registry`, `resolve_ca_certs`, `resolve_mirror`) raise
@@ -351,14 +351,14 @@ for *talking to* a registry, path-only) is deliberately distinct from `transform
 
 ## CLI
 
-Six commands (`houba …`):
+Six commands (`knock …`):
 
 - **`reconcile <directory> [--dry-run] [--verbose]`** — load every `*.yml` / `*.yaml` policy in
   the directory, reconcile them, render a report to **stdout** (text or JSON) while a structured
   event journal goes to **stderr**, and exit with `report_exit_code`.
 - **`purge [--registry NAME] [--apply]`** — the reference reaper: walk `pending-deletion` marks and
-  delete tags not seen in production within `HOUBA_PURGE_MIN_IDLE_DAYS` (resolved against a usage
-  oracle). Dry-run by default; `--apply` actually deletes (still gated by `HOUBA_DRY_RUN_DELETIONS`).
+  delete tags not seen in production within `KNOCK_PURGE_MIN_IDLE_DAYS` (resolved against a usage
+  oracle). Dry-run by default; `--apply` actually deletes (still gated by `KNOCK_DRY_RUN_DELETIONS`).
 - **`attach <image-ref> --report <file|-> [--format F] [--registry NAME] [--output text|json]
   [--fail-on SEVERITY]`** — ingest a scan report produced upstream and attach it as a stamped (and,
   when a signer is set, signed) OCI referrer on the image. `--registry` authenticates against a
@@ -366,7 +366,7 @@ Six commands (`houba …`):
   the command into a CI gate — exit non-zero on any finding at or above the threshold (the first
   enforcement lever).
 - **`audit [--registry NAME] [--fail-on-uncovered] [--signed] [--fail-on-unsigned] [--sbom]`** —
-  coverage-gap report: walk the registry and list images that do **not** carry houba's stamp;
+  coverage-gap report: walk the registry and list images that do **not** carry knock's stamp;
   `--fail-on-uncovered` makes it a CI gate. `--signed` additionally probes each stamped image for a
   signed-attestation referrer (reporting `signed` / `unsigned`), and `--fail-on-unsigned` gates on it
   (implying `--signed`). `--sbom` likewise probes for a package-SBOM referrer (reporting
@@ -383,9 +383,9 @@ Six commands (`houba …`):
 
 - **Delivered** — the full hexagon (`domain/`, `ports/`, `adapters/`, `use_cases/`, `cli/`); both
   the copy and the **rebuild / derive-and-stamp** paths; the pluggable transform engine with three
-  built-in steps; the OCI-standard + `io.houba.*` provenance stamp **plus signed SLSA / in-toto
+  built-in steps; the OCI-standard + `io.knock.*` provenance stamp **plus signed SLSA / in-toto
   attestations** (cosign, off by default); a **package-level SBOM (SPDX and/or CycloneDX) on every
-  placed image** — copy and rebuild alike — generated by standalone `syft` and signed under houba's
+  placed image** — copy and rebuild alike — generated by standalone `syft` and signed under knock's
   identity when a signer is set; provenance-based, transform-aware change detection; the
   `reconcile` / `purge` / `attach` / `audit` / `gc` commands (delegated deletion + the reference reaper,
   scan ingestion, the coverage-gap audit, and scan-referrer GC); concurrent + horizontally-shardable

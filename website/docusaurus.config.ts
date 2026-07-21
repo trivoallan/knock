@@ -1,19 +1,19 @@
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
-const GH = 'https://github.com/trivoallan/houba';
+const GH = 'https://github.com/trivoallan/knock';
 
 export default async function createConfig(): Promise<Config> {
   // remark-code-import is ESM-only; dynamic import is the Docusaurus 3 workaround.
   const {default: codeImport} = await import('remark-code-import');
 
   return {
-  title: 'houba',
+  title: 'knock',
   tagline: 'The single front door for external container images',
   url: 'https://trivoallan.github.io',
-  baseUrl: '/houba/',
+  baseUrl: '/knock/',
   organizationName: 'trivoallan',
-  projectName: 'houba',
+  projectName: 'knock',
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'throw',
@@ -70,7 +70,7 @@ export default async function createConfig(): Promise<Config> {
       {
         generateLLMsTxt: true,
         generateLLMsFullTxt: true,
-        title: 'houba',
+        title: 'knock',
         description: 'The single front door for external container images',
         docsDir: '../docs',
         // index.md (docs root) is dropped: the plugin mis-maps the root index URL when
@@ -89,7 +89,7 @@ export default async function createConfig(): Promise<Config> {
       maxHeadingLevel: 3,
     },
     navbar: {
-      title: 'houba',
+      title: 'knock',
       items: [
         {type: 'doc', docId: 'tutorials/getting-started', label: 'Tutorials', position: 'left'},
         {to: '/how-to', label: 'How-to', position: 'left'},

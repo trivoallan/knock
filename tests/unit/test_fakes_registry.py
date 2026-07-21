@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from houba.ports.registry import ImageInfo, RegistryPort
+from knock.ports.registry import ImageInfo, RegistryPort
 from tests.fakes.registry import FakeRegistryPort
 
 
@@ -59,8 +59,8 @@ def test_put_referrer_with_blob_journals_and_returns_blob_digest() -> None:
     reg = FakeRegistryPort()
     out = reg.put_referrer(
         "harbor.corp/lib/redis@sha256:abc",
-        "application/vnd.houba.scan.result.v1",
-        {"io.houba.scan.tool": "trivy"},
+        "application/vnd.knock.scan.result.v1",
+        {"io.knock.scan.tool": "trivy"},
         blob=b"{}",
         media_type="application/sarif+json",
     )
@@ -68,9 +68,9 @@ def test_put_referrer_with_blob_journals_and_returns_blob_digest() -> None:
     assert reg.artifact_referrers == [
         (
             "harbor.corp/lib/redis@sha256:abc",
-            "application/vnd.houba.scan.result.v1",
+            "application/vnd.knock.scan.result.v1",
             "application/sarif+json",
             b"{}",
-            {"io.houba.scan.tool": "trivy"},
+            {"io.knock.scan.tool": "trivy"},
         )
     ]

@@ -1,4 +1,4 @@
-# 26. Signed-coverage audit tier (houba audit --signed)
+# 26. Signed-coverage audit tier (knock audit --signed)
 
 Date: 2026-06-16
 
@@ -13,12 +13,12 @@ Builds on [14. Coverage audit](0014-coverage-audit.md) and is unblocked by
 
 The coverage audit (ADR 0014) classified images by the *annotation stamp* alone and explicitly
 deferred the signed-attestation tier until every path was attested. That is now delivered, so the
-audit can distinguish *signed* provenance from a stamp that merely proves houba touched the image —
+audit can distinguish *signed* provenance from a stamp that merely proves knock touched the image —
 turning the verifiable front door into a trustworthy one.
 
 ## Decision
 
-Add an opt-in `--signed` flag to `houba audit`. For each *stamped* image it probes
+Add an opt-in `--signed` flag to `knock audit`. For each *stamped* image it probes
 `RegistryPort.list_referrers(ref, COSIGN_ATTESTATION_ARTIFACT_TYPE)` — the same heuristic
 `reconcile` uses for idempotent backfill (a present cosign bundle ⇒ signed; no pull-and-verify).
 Signatures are probed **only on covered images** (an uncovered image already fails the base gate).

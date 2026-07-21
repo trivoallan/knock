@@ -12,8 +12,8 @@ one is generated. This handles both, idempotently across reruns:
      fresh API key for it,
   4. write the key into the dt-api-key Secret via the in-cluster k8s API.
 
-stdlib only — the houba image has python3, no kubectl/curl. Every step logs so a failure in the
-DT auth dance is diagnosable from `kubectl logs job/houba-dt-bootstrap`.
+stdlib only — the knock image has python3, no kubectl/curl. Every step logs so a failure in the
+DT auth dance is diagnosable from `kubectl logs job/knock-dt-bootstrap`.
 """
 
 import json
@@ -25,8 +25,8 @@ import urllib.parse
 import urllib.request
 
 DT = os.environ.get("DT_URL", "http://dependency-track-apiserver:8080")
-NS = os.environ.get("POD_NAMESPACE", "houba")
-NEW_PW = os.environ.get("DT_ADMIN_PASSWORD", "houba-demo-admin")
+NS = os.environ.get("POD_NAMESPACE", "knock")
+NEW_PW = os.environ.get("DT_ADMIN_PASSWORD", "knock-demo-admin")
 SA = "/var/run/secrets/kubernetes.io/serviceaccount"
 
 

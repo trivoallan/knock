@@ -9,11 +9,11 @@ import time
 
 import pytest
 
-from houba.adapters.redis_streams import RedisStreamsAdapter
-from houba.ports.queue import Reservation
+from knock.adapters.redis_streams import RedisStreamsAdapter
+from knock.ports.queue import Reservation
 
-WORK = "houba:scan:work"
-DEAD = "houba:scan:dead"
+WORK = "knock:scan:work"
+DEAD = "knock:scan:dead"
 GROUP = "scan"
 
 MIN_IDLE_MS = 300
@@ -26,8 +26,8 @@ def _make_adapter(redis_client, *, consumer: str = "worker-1") -> RedisStreamsAd
         consumer=consumer,
         work=WORK,
         dead=DEAD,
-        confirmed="houba:scan:confirmed",
-        placed="houba:scan:placed",
+        confirmed="knock:scan:confirmed",
+        placed="knock:scan:placed",
         group=GROUP,
     )
 
@@ -43,7 +43,7 @@ def test_enqueue_xadds_each_ref(redis_server):
 def test_enqueue_records_placed_set(redis_server):
     adapter = _make_adapter(redis_server)
     adapter.enqueue(["repo@sha256:a", "repo@sha256:b"])
-    assert redis_server.smembers("houba:scan:placed") == {"sha256:a", "sha256:b"}
+    assert redis_server.smembers("knock:scan:placed") == {"sha256:a", "sha256:b"}
 
 
 def test_reserve_returns_reservation(redis_server):
@@ -67,7 +67,7 @@ def test_reserve_then_ack_confirms_and_trims(redis_server):
     # After ack completes: confirmed-set has the digest; pending count is 0; stream is trimmed.
     adapter.ack(res, digest="sha256:a", attested_at="2024-01-01T00:00:00+00:00")
 
-    score = redis_server.zscore("houba:scan:confirmed", "sha256:a")
+    score = redis_server.zscore("knock:scan:confirmed", "sha256:a")
     assert score is not None and score > 0.0  # RESP3: float epoch
 
     assert redis_server.xpending(WORK, GROUP)["pending"] == 0  # RESP3: int
@@ -83,7 +83,7 @@ def test_ack_score_is_epoch_from_iso_string(redis_server):
 
     # 2024-01-01T12:00:00+00:00 == 1704110400.0 UTC
     adapter.ack(res, digest="sha256:c", attested_at="2024-01-01T12:00:00+00:00")
-    score = redis_server.zscore("houba:scan:confirmed", "sha256:c")
+    score = redis_server.zscore("knock:scan:confirmed", "sha256:c")
     assert score == pytest.approx(1704110400.0)
 
 
@@ -138,7 +138,7 @@ def test_trim_minid_keeps_unacked(redis_server):
 
 
 def test_coverage_check_returns_gap(redis_server):
-    redis_server.zadd("houba:scan:confirmed", {"sha256:b": 5000})
+    redis_server.zadd("knock:scan:confirmed", {"sha256:b": 5000})
     adapter = _make_adapter(redis_server)
     gap = adapter.coverage_check(["sha256:a", "sha256:b"], max_age_s=10_000, now=10_000)
     assert gap == ["sha256:a"]

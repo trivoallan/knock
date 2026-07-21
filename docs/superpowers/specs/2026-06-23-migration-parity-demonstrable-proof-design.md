@@ -5,7 +5,7 @@ Status: Proposed (spec)
 
 ## Problem
 
-The migration-parity *narrative* — "houba's `destinations` fan-out **replaces** registry
+The migration-parity *narrative* — "knock's `destinations` fan-out **replaces** registry
 replication, and (because replication strips OCI referrers) keeps the SBOM/signature alive in
 every team copy" — ships as prose (`docs/how-to/migrate-from-replication.md`, #156). But the
 load-bearing claim (*the referrer survives into every copy*) is **asserted, not demonstrated**: all
@@ -16,10 +16,10 @@ an adoption proof that cannot be **run** is not a proof. This is the lead *Now* 
 ## Goal
 
 Make the claim **demonstrable**: a runnable multi-destination fan-out where, after one
-`houba reconcile`, **every** team copy is shown to carry its package-SBOM referrer (and, when a
+`knock reconcile`, **every** team copy is shown to carry its package-SBOM referrer (and, when a
 signer is configured, its signature) — addressable by the same digest a CVE query already uses.
 
-**Boundary — and the guardrail.** The demo proves houba's **positive**: *placement attaches the
+**Boundary — and the guardrail.** The demo proves knock's **positive**: *placement attaches the
 referrer to every destination.* It does **not** stand up Harbor to demonstrate the **negative**
 (replication stripping referrers) — that is an external, documented fact
 ([goharbor/harbor#23210](https://github.com/goharbor/harbor/issues/23210)), already cited in the
@@ -34,10 +34,10 @@ stripping is out of scope.
   checklist.
 - **Multi-`destinations` is a built feature** — `domain/mirror_policy.py` (`Defaults.destinations`
   / `ImportProfile.destinations`), fanned out in `use_cases/reconcile.py` (places + stamps + SBOMs
-  each destination). **No houba-core code is needed.**
+  each destination). **No knock-core code is needed.**
 - **Referrer verification tooling** — `regctl` (the registry adapter) lists referrers;
   `cosign verify-attestation` verifies the signed tiers. The signed-SBOM tier exists
-  (`HOUBA_ATTEST_SIGNER`, ADR 0029).
+  (`KNOCK_ATTEST_SIGNER`, ADR 0029).
 - **A reference deployment that is the demo** — kind + Zot + Argo App-of-Apps, with per-example
   `DEMO.md` narration (`docs/examples/reference/`).
 
@@ -52,7 +52,7 @@ stripping is out of scope.
 
 A single example fanned into two team projects, plus one script that reconciles it and asserts the
 referrer landed on **both** copies. All under `docs/examples/` + `scripts/` + `docs/` — zero
-houba-core.
+knock-core.
 
 | Leg | Question | How shown |
 |-----|----------|-----------|
@@ -66,7 +66,7 @@ houba-core.
    team projects (e.g. `team-a` / `team-b`) in the demo Zot. Mirrors the how-to's inline YAML so the
    doc and the runnable example agree.
 2. **`scripts/migration-parity-proof.sh`** — `regctl`-only, scenario-style like the existing
-   fake-bins: `houba reconcile` the example, then for **each** destination resolve the digest and
+   fake-bins: `knock reconcile` the example, then for **each** destination resolve the digest and
    list referrers; assert a package-SBOM referrer is present; exit non-zero if **any** copy is bare.
    Prints a per-copy `SBOM present: team-a ✓ / team-b ✓` line — the thing a stakeholder reads.
 3. **`docs/examples/migration/DEMO.md`** — narration tying the script output back to the how-to: two
@@ -78,7 +78,7 @@ houba-core.
 
 - **R1 Multi-destination example.** `docs/examples/migration/redis.yml` fans one import to ≥ 2
   destinations.
-  - *Given* the example, *when* `houba reconcile` runs, *then* the same selected tag exists in
+  - *Given* the example, *when* `knock reconcile` runs, *then* the same selected tag exists in
     every destination project at the **same digest**.
 - **R2 SBOM-referrer assertion on every copy.** The proof script verifies each placed digest carries
   a package-SBOM referrer.
@@ -91,7 +91,7 @@ houba-core.
 
 **Nice-to-have (P1)** — fast follow:
 
-- **R4 Signature assertion.** When `HOUBA_ATTEST_SIGNER` is configured, the script also asserts a
+- **R4 Signature assertion.** When `KNOCK_ATTEST_SIGNER` is configured, the script also asserts a
   cosign signature/attestation referrer on each copy (`cosign verify-attestation`). SBOM-only is a
   valid pass when no signer is set (the signed tier is independently demonstrated).
 - **R5 Reference-deployment demo step.** Wire `migration-parity-proof.sh` into the demo flow / a
@@ -116,13 +116,13 @@ houba-core.
 
 - **Reproducing Harbor's referrer stripping** (external fact; Zot propagates referrers anyway).
 - **A replication-rule importer / codegen** (Deferred — ⑥).
-- **Any houba-core change** — multi-`destinations` already ships.
+- **Any knock-core change** — multi-`destinations` already ships.
 - **A new external system or actor** — no `workspace.dsl` (C4) change; this composes existing
-  houba + Zot + regctl/cosign.
+  knock + Zot + regctl/cosign.
 
 ## Open questions
 
-- **Signer in the reference deployment** *(engineering)* — is `HOUBA_ATTEST_SIGNER` wired in the demo
+- **Signer in the reference deployment** *(engineering)* — is `KNOCK_ATTEST_SIGNER` wired in the demo
   today? If yes, R4 is cheap and the proof covers both tiers; if not, P0 stays SBOM-only and R4 waits.
   *(non-blocking — R1–R3 stand alone.)*
 - **Standalone vs demo-integrated** *(engineering/docs)* — land the script standalone first (P0),

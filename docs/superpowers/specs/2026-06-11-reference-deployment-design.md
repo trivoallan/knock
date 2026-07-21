@@ -4,7 +4,7 @@
 `.gitlab-ci.yml`, this runbook, and the C4 Deployment view are in place. All three overlays
 `kustomize build` clean; the lite layer is validated runnable end-to-end.
 **Date:** 2026-06-11
-**Scope:** Define the *blessed, reproducible topology* for running houba in an organization — the
+**Scope:** Define the *blessed, reproducible topology* for running knock in an organization — the
 "reference deployment". One kustomize-based artifact that (a) runs the full loop locally in
 [kind](https://kind.sigs.k8s.io), (b) doubles as a production blueprint, and (c) is modeled as a
 C4 Deployment view. Covers the loop **end to end, through consumption** (mirror/rebuild → stamp →
@@ -12,7 +12,7 @@ blast-radius query), per the product thesis *the label is the product*.
 
 ## Problem
 
-houba today ships a CLI (`houba reconcile <dir>`), a declarative `MirrorPolicy` schema, the copy
+knock today ships a CLI (`knock reconcile <dir>`), a declarative `MirrorPolicy` schema, the copy
 path, and the rebuild/hardening path. What it does **not** ship is the *missing middle*: **how you
 run it for real**. There is no answer to:
 
@@ -46,7 +46,7 @@ A "reference deployment" answers all of the above as **one coherent, copyable ar
 
 ### Runtime spine — kind + Kubernetes CronJob (decided)
 
-The reference runtime is a **Kubernetes CronJob** running `houba reconcile`, exercised locally via
+The reference runtime is a **Kubernetes CronJob** running `knock reconcile`, exercised locally via
 **kind**. Rationale, weighed against the alternatives:
 
 | Candidate | Local demo | Prod representativeness | Coupling | Maps to C4 Deployment |
@@ -58,14 +58,14 @@ The reference runtime is a **Kubernetes CronJob** running `houba reconcile`, exe
 k8s wins on the decisive axis — **anti-drift**: the *same* manifest set runs in kind (demo layer),
 copies into a real cluster (blueprint layer), and is modeled verbatim as a Deployment view (C4 layer).
 GitLab CI is kept as a **documented alternative trigger** (`.gitlab-ci.yml` example) because GitLab is
-already a houba port — but it couples the reference to GitLab and is not self-contained, so it is not
+already a knock port — but it couples the reference to GitLab and is not self-contained, so it is not
 the spine. docker-compose is rejected as the spine: it spawns a second artifact that drifts from prod.
 
 ### Topology (full loop)
 
 ```
    ┌──────────────────────┐   git-sync    ┌─────────────────────────┐
-   │  Policy GitOps repo   │◀──────────────│  houba CronJob          │
+   │  Policy GitOps repo   │◀──────────────│  knock CronJob          │
    │  (PR = the front door)│               │  reconcile + stamp      │
    └──────────────────────┘               └───────────┬─────────────┘
                                        pull │          │ rebuild (buildkitd, rootless)
@@ -92,7 +92,7 @@ A single `base/` plus thin overlays is what lets one artifact serve all three us
 
 ```
 deploy/
-  base/                      # CronJob(houba), buildkitd Deployment, git-sync, blast-radius Job,
+  base/                      # CronJob(knock), buildkitd Deployment, git-sync, blast-radius Job,
                              # RBAC, the policy/secret wiring — runtime-neutral
   overlays/
     local-lite/             # kind: seeded source, dest = registry:2, fake secrets,
@@ -111,10 +111,10 @@ the demo is the blueprint.
 
 ### 1. `base/` — the runtime-neutral core
 
-- **CronJob `houba-reconcile`** — runs the houba runtime image, `houba reconcile /policies`. In demo
+- **CronJob `knock-reconcile`** — runs the knock runtime image, `knock reconcile /policies`. In demo
   overlays it is also exposed as a one-shot `Job` (`make demo-* run`) so the loop fires on demand.
 - **git-sync sidecar** — clones/refreshes the policy repo into a shared `emptyDir` mounted at
-  `/policies`. This is the GitOps mechanism: a merged PR on the policy repo is what houba reconciles —
+  `/policies`. This is the GitOps mechanism: a merged PR on the policy repo is what knock reconciles —
   the operational form of "the front door is mandatory". Argo CD / Flux are noted as alternatives;
   git-sync is chosen for zero extra cluster dependencies.
 - **`buildkitd` Deployment (rootless)** — drives the rebuild/hardening path. Rootless to keep the
@@ -122,8 +122,8 @@ the demo is the blueprint.
   runbook, not glossed.
 - **blast-radius `Job`** — runs `scripts/blast-radius.sh`: walks the destination registry with regctl,
   reads the OCI annotations, and answers the two canonical queries (by `base.digest`, by
-  `io.houba.owner.team`). Generic, zero lock-in.
-- **RBAC + config** — `HOUBA_*` env from a ConfigMap; the registry roster (`HOUBA_REGISTRIES`) from a
+  `io.knock.owner.team`). Generic, zero lock-in.
+- **RBAC + config** — `KNOCK_*` env from a ConfigMap; the registry roster (`KNOCK_REGISTRIES`) from a
   ConfigMap + Secret split (hosts public, creds secret).
 
 ### 2. Overlays
@@ -131,7 +131,7 @@ the demo is the blueprint.
 - **`local-lite`** — dest = `registry:2` (anonymous, HTTP, `tls_verify:false`), source seeded or pulled
   from Docker Hub, secrets are throwaway literals. Copy path only — no buildkitd needed to see the loop.
   Fast and deterministic, mirrors the current `docs/examples` walkthrough but on-cluster.
-- **`local-full`** — dest = **Harbor** via its Helm chart (projects + a `robot$houba` account), buildkitd
+- **`local-full`** — dest = **Harbor** via its Helm chart (projects + a `robot$knock` account), buildkitd
   active, the `hardened/redis.yml` rebuild policy in play. Realistic; heavier to stand up.
 - **`prod`** — points at real registries; secrets via **External Secrets Operator** (Sealed Secrets noted
   as an alternative) — referenced, never embedded; CronJob on an **hourly** schedule (the 7-day
@@ -146,7 +146,7 @@ tool. This keeps the reference generic (CLAUDE.md) while still closing the thesi
 
 ### 4. GitLab CI — documented alternative trigger
 
-A `.gitlab-ci.yml` example runs the *same* `houba reconcile` against the *same* policy repo on a
+A `.gitlab-ci.yml` example runs the *same* `knock reconcile` against the *same* policy repo on a
 pipeline `schedule`, for GitLab shops that prefer it over a CronJob. Documented as a variant, not the
 spine.
 
@@ -154,7 +154,7 @@ spine.
 
 The model today is deliberately "one model, two views" (Landscape, Context). The reference deployment
 is a genuinely new *level* of concern, so it adds a **third view**: a `deploymentEnvironment
-"Reference (kind)"` placing `softwareSystemInstance`s of houba / source / destination / BuildKit /
+"Reference (kind)"` placing `softwareSystemInstance`s of knock / source / destination / BuildKit /
 package-mirror onto Kubernetes deployment nodes, with `infrastructureNode`s for the policy git repo,
 the git-sync sidecar, and the blast-radius job. Landscape and Context are **unchanged** — no new
 context-level actor/external-system/integration is introduced (the policy repo and blast-radius job are
@@ -193,10 +193,10 @@ deployment references it as-is — no image change is carried by this work.
 ## Out of scope
 
 - An in-cluster **operator / native fleet inventory** — the roadmap explicitly keeps runtime presence out
-  of houba; the deployment stamps, the org's stack queries. The blast-radius Job is a *consumer demo*,
+  of knock; the deployment stamps, the org's stack queries. The blast-radius Job is a *consumer demo*,
   not an inventory service.
 - **Multi-cluster / HA topology** for buildkitd or the registry — single-node kind is the reference;
   scaling notes belong in the runbook, not the reference manifests.
 - Bundling a specific **scanner/observability product** — only a documented hook, to stay generic.
-- Any change to houba's **application code** — this is a deployment/packaging artifact; if a gap surfaces
+- Any change to knock's **application code** — this is a deployment/packaging artifact; if a gap surfaces
   (e.g. per-registry TLS config), it is filed separately, not folded in here.

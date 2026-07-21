@@ -5,13 +5,13 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-import houba.cli.reconcile as cli_reconcile
-from houba.cli.main import app
-from houba.domain.deletion_mode import DeletionMode
-from houba.errors import PolicyValidationError
+import knock.cli.reconcile as cli_reconcile
+from knock.cli.main import app
+from knock.domain.deletion_mode import DeletionMode
+from knock.errors import PolicyValidationError
 
 POLICY = """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: redis }
 spec:
@@ -26,7 +26,7 @@ spec:
 
 def _env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(
-        "HOUBA_REGISTRIES", '{"only": {"host": "harbor.corp", "username": "r", "password": "x"}}'
+        "KNOCK_REGISTRIES", '{"only": {"host": "harbor.corp", "username": "r", "password": "x"}}'
     )
 
 
@@ -49,7 +49,7 @@ def test_reconcile_json_output_is_parseable(
 
     _env(monkeypatch)
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "empty")
-    monkeypatch.setenv("HOUBA_LOG_FORMAT", "json")
+    monkeypatch.setenv("KNOCK_LOG_FORMAT", "json")
     (tmp_path / "redis.yml").write_text(POLICY)
     result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "--dry-run"])
     assert result.exit_code == 0, result.stdout
@@ -61,7 +61,7 @@ def test_reconcile_json_output_is_parseable(
 
 
 BOOM_POLICY = """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: boom }
 spec:
@@ -172,13 +172,13 @@ def test_reconcile_rejects_index_ge_count(
 def test_reconcile_report_json_flag_emits_parseable_json_regardless_of_log_format(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
 ) -> None:
-    """--report-json writes a JSON RunReport to stdout even when HOUBA_LOG_FORMAT=text."""
+    """--report-json writes a JSON RunReport to stdout even when KNOCK_LOG_FORMAT=text."""
     import json
 
     _env(monkeypatch)
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "empty")
     # Explicitly keep log format as text (the default) to prove --report-json overrides it.
-    monkeypatch.setenv("HOUBA_LOG_FORMAT", "text")
+    monkeypatch.setenv("KNOCK_LOG_FORMAT", "text")
     (tmp_path / "redis.yml").write_text(POLICY)
     result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "--dry-run", "--report-json"])
     assert result.exit_code == 0, result.stdout
@@ -193,7 +193,7 @@ def test_cli_threads_global_deletion_mode(
 ) -> None:
     _env(monkeypatch)
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "empty")
-    monkeypatch.setenv("HOUBA_DELETION_MODE", "mark")
+    monkeypatch.setenv("KNOCK_DELETION_MODE", "mark")
     (tmp_path / "redis.yml").write_text(POLICY)
 
     captured: dict[str, object] = {}

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from houba.domain.expand import ExpandedImport, VariantPlan, expand_import
-from houba.domain.mirror_policy import Spec
-from houba.domain.policy_merge import resolve_imports
+from knock.domain.expand import ExpandedImport, VariantPlan, expand_import
+from knock.domain.mirror_policy import Spec
+from knock.domain.policy_merge import resolve_imports
 
 SOURCE = ["7.2.0", "7.2.1", "7.3.0", "latest"]
 

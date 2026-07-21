@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from houba.adapters.system_clock import SystemClock
+from knock.adapters.system_clock import SystemClock
 
 
 def test_now_returns_utc_datetime_close_to_real_time() -> None:

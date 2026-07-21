@@ -6,6 +6,6 @@
     "type": "generated-index",
     "slug": "/reference",
     "title": "Reference",
-    "description": "Generated reference for houba's published contracts: the policy and scan-attestation schemas, the HOUBA_* configuration, and the command-line interface."
+    "description": "Generated reference for knock's published contracts: the policy and scan-attestation schemas, the KNOCK_* configuration, and the command-line interface."
   }
 }

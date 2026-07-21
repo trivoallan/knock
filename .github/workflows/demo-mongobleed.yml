@@ -111,20 +111,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
-      - name: Build houba runtime image
+      - name: Build knock runtime image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
           push: false
           load: true
-          tags: houba:dev
+          tags: knock:dev
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Create kind cluster + load image
         run: |
-          kind create cluster --name houba-demo
-          kind load docker-image houba:dev --name houba-demo
+          kind create cluster --name knock-demo
+          kind load docker-image knock:dev --name knock-demo
 
       - name: make demo-mongobleed
         run: make demo-mongobleed

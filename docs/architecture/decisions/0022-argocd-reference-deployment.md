@@ -14,19 +14,19 @@ Originally accepted; builds on [4. Reference deployment](0004-reference-deployme
 
 The reference deployment (ADR 0004) deliberately uses git-sync + `kubectl apply -k` to keep zero
 extra cluster dependencies, and the product thesis forbids any single orchestrator becoming a
-dependency. But teams already running ArgoCD want a copy-paste GitOps blueprint, and houba's
+dependency. But teams already running ArgoCD want a copy-paste GitOps blueprint, and knock's
 "the front door is a merged PR" maps naturally onto App-of-Apps.
 
 ## Decision
 
 Add an ArgoCD App-of-Apps **variant** under `deploy/argocd/`, alongside (not replacing) the overlays.
 A parameterized `root.yaml` points at `apps/${ARGOCD_ENV}` (demo|prod). The demo manages two children
-(registry + houba, copy path); the prod root bootstraps the **entire** stack from git — the External
-Secrets Operator, KEDA, kube-prometheus-stack, and OpenBao as sync-wave-0 Helm children, then houba +
+(registry + knock, copy path); the prod root bootstraps the **entire** stack from git — the External
+Secrets Operator, KEDA, kube-prometheus-stack, and OpenBao as sync-wave-0 Helm children, then knock +
 buildkitd as wave-1 consumers. buildkitd is its own additive app: its CronJob wiring becomes a
-`BUILDKIT_HOST` config literal in `houba-prod`, so two apps never write the same resource. Sources are
+`BUILDKIT_HOST` config literal in `knock-prod`, so two apps never write the same resource. Sources are
 composed à la carte from `deploy/base` + the existing `components/*` (no copies); the overlays are
-untouched. ESO reads OpenBao via its `vault` provider through the `houba-secret-store`
+untouched. ESO reads OpenBao via its `vault` provider through the `knock-secret-store`
 `ClusterSecretStore`. A `make demo-argocd` target installs argo-cd on kind and syncs the demo from git.
 
 ## Consequences

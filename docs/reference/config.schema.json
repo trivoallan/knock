@@ -148,7 +148,7 @@
         },
         "tls_verify": {
           "default": true,
-          "description": "Set to `false` for plain-HTTP registries; houba then pushes insecurely on both paths \u2014 `regctl registry set \u2026 --tls disabled` for copies and `registry.insecure=true` for BuildKit rebuilds.",
+          "description": "Set to `false` for plain-HTTP registries; knock then pushes insecurely on both paths \u2014 `regctl registry set \u2026 --tls disabled` for copies and `registry.insecure=true` for BuildKit rebuilds.",
           "title": "Tls Verify",
           "type": "boolean"
         },
@@ -187,8 +187,8 @@
   },
   "properties": {
     "label_prefix": {
-      "default": "io.houba",
-      "description": "Prefix for houba's own provenance annotations; empty \u21d2 no houba labels (OCI-standard keys only).",
+      "default": "io.knock",
+      "description": "Prefix for knock's own provenance annotations; empty \u21d2 no knock labels (OCI-standard keys only).",
       "title": "Label Prefix",
       "type": "string"
     },
@@ -253,7 +253,7 @@
       "description": "Global tier of the retention cascade (a JSON `Archive`); unset \u21d2 retention off everywhere."
     },
     "work_dir": {
-      "default": "/tmp/houba-work",
+      "default": "/tmp/knock-work",
       "description": "Scratch directory for build contexts.",
       "format": "path",
       "title": "Work Dir",
@@ -328,19 +328,19 @@
     },
     "attest_builder_id": {
       "default": "",
-      "description": "URI identifying this houba builder.",
+      "description": "URI identifying this knock builder.",
       "title": "Attest Builder Id",
       "type": "string"
     },
     "attest_verify_identity": {
       "default": "",
-      "description": "Keyless verify identity regexp (HOUBA_ATTEST_VERIFY_IDENTITY).",
+      "description": "Keyless verify identity regexp (KNOCK_ATTEST_VERIFY_IDENTITY).",
       "title": "Attest Verify Identity",
       "type": "string"
     },
     "attest_verify_oidc_issuer": {
       "default": "",
-      "description": "Keyless verify OIDC issuer (HOUBA_ATTEST_VERIFY_OIDC_ISSUER).",
+      "description": "Keyless verify OIDC issuer (KNOCK_ATTEST_VERIFY_OIDC_ISSUER).",
       "title": "Attest Verify Oidc Issuer",
       "type": "string"
     },
@@ -354,7 +354,7 @@
         }
       ],
       "default": null,
-      "description": "Executable speaking the usage-oracle contract; required to run `houba purge`.",
+      "description": "Executable speaking the usage-oracle contract; required to run `knock purge`.",
       "title": "Usage Oracle Cmd"
     },
     "usage_oracle_timeout": {
@@ -375,10 +375,10 @@
         }
       ],
       "default": null,
-      "description": "Idle window `houba purge` requires before reaping a marked tag.",
+      "description": "Idle window `knock purge` requires before reaping a marked tag.",
       "title": "Purge Min Idle Days"
     }
   },
-  "title": "houba configuration (HOUBA_*)",
+  "title": "knock configuration (KNOCK_*)",
   "type": "object"
 }

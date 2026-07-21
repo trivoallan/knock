@@ -1,6 +1,6 @@
 import pytest
 
-from houba.domain.semver import SemverParts, parse_semver, sort_semver
+from knock.domain.semver import SemverParts, parse_semver, sort_semver
 
 
 def test_basic_ascending_order() -> None:

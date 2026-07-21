@@ -11,14 +11,14 @@ Supports [8. local-transform demo tier](0008-local-transform-demo.md)
 
 ## Context
 
-houba pulled each policy's source image anonymously, so high-volume demos and real deployments
+knock pulled each policy's source image anonymously, so high-volume demos and real deployments
 hit Docker Hub's unauthenticated pull rate limit (429) — it blocked the `local-transform` e2e.
 Destinations were already authenticated; the source registry was not.
 
 ## Decision
 
 Authenticate source pulls via the standard Docker `config.json`: both `buildctl` (rebuild) and
-`regctl` (copy) read it natively, so mounting a Docker-auth secret into the houba container is
+`regctl` (copy) read it natively, so mounting a Docker-auth secret into the knock container is
 nearly code-free. Add a `make docker-auth` affordance.
 
 ## Consequences

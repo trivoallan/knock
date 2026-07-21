@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from houba.ports.queue import Reservation
-from houba.use_cases.scan_worker import handle_reservation
+from knock.ports.queue import Reservation
+from knock.use_cases.scan_worker import handle_reservation
 from tests.fakes.queue import FakeQueuePort
 
 

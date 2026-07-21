@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from houba.ports.reporter import Counts, ErrorInfo, OperationEvent
-from houba.use_cases.report import RunReport
+from knock.ports.reporter import Counts, ErrorInfo, OperationEvent
+from knock.use_cases.report import RunReport
 from tests.fakes.reporter import FakeReporter
 
 
@@ -31,7 +31,7 @@ def test_fake_reporter_journals_run_completed() -> None:
 
 
 def test_fake_reporter_journals_operation_failed() -> None:
-    from houba.ports.reporter import OperationEvent
+    from knock.ports.reporter import OperationEvent
 
     r = FakeReporter()
     ev = OperationEvent(

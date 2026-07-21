@@ -26,22 +26,22 @@ def test_header_row(tmp_out: Path) -> None:
 
 def test_label_prefix_row(tmp_out: Path) -> None:
     content = tmp_out.read_text()
-    assert "| `HOUBA_LABEL_PREFIX` | string | `io.houba` |" in content
+    assert "| `KNOCK_LABEL_PREFIX` | string | `io.knock` |" in content
 
 
 def test_sbom_formats_row(tmp_out: Path) -> None:
     content = tmp_out.read_text()
-    assert '| `HOUBA_SBOM_FORMATS` | JSON list | `["spdx-json"]` |' in content
+    assert '| `KNOCK_SBOM_FORMATS` | JSON list | `["spdx-json"]` |' in content
 
 
 def test_max_concurrency_row(tmp_out: Path) -> None:
     content = tmp_out.read_text()
-    assert "| `HOUBA_MAX_CONCURRENCY` | integer | `4` |" in content
+    assert "| `KNOCK_MAX_CONCURRENCY` | integer | `4` |" in content
 
 
 def test_registries_row(tmp_out: Path) -> None:
     content = tmp_out.read_text()
-    assert "| `HOUBA_REGISTRIES` | JSON object |" in content
+    assert "| `KNOCK_REGISTRIES` | JSON object |" in content
 
 
 def test_config_schema_json_written(tmp_out: Path) -> None:

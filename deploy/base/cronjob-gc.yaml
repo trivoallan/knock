@@ -1,12 +1,12 @@
-# Scale-hygiene trigger: houba gc on a schedule.
+# Scale-hygiene trigger: knock gc on a schedule.
 # Unlike reconcile, gc reads no policies (it walks the registry roster), so there is no
 # git-sync init container and no policies volume — just the roster secret and a writable
 # /tmp for regctl's destination logins. --apply makes it actually collect; the
-# HOUBA_DRY_RUN_DELETIONS kill-switch (shared with reconcile/purge) forces dry-run if set.
+# KNOCK_DRY_RUN_DELETIONS kill-switch (shared with reconcile/purge) forces dry-run if set.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: houba-gc
+  name: knock-gc
 spec:
   schedule: "0 3 * * 0" # weekly (Sun 03:00) — referrer hygiene is not urgent; keep=2/older-than=30d defaults
   concurrencyPolicy: Forbid
@@ -18,21 +18,21 @@ spec:
       template:
         metadata:
           labels:
-            app.kubernetes.io/name: houba
+            app.kubernetes.io/name: knock
             app.kubernetes.io/component: gc
         spec:
-          serviceAccountName: houba
+          serviceAccountName: knock
           restartPolicy: Never
           securityContext:
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
           containers:
-            - name: houba
-              image: houba # rewritten by the kustomize images transformer
+            - name: knock
+              image: knock # rewritten by the kustomize images transformer
               command: ["/bin/sh", "-c"]
               args:
-                ["exec houba gc --apply"]
+                ["exec knock gc --apply"]
               env:
                 # regctl's destination logins live on the writable /tmp mount (the root
                 # filesystem is read-only). gc pulls no source images, so no DOCKER_CONFIG.
@@ -40,9 +40,9 @@ spec:
                   value: /tmp/.regctl/config.json
               envFrom:
                 - configMapRef:
-                    name: houba-config
+                    name: knock-config
                 - secretRef:
-                    name: houba-registries # provided per-overlay (literal / ExternalSecret)
+                    name: knock-registries # provided per-overlay (literal / ExternalSecret)
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true

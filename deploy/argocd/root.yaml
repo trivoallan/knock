@@ -1,13 +1,13 @@
 # The App-of-Apps root. `make demo` (or kubectl) applies THIS only; ArgoCD then pulls
-# the child Applications from git and syncs them: ESO + OpenBao (wave 0), houba +
+# the child Applications from git and syncs them: ESO + OpenBao (wave 0), knock +
 # buildkitd (wave 1). Parameterized via envsubst only for the source repo/ref:
-#   ARGOCD_REPO_URL  (default https://github.com/trivoallan/houba)
+#   ARGOCD_REPO_URL  (default https://github.com/trivoallan/knock)
 #   ARGOCD_REPO_REF  (default main)
 # To adopt: copy this file, hardcode your repoURL/targetRevision, kubectl apply.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: houba-root
+  name: knock-root
   namespace: argocd
 spec:
   project: default

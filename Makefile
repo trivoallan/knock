@@ -1,13 +1,13 @@
-# houba reference deployment — local driver (kind).
+# knock reference deployment — local driver (kind).
 # See docs/how-to/reference-deployment.md for the full walkthrough.
 #
 #   make demo    the single Argo reference on kind (operators + ESO->OpenBao +
 #                buildkitd + the reference policy + registry + reconcile + report)
 #   make local   the inner-loop escape hatch (kubectl apply -k, no Argo/operators)
 
-CLUSTER ?= houba-demo
-IMAGE   ?= houba:dev
-NS      ?= houba
+CLUSTER ?= knock-demo
+IMAGE   ?= knock:dev
+NS      ?= knock
 
 # The blast-radius script lives outside the base dir (canonical scripts/), so the
 # configMapGenerator needs the relaxed load restrictor. `kubectl apply -k` can't pass
@@ -21,10 +21,10 @@ OVERLAY  ?= deploy/overlays/local
 # ---- Argo reference (App-of-Apps) ----------------------------------------
 # `make demo` applies root.yaml; ArgoCD pulls the children from git. To demo YOUR branch,
 # push it to your fork and override:
-#   ARGOCD_REPO_URL=https://github.com/me/houba ARGOCD_REPO_REF=my-branch make demo
+#   ARGOCD_REPO_URL=https://github.com/me/knock ARGOCD_REPO_REF=my-branch make demo
 # ponytail: children are read from git (intrinsic App-of-Apps coupling) — uncommitted
 # local changes are invisible until pushed. `make local` is the escape hatch for that.
-ARGOCD_REPO_URL ?= https://github.com/trivoallan/houba
+ARGOCD_REPO_URL ?= https://github.com/trivoallan/knock
 ARGOCD_REPO_REF ?= main
 ARGOCD_VERSION  ?= v2.12.4
 # The OpenBao server pod (StatefulSet -> openbao-0). Selected by name pattern, NOT a
@@ -33,10 +33,10 @@ ARGOCD_VERSION  ?= v2.12.4
 OPENBAO_POD = $$($(KUBECTL) -n openbao get pod -o name | grep -E 'openbao-[0-9]+$$' | head -1)
 
 # Host-side port-forward address for the local Zot (registry svc/registry 5000).
-# Used by demo-mongobleed and any host-side regctl/houba invocation.
+# Used by demo-mongobleed and any host-side regctl/knock invocation.
 LOCAL_REG ?= localhost:5000
-# HOUBA_REGISTRIES roster for host-side access (port-forward to the local Zot).
-LOCAL_HOUBA_REGISTRIES ?= {"local":{"host":"$(LOCAL_REG)","tls_verify":false}}
+# KNOCK_REGISTRIES roster for host-side access (port-forward to the local Zot).
+LOCAL_KNOCK_REGISTRIES ?= {"local":{"host":"$(LOCAL_REG)","tls_verify":false}}
 
 .PHONY: help reference docs-serve cluster image up-local up-brownfield local local-run \
         argocd demo demo-run openbao-seed seed-incident incident-deploy \
@@ -56,7 +56,7 @@ docs-serve: ## Serve the Docusaurus docs site locally (hot reload)
 cluster: ## Create the kind cluster if absent
 	@kind get clusters 2>/dev/null | grep -qx $(CLUSTER) || kind create cluster --name $(CLUSTER)
 
-image: ## Build the houba runtime image and load it into kind
+image: ## Build the knock runtime image and load it into kind
 	docker build -t $(IMAGE) .
 	kind load docker-image $(IMAGE) --name $(CLUSTER)
 
@@ -80,9 +80,9 @@ local: up-local ## Local stack + reconcile + bootstrap DT + publish SBOMs + repo
 	@echo ">> SBOMs published to Dependency-Track. Browse them with 'make dt-ui'."
 
 local-run: ## Fire a one-shot reconcile from the suspended CronJob
-	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
-	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=600s
+	-$(KUBECTL) -n $(NS) delete job knock-reconcile-run --ignore-not-found
+	$(KUBECTL) -n $(NS) create job knock-reconcile-run --from=cronjob/knock-reconcile
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/knock-reconcile-run --timeout=600s
 
 # ---- DEMO (the single Argo reference on kind) ----------------------------
 argocd: ## Install argo-cd into the kind cluster + relax the kustomize load restrictor
@@ -106,7 +106,7 @@ argocd-ui: ## Open the ArgoCD UI (port-forward svc/argocd-server; prints admin c
 demo: cluster image argocd ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
 	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) \
 	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
-	@echo ">> App-of-Apps applied. ArgoCD is syncing 4 children: ESO+OpenBao (wave 0) then houba+buildkitd (wave 1)."
+	@echo ">> App-of-Apps applied. ArgoCD is syncing 4 children: ESO+OpenBao (wave 0) then knock+buildkitd (wave 1)."
 	@echo ">> Waiting for the OpenBao server pod (wave 0) to be Running so it can be seeded ..."
 	@for i in $$(seq 1 60); do \
 	  P=$(OPENBAO_POD); \
@@ -114,44 +114,44 @@ demo: cluster image argocd ## The single Argo reference on kind, end-to-end (ope
 	  sleep 10; \
 	done
 	-$(MAKE) openbao-seed
-	@echo ">> Deploying Zot — the push destination + built-in UI (host registry.houba.svc.cluster.local:5000)."
+	@echo ">> Deploying Zot — the push destination + built-in UI (host registry.knock.svc.cluster.local:5000)."
 	@echo ">>       Applied out-of-band; ArgoCD does not manage it. Browse it with 'make registry-ui'."
 	$(KUSTOMIZE) deploy/argocd/sources/registry | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=180s
 	$(MAKE) seed-incident
-	@echo ">> Waiting for ESO to materialize the houba-registries Secret from OpenBao ..."
-	@for i in $$(seq 1 30); do $(KUBECTL) -n $(NS) get secret houba-registries >/dev/null 2>&1 && break; sleep 10; done
-	@echo ">> Waiting for the houba CronJob (wave 1) to sync ..."
-	@for i in $$(seq 1 60); do $(KUBECTL) -n $(NS) get cronjob/houba-reconcile >/dev/null 2>&1 && break; sleep 10; done
+	@echo ">> Waiting for ESO to materialize the knock-registries Secret from OpenBao ..."
+	@for i in $$(seq 1 30); do $(KUBECTL) -n $(NS) get secret knock-registries >/dev/null 2>&1 && break; sleep 10; done
+	@echo ">> Waiting for the knock CronJob (wave 1) to sync ..."
+	@for i in $$(seq 1 60); do $(KUBECTL) -n $(NS) get cronjob/knock-reconcile >/dev/null 2>&1 && break; sleep 10; done
 	$(MAKE) demo-run
 	@sleep 3
-	$(MAKE) blast-radius OVERLAY=deploy/argocd/sources/houba
-	$(MAKE) dt-bootstrap OVERLAY=deploy/argocd/sources/houba
-	$(MAKE) publish-sbom OVERLAY=deploy/argocd/sources/houba
+	$(MAKE) blast-radius OVERLAY=deploy/argocd/sources/knock
+	$(MAKE) dt-bootstrap OVERLAY=deploy/argocd/sources/knock
+	$(MAKE) publish-sbom OVERLAY=deploy/argocd/sources/knock
 	@echo ">> The Argo reference is up and mirrored the reference policy end-to-end: operators"
-	@echo ">>       (ESO+OpenBao) + houba/buildkitd, the ESO->OpenBao secret path, a git-sync'd"
+	@echo ">>       (ESO+OpenBao) + knock/buildkitd, the ESO->OpenBao secret path, a git-sync'd"
 	@echo ">>       policy (busybox copy + debian rebuild), and the registry destination."
-	@echo ">>       For a REAL cluster: pin your published image, point sources/houba at your"
+	@echo ">>       For a REAL cluster: pin your published image, point sources/knock at your"
 	@echo ">>       policy repo and vault, and use your registry (not this demo registry:2)."
 	@echo ">> Browse the ArgoCD UI with 'make argocd-ui' (admin creds printed)."
 
 demo-run: ## Fire a one-shot reconcile from the ArgoCD-synced CronJob
-	-$(KUBECTL) -n $(NS) delete job houba-reconcile-run --ignore-not-found
-	$(KUBECTL) -n $(NS) create job houba-reconcile-run --from=cronjob/houba-reconcile
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-reconcile-run --timeout=600s
+	-$(KUBECTL) -n $(NS) delete job knock-reconcile-run --ignore-not-found
+	$(KUBECTL) -n $(NS) create job knock-reconcile-run --from=cronjob/knock-reconcile
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/knock-reconcile-run --timeout=600s
 
-openbao-seed: ## Seed the dev OpenBao so ESO can resolve houba-registries (placeholder roster; demo only)
+openbao-seed: ## Seed the dev OpenBao so ESO can resolve knock-registries (placeholder roster; demo only)
 	$(KUBECTL) -n openbao create secret generic openbao-token --from-literal=token=root --dry-run=client -o yaml | $(KUBECTL) apply -f -
-	$(KUBECTL) -n openbao exec -i $(OPENBAO_POD) -- sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/houba/registries HOUBA_REGISTRIES='\''{"local":{"host":"registry.houba.svc.cluster.local:5000","tls_verify":false}}'\'''
+	$(KUBECTL) -n openbao exec -i $(OPENBAO_POD) -- sh -c 'BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv put secret/knock/registries KNOCK_REGISTRIES='\''{"local":{"host":"registry.knock.svc.cluster.local:5000","tls_verify":false}}'\'''
 
 # ---- consumer / ops ------------------------------------------------------
 seed-incident: ## Build the xz fixture IN-CLUSTER (buildkitd) → upstream/ + bypassed/ repos in the Zot
 	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
 	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=120s
-	-$(KUBECTL) -n $(NS) delete job houba-seed-incident --ignore-not-found
+	-$(KUBECTL) -n $(NS) delete job knock-seed-incident --ignore-not-found
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-seed-incident --timeout=600s
-	$(KUBECTL) -n $(NS) logs job/houba-seed-incident
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/knock-seed-incident --timeout=600s
+	$(KUBECTL) -n $(NS) logs job/knock-seed-incident
 
 incident-deploy: ## Run the marked runtime stand-in (pause pods carrying the placed/bypass digest)
 	@echo ">> resolving placed + bypass digests from the in-cluster Zot ..."
@@ -180,22 +180,22 @@ incident-deploy: ## Run the marked runtime stand-in (pause pods carrying the pla
 	@echo ">> marked workloads running. Re-run 'make blast-radius' to see the RUNNING IN column."
 
 blast-radius: ## (Re)run the blast-radius consumer and print its report
-	-$(KUBECTL) -n $(NS) delete job houba-blast-radius --ignore-not-found
+	-$(KUBECTL) -n $(NS) delete job knock-blast-radius --ignore-not-found
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-blast-radius --timeout=120s
-	$(KUBECTL) -n $(NS) logs job/houba-blast-radius
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/knock-blast-radius --timeout=120s
+	$(KUBECTL) -n $(NS) logs job/knock-blast-radius
 
 dt-bootstrap: ## Mint DT's API key into the dt-api-key Secret (re-runnable)
-	-$(KUBECTL) -n $(NS) delete job houba-dt-bootstrap --ignore-not-found
+	-$(KUBECTL) -n $(NS) delete job knock-dt-bootstrap --ignore-not-found
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-dt-bootstrap --timeout=300s
-	$(KUBECTL) -n $(NS) logs job/houba-dt-bootstrap
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/knock-dt-bootstrap --timeout=300s
+	$(KUBECTL) -n $(NS) logs job/knock-dt-bootstrap
 
 publish-sbom: ## Convert each rebuilt image's SBOM to CycloneDX and upload it to Dependency-Track
-	-$(KUBECTL) -n $(NS) delete job houba-publish-sbom --ignore-not-found
+	-$(KUBECTL) -n $(NS) delete job knock-publish-sbom --ignore-not-found
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-publish-sbom --timeout=300s
-	$(KUBECTL) -n $(NS) logs job/houba-publish-sbom
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/knock-publish-sbom --timeout=300s
+	$(KUBECTL) -n $(NS) logs job/knock-publish-sbom
 
 dt-vulns: ## Trigger DT's OSV (Debian) vuln mirror — restart the apiserver (data persists on the PVC)
 	@echo ">> dt-bootstrap enables the OSV Debian ecosystem; the mirror only runs on restart. Restarting ..."
@@ -205,7 +205,7 @@ dt-vulns: ## Trigger DT's OSV (Debian) vuln mirror — restart the apiserver (da
 	@echo ">>       to re-analyze the projects; CVEs then show in 'make dt-ui'."
 
 dt-ui: ## Open the Dependency-Track UI (frontend on :8080, apiserver on :8081 — both needed)
-	@echo ">> DT UI at http://localhost:8080  (login admin / $${DT_ADMIN_PASSWORD:-houba-demo-admin} — set by dt-bootstrap). Ctrl-C to stop."
+	@echo ">> DT UI at http://localhost:8080  (login admin / $${DT_ADMIN_PASSWORD:-knock-demo-admin} — set by dt-bootstrap). Ctrl-C to stop."
 	$(KUBECTL) -n $(NS) port-forward svc/dependency-track-apiserver 8081:8080 & \
 	  $(KUBECTL) -n $(NS) port-forward svc/dependency-track-frontend 8080:8080
 
@@ -214,7 +214,7 @@ docker-auth: ## Seed source-registry creds (set DOCKER_USER + DOCKER_PASS) so pu
 	  { echo "ERROR: set DOCKER_USER and DOCKER_PASS (a Docker Hub username + access token)"; exit 1; }
 	@printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}' \
 	  "$$(printf '%s:%s' "$$DOCKER_USER" "$$DOCKER_PASS" | base64 | tr -d '\n')" \
-	  | $(KUBECTL) -n $(NS) create secret generic houba-docker-config \
+	  | $(KUBECTL) -n $(NS) create secret generic knock-docker-config \
 	      --from-file=config.json=/dev/stdin --dry-run=client -o yaml | $(KUBECTL) apply -f -
 
 registry-ui: ## Open Zot's built-in registry UI (port-forward svc/registry to localhost:8082)
@@ -222,27 +222,27 @@ registry-ui: ## Open Zot's built-in registry UI (port-forward svc/registry to lo
 	$(KUBECTL) -n $(NS) port-forward svc/registry 8082:5000
 
 logs: ## Tail the last reconcile run's logs
-	$(KUBECTL) -n $(NS) logs job/houba-reconcile-run -f
+	$(KUBECTL) -n $(NS) logs job/knock-reconcile-run -f
 
 down: ## Delete the kind cluster
 	kind delete cluster --name $(CLUSTER)
 
-scan: ## Run the scan-attach Job (grype on the SBOM -> houba attach) over the placed images
-	-$(KUBECTL) -n $(NS) delete job houba-scan-attach --ignore-not-found
+scan: ## Run the scan-attach Job (grype on the SBOM -> knock attach) over the placed images
+	-$(KUBECTL) -n $(NS) delete job knock-scan-attach --ignore-not-found
 	$(KUSTOMIZE) $(OVERLAY) | $(KUBECTL) apply -f - >/dev/null
-	$(KUBECTL) -n $(NS) wait --for=condition=complete job/houba-scan-attach --timeout=300s
-	$(KUBECTL) -n $(NS) logs job/houba-scan-attach --all-containers
+	$(KUBECTL) -n $(NS) wait --for=condition=complete job/knock-scan-attach --timeout=300s
+	$(KUBECTL) -n $(NS) logs job/knock-scan-attach --all-containers
 
 # ---- BROWNFIELD DEMO ---------------------------------------------------------
 # Demonstrates the mongobleed gap (CVE-2025-14847): grype + trivy both miss it
 # on the official `mongo` image; the package-level SBOM inventory catches it.
-# Act 1: houba reconcile copies mongo:8.0.15+8.0.16 with stamp + SBOM, then
+# Act 1: knock reconcile copies mongo:8.0.15+8.0.16 with stamp + SBOM, then
 #         demo-mongobleed.sh shows the scanner blind spot vs. the SBOM query.
-# Act 2: demo-gate.sh runs grype on the XZ image and shows houba attach blocking it.
+# Act 2: demo-gate.sh runs grype on the XZ image and shows knock attach blocking it.
 #
-# Reconcile strategy: run `houba reconcile docs/examples/brownfield` directly on the
+# Reconcile strategy: run `knock reconcile docs/examples/brownfield` directly on the
 # host against the port-forwarded Zot (LOCAL_REG=localhost:5000). This sidesteps the
-# in-cluster CronJob's fixed POLICY_DIR without mutating the shared houba-config
+# in-cluster CronJob's fixed POLICY_DIR without mutating the shared knock-config
 # ConfigMap — consistent with how the demo scripts themselves access the registry.
 demo-mongobleed: OVERLAY = deploy/overlays/local-brownfield
 demo-mongobleed: up-brownfield seed-incident ## Brownfield demo end-to-end: mongo corpus → Act 1 (scanner blind spot) + Act 2 (XZ gate)
@@ -255,11 +255,11 @@ demo-mongobleed: up-brownfield seed-incident ## Brownfield demo end-to-end: mong
 	      >/dev/null 2>&1 && break; sleep 0.5; \
 	  done; \
 	  echo ">> reconciling docs/examples/brownfield (copy path: mongo:8.0.15 + 8.0.16 → $(LOCAL_REG)/demo/mongo) …"; \
-	  HOUBA_REGISTRIES='$(LOCAL_HOUBA_REGISTRIES)' \
-	    HOUBA_SBOM_FORMATS='["spdx-json","cyclonedx-json"]' \
-	    uv run houba reconcile docs/examples/brownfield; \
+	  KNOCK_REGISTRIES='$(LOCAL_KNOCK_REGISTRIES)' \
+	    KNOCK_SBOM_FORMATS='["spdx-json","cyclonedx-json"]' \
+	    uv run knock reconcile docs/examples/brownfield; \
 	  echo ">> Act 1 — scanner blind spot vs. the SBOM inventory"; \
 	  REG=$(LOCAL_REG) scripts/demo-mongobleed.sh; \
 	  echo ">> Act 2 — the front door blocks a vulnerable image at intake"; \
-	  REG=$(LOCAL_REG) HOUBA_REGISTRIES='$(LOCAL_HOUBA_REGISTRIES)' HOUBA='uv run houba' \
+	  REG=$(LOCAL_REG) KNOCK_REGISTRIES='$(LOCAL_KNOCK_REGISTRIES)' KNOCK='uv run knock' \
 	    scripts/demo-gate.sh

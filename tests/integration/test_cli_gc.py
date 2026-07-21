@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from houba.cli.main import app
+from knock.cli.main import app
 
 runner = CliRunner()
 
@@ -15,10 +15,10 @@ runner = CliRunner()
 def _env(monkeypatch: pytest.MonkeyPatch, fake_bin_path: Path, log: Path) -> None:
     monkeypatch.setenv("PATH", f"{fake_bin_path}{os.pathsep}{os.environ['PATH']}")
     monkeypatch.setenv(
-        "HOUBA_REGISTRIES",
+        "KNOCK_REGISTRIES",
         json.dumps({"harbor": {"host": "harbor.example", "tls_verify": False}}),
     )
-    monkeypatch.setenv("HOUBA_LOG_FORMAT", "json")
+    monkeypatch.setenv("KNOCK_LOG_FORMAT", "json")
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "gc-superseded")
     monkeypatch.setenv("FAKE_REGCTL_LOG", str(log))
 

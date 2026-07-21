@@ -1,4 +1,4 @@
-# 14. Coverage audit (houba audit)
+# 14. Coverage audit (knock audit)
 
 Date: 2026-06-13
 
@@ -11,13 +11,13 @@ provenance stamp ([6. SLSA / in-toto attestation](0006-slsa-attestation.md)).
 
 ## Context
 
-The roadmap's coverage-gate thesis: houba's value is proportional to it being the *mandatory*
+The roadmap's coverage-gate thesis: knock's value is proportional to it being the *mandatory*
 front door. Roadmap ④ makes coverage measurable — "show me the registry images that do NOT
-carry houba's stamp" — which is what makes the front door verifiable, and therefore enforceable.
+carry knock's stamp" — which is what makes the front door verifiable, and therefore enforceable.
 
 ## Decision
 
-Add a read-only `houba audit` verb: a whole-registry catalog walk (reusing the `purge` pattern)
+Add a read-only `knock audit` verb: a whole-registry catalog walk (reusing the `purge` pattern)
 that classifies each image via a pure `domain/coverage.py:is_stamped` predicate (annotation
 stamp: `{prefix}.policy`, or `base.digest` when the prefix is empty) and emits a `CoverageReport`.
 A new lightweight `RegistryPort.get_annotations` (one `manifest get`) keeps the sweep cheap.

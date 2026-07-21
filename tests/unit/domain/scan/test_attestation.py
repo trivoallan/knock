@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from houba.domain.scan.attestation import (
+from knock.domain.scan.attestation import (
     SCAN_PREDICATE_TYPE,
     build_scan_statement,
     scan_predicate_json_schema,
@@ -17,14 +17,14 @@ def _stmt() -> dict:
         summary={"vuln.critical": "1", "vuln.high": "0"},
         report_digest="sha256:report",
         attested_at="2026-06-13T09:00:00+00:00",
-        builder_id="houba://ci",
+        builder_id="knock://ci",
     )
 
 
 def test_statement_envelope() -> None:
     s = _stmt()
     assert s["_type"] == "https://in-toto.io/Statement/v1"
-    assert s["predicateType"] == SCAN_PREDICATE_TYPE == "https://houba.dev/predicate/scan/v1"
+    assert s["predicateType"] == SCAN_PREDICATE_TYPE == "https://knock.dev/predicate/scan/v1"
     assert s["subject"] == [{"name": "harbor.corp/lib/redis:7.2.0", "digest": {"sha256": "abc"}}]
 
 
@@ -35,7 +35,7 @@ def test_predicate_fields() -> None:
     assert p["summary"] == {"vuln.critical": "1", "vuln.high": "0"}
     assert p["report_digest"] == "sha256:report"
     assert p["attested_at"] == "2026-06-13T09:00:00+00:00"
-    assert p["builder_id"] == "houba://ci"
+    assert p["builder_id"] == "knock://ci"
 
 
 def test_subject_digest_without_algo_prefix_assumes_sha256() -> None:

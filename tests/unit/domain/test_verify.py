@@ -2,10 +2,10 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from houba.domain.scan.summary import Severity
-from houba.domain.verify import Requirement, evaluate, parse_duration, parse_requirements
-from houba.errors import ConfigError
-from houba.ports.attestor import VerifiedPredicate
+from knock.domain.scan.summary import Severity
+from knock.domain.verify import Requirement, evaluate, parse_duration, parse_requirements
+from knock.errors import ConfigError
+from knock.ports.attestor import VerifiedPredicate
 
 
 @pytest.mark.parametrize(

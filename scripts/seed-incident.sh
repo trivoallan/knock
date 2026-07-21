@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # seed-incident.sh — build the deliberately-vulnerable xz fixture IN-CLUSTER (via buildkitd) and
 # push it to the demo registry, twice:
-#   - upstream/debian-xz:5.6.1  — the pretend-upstream houba rebuilds (front door → SBOM + stamp)
-#   - bypassed/debian-xz:5.6.1  — the SAME bits pushed directly, never through houba (blind spot)
+#   - upstream/debian-xz:5.6.1  — the pretend-upstream knock rebuilds (front door → SBOM + stamp)
+#   - bypassed/debian-xz:5.6.1  — the SAME bits pushed directly, never through knock (blind spot)
 #
 # In-cluster because Docker Desktop's daemon (a Linux VM) can't reach a host `kubectl port-forward`;
 # buildkitd → Zot is on the cluster network. The fixture is built WITHOUT an SBOM on purpose —
-# houba's rebuild is what generates the package SBOM the demo flags.
+# knock's rebuild is what generates the package SBOM the demo flags.
 set -euo pipefail
 
-: "${HOUBA_REGISTRIES:?set HOUBA_REGISTRIES (the registry roster JSON)}"
+: "${KNOCK_REGISTRIES:?set KNOCK_REGISTRIES (the registry roster JSON)}"
 : "${BUILDKIT_HOST:?set BUILDKIT_HOST (the buildkitd gRPC endpoint)}"
 
 # Resolve the demo registry host + TLS from the roster (sole entry).
 read -r HOST TLS < <(
   python3 - <<'PY'
 import json, os
-roster = json.loads(os.environ["HOUBA_REGISTRIES"])
+roster = json.loads(os.environ["KNOCK_REGISTRIES"])
 r = roster[next(iter(roster))]
 print(r["host"], str(r.get("tls_verify", True)).lower())
 PY
@@ -38,16 +38,16 @@ buildctl build \
   --opt=filename=debian-xz.Dockerfile \
   "--output=type=image,name=${HOST}/upstream/debian-xz:5.6.1,push=true,oci-mediatypes=true${INSECURE}"
 
-echo "» copying the same bits directly to ${HOST}/bypassed/debian-xz:5.6.1 (never through houba)" >&2
+echo "» copying the same bits directly to ${HOST}/bypassed/debian-xz:5.6.1 (never through knock)" >&2
 regctl image copy "${HOST}/upstream/debian-xz:5.6.1" "${HOST}/bypassed/debian-xz:5.6.1"
 
-echo "» seeded upstream/debian-xz:5.6.1 (houba will rebuild it) + bypassed/debian-xz:5.6.1" >&2
+echo "» seeded upstream/debian-xz:5.6.1 (knock will rebuild it) + bypassed/debian-xz:5.6.1" >&2
 
-# Mongo corpus (brownfield Act 1) is NOT seeded here. houba's policy
+# Mongo corpus (brownfield Act 1) is NOT seeded here. knock's policy
 # (docs/examples/brownfield/mongo.yml) sources mongo directly from
-# docker.io/library/mongo, so `houba reconcile` pulls + places it (stamp + SBOM)
+# docker.io/library/mongo, so `knock reconcile` pulls + places it (stamp + SBOM)
 # → demo/mongo. We deliberately do not pre-copy it into the Zot: the official
 # mongo image is large and multi-arch, and a redundant seed copy floods a fresh
-# kind node's disk. The tag-only "before" world (an un-houba'd mirror under a
+# kind node's disk. The tag-only "before" world (an un-knock'd mirror under a
 # project-named repo, owner only guessable from the path) is illustrated in the
 # how-to (docs/how-to/brownfield-drop-in.md), not seeded.

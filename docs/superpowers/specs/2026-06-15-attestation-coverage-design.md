@@ -5,22 +5,22 @@
 
 ## Why
 
-houba's value lands at incident time, and it flows through the **signed provenance attestation** —
+knock's value lands at incident time, and it flows through the **signed provenance attestation** —
 *the label is the product*, and *coverage gates value*. The single-front-door mandate is now
 confirmed, so a coverage hole is no longer theoretical: today only the **rebuild** path signs an
-attestation. Images that houba **copies** (no transform) or **skips** (already mirrored, digest-stable)
-carry the OCI/`io.houba.*` annotation stamp but **no signed attestation** — exactly the hole the
+attestation. Images that knock **copies** (no transform) or **skips** (already mirrored, digest-stable)
+carry the OCI/`io.knock.*` annotation stamp but **no signed attestation** — exactly the hole the
 coverage audit surfaces. The mandating team cannot rely on a signed-coverage query while two of three
 paths are unsigned.
 
-Goal: **every image houba fronts carries a signed houba attestation**, computed idempotently so the
+Goal: **every image knock fronts carries a signed knock attestation**, computed idempotently so the
 fleet is signed once, not re-signed every reconcile.
 
 ## The unifying rule
 
 Replace the current signing trigger — *"is there a transform?"* (the `w.vplan.transform` guard at
-`use_cases/reconcile.py` ~line 408) — with: **every image houba places or finds must carry a signed
-houba attestation.**
+`use_cases/reconcile.py` ~line 408) — with: **every image knock places or finds must carry a signed
+knock attestation.**
 
 | Case | Today | After |
 |---|---|---|
@@ -61,7 +61,7 @@ boolean field **`transformed: bool`** (`True` for rebuild, `False` for copy/skip
   `attested = len(refs) > 0`. (Port already exists — no new port/adapter.) Done for **all** mirrored
   tags (simpler than a skip-only second pass; in steady state most tags are skips anyway, so this is
   the backfill cost itself).
-  - *ponytail: heuristic "a cosign attestation bundle exists ⇒ houba already signed this digest";
+  - *ponytail: heuristic "a cosign attestation bundle exists ⇒ knock already signed this digest";
     sufficient for idempotence — we do not re-verify the signature. Tighten only if another tool is
     known to attach attestations to the same digests.*
 - **Copy path.** Drop `and w.vplan.transform` from the signing guard (~line 408); on the copy branch
@@ -69,7 +69,7 @@ boolean field **`transformed: bool`** (`True` for rebuild, `False` for copy/skip
 - **Sign-only pass (`to_sign`).** For each backfill tag, resolve its current destination digest (via
   the `inspect` / `get_annotations` read already performed during gathering) and call
   `attestor.attest(dst@digest, statement)` with `transformed=False`. **No copy, no re-stamp** — the
-  annotation stamp is already present (roadmap premise: skipped images already carry the houba stamp).
+  annotation stamp is already present (roadmap premise: skipped images already carry the knock stamp).
 
 `COSIGN_ATTESTATION_ARTIFACT_TYPE` is the cosign v3 attestation-bundle media type the
 `CosignAdapter` already produces; define it as one shared constant.
@@ -86,8 +86,8 @@ this feature.
 - **Re-signing on predicate-schema bumps.** YAGNI while the schema is stable; the immutable digest
   makes a one-time signature durable. A schema migration is a separate, future concern.
 - **Stamping/backfilling the annotation on images placed by another tool.** The roadmap premises that
-  skipped images already carry the houba stamp; this design backfills the *signature* only.
-- **Extending `houba audit` to a signed-vs-unsigned coverage tier.** A natural follow-up once all
+  skipped images already carry the knock stamp; this design backfills the *signature* only.
+- **Extending `knock audit` to a signed-vs-unsigned coverage tier.** A natural follow-up once all
   paths are signed (and explicitly listed apart on the roadmap), not part of this change.
 
 ## Testing (TDD)
@@ -105,11 +105,11 @@ Two refinements confirmed during implementation:
 
 1. **`"attested"` operation kind.** The sign-only backfill pass is reported as a new `attested`
    operation kind (distinct from `import` / `update` / `skip` / `delete`), with a matching
-   `Counts.attested` total field in `houba/ports/reporter.py`. This makes the backfill visible in
+   `Counts.attested` total field in `knock/ports/reporter.py`. This makes the backfill visible in
    structured logs and summary output without conflating it with copy operations.
 
 2. **`COSIGN_ATTESTATION_ARTIFACT_TYPE` placement.** The constant lives in
-   `houba/domain/attestation.py` (alongside the existing `SIGNING_CONFIG_MEDIA_TYPE`), value
+   `knock/domain/attestation.py` (alongside the existing `SIGNING_CONFIG_MEDIA_TYPE`), value
    `application/vnd.dev.sigstore.bundle.v0.3+json`. This keeps all attestation-related constants
    in one domain module. Note: the exact media type string is still pending confirmation against a
    real cosign v3 run — treat as a verification task before declaring this frozen.

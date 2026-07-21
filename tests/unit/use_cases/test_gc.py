@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from houba.config import RegistryConfig
-from houba.ports.registry import Referrer
-from houba.use_cases.gc import gc_exit_code, gc_referrers
+from knock.config import RegistryConfig
+from knock.ports.registry import Referrer
+from knock.use_cases.gc import gc_exit_code, gc_referrers
 from tests.fakes.registry import FakeRegistryPort
 
 NOW = datetime(2026, 6, 16, tzinfo=UTC)
-PREFIX = "io.houba"
-ATYPE = "application/vnd.houba.scan.result.v1"
+PREFIX = "io.knock"
+ATYPE = "application/vnd.knock.scan.result.v1"
 
 
 def _ref(digest: str, *, days_old: int) -> Referrer:
@@ -105,7 +105,7 @@ def test_only_registry_narrows_the_walk():
 def test_list_referrers_failure_reddens_exit_without_blocking_siblings():
     class Boom(FakeRegistryPort):
         def list_referrers(self, image_ref: str, artifact_type: str):
-            from houba.errors import RegctlError
+            from knock.errors import RegctlError
 
             raise RegctlError("boom")
 
