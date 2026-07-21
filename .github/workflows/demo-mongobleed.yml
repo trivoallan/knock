@@ -1,6 +1,8 @@
 name: demo-mongobleed
 
-# Runs on PRs touching demo files + on-demand.
+# On-demand only (workflow_dispatch). This is a heavy kind e2e that pulls large
+# images from Docker Hub inside kind; it must never gate PRs automatically — run
+# it manually when validating the demo.
 # Two gates:
 #   1. spike-mongobleed.sh — regression guard: grype+trivy report 0 CVE-2025-14847,
 #      syft inventory ≥ 1.  Catches scanner-DB drift early, before the full demo.
@@ -8,13 +10,6 @@ name: demo-mongobleed
 #      brownfield reconcile, Act 1 (scanner blind spot) + Act 2 (XZ gate).
 
 on:
-  pull_request:
-    paths:
-      - scripts/demo-mongobleed.sh
-      - scripts/demo-gate.sh
-      - scripts/spike-mongobleed.sh
-      - docs/examples/brownfield/**
-      - Makefile
   workflow_dispatch:
 
 permissions:
