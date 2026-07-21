@@ -32,20 +32,20 @@ Reconcile all MirrorPolicy files under DIRECTORY against their destinations.
 **Usage**:
 
 ```console
-$ knock reconcile [OPTIONS] DIRECTORY
+$ knock reconcile [OPTIONS] {directory}
 ```
 
 **Arguments**:
 
-* `DIRECTORY`: Directory of MirrorPolicy files (recursive).  [required]
+* `directory`: Directory of MirrorPolicy files (recursive).  [required]
 
 **Options**:
 
 * `--dry-run`: Plan only — no copies, no deletes.
 * `-v, --verbose`: Unfold per-operation detail in text output.
-* `-j, --concurrency INTEGER RANGE`: Max parallel tag operations (overrides KNOCK_MAX_CONCURRENCY; 1 = sequential).  [x>=1]
-* `--shard-index INTEGER RANGE`: This shard's 0-based index (pass $JOB_COMPLETION_INDEX in an Indexed Job).  [default: 0; x>=0]
-* `--shard-count INTEGER RANGE`: Total shards N (1 = process all policies).  [default: 1; x>=1]
+* `-j, --concurrency <int range>`: Max parallel tag operations (overrides KNOCK_MAX_CONCURRENCY; 1 = sequential).  [x>=1]
+* `--shard-index <int range>`: This shard's 0-based index (pass $JOB_COMPLETION_INDEX in an Indexed Job).  [default: 0; x>=0]
+* `--shard-count <int range>`: Total shards N (1 = process all policies).  [default: 1; x>=1]
 * `--report-json`: Emit the reconcile report as JSON to stdout (for piping to `knock scan enqueue`).
 * `--help`: Show this message and exit.
 
@@ -61,7 +61,7 @@ $ knock purge [OPTIONS]
 
 **Options**:
 
-* `--registry TEXT`: Bound the walk to one registry from the roster.
+* `--registry <str>`: Bound the walk to one registry from the roster.
 * `--apply`: Actually delete (default: dry-run, plan only).
 * `--help`: Show this message and exit.
 
@@ -72,20 +72,20 @@ Ingest a scan report produced upstream and attach it as a stamped OCI referrer.
 **Usage**:
 
 ```console
-$ knock attach [OPTIONS] IMAGE_REF
+$ knock attach [OPTIONS] {image_ref}
 ```
 
 **Arguments**:
 
-* `IMAGE_REF`: Image reference (tag or digest) to stamp.  [required]
+* `image_ref`: Image reference (tag or digest) to stamp.  [required]
 
 **Options**:
 
-* `--report TEXT`: Path to the upstream scan report, or '-' for stdin.  [required]
-* `--format TEXT`: Override report-format auto-detection (e.g. 'sarif').
-* `--registry TEXT`: Roster entry to authenticate against (overrides ref host-matching).
-* `--output TEXT`: Output format: 'text' (default) or 'json'.  [default: text]
-* `--fail-on [critical|high|medium|low|unknown]`: Exit non-zero if the scan has a finding at or above this severity (CI gate).
+* `--report <str>`: Path to the upstream scan report, or '-' for stdin.  [required]
+* `--format <str>`: Override report-format auto-detection (e.g. 'sarif').
+* `--registry <str>`: Roster entry to authenticate against (overrides ref host-matching).
+* `--output <str>`: Output format: 'text' (default) or 'json'.  [default: text]
+* `--fail-on <critical|high|medium|low|unknown>`: Exit non-zero if the scan has a finding at or above this severity (CI gate).
 * `--help`: Show this message and exit.
 
 ## `knock audit`
@@ -100,12 +100,12 @@ $ knock audit [OPTIONS]
 
 **Options**:
 
-* `--registry TEXT`: Bound the walk to one registry from the roster.
+* `--registry <str>`: Bound the walk to one registry from the roster.
 * `--fail-on-uncovered`: Exit non-zero if any image lacks the stamp (CI gate).
 * `--signed`: Also probe each stamped image for a signed attestation referrer.
 * `--fail-on-unsigned`: Exit non-zero if any stamped image is unsigned (implies --signed).
 * `--sbom`: Also probe each stamped image for a package SBOM referrer.
-* `--limit INTEGER`: Stop after N images — bounded smoke-check / walk benchmark over a slice.
+* `--limit <int>`: Stop after N images — bounded smoke-check / walk benchmark over a slice.
 * `--help`: Show this message and exit.
 
 ## `knock gc`
@@ -120,9 +120,9 @@ $ knock gc [OPTIONS]
 
 **Options**:
 
-* `--registry TEXT`: Bound the walk to one registry from the roster.
-* `--keep INTEGER`: Newest scan referrers to retain per (tool, format).  [default: 2]
-* `--older-than-days INTEGER`: Only collect referrers older than this many days.  [default: 30]
+* `--registry <str>`: Bound the walk to one registry from the roster.
+* `--keep <int>`: Newest scan referrers to retain per (tool, format).  [default: 2]
+* `--older-than-days <int>`: Only collect referrers older than this many days.  [default: 30]
 * `--apply`: Actually delete (default: dry-run, plan only).
 * `--help`: Show this message and exit.
 
@@ -133,20 +133,20 @@ Read knock's facts for a digest and gate on them (exit 0 = pass, 1 = fail).
 **Usage**:
 
 ```console
-$ knock verify [OPTIONS] IMAGE_REF
+$ knock verify [OPTIONS] {image_ref}
 ```
 
 **Arguments**:
 
-* `IMAGE_REF`: Image reference (tag or digest) to verify.  [required]
+* `image_ref`: Image reference (tag or digest) to verify.  [required]
 
 **Options**:
 
-* `--require TEXT`: Comma-separated: scan-pass,stamp,sbom.  [default: scan-pass]
-* `--max-severity [critical|high|medium|low|unknown]`: Fail at or above this scan severity.  [default: high]
-* `--max-age TEXT`: Scan freshness SLA (e.g. 7d, 12h, 30m).  [default: 7d]
-* `--registry TEXT`: Roster entry to authenticate against.
-* `--output TEXT`: Output format: 'text' (default) or 'json'.  [default: text]
+* `--require <str>`: Comma-separated: scan-pass,stamp,sbom.  [default: scan-pass]
+* `--max-severity <critical|high|medium|low|unknown>`: Fail at or above this scan severity.  [default: high]
+* `--max-age <str>`: Scan freshness SLA (e.g. 7d, 12h, 30m).  [default: 7d]
+* `--registry <str>`: Roster entry to authenticate against.
+* `--output <str>`: Output format: 'text' (default) or 'json'.  [default: text]
 * `--help`: Show this message and exit.
 
 ## `knock version`
@@ -241,6 +241,6 @@ $ knock scan reaper [OPTIONS]
 
 **Options**:
 
-* `--min-idle-ms INTEGER`: Idle threshold in ms.  [default: 600000]
-* `--max-deliveries INTEGER`: Dead-letter threshold.  [default: 3]
+* `--min-idle-ms <int>`: Idle threshold in ms.  [default: 600000]
+* `--max-deliveries <int>`: Dead-letter threshold.  [default: 3]
 * `--help`: Show this message and exit.
