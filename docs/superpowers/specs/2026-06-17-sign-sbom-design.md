@@ -1,28 +1,28 @@
 # Sign the SBOM — the trust tier — design
 
-*Status: design. Roadmap item: *Now* → "Sign the SBOM under houba's identity (cosign) — the trust
+*Status: design. Roadmap item: *Now* → "Sign the SBOM under knock's identity (cosign) — the trust
 tier, sequenced like stamp-then-sign" (ADR 0029, P1). Closes the gap named in
 [explanation/sbom.md § "Presence, not yet trust"](../../explanation/sbom.md). Date: 2026-06-17.*
 
 ## Why (the gap, and why now)
 
-houba already attaches a package-level SBOM to **every** placed digest — copy and rebuild alike — as
+knock already attaches a package-level SBOM to **every** placed digest — copy and rebuild alike — as
 a raw OCI referrer. Its *presence* answers the blast-radius query. But the SBOM is attached
-**unsigned**: nothing binds it to houba's identity, so a downstream admission controller cannot
+**unsigned**: nothing binds it to knock's identity, so a downstream admission controller cannot
 *require* a trustworthy SBOM the way it can already require a signed transform attestation or a signed
-scan result. That is the difference between "an SBOM is present" and "houba asserts this SBOM".
+scan result. That is the difference between "an SBOM is present" and "knock asserts this SBOM".
 
-The precedent is already in the tree. `houba attach` attaches each scan result **both** as a raw
-SARIF referrer **and** as a signed in-toto attestation (`https://houba.dev/predicate/scan/v1`), gated
-by the single `HOUBA_ATTEST_SIGNER`. The SBOM is the one placed artifact still missing its signed
+The precedent is already in the tree. `knock attach` attaches each scan result **both** as a raw
+SARIF referrer **and** as a signed in-toto attestation (`https://knock.dev/predicate/scan/v1`), gated
+by the single `KNOCK_ATTEST_SIGNER`. The SBOM is the one placed artifact still missing its signed
 twin. This spec adds it, with the same shape.
 
-Goal: **when signing is configured, every SBOM houba attaches also gets a signed in-toto attestation
-under houba's identity, verifiable downstream with stock `cosign verify-attestation`.**
+Goal: **when signing is configured, every SBOM knock attaches also gets a signed in-toto attestation
+under knock's identity, verifiable downstream with stock `cosign verify-attestation`.**
 
 ## What it is not (scope)
 
-- **No new config knob.** SBOM-signing rides the existing `HOUBA_ATTEST_SIGNER` (the same identity
+- **No new config knob.** SBOM-signing rides the existing `KNOCK_ATTEST_SIGNER` (the same identity
   that already signs transform + scan). Signing on ⇒ transform, scan, *and* SBOM are signed together;
   signing off ⇒ presence only. "The label is the product": everything signs as one.
 - **Placement-time only.** The SBOM is signed in the same step it is generated — the syft bytes are
@@ -34,7 +34,7 @@ under houba's identity, verifiable downstream with stock `cosign verify-attestat
 ## Mechanism — sign-as-predicate, reuse the attestor untouched
 
 cosign's idiomatic signed SBOM is an in-toto attestation whose **predicate is the SBOM** and whose
-`predicateType` is the canonical document type. houba's `AttestorPort.attest(subject_ref, statement)`
+`predicateType` is the canonical document type. knock's `AttestorPort.attest(subject_ref, statement)`
 already signs an arbitrary in-toto Statement via `cosign attest --type <predicateType> --predicate
 <predicate.json>`. So signing the SBOM needs **no port or adapter change** — only a pure domain
 function that wraps the SBOM bytes as that Statement.
@@ -54,7 +54,7 @@ still lives in the raw referrer, so nothing is lost.
 
 ## Design
 
-### 1. Domain — one pure function (`houba/domain/sbom.py`)
+### 1. Domain — one pure function (`knock/domain/sbom.py`)
 
 ```python
 SBOM_PREDICATE_TYPES = {
@@ -76,11 +76,11 @@ Returns the in-toto v1 Statement:
 - `predicate`: `json.loads(sbom.content)`
 
 An unrecognized `sbom.format` raises `UnknownFormatError` (existing `DomainError` leaf → exit 1).
-Fully `mypy --strict`; counts toward the ≥ 90 % `houba.domain` coverage bar. The canonical
+Fully `mypy --strict`; counts toward the ≥ 90 % `knock.domain` coverage bar. The canonical
 `predicateType` is what lets a downstream `cosign verify-attestation --type spdxjson|cyclonedx`
 resolve and match for free.
 
-### 2. Use case — three lines (`houba/use_cases/reconcile.py`)
+### 2. Use case — three lines (`knock/use_cases/reconcile.py`)
 
 Inside the existing per-format SBOM loop in `_do_import`, immediately after `registry.put_referrer`:
 
@@ -97,7 +97,7 @@ if attestor is not None:
   collision with the transform attestation already on that digest.
 - **Inside the `try`**: a signing failure fails the operation, the same no-silent-gap rule that
   already governs SBOM generation and transform-signing.
-- **Gated by `attestor is not None`**: rides `HOUBA_ATTEST_SIGNER`; no new wiring in `cli/_di.py`
+- **Gated by `attestor is not None`**: rides `KNOCK_ATTEST_SIGNER`; no new wiring in `cli/_di.py`
   (the attestor is already constructed and passed in).
 
 ### 3. Failure semantics

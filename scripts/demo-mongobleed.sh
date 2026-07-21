@@ -2,8 +2,8 @@
 # demo-mongobleed.sh — Act 1: the signed SBOM inventory catches CVE-2025-14847
 # ("mongobleed", MongoDB 8.0.0–8.0.16) that grype + trivy both miss.
 #
-# Reads the demo registry directly via regctl; imports no houba-core.
-# houba attaches a CycloneDX SBOM referrer to every placed image; this script
+# Reads the demo registry directly via regctl; imports no knock-core.
+# knock attaches a CycloneDX SBOM referrer to every placed image; this script
 # fetches that referrer and queries it for the affected package + version range,
 # proving the inventory answers questions that CVE scanners cannot.
 #
@@ -33,7 +33,7 @@ in_range() {
   printf '%s\n%s\n%s\n' "$LO" "$1" "$HI" | sort -V -c >/dev/null 2>&1
 }
 
-echo "== Act 1: scanners vs the houba inventory =="
+echo "== Act 1: scanners vs the knock inventory =="
 found=0
 for tag in 8.0.15 8.0.16; do
   ref="${REG}/${REPO}:${tag}"
@@ -41,13 +41,13 @@ for tag in 8.0.15 8.0.16; do
   # Read the digest from the registry.
   digest=$(regctl image digest "${ref}" 2>/dev/null || echo "-")
 
-  # Pull io.houba.owners from the top-level manifest annotations
+  # Pull io.knock.owners from the top-level manifest annotations
   # (same approach as blast-radius.sh: `regctl manifest get --format '{{json .}}'`
-  # returns the raw manifest JSON; owners lives at .annotations["io.houba.owners"]).
+  # returns the raw manifest JSON; owners lives at .annotations["io.knock.owners"]).
   owners=$(regctl manifest get "${ref}" --format '{{json .}}' 2>/dev/null \
-           | jq -r '.annotations["io.houba.owners"] // "-"')
+           | jq -r '.annotations["io.knock.owners"] // "-"')
 
-  # Fetch the CycloneDX SBOM referrer houba attached to this image and query
+  # Fetch the CycloneDX SBOM referrer knock attached to this image and query
   # it for the affected package.  No --format flag: regctl artifact get writes
   # the raw artifact body to stdout (matching publish-sbom.sh's usage).
   pkgver=$(regctl artifact get --subject "${ref}" \

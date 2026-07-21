@@ -24,10 +24,10 @@ An explicit SARIF `result.kind` marks an **evaluation outcome** (a governance ve
 over** the CVSS score. Verdicts are summarized in a severity-bucketed `policy.*` space:
 `kind:"pass"` → `policy.passed`; otherwise `policy.<severity>`, bucketed by the result's
 `security-severity` (else its `level`). A result **without** `kind` is a finding → `vuln.*`
-(unchanged). houba keys on the standard `kind` signal, **never on `tool.driver.name`** — any
+(unchanged). knock keys on the standard `kind` signal, **never on `tool.driver.name`** — any
 analyzer emitting `kind` gets governance bucketing, so the split stays analyzer-agnostic. This
-replaces the binary `rule.passed`/`rule.failed` (annotation keys `io.houba.scan.rule.*` →
-`io.houba.scan.policy.*`); acceptable as a breaking change in 0.x, where no producer emitted
+replaces the binary `rule.passed`/`rule.failed` (annotation keys `io.knock.scan.rule.*` →
+`io.knock.scan.policy.*`); acceptable as a breaking change in 0.x, where no producer emitted
 `rule.*` yet.
 
 The `--fail-on <severity>` gate is unchanged (acts on `vuln.*` only); policy verdicts are reported
@@ -42,6 +42,6 @@ regeneration.
 - A `kind`-bearing result with a CVSS score is now a verdict, not a vulnerability (the 0027
   ordering is reversed). This is intentional: a tool that sets `kind` is declaring a verdict.
 - regis emitting `kind:"fail"`/`"pass"` is a parallel sibling-repo change (PR #789 follow-up); the
-  houba change is testable without it via synthetic SARIF fixtures.
+  knock change is testable without it via synthetic SARIF fixtures.
 
 Full design spec: [2026-06-19-sarif-kind-policy-classification-design.md](../../superpowers/specs/2026-06-19-sarif-kind-policy-classification-design.md)

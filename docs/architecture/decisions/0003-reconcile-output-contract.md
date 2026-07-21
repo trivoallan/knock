@@ -10,7 +10,7 @@ Refines [1. MirrorPolicy format & reconcile contract](0001-mirror-policy-format.
 
 ## Context
 
-`houba reconcile` emitted a single summary line, and a single failing policy aborted the
+`knock reconcile` emitted a single summary line, and a single failing policy aborted the
 whole run — poor for both machine consumption and multi-policy operation.
 
 ## Decision

@@ -4,11 +4,11 @@
 
 ## Why
 
-*The label is the product* — the provenance stamp is houba's public API and must not wobble before
+*The label is the product* — the provenance stamp is knock's public API and must not wobble before
 real artifacts depend on it. One OCI key is currently mis-stamped.
 
 OCI defines `org.opencontainers.image.revision` as the *"Source control revision identifier for the
-packaged software"* — a VCS commit. houba mirrors upstream images and does **not** know the upstream
+packaged software"* — a VCS commit. knock mirrors upstream images and does **not** know the upstream
 software's SCM commit. Today `domain/stamp.py` stamps `.revision = source_digest` (the source manifest
 digest). That is semantically wrong (a manifest digest is not a source-control revision) **and**
 redundant: `.revision == .base.digest == source_digest`, two OCI keys carrying the identical value.
@@ -18,8 +18,8 @@ redundant: `.revision == .base.digest == source_digest`, two OCI keys carrying t
 **Propagate the `.revision` the source image declares itself; if it declares none, do not emit the
 key.** Never fabricate one from a digest or tag. Source identity is already carried by `base.name`
 (the upstream tag) and `base.digest` (the immutable bytes). Uniform across the **copy** and **rebuild**
-paths — the packaged software's SCM revision is the upstream's regardless of houba hardening (houba's
-own lineage lives in `io.houba.transform.*`).
+paths — the packaged software's SCM revision is the upstream's regardless of knock hardening (knock's
+own lineage lives in `io.knock.transform.*`).
 
 This removes the current `.revision == .base.digest` redundancy and makes `.revision` mean what OCI
 says, or be absent.
@@ -57,7 +57,7 @@ is reachable with **no extra registry call** — it just needs surfacing.
   manifest, v1 does not descend into children → the key is omitted. Documented limitation.
 - **The signed in-toto predicate is unchanged.** It already carries `source` + `source_digest`; adding
   the upstream revision to the signed predicate is a possible follow-up, not this change.
-- **`houba audit` / `domain/coverage.is_stamped` is unaffected** — it tests `{prefix}.policy` (or
+- **`knock audit` / `domain/coverage.is_stamped` is unaffected** — it tests `{prefix}.policy` (or
   `base.digest` when the prefix is empty), never `.revision`.
 
 ## Testing (TDD)

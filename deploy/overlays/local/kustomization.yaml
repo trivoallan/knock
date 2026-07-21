@@ -5,7 +5,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: houba
+namespace: knock
 
 resources:
   - ../../base
@@ -17,12 +17,12 @@ components:
   - ../../components/dependency-track
   - ../../components/scan-pipeline
 
-# Re-run the houba image rewrite at the overlay level so it also catches the
+# Re-run the knock image rewrite at the overlay level so it also catches the
 # scan-pipeline component's containers (enqueuer + worker), which the base-level
 # transformer never sees — components are applied after the base accumulates.
 images:
-  - name: houba
-    newName: houba
+  - name: knock
+    newName: knock
     newTag: dev
 
 generatorOptions:
@@ -30,7 +30,7 @@ generatorOptions:
 
 configMapGenerator:
   # Point the reconcile + blast-radius at the reference policy.
-  - name: houba-config
+  - name: knock-config
     behavior: merge
     literals:
       - POLICY_DIR=/policies/current/docs/examples/reference
@@ -41,11 +41,11 @@ patches:
   # gc is suspended in the local loop too — fired on demand, never auto-deletes during a demo.
   - target:
       kind: CronJob
-      name: houba-gc
+      name: knock-gc
     patch: |-
       - op: add
         path: /spec/suspend
         value: true
-  # No buildkitd plain-HTTP config: houba derives BuildKit's `registry.insecure=true`
+  # No buildkitd plain-HTTP config: knock derives BuildKit's `registry.insecure=true`
   # from the roster's `tls_verify=false` (same primitive regctl uses), so the rebuild
   # push to the plain-HTTP Zot works with the generic components/buildkitd as-is.

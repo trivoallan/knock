@@ -1,7 +1,7 @@
 graph LR
   linkStyle default fill:#ffffff
 
-  subgraph diagram ["Deployment View: houba - Greenfield — full GitOps platform (Reference B, advanced)"]
+  subgraph diagram ["Deployment View: knock - Greenfield — full GitOps platform (Reference B, advanced)"]
     style diagram fill:#ffffff,stroke:#ffffff
 
     subgraph 201 ["Git host"]
@@ -19,19 +19,19 @@ graph LR
       subgraph 205 ["namespace: argocd"]
         style 205 fill:#ffffff,stroke:#444444,color:#ffffff
 
-        206("<div style='font-weight: bold'>Application: houba-root</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ArgoCD]</div><div style='font-size: 80%; margin-top:10px'>App-of-Apps; syncs the apps/<br />children from git (no<br />demo/prod split)</div>")
+        206("<div style='font-weight: bold'>Application: knock-root</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ArgoCD]</div><div style='font-size: 80%; margin-top:10px'>App-of-Apps; syncs the apps/<br />children from git (no<br />demo/prod split)</div>")
         style 206 fill:#8a94a0,stroke:#606770,color:#ffffff
-        207("<div style='font-weight: bold'>ArgoCD</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>GitOps controller: the<br />App-of-Apps that syncs the<br />houba install from git. This<br />IS the reference deployment —<br />and the demo on kind. The<br />kubectl apply -k<br />overlays/local path is the<br />inner-loop escape hatch, not<br />a separate blueprint.</div>")
+        207("<div style='font-weight: bold'>ArgoCD</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>GitOps controller: the<br />App-of-Apps that syncs the<br />knock install from git. This<br />IS the reference deployment —<br />and the demo on kind. The<br />kubectl apply -k<br />overlays/local path is the<br />inner-loop escape hatch, not<br />a separate blueprint.</div>")
         style 207 fill:#69707a,stroke:#494e55,color:#ffffff
       end
 
-      subgraph 208 ["namespace: houba"]
+      subgraph 208 ["namespace: knock"]
         style 208 fill:#ffffff,stroke:#444444,color:#ffffff
 
-        subgraph 209 ["CronJob: houba-reconcile"]
+        subgraph 209 ["CronJob: knock-reconcile"]
           style 209 fill:#ffffff,stroke:#444444,color:#ffffff
 
-          210("<div style='font-weight: bold'>houba CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
+          210("<div style='font-weight: bold'>knock CLI</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python · Typer]</div><div style='font-size: 80%; margin-top:10px'>Reconcile engine: loads<br />MirrorPolicy files, mirrors<br />or rebuilds images and stamps<br />them with provenance. Runs as<br />a CLI / Job; the runtime<br />image bundles regctl +<br />buildctl.</div>")
           style 210 fill:#2563c9,stroke:#19458c,color:#ffffff
           211("<div style='font-weight: bold'>git-sync sidecar</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: git-sync]</div><div style='font-size: 80%; margin-top:10px'>Clones the policy repo into<br />/policies</div>")
           style 211 fill:#8a94a0,stroke:#606770,color:#ffffff
@@ -40,21 +40,21 @@ graph LR
         subgraph 212 ["Deployment: buildkitd (own app)"]
           style 212 fill:#ffffff,stroke:#444444,color:#ffffff
 
-          213("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine houba drives<br />to rebuild and harden images.</div>")
+          213("<div style='font-weight: bold'>BuildKit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>OCI build engine knock drives<br />to rebuild and harden images.</div>")
           style 213 fill:#69707a,stroke:#494e55,color:#ffffff
         end
 
-        215("<div style='font-weight: bold'>ExternalSecret + ClusterSecretStore</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ExternalSecret]</div><div style='font-size: 80%; margin-top:10px'>houba-secret-store → OpenBao<br />(ESO vault provider)</div>")
+        215("<div style='font-weight: bold'>ExternalSecret + ClusterSecretStore</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: ExternalSecret]</div><div style='font-size: 80%; margin-top:10px'>knock-secret-store → OpenBao<br />(ESO vault provider)</div>")
         style 215 fill:#8a94a0,stroke:#606770,color:#ffffff
         216("<div style='font-weight: bold'>Job: blast-radius</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: regctl]</div><div style='font-size: 80%; margin-top:10px'>BLAST_REPOS=demo/busybox<br />demo/debian — reads stamps,<br />answers the CVE-time query</div>")
         style 216 fill:#8a94a0,stroke:#606770,color:#ffffff
-        217("<div style='font-weight: bold'>CronJob: houba-gc</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes CronJob]</div><div style='font-size: 80%; margin-top:10px'>Weekly houba gc --apply —<br />collects superseded scan<br />referrers<br />(keep=2/older-than=30d). No<br />git-sync/policies; walks the<br />roster only.</div>")
+        217("<div style='font-weight: bold'>CronJob: knock-gc</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes CronJob]</div><div style='font-size: 80%; margin-top:10px'>Weekly knock gc --apply —<br />collects superseded scan<br />referrers<br />(keep=2/older-than=30d). No<br />git-sync/policies; walks the<br />roster only.</div>")
         style 217 fill:#8a94a0,stroke:#606770,color:#ffffff
-        218("<div style='font-weight: bold'>Deployment: dependency-track (own app)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Deployment]</div><div style='font-size: 80%; margin-top:10px'>Worked-example SBOM consumer<br />(apiserver + frontend,<br />embedded H2) — its own ArgoCD<br />Application (ADR 0035).<br />Currency layer: package-level<br />blast-radius. Fed the<br />CycloneDX SBOM referrer houba<br />attaches<br />(HOUBA_SBOM_FORMATS),<br />uploaded by publish-sbom.</div>")
+        218("<div style='font-weight: bold'>Deployment: dependency-track (own app)</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Deployment]</div><div style='font-size: 80%; margin-top:10px'>Worked-example SBOM consumer<br />(apiserver + frontend,<br />embedded H2) — its own ArgoCD<br />Application (ADR 0035).<br />Currency layer: package-level<br />blast-radius. Fed the<br />CycloneDX SBOM referrer knock<br />attaches<br />(KNOCK_SBOM_FORMATS),<br />uploaded by publish-sbom.</div>")
         style 218 fill:#8a94a0,stroke:#606770,color:#ffffff
-        219("<div style='font-weight: bold'>Job: houba-publish-sbom</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Job]</div><div style='font-size: 80%; margin-top:10px'>Fetches the CycloneDX SBOM<br />referrer houba attaches to<br />each placed image and uploads<br />it to DT. regctl + python, no<br />conversion. Twin of the<br />blast-radius consumer.</div>")
+        219("<div style='font-weight: bold'>Job: knock-publish-sbom</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Job]</div><div style='font-size: 80%; margin-top:10px'>Fetches the CycloneDX SBOM<br />referrer knock attaches to<br />each placed image and uploads<br />it to DT. regctl + python, no<br />conversion. Twin of the<br />blast-radius consumer.</div>")
         style 219 fill:#8a94a0,stroke:#606770,color:#ffffff
-        220("<div style='font-weight: bold'>Job: houba-scan-attach</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Job]</div><div style='font-size: 80%; margin-top:10px'>Off-the-shelf grype evaluates<br />the SBOM referrer houba<br />attached (grype sbom:, no<br />registry creds); houba attach<br />binds the SARIF as a signed<br />referrer on the same digest.<br />regctl + grype + houba, no<br />derived image. grype pulls<br />its CVE DB from the internet<br />(air-gapped => mirror).</div>")
+        220("<div style='font-weight: bold'>Job: knock-scan-attach</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: Kubernetes Job]</div><div style='font-size: 80%; margin-top:10px'>Off-the-shelf grype evaluates<br />the SBOM referrer knock<br />attached (grype sbom:, no<br />registry creds); knock attach<br />binds the SARIF as a signed<br />referrer on the same digest.<br />regctl + grype + knock, no<br />derived image. grype pulls<br />its CVE DB from the internet<br />(air-gapped => mirror).</div>")
         style 220 fill:#8a94a0,stroke:#606770,color:#ffffff
         subgraph 221 ["marked workloads (team-a/b/c)"]
           style 221 fill:#ffffff,stroke:#444444,color:#ffffff
@@ -75,7 +75,7 @@ graph LR
       subgraph 225 ["namespace: openbao"]
         style 225 fill:#ffffff,stroke:#444444,color:#ffffff
 
-        226("<div style='font-weight: bold'>OpenBao</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: OpenBao]</div><div style='font-size: 80%; margin-top:10px'>Helm child (dev mode on<br />kind); holds houba/registries</div>")
+        226("<div style='font-weight: bold'>OpenBao</div><div style='font-size: 70%; margin-top: 0px'>[Infrastructure Node: OpenBao]</div><div style='font-size: 80%; margin-top:10px'>Helm child (dev mode on<br />kind); holds knock/registries</div>")
         style 226 fill:#8a94a0,stroke:#606770,color:#ffffff
       end
 
@@ -99,9 +99,9 @@ graph LR
     210-. "<div>Reads mirror state; copies,<br />stamps, retags, deletes</div><div style='font-size: 70%'>[regctl (dist-spec)]</div>" .->228
     210-. "<div>Lists tags, inspects digests,<br />copies images</div><div style='font-size: 70%'>[regctl]</div>" .->231
     207-. "<div>Pulls manifests (App-of-Apps)</div><div style='font-size: 70%'>[git]</div>" .->202
-    206-. "<div>Syncs the houba install</div><div style='font-size: 70%'>[ArgoCD]</div>" .->210
+    206-. "<div>Syncs the knock install</div><div style='font-size: 70%'>[ArgoCD]</div>" .->210
     206-. "<div>Syncs the buildkitd app</div><div style='font-size: 70%'>[ArgoCD]</div>" .->213
-    224-. "<div>Reads houba/registries</div><div style='font-size: 70%'>[vault API]</div>" .->226
+    224-. "<div>Reads knock/registries</div><div style='font-size: 70%'>[vault API]</div>" .->226
     215-. "<div>Requests the roster Secret</div><div style='font-size: 70%'>[ESO]</div>" .->224
     211-. "<div>Pulls policies</div><div style='font-size: 70%'>[git]</div>" .->203
     216-. "<div>Reads provenance stamps</div><div style='font-size: 70%'>[regctl]</div>" .->228

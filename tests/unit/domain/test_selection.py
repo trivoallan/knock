@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from houba.domain.mirror_policy import TagSelection
-from houba.domain.selection import select_tags
+from knock.domain.mirror_policy import TagSelection
+from knock.domain.selection import select_tags
 
 SOURCE = ["1.36.0", "1.36.1", "1.37.0", "2.0.0", "2.0.0-rc1", "latest", "1.36.1-special"]
 

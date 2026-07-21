@@ -13,7 +13,15 @@ change on a dedicated branch, landed as one merge into `main`, tagged `0.9.0`.
 ## Why "knock"
 
 Short, memorable, CLI-friendly (`knock reconcile`, `knock attach`, `knock audit`). Evocative of the
-product thesis: knock is the single front door — every external image knocks before it enters.
+product thesis: knock is the single front door — every external image knocks before it enters. A
+second register reinforces it: Jules Romains' *Knock ou le Triomphe de la médecine* (1923), whose
+Dr. Knock runs a town on *« tout homme bien portant est un malade qui s'ignore »* and screens
+everyone — which is the coverage thesis exactly (no image is presumed clean until screened and
+stamped). It also retires the interim "nok", which collides with "not OK" and the NOK currency code.
+
+This spec is mirrored by [ADR 0045](../../architecture/decisions/0045-rename-houba-to-knock.md),
+which records the as-built refinements (distribution `knock-oci`; the one open read-side follow-up
+on frozen predicate URIs).
 
 ## Problem & context
 
@@ -41,8 +49,11 @@ upgrade path.
    rename changes only what **new** images receive.
 5. The predicate URIs (`https://houba.dev/predicate/*/v1`) and artifact types
    (`application/vnd.houba.*`) are stamped on existing attestations and referrers in registries.
-   These are **frozen** — verification of already-signed attestations must not break. New images
-   get the new URIs; the verifier must accept both until the old cohort ages out.
+   ~~These are frozen; the verifier must accept both until the old cohort ages out.~~ **Decided
+   against (ADR 0045): no dual-accept.** Consistent with the clean-break stance (premise 3), the
+   verifier recognizes only the new `knock.dev` / `vnd.knock.*` families; attestations signed before
+   the rename do not verify and are re-placed (rebuild/copy) to re-stamp under the new identifiers.
+   The pre-1.0 status (premise 1) and absent user base (premise 2) make this acceptable.
 
 ## Scope
 
@@ -56,12 +67,12 @@ Everything below ships in **one branch, one merge, one tag**.
 |---|---|---|
 | Package directory | `houba/` | `knock/` |
 | All `import houba` / `from houba` | `houba` | `knock` |
-| `pyproject.toml` name | `houba` | `knock` |
+| `pyproject.toml` name | `houba` | `knock-oci` (bare `knock` is taken on PyPI; command + import stay `knock`) |
 | Script entry point | `houba = "houba.cli.main:_run"` | `knock = "knock.cli.main:_run"` |
 | `setuptools.packages` | `["houba"]` | `["knock"]` |
 | Error root class | `HoubaError` | `KnockError` |
 | Typer app name | `name="houba"` | `name="knock"` |
-| `importlib.metadata.version("houba")` | `"houba"` | `"knock"` |
+| `importlib.metadata.version("houba")` | `"houba"` | `"knock-oci"` (distribution name) |
 
 ~421 import statements across ~149 files. Mechanical find/replace.
 

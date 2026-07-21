@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import hashlib
 
-from houba.errors import RegctlError
-from houba.ports.registry import ImageInfo, Referrer
+from knock.errors import RegctlError
+from knock.ports.registry import ImageInfo, Referrer
 
 
 class FakeRegistryPort:

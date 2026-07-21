@@ -6,9 +6,9 @@
 # Schema: https://github.com/repository-settings/app
 
 repository:
-  name: houba
+  name: knock
   description: "The single front door for external container images: harden, stamp, and trace every image you run."
-  homepage: "https://github.com/trivoallan/houba"
+  homepage: "https://github.com/trivoallan/knock"
   topics: oci, containers, container-images, harbor, supply-chain-security, provenance, slsa, image-hardening, golden-images, devsecops, python, cli
 
   private: false

@@ -1,4 +1,4 @@
-"""Acceptance gate: standalone syft (houba's runtime SBOM scanner) must surface every
+"""Acceptance gate: standalone syft (knock's runtime SBOM scanner) must surface every
 incident class at the right granularity. Permanent guard against silent scanner-depth
 regression.
 
@@ -70,7 +70,7 @@ def test_sbom_depth_incident_matrix(tmp_path: Path) -> None:
         " && rm -rf /var/lib/apt/lists/*\n"
         "RUN cp /bin/true /usr/local/bin/mongod && chmod +x /usr/local/bin/mongod\n"
     )
-    image = "houba-sbom-depth-fixture:test"
+    image = "knock-sbom-depth-fixture:test"
     build = subprocess.run(
         ["docker", "build", "-t", image, str(ctx)],
         capture_output=True,

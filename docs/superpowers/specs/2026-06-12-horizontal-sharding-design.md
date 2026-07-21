@@ -6,7 +6,7 @@
 
 ## Context & motivation
 
-houba runs today as a **single Kubernetes CronJob** (`deploy/base/cronjob-reconcile.yaml`), hourly,
+knock runs today as a **single Kubernetes CronJob** (`deploy/base/cronjob-reconcile.yaml`), hourly,
 `concurrencyPolicy: Forbid`, one pod reconciling **all** policies; `buildkitd` is a `replicas: 1`
 Deployment. That is strictly single-instance: safe (no overlap), but it does not scale out.
 
@@ -14,14 +14,14 @@ The companion threading spec is the **scale-up** axis (parallel *tags* within on
 **scale-out** axis (parallel *policies* across pods). They compose: a sharded pod owns a subset of policies
 and threads the tags within each.
 
-houba is already well-positioned for scale-out: it is **stateless**, the **destination registry is the
+knock is already well-positioned for scale-out: it is **stateless**, the **destination registry is the
 state store**, reconcile is a **convergence loop** (controller pattern), and per-policy isolation already
 exists. The only thing missing is a safe way to divide the policy set across instances without two
 instances writing the same destination.
 
 ## Goals
 
-1. Let N houba instances each reconcile a **disjoint** subset of policies, with **no cross-instance races**
+1. Let N knock instances each reconcile a **disjoint** subset of policies, with **no cross-instance races**
    on any destination repository.
 2. Keep it **stateless and coordination-free** — no distributed lock, no queue, no leader election. The
    registry stays the only state store.
@@ -130,7 +130,7 @@ These are asserted with tests (below), not just assumed.
 
 ## CLI
 
-`houba reconcile <dir>` gains two integer options (no env reading in app code — the manifest passes them via
+`knock reconcile <dir>` gains two integer options (no env reading in app code — the manifest passes them via
 the shell, honouring "`config.py` is the only env reader"):
 
 ```python
@@ -153,15 +153,15 @@ Validate `shard_index < shard_count` (raise a `ConfigError`/typer error otherwis
       parallelism: 1        # = M concurrent pods (M ≤ N; cap to protect buildkitd).
 ```
 
-The houba container args become (shell expands the kube-injected `$JOB_COMPLETION_INDEX` and the
-config-map `$SHARD_COUNT` — houba never reads them itself):
+The knock container args become (shell expands the kube-injected `$JOB_COMPLETION_INDEX` and the
+config-map `$SHARD_COUNT` — knock never reads them itself):
 
 ```yaml
-args: ['exec houba reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX" --shard-count "$SHARD_COUNT"']
+args: ['exec knock reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX" --shard-count "$SHARD_COUNT"']
 ```
 
 - `JOB_COMPLETION_INDEX` is injected automatically by Kubernetes into Indexed-Job pods.
-- `SHARD_COUNT` is a `houba-config` ConfigMap value; **it must equal `completions`** — both are N, set from
+- `SHARD_COUNT` is a `knock-config` ConfigMap value; **it must equal `completions`** — both are N, set from
   one place (a kustomize variable or a single ConfigMap key) so they cannot drift.
 - `concurrencyPolicy: Forbid` is unchanged → no overlap of successive Jobs.
 - `backoffLimit: 0` is unchanged (a failed shard waits for the next schedule). Indexed mode additionally
@@ -175,7 +175,7 @@ args: ['exec houba reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX"
 The build path (`build_and_push`) terminates at `buildkitd`. One daemon interleaves builds up to one
 node's resources; exceeding that needs `replicas > 1`. The target:
 
-- buildkitd `replicas` becomes an overlay knob; houba pods reach it via the existing buildkitd **Service**
+- buildkitd `replicas` becomes an overlay knob; knock pods reach it via the existing buildkitd **Service**
   (load-balanced).
 - Cache fragmentation across replicas is mitigated by a **registry-backed cache** (`buildctl … --export-cache
   type=registry --import-cache type=registry`) — a change in the `buildkit_cli` adapter.
@@ -185,13 +185,13 @@ ceiling is the single buildkitd. `max_concurrency` default stays modest (4).
 
 ## Code touch points
 
-- **Create** `houba/domain/sharding.py` — `policy_shard`, `owns` (pure).
-- **Modify** `houba/domain/collision.py` — add `detect_dest_repo_collisions` (pure).
-- **Modify** `houba/use_cases/reconcile.py` — `_resolved_dest_repos` helper (pure resolution), the global
+- **Create** `knock/domain/sharding.py` — `policy_shard`, `owns` (pure).
+- **Modify** `knock/domain/collision.py` — add `detect_dest_repo_collisions` (pure).
+- **Modify** `knock/use_cases/reconcile.py` — `_resolved_dest_repos` helper (pure resolution), the global
   invariant call, the shard filter, and `shard_index`/`shard_count` params on `reconcile_policies`.
-- **Modify** `houba/cli/reconcile.py` — `--shard-index` / `--shard-count`, `shard_index < shard_count`
+- **Modify** `knock/cli/reconcile.py` — `--shard-index` / `--shard-count`, `shard_index < shard_count`
   validation, pass-through.
-- **Modify** `deploy/base/cronjob-reconcile.yaml` (+ `houba-config` ConfigMap) — Indexed Job, `SHARD_COUNT`.
+- **Modify** `deploy/base/cronjob-reconcile.yaml` (+ `knock-config` ConfigMap) — Indexed Job, `SHARD_COUNT`.
 - **Docs** — `docs/runbooks/reference-deployment.md` (sharding section), `docs/architecture/README.md`
   wording (CronJob → optionally-sharded Indexed Job).
 
@@ -239,4 +239,4 @@ Strict TDD per house rule: failing test → red → minimal impl → green → c
 - **buildkitd horizontal scaling + registry build cache** — the target above, deferred.
 - **Dynamic rebalancing / autoscaling** — N is static per Job; changing N is a manifest edit.
 - **Cross-shard run aggregation** — each shard emits its own `RunReport`; a combined fleet view (e.g. the
-  blast-radius consumer reading stamps) is a separate concern, already out of houba's scope per the roadmap.
+  blast-radius consumer reading stamps) is a separate concern, already out of knock's scope per the roadmap.

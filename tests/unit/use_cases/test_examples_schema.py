@@ -14,7 +14,7 @@ import jsonschema
 import pytest
 import yaml
 
-from houba.domain.mirror_policy import mirror_policy_json_schema
+from knock.domain.mirror_policy import mirror_policy_json_schema
 
 # Repo root: tests/unit/use_cases/<this file> → parents[3].
 _REPO_ROOT = Path(__file__).resolve().parents[3]

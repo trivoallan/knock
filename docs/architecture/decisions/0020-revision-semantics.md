@@ -10,7 +10,7 @@ Accepted
 
 `org.opencontainers.image.revision` is an OCI-standard annotation whose semantics are the
 **SCM commit hash of the software packaged in the image**, not a registry artifact identifier.
-houba was previously stamping it with the source manifest digest (the same value already carried
+knock was previously stamping it with the source manifest digest (the same value already carried
 by `org.opencontainers.image.base.digest`). This was wrong on two counts:
 
 1. **OCI semantics.** The OCI Image Spec defines `.revision` as the source-control revision of the
@@ -26,9 +26,9 @@ by `org.opencontainers.image.base.digest`). This was wrong on two counts:
 ## Decision
 
 `org.opencontainers.image.revision` is **propagated from the source image's own declaration**:
-houba reads the source manifest's OCI annotation first (annotation wins); if absent, falls back
+knock reads the source manifest's OCI annotation first (annotation wins); if absent, falls back
 to the equivalent config label. When the source declares no revision at all, `.revision` is
-**omitted** from the stamp — houba does not fabricate a value from the digest, a tag, or anything
+**omitted** from the stamp — knock does not fabricate a value from the digest, a tag, or anything
 else.
 
 Lookup priority (highest wins):
@@ -51,7 +51,7 @@ consumes it. **C4 model: unchanged.**
   different value (the actual upstream commit, or key absence). This is a deliberate breaking
   change: the old value was meaningless by the spec.
 - Images whose upstream maintainers do publish `.revision` (e.g. official images with full OCI
-  annotation sets) will carry that commit hash through houba's stamp, making source traceability
+  annotation sets) will carry that commit hash through knock's stamp, making source traceability
   free.
 
 Full design spec: [2026-06-15-revision-semantics-design.md](../../superpowers/specs/2026-06-15-revision-semantics-design.md)

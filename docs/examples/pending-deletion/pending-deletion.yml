@@ -1,14 +1,14 @@
-# Demonstrates deletionMode: mark — when a tag leaves the selection, houba attaches a
+# Demonstrates deletionMode: mark — when a tag leaves the selection, knock attaches a
 # pending-deletion OCI referrer instead of deleting it, so an external reaper that can
 # see production usage owns the actual purge. The image digest stays immutable and the
 # tag stays pullable until the reaper acts. Marks auto-clear if the tag re-enters.
 #
 # Resolution cascade (most-specific wins):
 #   deletionMode on the policy  ← wins (most specific)
-#   else destination deletion_mode in HOUBA_REGISTRIES
-#   else global HOUBA_DELETION_MODE (default: purge)
+#   else destination deletion_mode in KNOCK_REGISTRIES
+#   else global KNOCK_DELETION_MODE (default: purge)
 #
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis-delegated
@@ -21,7 +21,7 @@ spec:
   imports:
     - name: v7
       owners:
-        - group:default/data-platform     # stamped as io.houba.owners
+        - group:default/data-platform     # stamped as io.knock.owners
       tags:
         includeRegex: "^7\\.2\\."
       destinations:

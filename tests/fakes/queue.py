@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from houba.ports.queue import Reservation
+from knock.ports.queue import Reservation
 
 
 class FakeQueuePort:

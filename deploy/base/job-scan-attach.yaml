@@ -1,9 +1,9 @@
-# Runs an off-the-shelf analyzer (grype) on the SBOM houba attached, and attaches the SARIF.
-# grype reads a LOCAL SBOM (no registry creds); regctl/houba do the registry I/O.
+# Runs an off-the-shelf analyzer (grype) on the SBOM knock attached, and attaches the SARIF.
+# grype reads a LOCAL SBOM (no registry creds); regctl/knock do the registry I/O.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: houba-scan-attach
+  name: knock-scan-attach
   annotations:
     argocd.argoproj.io/sync-wave: "3"   # after reconcile placed + attached the SBOM
 spec:
@@ -12,26 +12,26 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: houba
+        app.kubernetes.io/name: knock
         app.kubernetes.io/component: scan-attach
     spec:
-      serviceAccountName: houba
+      serviceAccountName: knock
       restartPolicy: Never
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       initContainers:
-        - name: fetch-sbom            # houba image: pull each placed image's CycloneDX SBOM referrer
-          image: houba                # rewritten by the kustomize images transformer; has regctl + python3
+        - name: fetch-sbom            # knock image: pull each placed image's CycloneDX SBOM referrer
+          image: knock                # rewritten by the kustomize images transformer; has regctl + python3
           command: ["bash", "/scripts/scan-attach.sh", "fetch"]
           env:
             - {name: HOME, value: /tmp}
             - {name: SHARED, value: /shared}
             - name: BLAST_REPOS
-              valueFrom: {configMapKeyRef: {name: houba-config, key: BLAST_REPOS}}
+              valueFrom: {configMapKeyRef: {name: knock-config, key: BLAST_REPOS}}
           envFrom:
-            - secretRef: {name: houba-registries}
+            - secretRef: {name: knock-registries}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -58,16 +58,16 @@ spec:
             - {name: shared, mountPath: /shared}
             - {name: home, mountPath: /tmp}
       containers:
-        - name: attach                # houba image: attach each SARIF as a signed referrer
-          image: houba
+        - name: attach                # knock image: attach each SARIF as a signed referrer
+          image: knock
           command: ["bash", "/scripts/scan-attach.sh", "attach"]
           env:
             - {name: HOME, value: /tmp}
             - {name: SHARED, value: /shared}
             - name: BLAST_REPOS
-              valueFrom: {configMapKeyRef: {name: houba-config, key: BLAST_REPOS}}
+              valueFrom: {configMapKeyRef: {name: knock-config, key: BLAST_REPOS}}
           envFrom:
-            - secretRef: {name: houba-registries}
+            - secretRef: {name: knock-registries}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -77,6 +77,6 @@ spec:
             - {name: shared, mountPath: /shared}
             - {name: home, mountPath: /tmp}
       volumes:
-        - {name: scripts, configMap: {name: houba-scan-attach, defaultMode: 0755}}
+        - {name: scripts, configMap: {name: knock-scan-attach, defaultMode: 0755}}
         - {name: shared, emptyDir: {}}
         - {name: home, emptyDir: {}}

@@ -1,7 +1,7 @@
 from typer.testing import CliRunner
 
-from houba.cli.main import app
-from houba.errors import ConfigError, exit_code_for
+from knock.cli.main import app
+from knock.errors import ConfigError, exit_code_for
 
 runner = CliRunner()
 
@@ -13,8 +13,8 @@ def test_verify_in_help():
 
 
 def test_verify_bad_require_is_config_error_mapped_to_exit_3(monkeypatch):
-    monkeypatch.setenv("HOUBA_ATTEST_SIGNER", "key")
-    monkeypatch.setenv("HOUBA_ATTEST_KEY_REF", "/tmp/cosign.pub")
+    monkeypatch.setenv("KNOCK_ATTEST_SIGNER", "key")
+    monkeypatch.setenv("KNOCK_ATTEST_KEY_REF", "/tmp/cosign.pub")
     result = runner.invoke(app, ["verify", "reg/app@sha256:" + "a" * 64, "--require", "bogus"])
     # CliRunner bypasses main._run's exception->exit-code mapping, so the ConfigError
     # surfaces as result.exception. Assert the real product contract directly: the command

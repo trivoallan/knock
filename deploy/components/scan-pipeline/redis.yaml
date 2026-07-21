@@ -1,6 +1,6 @@
 # The reference work queue: a single Redis (durable enough for at-least-once with reserve/ack).
-# Swappable glue — replace with NATS/SQS without touching houba. Streams used:
-#   houba:scan:work        the work stream (XADD by the enqueuer, XREADGROUP by each Job)
+# Swappable glue — replace with NATS/SQS without touching knock. Streams used:
+#   knock:scan:work        the work stream (XADD by the enqueuer, XREADGROUP by each Job)
 # Consumer group: scan
 # AOF enabled (appendonly yes + appendfsync everysec) for durability across container restarts.
 # Production hardening: replace emptyDir with a PVC for pod-reschedule durability.

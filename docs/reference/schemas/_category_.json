@@ -6,6 +6,6 @@
     "type": "generated-index",
     "slug": "/reference/schemas",
     "title": "Published schemas",
-    "description": "The machine-readable contracts houba publishes, rendered for humans. Each page has a matching .schema.json for editor/CI validation."
+    "description": "The machine-readable contracts knock publishes, rendered for humans. Each page has a matching .schema.json for editor/CI validation."
   }
 }

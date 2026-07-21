@@ -29,7 +29,7 @@ Unifying on a standalone generator (syft) for **both** paths removes the redunda
 two mechanisms into one (OCI referrer), and makes CycloneDX a config flag rather than an
 impossibility. It is *less* surface, not more.
 
-Goal: **every image houba places — rebuilt or copied — carries a portable, package-level SBOM in the
+Goal: **every image knock places — rebuilt or copied — carries a portable, package-level SBOM in the
 org's chosen format(s) (SPDX and/or CycloneDX), attached uniformly as an OCI referrer.**
 
 ## Depth is already validated — same engine
@@ -61,7 +61,7 @@ volume.
 
 ## Architecture (follows the house pattern: port → fake → adapter → wiring)
 
-### 1. Port — `houba/ports/sbom.py`
+### 1. Port — `knock/ports/sbom.py`
 
 ```python
 @dataclass(frozen=True)
@@ -77,7 +77,7 @@ class SbomGeneratorPort(Protocol):
 
 `typing.Protocol` + frozen data model, never imports adapters. Stays `mypy --strict`.
 
-### 2. Adapter — `houba/adapters/syft_cli.py` (`SyftAdapter`)
+### 2. Adapter — `knock/adapters/syft_cli.py` (`SyftAdapter`)
 
 - Drives syft once with multiple `-o <fmt>=<path>` outputs (one scan, N files), reads them back.
 - **Lazy binary resolution** (the buildkit/git pattern, per repo convention) — not eager.
@@ -87,21 +87,21 @@ class SbomGeneratorPort(Protocol):
   TLS flag — mirroring the existing regctl session and the buildkit-push `tls_verify` handling
   (#127) and the plain-HTTP local demo (#131). Exact wiring is an implementation detail for the plan.
 
-### 3. Domain — `houba/domain/sbom.py` (pure)
+### 3. Domain — `knock/domain/sbom.py` (pure)
 
 - `FORMAT_MEDIA_TYPES: dict[str, str]` — the `spdx-json`/`cyclonedx-json` → media-type mapping, and a
   helper to map a format to its referrer artifact type.
 - `build_sbom_annotations(*, prefix, subject_digest, fmt, tool, tool_version, timestamp)` — the
   referrer's annotations (mirrors `domain/scan/summary.build_scan_annotations`). No I/O.
 
-### 4. Config — `houba/config.py`
+### 4. Config — `knock/config.py`
 
-- New `HOUBA_SBOM_FORMATS`: JSON list of syft format names. Default `["spdx-json"]` (SPDX parity);
+- New `KNOCK_SBOM_FORMATS`: JSON list of syft format names. Default `["spdx-json"]` (SPDX parity);
   validated against the allowed set `{"spdx-json", "cyclonedx-json"}`; **non-empty** (always-on
   coverage — the knob chooses *which* formats, never *whether*). Global, not per-policy: the format
   is an org / observability-stack decision, not a per-image one. Triggers `make reference`.
 
-### 5. Wiring — `houba/use_cases/reconcile.py`
+### 5. Wiring — `knock/use_cases/reconcile.py`
 
 - Remove `sbom=True` from `_build_variant` / `BuildRequest`.
 - In `_do_import`, after `out_digest = registry.annotate(...)`, a **common block** (both branches):
@@ -135,7 +135,7 @@ class SbomGeneratorPort(Protocol):
 - **Use case (fakes):** new `FakeSbomGenerator` (journals `generate` calls). Assert *both* the copy
   branch and the rebuild branch call `generate` and `put_referrer` once per configured format with
   the placed digest; `BuildRequest.sbom` is gone. A generator failure fails that op (fail-hard) and
-  reddens the report. `HOUBA_SBOM_FORMATS=["spdx-json","cyclonedx-json"]` ⇒ two referrers per image.
+  reddens the report. `KNOCK_SBOM_FORMATS=["spdx-json","cyclonedx-json"]` ⇒ two referrers per image.
 - **Acceptance gate — incident matrix, re-pointed (`tests/integration`, real syft, opt-in marker):**
   the Log4Shell-nested-JAR / openssl / liblzma / redis-present / runc-absent / bare-binary-mongod-absent
   matrix from ADR 0029, run against **standalone syft** (replacing the buildkit-syft-scanner build).
@@ -150,10 +150,10 @@ class SbomGeneratorPort(Protocol):
   no longer holds) — add `SbomGeneratorPort` + `SyftAdapter` to the Hexagon/Component views; the
   buildkit adapter loses the SBOM responsibility. syft is a bundled CLI tool driven by a subprocess
   adapter, like regctl / buildctl / cosign.
-- **`docs/reference/`:** regen for `HOUBA_SBOM_FORMATS` (`make reference`).
+- **`docs/reference/`:** regen for `KNOCK_SBOM_FORMATS` (`make reference`).
 - **`docs/examples/`:** update the SBOM example to show the referrer (both paths) and a CycloneDX
-  config; no new `MirrorPolicy` field (format is `HOUBA_*` config, not policy).
-- **Value-prop docs** (README, "Why houba?", `design.md`, roadmap): the honesty caveat *"rebuilt
+  config; no new `MirrorPolicy` field (format is `KNOCK_*` config, not policy).
+- **Value-prop docs** (README, "Why knock?", `design.md`, roadmap): the honesty caveat *"rebuilt
   images; the ~1% copy path stays uncovered"* flips to **both paths covered**, and SPDX-only becomes
   SPDX + CycloneDX. A positive narrative update.
 - **Dockerfile:** `+ syft`; the buildkit `attest:sbom` removal is code-only.

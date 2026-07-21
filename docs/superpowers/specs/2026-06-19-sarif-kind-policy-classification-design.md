@@ -1,15 +1,15 @@
-# SARIF `kind` → governance verdicts (`policy.*`) — houba-core classification — design
+# SARIF `kind` → governance verdicts (`policy.*`) — knock-core classification — design
 
 Date: 2026-06-19
 Status: Approved (brainstorm)
 
 ## Goal
 
-Make houba's `SarifMapper` classify a SARIF **evaluation outcome** (a policy verdict) apart from a
+Make knock's `SarifMapper` classify a SARIF **evaluation outcome** (a policy verdict) apart from a
 **vulnerability finding**, using the standard SARIF `result.kind` as the agnostic discriminator —
 never the producing tool's name. Verdicts land in a new severity-bucketed `policy.*` fact-space;
 findings keep the existing `vuln.*` space. This is the first decomposed piece of the
-"demo with regis to prove analyzer-agnosticism" effort; it is a houba-core domain change that
+"demo with regis to prove analyzer-agnosticism" effort; it is a knock-core domain change that
 merges and tests independently of regis.
 
 ## Why now (the regis #789 finding)
@@ -25,22 +25,22 @@ becomes a SARIF `result` carrying a `security-severity` (mapped from the verdict
    `rule.passed` / `rule.failed`, discarding the verdict's severity — so a "license: GPL in a
    proprietary image" critical and a "label hygiene" low look identical.
 
-The fix is a houba↔producer **convention** plus a mapper reordering. regis emitting `kind` is a
+The fix is a knock↔producer **convention** plus a mapper reordering. regis emitting `kind` is a
 parallel sibling-repo change (#789 follow-up); this spec does not depend on it (synthetic SARIF
 fixtures exercise the new path).
 
-## The convention (houba↔producer contract)
+## The convention (knock↔producer contract)
 
 - A SARIF `result.kind` (`pass` / `fail` / `open` / `review` / …) marks an **evaluation outcome** →
   a governance verdict → routed to `policy.*`.
 - A result **without** `kind` is a **finding** → `vuln.*` (unchanged; what grype/trivy emit).
 
-houba keys on `kind` (standard SARIF semantics), **never on `tool.driver.name`** — that is what keeps
+knock keys on `kind` (standard SARIF semantics), **never on `tool.driver.name`** — that is what keeps
 it analyzer-agnostic. A producer opts into governance bucketing by emitting `kind`.
 
 ## Design
 
-### `_classify` — `kind` first (`houba/domain/scan/formats/sarif.py`)
+### `_classify` — `kind` first (`knock/domain/scan/formats/sarif.py`)
 
 Invert the current order so `kind` is checked **before** `security-severity`:
 
@@ -84,12 +84,12 @@ fact_keys = (*(f"vuln.{b}" for b in _BUCKETS),
 - `policy.passed` counts `kind: pass` results (regis emits breaches only, so 0 from regis today; the
   convention still supports passes from other producers).
 - **`rule.passed` / `rule.failed` are removed**, superseded by `policy.*`. This changes the
-  annotation keys `io.houba.scan.rule.*` → `io.houba.scan.policy.*` — a breaking change, acceptable
+  annotation keys `io.knock.scan.rule.*` → `io.knock.scan.policy.*` — a breaking change, acceptable
   in 0.x where `rule.*` was a near-unused posture affordance (no producer emitted it yet).
 
 ### What flows for free
 
-- `build_scan_annotations` already emits `{prefix}.scan.<fact>` per fact → `io.houba.scan.policy.*`
+- `build_scan_annotations` already emits `{prefix}.scan.<fact>` per fact → `io.knock.scan.policy.*`
   appear automatically.
 - `ScanPredicate.summary` is an open `dict[str, str]` → **no schema change, no `make reference`**.
 - `gate_breached` operates on `vuln.*` only → **unchanged**: `attach --fail-on` keeps gating on
@@ -110,7 +110,7 @@ Synthetic SARIF fixtures in the `SarifMapper` tests:
 ## Docs ripple (grep `rule.passed` / `rule.failed` at implementation)
 
 - `docs/how-to/attach-scan.md` — the "Posture reports" section references
-  `io.houba.scan.rule.passed` / `rule.failed` and states a CVSS-scored result is always a vuln; rewrite
+  `io.knock.scan.rule.passed` / `rule.failed` and states a CVSS-scored result is always a vuln; rewrite
   to `policy.<severity>` + the `kind`-first convention (a `kind`-bearing result is a verdict regardless
   of its score).
 - Any other doc/fixture/ADR mentioning `rule.passed` / `rule.failed` → migrate to `policy.*`.
@@ -126,18 +126,18 @@ merged) — confirm at implementation.
 
 - **C4 `workspace.dsl`** — unchanged: a domain refinement, no new port/adapter/actor/external system.
 - **`blast-radius.sh` POLICY column** and **regis in `scan-attach.sh`** — the *demo* sub-project (next),
-  not houba-core.
+  not knock-core.
 - **regis emitting `kind`** — a parallel sibling-repo change (#789 follow-up); this spec is testable
   without it via synthetic fixtures.
 - **`make reference` / schema changes** — none (`summary` is an open dict).
 
 ## Acceptance
 
-- `uv run pytest tests/unit/domain` green, `houba.domain` coverage ≥ 90 %.
+- `uv run pytest tests/unit/domain` green, `knock.domain` coverage ≥ 90 %.
 - A `kind`-bearing SARIF result is counted in `policy.<severity>` (or `policy.passed`), never in
   `vuln.*`; a `kind`-less result keeps its `vuln.*` bucketing.
-- `io.houba.scan.policy.*` annotations appear on attached referrers; `io.houba.scan.rule.*` no longer
+- `io.knock.scan.policy.*` annotations appear on attached referrers; `io.knock.scan.rule.*` no longer
   emitted.
 - `attach --fail-on` behavior unchanged (gates `vuln.*` only).
 - `docs/how-to/attach-scan.md` and ADR 0039 reflect the convention; `mypy --strict` clean on
-  `houba.domain`; no `workspace.dsl` / `make reference` drift.
+  `knock.domain`; no `workspace.dsl` / `make reference` drift.

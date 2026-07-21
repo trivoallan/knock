@@ -5,12 +5,12 @@
 > (#187), which shipped the **topology** but left the queue mechanism as a hand-rolled reference
 > implementation. This doc fixes the mechanism and adds the supply-chain-grade guarantees, **without
 > adding net-new infra** — staying inside [ADR 0042](../../architecture/decisions/0042-platform-scan-pipeline-incremental-reconcile-fed.md)
-> ("a bus/engine for one pipe is unjustified net-new infra"). **Zero new houba-core.**
+> ("a bus/engine for one pipe is unjustified net-new infra"). **Zero new knock-core.**
 
 ## 1. Why this exists
 
 #187 landed the right *shape*: `reconcile` emits `out_digest` → durable queue → KEDA-scaled worker
-pool runs `regis scan` → `houba attach` → publish to Dependency-Track, with retry/DLQ. That shape is
+pool runs `regis scan` → `knock attach` → publish to Dependency-Track, with retry/DLQ. That shape is
 **not** in question here and was deliberately built as a minimal "reference deployment".
 
 The trigger for this doc: **this pipeline is becoming a load-bearing element of the org's software
@@ -38,7 +38,7 @@ Reading the shipped glue ([scripts/scan-queue-reserve.py](../../../scripts/scan-
   hand-rolled-correctness surface a critical pipeline should not carry.
 - **Observability is logs, not metrics.** No queue depth / in-flight age / scan pass-fail / DLQ-size
   signals to alert or SLO on.
-- **The out-of-band safety net was made optional.** ADR 0042 demoted the `houba audit --scan` coverage
+- **The out-of-band safety net was made optional.** ADR 0042 demoted the `knock audit --scan` coverage
   tier to "occasional insurance". For *critical* infra that is backwards (§4.4).
 
 **Conclusion:** keep the topology, replace the *mechanism* with the Redis-native primitive, and spend
@@ -46,19 +46,19 @@ the freed budget on the guarantees that actually make a supply-chain pipeline tr
 
 ## 3. Decision — Redis Streams consumer groups + four hardening guarantees
 
-Same Redis already in the deployment. Same KEDA. Same agnostic boundary (houba emits the list; fan-out
+Same Redis already in the deployment. Same KEDA. Same agnostic boundary (knock emits the list; fan-out
 stays deployment glue). Same ADR 0042.
 
 ### 3.1 Queue mechanism: `LIST + reaper` → `Streams + consumer group`
 
 | Concern | #187 (LIST) | This design (Streams) |
 |---|---|---|
-| Enqueue | `LPUSH work` | `XADD houba:scan:work * digest <d>` |
+| Enqueue | `LPUSH work` | `XADD knock:scan:work * digest <d>` |
 | Reserve | `BRPOPLPUSH work processing` | `XREADGROUP GROUP scan <consumer> COUNT 1 BLOCK …` |
 | In-flight tracking | `processing` LIST | **Pending Entries List (PEL)** — built in |
-| Ack | `LREM processing 1 <d>` | `XACK houba:scan:work scan <id>` |
+| Ack | `LREM processing 1 <d>` | `XACK knock:scan:work scan <id>` |
 | Crash recovery | two-snapshot reaper CronJob | `XAUTOCLAIM … MIN-IDLE-TIME <t>` — **per-item** timeout |
-| Dead-letter | (none explicit) | route to `houba:scan:dead` when `delivery-count > N` |
+| Dead-letter | (none explicit) | route to `knock:scan:dead` when `delivery-count > N` |
 | Scaling | KEDA `redis` LIST scaler | KEDA **`redis-streams`** scaler (**`streamLength`/XLEN** — see §11) |
 | Client | raw-socket RESP | a real Redis client lib |
 
@@ -68,15 +68,15 @@ becomes `XAUTOCLAIM` with a real per-item idle timeout (the visibility-timeout s
 wanted). `delivery-count` on each pending entry gives a principled DLQ threshold for free.
 
 **The load-bearing invariant — `XACK` is always last.** Every durable side-effect of processing an
-entry (the signed `houba attach`, the DT publish, the confirmed-set write of §3.4, the dead-letter
+entry (the signed `knock attach`, the DT publish, the confirmed-set write of §3.4, the dead-letter
 `XADD` of §3.3) completes *before* the `XACK`. Acking before a side-effect turns a crash into silent
 loss — under-coverage. Concretely: `XACK` only after DT publish returns 2xx; on the dead-letter path,
-`XADD houba:scan:dead` **then** `XACK` (a crash between them re-delivers and re-dead-letters — a
+`XADD knock:scan:dead` **then** `XACK` (a crash between them re-delivers and re-dead-letters — a
 dedupable duplicate, never a loss).
 
 **Trim by `XTRIM MINID`, never `MAXLEN` or per-entry `XDEL`.** `XACK` clears the PEL but the entry stays
 in the stream, so the stream must be trimmed or it grows unbounded (Redis OOM). The right primitive is
-`XTRIM houba:scan:work MINID <min-pending-id>` — `min-pending-id` from `XPENDING`; every entry below the
+`XTRIM knock:scan:work MINID <min-pending-id>` — `min-pending-id` from `XPENDING`; every entry below the
 oldest un-acked one is fully processed and safe to reclaim. `MAXLEN ~ N` is **wrong** (a backlog —
 regis is the throughput ceiling — can push past N and evict *un-acked* entries → silent loss);
 per-entry `XDEL` is **wrong** (dangling PEL references under a consumer group). The reaper kept for
@@ -86,14 +86,14 @@ per-entry `XDEL` is **wrong** (dangling PEL references under a consumer group). 
 ### 3.2 Guarantee — idempotency keyed on digest
 
 At-least-once delivery + an **idempotent worker** is the honest state of the art (exactly-once is a
-myth). The worker is already idempotent (`houba attach` dedups the signed referrer, `gc` prunes). Make
+myth). The worker is already idempotent (`knock attach` dedups the signed referrer, `gc` prunes). Make
 it **explicit and tested**: the digest is the idempotency key; re-delivery of the same digest is a
 verified no-op, not an accident that happens to be safe.
 
 ### 3.3 Guarantee — a DLQ a tired operator can triage *and replay*
 
-`houba:scan:dead` is a stream, not a black hole. Wrap it in a thin **`scan-dlq`** tool (deployment glue,
-not houba-core — a script in the worker image, runnable as a one-shot Job; raw Redis stays the escape
+`knock:scan:dead` is a stream, not a black hole. Wrap it in a thin **`scan-dlq`** tool (deployment glue,
+not knock-core — a script in the worker image, runnable as a one-shot Job; raw Redis stays the escape
 hatch) so the 3am-paged operator never hand-rolls `XRANGE`/`XADD`:
 - `scan-dlq list` → table: digest, repo, failed-stage, error, delivery-count, dead-since
 - `scan-dlq show <digest>` → full context **+ the suggested fix**
@@ -105,7 +105,7 @@ Each dead entry carries a **problem + cause + fix** payload, not a bare "last er
 `{digest, repo, stage (scan|attach|publish), error_class, error_excerpt, delivery_count, first_seen,
 last_seen, suggested_action}`. `suggested_action` comes from the **same F5 classifier** that decides
 dead-letter-vs-drop (§8) — e.g. `registry 5xx → transient, replay`; `manifest 404 → image gone, drop`;
-`signer error → check HOUBA_ATTEST_SIGNER`. A poison image is then a triageable item *with a next step*,
+`signer error → check KNOCK_ATTEST_SIGNER`. A poison image is then a triageable item *with a next step*,
 not a silent loss in a supply-chain pipeline.
 
 ### 3.4 Guarantee — observability as metrics + an out-of-band coverage proof
@@ -117,14 +117,14 @@ Two distinct needs, do not conflate them:
   Prometheus so you can alert and set SLOs.
 - **Coverage proof (the real supply-chain anchor):** an **independent** convergence check that does not
   trust the queue. Compute **placed-digests − fresh-confirmed-digests** — both sets cheap and
-  houba-side, **no DT query, no registry walk:**
-  - `placed` = a houba-side **SET `houba:scan:placed`** the enqueuer maintains: it already sees every
+  knock-side, **no DT query, no registry walk:**
+  - `placed` = a knock-side **SET `knock:scan:placed`** the enqueuer maintains: it already sees every
     placed digest (it `XADD`s them), so it also `SADD`s each one. (Originally specced as "reconcile's
     enumeration", but reconcile's report carries only the *applied* `out_digest` delta — `None` unless
     applied, and **empty under `--dry-run`** — so deriving `placed` from it yields a false-green. The
-    enqueuer SET is the correct full-placed source, still zero houba-core. Pruning deleted images from
+    enqueuer SET is the correct full-placed source, still zero knock-core. Pruning deleted images from
     the SET is a later refinement: over-reporting a gap is the safe direction, never a false-green.)
-  - `fresh-confirmed` = a houba-side **ZSET `houba:scan:confirmed`** scored by the signed `attested_at`;
+  - `fresh-confirmed` = a knock-side **ZSET `knock:scan:confirmed`** scored by the signed `attested_at`;
     the worker `ZADD`s the digest on a successful DT publish. Fresh coverage =
     `placed − ZRANGEBYSCORE(now − max_age, now)`. **One ZSET serves both** the coverage set-diff *and*
     the freshness-age metric (D3) — no second source of truth. ~150k entries ≈ 20–30 MB; the diff is a
@@ -136,20 +136,20 @@ Two distinct needs, do not conflate them:
   team-Y (7)"*, not an anonymous `N` (a number without the drill-down is anxiety, not information). Same
   owner-join the CVE blast-radius already does (#156), applied to coverage gaps. It stays
   **producer-side** (a structured metric label + the list surfaced in `scan-dlq` / runbook output),
-  **not** the coverage portal (Later) — the portal would *consume* this, houba just emits it
+  **not** the coverage portal (Later) — the portal would *consume* this, knock just emits it
   actionably. DT stays the *consumption* surface (blast-radius queries), never the coverage-check
-  source — "houba produces, DT consumes" stays clean. A full `audit --scan` registry walk
+  source — "knock produces, DT consumes" stays clean. A full `audit --scan` registry walk
   (46–115 h over 150k, ADR 0042) remains the *optional* insurance for the separate "bypassed the front
   door" question, not the routine check.
 
 This convergence loop is the SOTA move for critical infra: **don't trust the tuyau, verify coverage
-out of band.** It is a second reconcile loop, symmetric with houba's whole design ethos.
+out of band.** It is a second reconcile loop, symmetric with knock's whole design ethos.
 
 ## 4. Scope & non-goals
 
-- **Zero new houba-core.** Everything above is `deploy/` + `scripts/` glue over reconcile's existing
-  `out_digest` output and the existing `houba attach` / DT publish. The coverage check reuses data
-  houba already emits; it adds no per-image registry probe.
+- **Zero new knock-core.** Everything above is `deploy/` + `scripts/` glue over reconcile's existing
+  `out_digest` output and the existing `knock attach` / DT publish. The coverage check reuses data
+  knock already emits; it adds no per-image registry probe.
 - **KEDA stays.** Streams does not scale workers; the `redis-streams` scaler replaces the `redis`
   (LIST) scaler. One-line trigger change.
 - **No workflow engine.** ADR 0042 holds: the flow is linear (scan → attach → publish), the SBOM is
@@ -170,10 +170,10 @@ and §3's guarantees port over unchanged.
 block. *Rejected:* (1) the requester is not committed to Dapr — it was shorthand for "something solid";
 (2) it adds a sidecar-per-pod + control plane (placement, sentry, operator, mTLS) **into the trusted
 computing base of the most security-sensitive pipeline in the org** — criticality argues for a *smaller*
-TCB, not a larger one; (3) it runs against houba's "no HTTP layer" grain (Dapr is a localhost-HTTP/gRPC
+TCB, not a larger one; (3) it runs against knock's "no HTTP layer" grain (Dapr is a localhost-HTTP/gRPC
 sidecar); (4) ADR 0042's net-new-infra-for-one-pipe rejection applies *a fortiori*. Reopen **only** if
 Dapr becomes the platform-wide standard — then this is an org platform decision, not a pipeline one,
-and the queue (being deployment glue) can adopt it without touching houba-core.
+and the queue (being deployment glue) can adopt it without touching knock-core.
 
 **Why A wins:** the evidence says the topology is already right and only the mechanism is hand-rolled.
 Redis Streams deletes exactly the fragile code (reaper coupling, raw RESP) with **no new infra**, stays
@@ -188,8 +188,8 @@ are what actually make a supply-chain pipeline "state of the art", and are indep
 - **DLQ threshold N.** Pick `delivery-count` ceiling against observed transient-failure rates
   (registry 5xx, regis flakes) so you don't dead-letter a recoverable scan; start conservative (e.g. 5)
   and tune from metrics.
-- **Coverage-check source — RESOLVED (eng review, §3.4).** Not a DT query: a houba-side ZSET
-  `houba:scan:confirmed` (digest → `attested_at`) written by the worker on publish, diffed against
+- **Coverage-check source — RESOLVED (eng review, §3.4).** Not a DT query: a knock-side ZSET
+  `knock:scan:confirmed` (digest → `attested_at`) written by the worker on publish, diffed against
   reconcile's placed-set. Caveat (P3): a Redis wipe drops the ZSET → everything reads as a gap →
   re-scan herd; AOF survives restarts, and a cold-start rebuild of the confirmed-set from DT is the
   filet.
@@ -294,8 +294,8 @@ duration); both must carry tests before this goes load-bearing.
 
 ### Test strategy
 
-The glue is `deploy/` (not houba-core, so the ≥90 % domain gate does not apply; e2e-on-kind is the #187
-convention) — but mirror houba's own ports/adapters split *inside* the glue: pull the **decision logic**
+The glue is `deploy/` (not knock-core, so the ≥90 % domain gate does not apply; e2e-on-kind is the #187
+convention) — but mirror knock's own ports/adapters split *inside* the glue: pull the **decision logic**
 out of the Redis I/O into a small pure module so most of it is unit-tested without a broker.
 
 ```
@@ -347,13 +347,13 @@ folded as design — it is a doc deliverable (P2), tracked as a task.
 
 ## 11. e2e outcomes (kind, 2026-06-25)
 
-Run against a fresh `houba-demo` kind cluster (KEDA 2.20.1, in-cluster Redis 7.4.9), deployed **from the
+Run against a fresh `knock-demo` kind cluster (KEDA 2.20.1, in-cluster Redis 7.4.9), deployed **from the
 branch via `make local`** (the `deploy/overlays/local` path — no ArgoCD, since the Argo apps hardcode
 `targetRevision: main`; KEDA is a manual prereq). The **full Loop-A flow passed end to end**:
 
-- **reconcile → enqueue → scale → scan → attach → ack → confirmed.** `houba reconcile` placed 5 images;
-  the enqueuer `XADD`'d them + `SADD`'d `houba:scan:placed`; the KEDA **`streamLength`** scaler spawned
-  scan-worker Jobs; each worker reserved (`XREADGROUP`), ran grype, `houba attach`ed the signed SARIF
+- **reconcile → enqueue → scale → scan → attach → ack → confirmed.** `knock reconcile` placed 5 images;
+  the enqueuer `XADD`'d them + `SADD`'d `knock:scan:placed`; the KEDA **`streamLength`** scaler spawned
+  scan-worker Jobs; each worker reserved (`XREADGROUP`), ran grype, `knock attach`ed the signed SARIF
   referrer, and acked. End state: `work=0` (trimmed), `placed=5`, `confirmed=5`, `dead=0`, `pending=0`;
   the coverage check returned `{"coverage_gap": 0}`. **This is the proof the `streamLength` fix matters:
   with the original `pendingEntriesCount` no worker would have spawned and `confirmed` would be 0.**

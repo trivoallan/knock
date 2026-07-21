@@ -1,4 +1,4 @@
-from houba.ports.reporter import Counts, OperationEvent
+from knock.ports.reporter import Counts, OperationEvent
 
 
 def test_counts_has_marked_defaulting_to_zero() -> None:

@@ -1,4 +1,4 @@
-from houba.domain.deletion_mode import DeletionMode, resolve_deletion_mode
+from knock.domain.deletion_mode import DeletionMode, resolve_deletion_mode
 
 
 def test_policy_wins_over_destination_and_global() -> None:

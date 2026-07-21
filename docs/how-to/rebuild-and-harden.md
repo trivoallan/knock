@@ -5,9 +5,9 @@ sidebar_position: 1
 ---
 
 A policy with **no** `transform` is copied byte-for-byte and stamped (see
-[Getting started](../tutorials/getting-started.md)). Add a `transform` and houba switches to the
+[Getting started](../tutorials/getting-started.md)). Add a `transform` and knock switches to the
 **rebuild path**: it rebuilds the image through BuildKit applying declarative hardening primitives,
-then stamps the result with `base.digest` = the source digest plus `io.houba.transform.*` lineage.
+then stamps the result with `base.digest` = the source digest plus `io.knock.transform.*` lineage.
 The policy stays portable — it only *names* the CA(s) and mirror; the org-specific data lives in
 configuration. For the concepts behind this, see
 [Transforms & signed attestations](../explanation/attestations.md).
@@ -21,12 +21,12 @@ rewrites package sources to an internal mirror:
 imports:
   - name: v7
     owners:
-      - group:default/data-platform        # stamped as io.houba.owners
+      - group:default/data-platform        # stamped as io.knock.owners
     tags:
       includeRegex: "^7\.2\."
     transform:
-      - injectCA: { certs: [corp] }              # names → HOUBA_TRANSFORM_CA_CERTS
-      - rewritePackageSources: { mirror: corp }  # name → HOUBA_TRANSFORM_PACKAGE_MIRRORS
+      - injectCA: { certs: [corp] }              # names → KNOCK_TRANSFORM_CA_CERTS
+      - rewritePackageSources: { mirror: corp }  # name → KNOCK_TRANSFORM_PACKAGE_MIRRORS
     destinations:
       - project: hardened
         repository: redis
@@ -38,14 +38,14 @@ The policy only names `corp`; the actual cert path and mirror URLs are configura
 policy is portable across orgs:
 
 ```bash
-export HOUBA_TRANSFORM_CA_CERTS='{"corp": {"path": "/etc/houba/certs/corp-root.pem"}}'
-export HOUBA_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian", "apk": "https://mirror.corp/alpine"}}'
+export KNOCK_TRANSFORM_CA_CERTS='{"corp": {"path": "/etc/knock/certs/corp-root.pem"}}'
+export KNOCK_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian", "apk": "https://mirror.corp/alpine"}}'
 ```
 
 ## 3. Reconcile (rebuild)
 
 ```bash
-houba reconcile docs/examples/hardened
+knock reconcile docs/examples/hardened
 # rebuilt docker.io/library/redis:7.2.x → hardened/redis:7.2.x
 #   base.digest=sha256:src…  transform=injectCA,rewritePackageSources
 ```
@@ -58,9 +58,9 @@ houba reconcile docs/examples/hardened
 
 ```bash
 regctl image config registry.example.com/hardened/redis:7.2.0 \
-  | jq '.config.Labels | with_entries(select(.key | startswith("io.houba")))'
-# io.houba.transform.steps  = "injectCA,rewritePackageSources"
-# io.houba.owners           = "group:default/data-platform"
+  | jq '.config.Labels | with_entries(select(.key | startswith("io.knock")))'
+# io.knock.transform.steps  = "injectCA,rewritePackageSources"
+# io.knock.owners           = "group:default/data-platform"
 ```
 
 ## 5. Sign the rebuild (verifiable provenance)
@@ -69,19 +69,19 @@ regctl image config registry.example.com/hardened/redis:7.2.0 \
 is org configuration, not policy — the file stays portable:
 
 ```bash
-export HOUBA_ATTEST_SIGNER=keyless                       # or: kms | key
-export HOUBA_ATTEST_BUILDER_ID=https://houba.example/builders/main
+export KNOCK_ATTEST_SIGNER=keyless                       # or: kms | key
+export KNOCK_ATTEST_BUILDER_ID=https://knock.example/builders/main
 # keyless: optional internal CA + transparency log (blank rekor => no log entry)
-export HOUBA_ATTEST_FULCIO_URL=https://fulcio.corp
+export KNOCK_ATTEST_FULCIO_URL=https://fulcio.corp
 
-houba reconcile docs/examples/attested
+knock reconcile docs/examples/attested
 # rebuilt … → attested/redis:7.2.x
-#   signed: https://houba.dev/predicate/transform/v1 → sha256:att…
+#   signed: https://knock.dev/predicate/transform/v1 → sha256:att…
 #   signed: https://slsa.dev/provenance/v1 (buildkit) → sha256:att…
 ```
 
 :::note
-`cosign` must be on `PATH`. Off by default: with no `HOUBA_ATTEST_SIGNER`, the rebuild is stamped but unsigned.
+`cosign` must be on `PATH`. Off by default: with no `KNOCK_ATTEST_SIGNER`, the rebuild is stamped but unsigned.
 :::
 
 To verify the result and the attached SBOM, see

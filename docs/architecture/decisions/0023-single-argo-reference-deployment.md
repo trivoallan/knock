@@ -16,7 +16,7 @@ The deploy/demo surface had grown to six overlapping entry points — three loca
 `prod` overlay, an Argo `demo` app set, and an Argo `prod` app set — driven by ~22 Makefile
 targets. `make argocd-prod` on kind was already nearly the whole demo: the same App-of-Apps as
 production, with throwaway credentials. The rest was redundancy that drifts. The product thesis
-(houba is a stamper, not a mirror) was also undersold: the blessed demo (`busybox`) exercised
+(knock is a stamper, not a mirror) was also undersold: the blessed demo (`busybox`) exercised
 only the copy path.
 
 ## Decision

@@ -59,11 +59,11 @@ case "$cmd" in
             # inspect skips it and pins the concrete linux/amd64.
             printf '{"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[{"platform":{"os":"unknown","architecture":"unknown"}},{"platform":{"os":"linux","architecture":"amd64"}}]}\n'
         elif [ "$scenario" = "coverage-covered" ]; then
-            printf '{"annotations":{"io.houba.policy":"redis"}}\n'
+            printf '{"annotations":{"io.knock.policy":"redis"}}\n'
         elif [ "$scenario" = "coverage-signed" ]; then
-            printf '{"annotations":{"io.houba.policy":"redis"}}\n'
+            printf '{"annotations":{"io.knock.policy":"redis"}}\n'
         elif [ "$scenario" = "coverage-sbom" ]; then
-            printf '{"annotations":{"io.houba.policy":"redis"}}\n'
+            printf '{"annotations":{"io.knock.policy":"redis"}}\n'
         else
             printf '{"annotations":{}}\n'
         fi
@@ -94,7 +94,7 @@ case "$cmd" in
     "artifact list")
         case "$scenario" in
             referrers-one)
-                printf '{"descriptors":[{"digest":"sha256:ref1","artifactType":"application/vnd.houba.lifecycle.pending+json","annotations":{}}]}\n' ;;
+                printf '{"descriptors":[{"digest":"sha256:ref1","artifactType":"application/vnd.knock.lifecycle.pending+json","annotations":{}}]}\n' ;;
             referrers-empty)
                 printf '{"descriptors":[]}\n' ;;
             coverage-signed)
@@ -102,7 +102,7 @@ case "$cmd" in
             coverage-sbom)
                 printf '{"descriptors":[{"digest":"sha256:sbom","artifactType":"application/spdx+json","annotations":{}}]}\n' ;;
             gc-superseded)
-                printf '{"descriptors":[{"digest":"sha256:old","artifactType":"application/vnd.houba.scan.result.v1","annotations":{"io.houba.scan.tool":"trivy","io.houba.scan.format":"sarif","io.houba.scan.timestamp":"2024-01-01T00:00:00+00:00"}},{"digest":"sha256:new","artifactType":"application/vnd.houba.scan.result.v1","annotations":{"io.houba.scan.tool":"trivy","io.houba.scan.format":"sarif","io.houba.scan.timestamp":"2025-01-01T00:00:00+00:00"}}]}\n' ;;
+                printf '{"descriptors":[{"digest":"sha256:old","artifactType":"application/vnd.knock.scan.result.v1","annotations":{"io.knock.scan.tool":"trivy","io.knock.scan.format":"sarif","io.knock.scan.timestamp":"2024-01-01T00:00:00+00:00"}},{"digest":"sha256:new","artifactType":"application/vnd.knock.scan.result.v1","annotations":{"io.knock.scan.tool":"trivy","io.knock.scan.format":"sarif","io.knock.scan.timestamp":"2025-01-01T00:00:00+00:00"}}]}\n' ;;
             *) printf '{"descriptors":[]}\n' ;;
         esac
         ;;

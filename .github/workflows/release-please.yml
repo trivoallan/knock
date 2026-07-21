@@ -93,7 +93,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/houba
+          images: ghcr.io/${{ github.repository_owner }}/knock
           # Branch event (push to main) -> the git ref is the branch, not the
           # tag, so derive tags from release-please outputs rather than semver
           # auto-detection.
@@ -123,12 +123,12 @@ jobs:
 
       - name: Sign the pushed image (keyless)
         env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/houba
+          IMAGE: ghcr.io/${{ github.repository_owner }}/knock
           DIGEST: ${{ steps.build.outputs.digest }}
         run: cosign sign --yes "${IMAGE}@${DIGEST}"
 
       - name: Smoke-test the published image
         env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/houba
+          IMAGE: ghcr.io/${{ github.repository_owner }}/knock
           DIGEST: ${{ steps.build.outputs.digest }}
         run: docker run --rm "${IMAGE}@${DIGEST}" version

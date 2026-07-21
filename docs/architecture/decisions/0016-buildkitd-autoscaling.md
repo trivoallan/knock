@@ -12,7 +12,7 @@ Builds on [10. Horizontal sharding](0010-horizontal-sharding.md)
 
 `buildkitd` runs as a `replicas: 1` Deployment — the build-path ceiling. The concurrent-reconcile
 and horizontal-sharding work scaled the copy path but deliberately deferred horizontal scaling of the
-build daemon (sharding ADR, decision D5). houba's reconcile is an hourly batch that issues rebuilds in
+build daemon (sharding ADR, decision D5). knock's reconcile is an hourly batch that issues rebuilds in
 a burst, which a single `buildkitd` serialises onto one node.
 
 ## Decision
@@ -23,7 +23,7 @@ a single Prometheus trigger reading `buildkitd`'s **`Solve` completion rate**
 *(The metric was amended from the originally-planned in-flight `started−handled` count after empirical
 validation showed v0.30.0 exposes OpenTelemetry rpc metrics with no in-flight gauge — see the spec's D4.)*
 **No scale-to-zero** (the floor keeps the local build cache warm and removes the wake-before-push race
-against houba's "no retry" rule), **no Cron trigger** (no schedule-drift), and **no houba application
+against knock's "no retry" rule), **no Cron trigger** (no schedule-drift), and **no knock application
 code change** — it is a deploy/runtime concern (a new opt-in `keda-buildkitd` kustomize component,
 `prod`-only; KEDA + Prometheus are documented cluster prerequisites, never embedded). `K = 1`
 (component not applied) is exactly today's behaviour.

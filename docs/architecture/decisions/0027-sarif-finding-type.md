@@ -11,7 +11,7 @@ registry.
 
 ## Context
 
-`houba attach` summarized every SARIF result into `vuln.<severity>`. The sibling tool regis is a
+`knock attach` summarized every SARIF result into `vuln.<severity>`. The sibling tool regis is a
 posture evaluator (pass/fail rules, EOL, hygiene) that will emit SARIF; run through that mapper, a
 failed rule or an end-of-life finding was miscounted as a vulnerability — corrupting the
 blast-radius query and tripping `--fail-on <severity>` for non-vuln reasons. Since the label is the

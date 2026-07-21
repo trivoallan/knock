@@ -4,9 +4,9 @@
 #
 # In-cluster:  make demo / make local (the debian-tz half of the reference policy)
 # Locally (needs a BuildKit daemon on PATH):
-#   uv run houba reconcile docs/examples/reference/debian-tz
+#   uv run knock reconcile docs/examples/reference/debian-tz
 #
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: debian-tz

@@ -12,9 +12,9 @@ derives it from `tls_verify` instead.
 
 ## Context
 
-The reference deployment gave no way to *browse* what houba pushed — `registry:2` has no web UI —
-and its Jobs logged JSON (`HOUBA_LOG_FORMAT=json`), which is noise for the human reading
-`make logs`. Both gaps are about *seeing what houba did*; "the label is the product", yet the demo
+The reference deployment gave no way to *browse* what knock pushed — `registry:2` has no web UI —
+and its Jobs logged JSON (`KNOCK_LOG_FORMAT=json`), which is noise for the human reading
+`make logs`. Both gaps are about *seeing what knock did*; "the label is the product", yet the demo
 let you see neither the label nor a clean log.
 
 ## Decision
@@ -23,17 +23,17 @@ let you see neither the label nor a clean log.
   OCI-native registry whose full image bundles a **built-in web UI** (`search` + `ui` extensions).
   This delivers "a UI for the registry" with one component and no CORS plumbing — rejecting the
   `joxit/docker-registry-ui` sidecar alternative (two Deployments + a proxy hop). The swap is
-  invisible to houba: same Service name/port (`registry:5000`), plain HTTP, anonymous read+write,
+  invisible to knock: same Service name/port (`registry:5000`), plain HTTP, anonymous read+write,
   so the roster, the buildkitd plain-HTTP marking, and the regctl/buildctl paths are unchanged. It
   stays demo-only and out-of-band; a real cluster points at its own registry/console. Browse via
   `make registry-ui`.
-- **Logs → text.** Flip `HOUBA_LOG_FORMAT` in `deploy/base` from `json` to `text` (houba's own
+- **Logs → text.** Flip `KNOCK_LOG_FORMAT` in `deploy/base` from `json` to `text` (knock's own
   default) so the demo Jobs log human-readably; a real log pipeline flips it back to `json`.
 
 ## Consequences
 
 - The demo can show the provenance stamp on each manifest, not just report blast-radius — the UI
-  lists repos/tags and surfaces the OCI + `io.houba.*` annotations.
+  lists repos/tags and surfaces the OCI + `io.knock.*` annotations.
 - One registry component (pinned `zot v2.1.17`) instead of registry-plus-UI; the `local` overlay
   and the Argo reference both get the UI from the shared manifest.
 - No application code, port, or adapter change — manifests, the log-format default, docs, and the

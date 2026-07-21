@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from houba.adapters.command_usage import CommandUsageAdapter
-from houba.domain.lifecycle import MarkIdentity
-from houba.errors import UsageOracleError
-from houba.ports.usage_oracle import UsageQuery
+from knock.adapters.command_usage import CommandUsageAdapter
+from knock.domain.lifecycle import MarkIdentity
+from knock.errors import UsageOracleError
+from knock.ports.usage_oracle import UsageQuery
 
 
 def _query() -> UsageQuery:

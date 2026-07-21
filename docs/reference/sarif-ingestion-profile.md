@@ -1,18 +1,18 @@
 ---
 title: "SARIF ingestion profile"
-description: "The SARIF 2.1.0 contract any analyzer writes against so houba classifies its results correctly — vulnerability findings into vuln.*, governance verdicts into policy.*, keyed on result.kind."
+description: "The SARIF 2.1.0 contract any analyzer writes against so knock classifies its results correctly — vulnerability findings into vuln.*, governance verdicts into policy.*, keyed on result.kind."
 sidebar_position: 4
 ---
 
 # SARIF ingestion profile
 
-The contract **any analyzer writes against** so houba ingests its report correctly. houba accepts
-**SARIF 2.1.0** as the sole scan-report format (`houba attach … --report <file>`) and summarizes each
-result into a tool-agnostic fact space attached to the image digest. houba keys on standard SARIF
+The contract **any analyzer writes against** so knock ingests its report correctly. knock accepts
+**SARIF 2.1.0** as the sole scan-report format (`knock attach … --report <file>`) and summarizes each
+result into a tool-agnostic fact space attached to the image digest. knock keys on standard SARIF
 fields only — **never on the producing tool** — so any analyzer that follows this profile is
-supported without a houba change.
+supported without a knock change.
 
-## What houba reads
+## What knock reads
 
 From the report:
 
@@ -21,11 +21,11 @@ From the report:
   for results that reference that rule by `ruleId`.
 - `runs[].results[]` → each result is classified into exactly one fact key (below).
 
-The raw report travels verbatim as the OCI referrer blob; houba never rewrites it.
+The raw report travels verbatim as the OCI referrer blob; knock never rewrites it.
 
 ## Finding classes — `kind` is the discriminator
 
-houba splits results into two classes by the standard SARIF `result.kind`:
+knock splits results into two classes by the standard SARIF `result.kind`:
 
 | Result has…       | Class                    | Fact space |
 | ----------------- | ------------------------ | ---------- |
@@ -67,14 +67,14 @@ Severity fallback from `level` when no `security-severity` is present:
 
 :::note
 `security-severity` is a string-encoded numeric CVSS score carried in `properties` (the GitHub
-convention). Emit it on every scored result — houba's buckets are CVSS bands, finer than SARIF's
+convention). Emit it on every scored result — knock's buckets are CVSS bands, finer than SARIF's
 coarse `level`.
 :::
 
 ## Published facts
 
 Every attached scan referrer carries these annotation keys, each prefixed with the configured label
-prefix (default `io.houba`) as `{prefix}.scan.<key>`. An empty prefix emits no summary annotations.
+prefix (default `io.knock`) as `{prefix}.scan.<key>`. An empty prefix emits no summary annotations.
 
 Envelope:
 
@@ -88,12 +88,12 @@ SARIF facts (counts, string-encoded):
   `scan.policy.unknown`
 - `scan.policy.passed`
 
-The same facts populate the signed `https://houba.dev/predicate/scan/v1` attestation summary (see the
+The same facts populate the signed `https://knock.dev/predicate/scan/v1` attestation summary (see the
 [scan-predicate schema](schemas/scan-predicate.md)).
 
 ## The `--fail-on` gate
 
-`houba attach --fail-on <severity>` gates **only** on `vuln.*` counts (severity order
+`knock attach --fail-on <severity>` gates **only** on `vuln.*` counts (severity order
 `critical > high > medium > low > unknown`). Governance verdicts (`policy.*`) are recorded in the
 stamp but never affect the exit code.
 
@@ -130,16 +130,16 @@ To emit **governance verdicts** (not vulnerabilities):
 
 - set `result.kind` on every verdict — `"fail"` for a breach, `"pass"` for a satisfied check (with
   `level: "none"`, per SARIF 2.1.0);
-- carry the verdict severity as a CVSS-scaled `properties.security-severity` so houba buckets it
+- carry the verdict severity as a CVSS-scaled `properties.security-severity` so knock buckets it
   (`policy.critical` … `policy.low`);
-- use only `fail` / `pass` — houba treats every non-`pass` kind as a failed verdict.
+- use only `fail` / `pass` — knock treats every non-`pass` kind as a failed verdict.
 
-A **vulnerability scanner** needs no changes: omit `kind`, carry `security-severity`, and houba
+A **vulnerability scanner** needs no changes: omit `kind`, carry `security-severity`, and knock
 buckets findings into `vuln.*`.
 
 ## See also
 
 - [Attach a scan result](../how-to/attach-scan.md) — the task this profile feeds.
 - [scan-predicate schema](schemas/scan-predicate.md) — the signed `scan/v1` attestation.
-- ADR [0039 — SARIF `kind` discriminates a policy verdict from a vulnerability finding](https://github.com/trivoallan/houba/blob/main/docs/architecture/decisions/0039-sarif-kind-discriminates-policy-from-vuln.md),
-  which supersedes ADR [0027](https://github.com/trivoallan/houba/blob/main/docs/architecture/decisions/0027-sarif-finding-type.md).
+- ADR [0039 — SARIF `kind` discriminates a policy verdict from a vulnerability finding](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0039-sarif-kind-discriminates-policy-from-vuln.md),
+  which supersedes ADR [0027](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0027-sarif-finding-type.md).

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from houba.domain.stamp import build_stamp_annotations
+from knock.domain.stamp import build_stamp_annotations
 
 CREATED = datetime(2026, 6, 11, 12, 0, tzinfo=UTC)
 
 
 def _ann(
-    prefix: str = "io.houba",
+    prefix: str = "io.knock",
     owners: list[str] | None = None,
     source_revision: str | None = None,
     vendor: str | None = None,
@@ -71,29 +71,29 @@ def test_revision_is_the_propagated_source_revision() -> None:
     assert a["org.opencontainers.image.revision"] != a["org.opencontainers.image.base.digest"]
 
 
-def test_houba_facts_under_prefix() -> None:
-    a = _ann(prefix="io.houba", owners=["group:default/payments", "group:default/data"])
-    assert a["io.houba.owners"] == "group:default/payments,group:default/data"
-    assert a["io.houba.artifact.type"] == "image"
-    assert a["io.houba.policy"] == "redis"
-    assert a["io.houba.import"] == "v7"
-    assert a["io.houba.variant"] == "standard"
-    assert "io.houba.owner.team" not in a
+def test_knock_facts_under_prefix() -> None:
+    a = _ann(prefix="io.knock", owners=["group:default/payments", "group:default/data"])
+    assert a["io.knock.owners"] == "group:default/payments,group:default/data"
+    assert a["io.knock.artifact.type"] == "image"
+    assert a["io.knock.policy"] == "redis"
+    assert a["io.knock.import"] == "v7"
+    assert a["io.knock.variant"] == "standard"
+    assert "io.knock.owner.team" not in a
 
 
 def test_no_owners_omits_owners_key() -> None:
     a = _ann(owners=None)
-    assert "io.houba.owners" not in a
+    assert "io.knock.owners" not in a
 
 
 def test_empty_owners_omits_owners_key() -> None:
     a = _ann(owners=[])
-    assert "io.houba.owners" not in a
+    assert "io.knock.owners" not in a
 
 
-def test_empty_prefix_drops_houba_facts_keeps_oci() -> None:
+def test_empty_prefix_drops_knock_facts_keeps_oci() -> None:
     a = _ann(prefix="")
-    assert not any(k.startswith("io.houba") for k in a)
+    assert not any(k.startswith("io.knock") for k in a)
     assert "org.opencontainers.image.base.digest" in a
 
 
@@ -109,7 +109,7 @@ def test_no_location_fact_stamped() -> None:
 
 def _base_kwargs() -> dict:
     return dict(
-        prefix="io.houba",
+        prefix="io.knock",
         source_registry="docker.io",
         source_repository="library/redis",
         source_tag="7.2.0",
@@ -135,5 +135,5 @@ def test_stamp_with_transform_emits_steps_and_version() -> None:
         transform_steps=["injectCA", "rewritePackageSources"],
         transform_version_value="sha256:tv",
     )
-    assert ann["io.houba.transform.steps"] == "injectCA,rewritePackageSources"
-    assert ann["io.houba.transform.version"] == "sha256:tv"
+    assert ann["io.knock.transform.steps"] == "injectCA,rewritePackageSources"
+    assert ann["io.knock.transform.version"] == "sha256:tv"

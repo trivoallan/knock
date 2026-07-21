@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from houba.domain.lifecycle import (
+from knock.domain.lifecycle import (
     MarkedCandidate,
     MarkIdentity,
     build_pending_deletion_annotations,
@@ -13,14 +13,14 @@ from houba.domain.lifecycle import (
 def test_parse_round_trips_the_writer() -> None:
     marked_at = datetime(2026, 6, 1, 12, 0, tzinfo=UTC)
     annotations = build_pending_deletion_annotations(
-        prefix="io.houba",
+        prefix="io.knock",
         marked_at=marked_at,
         reason="dropped-from-selection",
         policy="redis",
         import_name="v7",
         variant="fips",
     )
-    candidate = parse_pending_mark("io.houba", "harbor.example/lib/redis:7.2-fips", annotations)
+    candidate = parse_pending_mark("io.knock", "harbor.example/lib/redis:7.2-fips", annotations)
     assert candidate == MarkedCandidate(
         image_ref="harbor.example/lib/redis:7.2-fips",
         identity=MarkIdentity(policy="redis", import_="v7", variant="fips"),
@@ -30,7 +30,7 @@ def test_parse_round_trips_the_writer() -> None:
 
 
 def test_parse_is_lenient_on_missing_keys() -> None:
-    candidate = parse_pending_mark("io.houba", "h/r:t", {})
+    candidate = parse_pending_mark("io.knock", "h/r:t", {})
     assert candidate.identity == MarkIdentity(policy="", import_="", variant="")
     assert candidate.marked_at is None
     assert candidate.reason == ""

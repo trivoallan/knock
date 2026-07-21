@@ -1,10 +1,10 @@
-# The reference trigger: houba reconcile on a schedule.
-# git-sync clones the policy repo (one-time) into a shared volume before houba runs;
+# The reference trigger: knock reconcile on a schedule.
+# git-sync clones the policy repo (one-time) into a shared volume before knock runs;
 # a merged PR on that repo is the operational form of "the front door is mandatory".
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: houba-reconcile
+  name: knock-reconcile
 spec:
   schedule: "0 * * * *" # hourly — the 7-day digest-stability window makes any sub-daily cadence enough
   concurrencyPolicy: Forbid
@@ -14,15 +14,15 @@ spec:
     spec:
       backoffLimit: 0 # a failed reconcile reports per-policy and exits; let the next schedule retry
       completionMode: Indexed
-      completions: 1   # = N shards (= SHARD_COUNT in houba-config). Base is 1 (today's behaviour); overlays bump both together.
+      completions: 1   # = N shards (= SHARD_COUNT in knock-config). Base is 1 (today's behaviour); overlays bump both together.
       parallelism: 1   # = M concurrent pods (M ≤ N; cap to protect buildkitd).
       template:
         metadata:
           labels:
-            app.kubernetes.io/name: houba
+            app.kubernetes.io/name: knock
             app.kubernetes.io/component: reconcile
         spec:
-          serviceAccountName: houba
+          serviceAccountName: knock
           restartPolicy: Never
           securityContext:
             runAsNonRoot: true
@@ -40,7 +40,7 @@ spec:
                 - --verbose=1
               envFrom:
                 - configMapRef:
-                    name: houba-config
+                    name: knock-config
               securityContext:
                 allowPrivilegeEscalation: false
                 capabilities:
@@ -49,11 +49,11 @@ spec:
                 - name: policies
                   mountPath: /policies
           containers:
-            - name: houba
-              image: houba # rewritten by the kustomize images transformer
+            - name: knock
+              image: knock # rewritten by the kustomize images transformer
               command: ["/bin/sh", "-c"]
               args:
-                ['exec houba reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX" --shard-count "$SHARD_COUNT"']
+                ['exec knock reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX" --shard-count "$SHARD_COUNT"']
               env:
                 # Source-registry auth (opt-in). DOCKER_CONFIG is read by BOTH regctl
                 # (copy path) and buildctl (rebuild path); REGCTL_CONFIG keeps regctl's
@@ -65,9 +65,9 @@ spec:
                   value: /tmp/.regctl/config.json
               envFrom:
                 - configMapRef:
-                    name: houba-config
+                    name: knock-config
                 - secretRef:
-                    name: houba-registries # provided per-overlay (literal / ExternalSecret)
+                    name: knock-registries # provided per-overlay (literal / ExternalSecret)
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
@@ -97,7 +97,7 @@ spec:
             # Opt-in source-registry auth: absent secret ⇒ empty mount ⇒ anonymous pulls.
             - name: docker-config
               secret:
-                secretName: houba-docker-config
+                secretName: knock-docker-config
                 optional: true
                 items:
                   - key: config.json

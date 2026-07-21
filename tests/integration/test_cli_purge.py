@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from houba.cli.main import _run, app
+from knock.cli.main import _run, app
 
 runner = CliRunner()
 
@@ -15,11 +15,11 @@ runner = CliRunner()
 def _env(monkeypatch: pytest.MonkeyPatch, fake_bin_path: Path) -> None:
     monkeypatch.setenv("PATH", f"{fake_bin_path}{os.pathsep}{os.environ['PATH']}")
     monkeypatch.setenv(
-        "HOUBA_REGISTRIES", json.dumps({"harbor": {"host": "harbor.example", "tls_verify": False}})
+        "KNOCK_REGISTRIES", json.dumps({"harbor": {"host": "harbor.example", "tls_verify": False}})
     )
-    monkeypatch.setenv("HOUBA_USAGE_ORACLE_CMD", str(fake_bin_path / "oracle"))
-    monkeypatch.setenv("HOUBA_PURGE_MIN_IDLE_DAYS", "15")
-    monkeypatch.setenv("HOUBA_LOG_FORMAT", "json")
+    monkeypatch.setenv("KNOCK_USAGE_ORACLE_CMD", str(fake_bin_path / "oracle"))
+    monkeypatch.setenv("KNOCK_PURGE_MIN_IDLE_DAYS", "15")
+    monkeypatch.setenv("KNOCK_LOG_FORMAT", "json")
 
 
 def test_purge_missing_oracle_cmd_exits_3(
@@ -28,8 +28,8 @@ def test_purge_missing_oracle_cmd_exits_3(
     # ConfigError → exit 3 is mapped in _run (not app), so drive _run with argv set
     # (mirrors tests/integration/test_cli_main.py's _run-based exit-code tests).
     _env(monkeypatch, fake_bin_path)
-    monkeypatch.delenv("HOUBA_USAGE_ORACLE_CMD", raising=False)
-    monkeypatch.setattr("sys.argv", ["houba", "purge"])
+    monkeypatch.delenv("KNOCK_USAGE_ORACLE_CMD", raising=False)
+    monkeypatch.setattr("sys.argv", ["knock", "purge"])
     with pytest.raises(SystemExit) as excinfo:
         _run()
     assert excinfo.value.code == 3
@@ -53,7 +53,7 @@ def test_dry_run_deletions_env_forces_dry_run_despite_apply(
 ) -> None:
     _env(monkeypatch, fake_bin_path)
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "repos")
-    monkeypatch.setenv("HOUBA_DRY_RUN_DELETIONS", "true")
+    monkeypatch.setenv("KNOCK_DRY_RUN_DELETIONS", "true")
     result = runner.invoke(app, ["purge", "--apply"])  # --apply, but env forces dry-run
     assert result.exit_code == 0, result.stdout
     assert "dry-run" in result.stdout  # mode reflects effective_apply=False

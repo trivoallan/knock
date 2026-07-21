@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from houba.domain.mirror_policy import Spec
-from houba.domain.policy_merge import resolve_imports
-from houba.domain.variants import ResolvedVariant, expand_variants
+from knock.domain.mirror_policy import Spec
+from knock.domain.policy_merge import resolve_imports
+from knock.domain.variants import ResolvedVariant, expand_variants
 
 
 def _resolved(import_body: dict, defaults: dict | None = None):

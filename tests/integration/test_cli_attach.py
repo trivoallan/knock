@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from houba.cli.main import app
-from houba.errors import UnknownFormatError
+from knock.cli.main import app
+from knock.errors import UnknownFormatError
 
 runner = CliRunner()
 
@@ -131,21 +131,21 @@ def test_attach_signs_when_signer_configured(
 ) -> None:
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "default")
     monkeypatch.setenv("FAKE_COSIGN_SCENARIO", "success")
-    monkeypatch.setenv("HOUBA_ATTEST_SIGNER", "keyless")
-    monkeypatch.setenv("HOUBA_ATTEST_BUILDER_ID", "houba://ci")
+    monkeypatch.setenv("KNOCK_ATTEST_SIGNER", "keyless")
+    monkeypatch.setenv("KNOCK_ATTEST_BUILDER_ID", "knock://ci")
     report = tmp_path / "scan.sarif.json"
     report.write_text(SARIF)
     result = runner.invoke(app, ["attach", "harbor.corp/lib/redis:7.2.0", "--report", str(report)])
     assert result.exit_code == 0, result.stdout
     assert "signed:" in result.stdout
-    assert "https://houba.dev/predicate/scan/v1" in result.stdout
+    assert "https://knock.dev/predicate/scan/v1" in result.stdout
 
 
 def test_attach_unsigned_when_no_signer(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
 ) -> None:
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "default")
-    monkeypatch.delenv("HOUBA_ATTEST_SIGNER", raising=False)
+    monkeypatch.delenv("KNOCK_ATTEST_SIGNER", raising=False)
     report = tmp_path / "scan.sarif.json"
     report.write_text(SARIF)
     result = runner.invoke(app, ["attach", "harbor.corp/lib/redis:7.2.0", "--report", str(report)])
@@ -197,7 +197,7 @@ def test_attach_authenticates_via_roster(
     log = tmp_path / "regctl.log"
     monkeypatch.setenv("FAKE_REGCTL_LOG", str(log))
     monkeypatch.setenv(
-        "HOUBA_REGISTRIES",
+        "KNOCK_REGISTRIES",
         '{"prod": {"host": "harbor.corp", "username": "u", "password": "p"}}',
     )
     report = tmp_path / "scan.sarif.json"

@@ -13,7 +13,7 @@ The deployment/demo surface has grown to **six overlapping entry points**:
 
 `make argocd-prod` on kind is *already* nearly the whole demo: the same App-of-Apps you would run in production, with throwaway credentials and registry. Everything else is redundancy that drifts, and the Makefile carries ~22 targets to drive it.
 
-The product thesis (CLAUDE.md line 1) is that houba is a **stamper, not a mirror** — yet the blessed demo (`busybox`) exercises only the copy path.
+The product thesis (CLAUDE.md line 1) is that knock is a **stamper, not a mirror** — yet the blessed demo (`busybox`) exercises only the copy path.
 
 ## Decisions
 
@@ -30,7 +30,7 @@ The product thesis (CLAUDE.md line 1) is that houba is a **stamper, not a mirror
 One App-of-Apps, **no demo/prod ENV split**. `root.yaml` drops the `ARGOCD_ENV` parameter; `path` becomes `deploy/argocd/apps`. The app set is:
 
 - wave 0: `eso`, `openbao`
-- wave 1: `houba` (→ `sources/houba`), `buildkitd` (→ `sources/buildkitd`)
+- wave 1: `knock` (→ `sources/knock`), `buildkitd` (→ `sources/buildkitd`)
 
 The throwaway `registry:2` is applied out-of-band by `make demo` (unmanaged by Argo, as `argocd-prod` does today). KEDA + Prometheus apps are removed from the set.
 
@@ -71,7 +71,7 @@ Delete: `up-lite`/`demo-lite`/`demo-lite-run`, `up-full`/`demo-full`/`demo-full-
 - `deploy/overlays/local-lite/`, `deploy/overlays/local-full/`, `deploy/overlays/local-transform/` (content folds into `overlays/local`)
 - `deploy/overlays/prod/` — `externalsecret.yaml` moves into the Argo source first
 - `deploy/argocd/apps/demo/` (whole set), `deploy/argocd/apps/prod/keda.yaml`, `deploy/argocd/apps/prod/prometheus.yaml`
-- `deploy/argocd/sources/houba-demo/`
+- `deploy/argocd/sources/knock-demo/`
 - `docs/examples/busybox/`, `docs/examples/timezone/` (relocated)
 
 **Add**
@@ -84,8 +84,8 @@ Delete: `up-lite`/`demo-lite`/`demo-lite-run`, `up-full`/`demo-full`/`demo-full-
 
 - `Makefile` — collapse targets as above
 - `deploy/argocd/root.yaml` — drop `ARGOCD_ENV`; `path: deploy/argocd/apps`
-- `deploy/argocd/apps/prod/{eso,openbao,houba,buildkitd}.yaml` → `deploy/argocd/apps/` (flatten); `houba.yaml` repoints to `sources/houba`
-- `deploy/argocd/sources/houba-prod/` → `deploy/argocd/sources/houba/`; absorb `externalsecret.yaml`; `POLICY_DIR`/`BLAST_REPOS` → reference policy
+- `deploy/argocd/apps/prod/{eso,openbao,knock,buildkitd}.yaml` → `deploy/argocd/apps/` (flatten); `knock.yaml` repoints to `sources/knock`
+- `deploy/argocd/sources/knock-prod/` → `deploy/argocd/sources/knock/`; absorb `externalsecret.yaml`; `POLICY_DIR`/`BLAST_REPOS` → reference policy
 - `deploy/base/kustomization.yaml` — `POLICY_DIR` → reference, `BLAST_REPOS` → `demo/busybox demo/debian`
 - `deploy/components/keda-buildkitd/` — keep, document as optional (unwired)
 - `docs/runbooks/reference-deployment.md` — rewrite around `make demo` / `make local`
@@ -105,5 +105,5 @@ Delete: `up-lite`/`demo-lite`/`demo-lite-run`, `up-full`/`demo-full`/`demo-full-
 
 - `make demo` on a clean kind cluster: operators sync, ESO materializes the registries Secret from OpenBao, the reconcile copies `busybox` and rebuilds+stamps `debian` variants, blast-radius reports both grouped by `base.digest` + `owner.team`.
 - `make local` on a clean kind cluster: same reconcile result without Argo/operators, reflecting uncommitted manifests.
-- `uv run pytest`, `ruff check`, `ruff format --check`, `mypy houba` stay green (deployment-only change, but the policy relocation must not break any test that references example paths).
+- `uv run pytest`, `ruff check`, `ruff format --check`, `mypy knock` stay green (deployment-only change, but the policy relocation must not break any test that references example paths).
 - C4 model renders; `_export/` regenerated; ADR linked from the workspace Decisions pane.

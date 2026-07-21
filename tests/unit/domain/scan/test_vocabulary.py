@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from houba.domain.scan.vocabulary import scan_annotation_vocabulary
+from knock.domain.scan.vocabulary import scan_annotation_vocabulary
 
 
 def test_vocabulary_lists_common_envelope_keys() -> None:

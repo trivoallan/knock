@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 class FakeClock:
     """Horloge déterministe pour les tests : now() renvoie un instant fixe injecté.
 
-    Refuse les datetime naïves — toutes les datetimes manipulées dans houba
+    Refuse les datetime naïves — toutes les datetimes manipulées dans knock
     doivent être tz-aware pour éviter des TypeError surprenants en runtime.
     """
 

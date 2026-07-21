@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from houba.errors import CosignError
-from houba.ports.attestor import AttestationRef, VerifiedPredicate
+from knock.errors import CosignError
+from knock.ports.attestor import AttestationRef, VerifiedPredicate
 
 
 class FakeAttestor:

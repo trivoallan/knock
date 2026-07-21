@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# scan-attach.sh — run an off-the-shelf analyzer (grype) on the SBOM houba already
+# scan-attach.sh — run an off-the-shelf analyzer (grype) on the SBOM knock already
 # attached, and attach its SARIF as a signed referrer on the same digest.
 #
 # Two modes, because grype runs in a separate (credential-free) container between them:
-#   fetch  — (init, houba image) pull each placed image's CycloneDX SBOM referrer to /shared
-#   attach — (main, houba image) houba attach the SARIF grype wrote to /shared
+#   fetch  — (init, knock image) pull each placed image's CycloneDX SBOM referrer to /shared
+#   attach — (main, knock image) knock attach the SARIF grype wrote to /shared
 # The grype step in between is an unmodified anchore/grype container: grype sbom:<file>.
 #
-# Inputs (environment): HOUBA_REGISTRIES, BLAST_REGISTRY (opt), BLAST_REPOS, SHARED (default /shared).
+# Inputs (environment): KNOCK_REGISTRIES, BLAST_REGISTRY (opt), BLAST_REPOS, SHARED (default /shared).
 set -euo pipefail
-: "${HOUBA_REGISTRIES:?set HOUBA_REGISTRIES (the registry roster JSON)}"
+: "${KNOCK_REGISTRIES:?set KNOCK_REGISTRIES (the registry roster JSON)}"
 : "${BLAST_REPOS:?set BLAST_REPOS (space/comma-separated repositories)}"
 MODE="${1:?usage: scan-attach.sh fetch|attach}"
 SHARED="${SHARED:-/shared}"
@@ -19,7 +19,7 @@ SPDX_TYPE="application/spdx+json"
 read -r HOST TLS USER_NAME PASSWORD < <(
   BLAST_REGISTRY="${BLAST_REGISTRY:-}" python3 - <<'PY'
 import json, os, sys
-roster = json.loads(os.environ["HOUBA_REGISTRIES"])
+roster = json.loads(os.environ["KNOCK_REGISTRIES"])
 name = os.environ.get("BLAST_REGISTRY") or (next(iter(roster)) if len(roster) == 1 else "")
 if not name:
     sys.exit(f"BLAST_REGISTRY must be one of {sorted(roster)} (more than one configured)")
@@ -39,7 +39,7 @@ for repo in ${REPOS}; do
   seen=""   # digests already handled (dedup tags that share a digest)
   for tag in $(regctl tag ls "${ref_base}" 2>/dev/null); do
     # Pin to the SAME digest blast-radius reads (regctl image digest) so the scan referrer lands
-    # where the consumer looks. houba and regctl can resolve a tag to different digests
+    # where the consumer looks. knock and regctl can resolve a tag to different digests
     # (multi-arch index vs child manifest); the digest ref removes that ambiguity.
     digest=$(regctl image digest "${ref_base}:${tag}" 2>/dev/null || echo "")
     [ -n "${digest}" ] || { echo "» ${repo}:${tag} — cannot resolve digest — skipped" >&2; continue; }
@@ -63,7 +63,7 @@ for repo in ${REPOS}; do
         ;;
       attach)
         if [ -s "${SHARED}/${key}.sarif" ]; then
-          houba attach "${ref}" --report "${SHARED}/${key}.sarif"
+          knock attach "${ref}" --report "${SHARED}/${key}.sarif"
         else
           echo "» ${short} — no SARIF — skipped" >&2
         fi

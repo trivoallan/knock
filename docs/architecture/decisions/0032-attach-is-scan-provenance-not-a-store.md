@@ -6,7 +6,7 @@ Date: 2026-06-16
 
 Accepted.
 
-Builds on [15. Sign the houba attach scan referrer](0015-scan-attestation.md),
+Builds on [15. Sign the knock attach scan referrer](0015-scan-attestation.md),
 [21. `attach --fail-on` CI gate](0021-attach-fail-on-gate.md),
 [28. Scan-referrer garbage collection](0028-scan-referrer-gc.md).
 
@@ -14,7 +14,7 @@ Builds on [15. Sign the houba attach scan referrer](0015-scan-attestation.md),
 
 The target org already runs **Dependency-Track** (continuous SBOM/vuln analysis: central,
 queryable, re-correlated against today's feeds). That raises a redundancy question against
-`houba attach`, which writes scan results as signed OCI referrers: is the referrer a second,
+`knock attach`, which writes scan results as signed OCI referrers: is the referrer a second,
 weaker vuln *store* competing with DT's database?
 
 It is — *if framed as a store*. DT wins that role on every axis (central, continuous, rich,
@@ -47,7 +47,7 @@ demoted to a coarse CI tripwire; it is no longer the reason `attach` exists.
 ## Guardrail (the redundancy trap, kept shut)
 
 The admission controller verifies the **signature and digest binding** — *"was scanned, signed by
-houba"* — never the **content** (currency, severity). A valid signature over a stale scan still
+knock"* — never the **content** (currency, severity). A valid signature over a stale scan still
 passes. The temptation will be to add freshness/severity correlation into the referrer; that
 re-imports DT's job onto the artifact and reopens the overlap. **The referrer stays provenance.**
 Staleness, if closed at admission, is closed only by a provenance-shaped **max-age** policy

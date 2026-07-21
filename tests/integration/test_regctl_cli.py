@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from houba.adapters.regctl_cli import RegctlAdapter
-from houba.errors import RegctlError
+from knock.adapters.regctl_cli import RegctlAdapter
+from knock.errors import RegctlError
 
 
 def test_list_tags(fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -111,12 +111,12 @@ def test_annotate_emits_one_flag_per_annotation(
     log = _log(tmp_path, monkeypatch)
     result = RegctlAdapter().annotate(
         "harbor.corp/lib/redis:7.2.0",
-        {"org.opencontainers.image.base.digest": "sha256:src", "io.houba.lineage": "copy"},
+        {"org.opencontainers.image.base.digest": "sha256:src", "io.knock.lineage": "copy"},
     )
     line = log.read_text()
     assert "image mod" in line
     assert "--annotation org.opencontainers.image.base.digest=sha256:src" in line
-    assert "--annotation io.houba.lineage=copy" in line
+    assert "--annotation io.knock.lineage=copy" in line
     # annotate returns the resulting (post-mod) manifest digest, read back via `image digest`
     assert result == "sha256:abc123"
     assert "image digest harbor.corp/lib/redis:7.2.0" in line
@@ -231,14 +231,14 @@ def test_put_referrer_invokes_artifact_put_with_subject(
     log = _log(tmp_path, monkeypatch)
     RegctlAdapter().put_referrer(
         "harbor.corp/lib/redis:6.0.0",
-        "application/vnd.houba.lifecycle.pending+json",
-        {"io.houba.lifecycle.state": "pending-deletion"},
+        "application/vnd.knock.lifecycle.pending+json",
+        {"io.knock.lifecycle.state": "pending-deletion"},
     )
     line = log.read_text()
     assert "artifact put" in line
     assert "--subject harbor.corp/lib/redis:6.0.0" in line
-    assert "--artifact-type application/vnd.houba.lifecycle.pending+json" in line
-    assert "--annotation io.houba.lifecycle.state=pending-deletion" in line
+    assert "--artifact-type application/vnd.knock.lifecycle.pending+json" in line
+    assert "--annotation io.knock.lifecycle.state=pending-deletion" in line
 
 
 def test_delete_referrer_invokes_manifest_delete(
@@ -254,11 +254,11 @@ def test_list_referrers_parses_descriptors(
 ) -> None:
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "referrers-one")
     got = RegctlAdapter().list_referrers(
-        "harbor.corp/lib/redis:6.0.0", "application/vnd.houba.lifecycle.pending+json"
+        "harbor.corp/lib/redis:6.0.0", "application/vnd.knock.lifecycle.pending+json"
     )
     assert len(got) == 1
     assert got[0].digest == "sha256:ref1"
-    assert got[0].artifact_type == "application/vnd.houba.lifecycle.pending+json"
+    assert got[0].artifact_type == "application/vnd.knock.lifecycle.pending+json"
     assert got[0].subject_tag == "harbor.corp/lib/redis:6.0.0"
 
 
@@ -267,7 +267,7 @@ def test_list_referrers_empty_when_none(
 ) -> None:
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "referrers-empty")
     assert (
-        RegctlAdapter().list_referrers("harbor.corp/lib/redis:6.0.0", "application/vnd.houba.x")
+        RegctlAdapter().list_referrers("harbor.corp/lib/redis:6.0.0", "application/vnd.knock.x")
         == []
     )
 
@@ -288,18 +288,18 @@ def test_put_referrer_with_blob_invokes_artifact_put_with_flags(
     log = _log(tmp_path, monkeypatch)
     digest = RegctlAdapter().put_referrer(
         "harbor.corp/lib/redis@sha256:abc",
-        "application/vnd.houba.scan.result.v1",
-        {"io.houba.scan.tool": "trivy", "io.houba.scan.vuln.critical": "0"},
+        "application/vnd.knock.scan.result.v1",
+        {"io.knock.scan.tool": "trivy", "io.knock.scan.vuln.critical": "0"},
         blob=b'{"runs": []}',
         media_type="application/sarif+json",
     )
     line = log.read_text()
     assert "artifact put" in line
     assert "--subject harbor.corp/lib/redis@sha256:abc" in line
-    assert "--artifact-type application/vnd.houba.scan.result.v1" in line
+    assert "--artifact-type application/vnd.knock.scan.result.v1" in line
     assert "--file-media-type application/sarif+json" in line
-    assert "--annotation io.houba.scan.tool=trivy" in line
-    assert "--annotation io.houba.scan.vuln.critical=0" in line
+    assert "--annotation io.knock.scan.tool=trivy" in line
+    assert "--annotation io.knock.scan.vuln.critical=0" in line
     assert line.split().count("harbor.corp/lib/redis@sha256:abc") == 1
     assert digest == "harbor.corp/lib/redis@sha256:ref123"
 
@@ -309,7 +309,7 @@ def test_put_referrer_failure_raises_regctl_error(
 ) -> None:
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "fail")
     with pytest.raises(RegctlError):
-        RegctlAdapter().put_referrer("r:1", "application/vnd.houba.x", {})
+        RegctlAdapter().put_referrer("r:1", "application/vnd.knock.x", {})
 
 
 def test_delete_referrer_failure_raises_regctl_error(
@@ -325,7 +325,7 @@ def test_list_referrers_failure_raises_regctl_error(
 ) -> None:
     monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "fail")
     with pytest.raises(RegctlError):
-        RegctlAdapter().list_referrers("harbor.corp/lib/redis:6.0.0", "application/vnd.houba.x")
+        RegctlAdapter().list_referrers("harbor.corp/lib/redis:6.0.0", "application/vnd.knock.x")
 
 
 def test_list_repositories_parses_lines(

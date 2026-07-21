@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from houba.config import CACertSource, PackageMirror, RegistryConfig
-from houba.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE, PREDICATE_TYPE
-from houba.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
-from houba.ports.registry import ImageInfo, Referrer
-from houba.use_cases.reconcile import reconcile_policies
-from houba.use_cases.report import RunReport
+from knock.config import CACertSource, PackageMirror, RegistryConfig
+from knock.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE, PREDICATE_TYPE
+from knock.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
+from knock.ports.registry import ImageInfo, Referrer
+from knock.use_cases.reconcile import reconcile_policies
+from knock.use_cases.report import RunReport
 from tests.fakes.attestor import FakeAttestor
 from tests.fakes.image_builder import FakeImageBuilder
 from tests.fakes.registry import FakeRegistryPort
@@ -24,7 +24,7 @@ def _hardened_policy() -> MirrorPolicy:
 def _copy_policy() -> MirrorPolicy:
     return parse_mirror_policy(
         """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: busybox-copy }
 spec:
@@ -47,11 +47,11 @@ def _run(policy: MirrorPolicy, registry: FakeRegistryPort, **over: object) -> Ru
         package_mirrors={"corp": PackageMirror(apt="https://mirror.corp")},
         build_platform="linux/amd64",
         now=NOW,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         dry_run_tags=False,
         dry_run_deletions=False,
         reporter=FakeReporter(),
-        attest_builder_id="https://houba.example/builders/main",
+        attest_builder_id="https://knock.example/builders/main",
     )
     kwargs.update(over)
     return reconcile_policies([policy], **kwargs)  # type: ignore[arg-type]
@@ -85,7 +85,7 @@ def test_rebuild_attests_with_transform_predicate() -> None:
     assert pred["import"] == "v7"
     assert pred["source"] == "docker.io/library/redis"
     assert pred["source_digest"] == "sha256:src"
-    assert pred["builder_id"] == "https://houba.example/builders/main"
+    assert pred["builder_id"] == "https://knock.example/builders/main"
     assert [s["name"] for s in pred["steps"]] == ["injectCA", "rewritePackageSources"]
     assert pred["transformed"] is True
 
@@ -199,7 +199,7 @@ def test_backfill_records_mirror_base_digest_not_current_source() -> None:
     # was actually derived from), NOT "sha256:new" (the current source).
     from datetime import timedelta
 
-    from houba.domain.reconcile import DEFAULT_GRACE
+    from knock.domain.reconcile import DEFAULT_GRACE
 
     src = "docker.io/library/busybox"
     dest_repo = "reg.local/demo/busybox"

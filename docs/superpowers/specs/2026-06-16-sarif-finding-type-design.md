@@ -2,12 +2,12 @@
 
 Date: 2026-06-16
 Status: Design (approved)
-Roadmap: *Now* — "Scan ecosystem breadth", reframed. Builds on `houba attach` (ADR 0006/0015) and
+Roadmap: *Now* — "Scan ecosystem breadth", reframed. Builds on `knock attach` (ADR 0006/0015) and
 the pluggable scan-format registry.
 
 ## Problem
 
-`houba attach` ingests scan reports as signed OCI referrers and summarizes them into a queryable
+`knock attach` ingests scan reports as signed OCI referrers and summarizes them into a queryable
 `{prefix}.scan.*` stamp. Today the only mapper is `SarifMapper`, and it buckets **every** SARIF
 result into `vuln.<severity>` (by CVSS `security-severity`, else by `level`).
 
@@ -20,7 +20,7 @@ the product*, a misleading stamp is worse than no stamp.
 The fix is **semantic, not transport**: teach the SARIF mapper to tell a vulnerability finding
 apart from a rule/policy evaluation, using only standard SARIF — no regis-specific knowledge, no
 new format (CLAUDE.md: org-specific behavior must be configuration of generic primitives, never
-hardcoded; here, regis-specific behavior is likewise forbidden — houba handles SARIF per spec).
+hardcoded; here, regis-specific behavior is likewise forbidden — knock handles SARIF per spec).
 
 ## Decision
 

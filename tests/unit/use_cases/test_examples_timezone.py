@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from houba.domain.mirror_policy import parse_mirror_policy
+from knock.domain.mirror_policy import parse_mirror_policy
 
 
 def test_timezone_example_declares_two_regional_variants() -> None:

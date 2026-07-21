@@ -6,7 +6,7 @@
   "packages": {
     ".": {
       "release-type": "python",
-      "package-name": "houba",
+      "package-name": "knock",
       "changelog-path": "CHANGELOG.md"
     }
   }

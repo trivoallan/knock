@@ -12,7 +12,7 @@ The reference policy that both `make demo` (the Argo App-of-Apps) and `make loca
 ```yaml title="docs/examples/reference/debian-tz/debian-tz.yml" file=../../examples/reference/debian-tz/debian-tz.yml
 ```
 
-Run it: `uv run houba reconcile docs/examples/reference/busybox` (copy path, no extra deps) or `uv run houba reconcile docs/examples/reference/debian-tz` (rebuild path, needs a BuildKit daemon on `PATH`).
+Run it: `uv run knock reconcile docs/examples/reference/busybox` (copy path, no extra deps) or `uv run knock reconcile docs/examples/reference/debian-tz` (rebuild path, needs a BuildKit daemon on `PATH`).
 
 ---
 

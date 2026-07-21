@@ -5,7 +5,7 @@
 
 ## 1. Context & motivation
 
-houba is a **stamper / single front door** for external OCI images. v0.2.0 ships the
+knock is a **stamper / single front door** for external OCI images. v0.2.0 ships the
 **copy path** — mirror + provenance stamp via `regctl`. This phase adds the **rebuild
 path**: re-build a source image through a declarative **hardening policy** (internal CA
 trust, internal package mirrors) and stamp the result. This is the essentialization the
@@ -72,10 +72,10 @@ Two new env-driven config blocks (same shape as the Phase 4 registry roster), un
 
 ```bash
 # name → CA cert SOURCE: a file path (k8s-mountable) is primary; inline PEM is a fallback.
-HOUBA_TRANSFORM_CA_CERTS='{"corp-root": {"path": "/etc/houba/certs/corp-root.pem"}, "partner-ca": {"path": "/etc/houba/certs/partner.pem"}}'
+KNOCK_TRANSFORM_CA_CERTS='{"corp-root": {"path": "/etc/knock/certs/corp-root.pem"}, "partner-ca": {"path": "/etc/knock/certs/partner.pem"}}'
 
 # name → per-package-manager mirror URLs
-HOUBA_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian", "apk": "https://mirror.corp/alpine"}}'
+KNOCK_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian", "apk": "https://mirror.corp/alpine"}}'
 ```
 
 - `CACertSource` — `{path: str}` **or** `{pem: str}` (inline, for local tests). Path primary.
@@ -124,8 +124,8 @@ stamp are the application layer.
 
 The stamp on a rebuilt image carries, in addition to the standard OCI facts:
 
-- `io.houba.transform.steps` — e.g. `"injectCA,rewritePackageSources"` (applied, in order).
-- `io.houba.transform.version` — a **content hash** of the resolved transform: the step
+- `io.knock.transform.steps` — e.g. `"injectCA,rewritePackageSources"` (applied, in order).
+- `io.knock.transform.version` — a **content hash** of the resolved transform: the step
   names/params **and** their resolved data (CA cert *contents*, mirror URLs). Rotating a CA
   or changing a mirror URL changes this hash even if the policy text is unchanged.
 
@@ -135,7 +135,7 @@ idempotency key for source change detection is unchanged).
 Change detection (`domain/reconcile.py`) extends:
 
 - `MirrorArtifact` gains `transform_version: str | None` (read from the mirror's
-  `io.houba.transform.version` annotation).
+  `io.knock.transform.version` annotation).
 - The desired `transform_version` is computed from the resolved transform (pure hash over
   the read cert contents + mirror URLs — the contents are read in the application layer and
   passed in).
@@ -179,15 +179,15 @@ all file/registry/build I/O is in the use case + adapters; `os.environ` only in 
 
 ## 9. Deployment (Kubernetes) — documentation, not coupling
 
-houba is **env-driven and orchestrator-agnostic** — it never reads the Kubernetes API. In a
+knock is **env-driven and orchestrator-agnostic** — it never reads the Kubernetes API. In a
 k8s deployment, ConfigMaps/Secrets feed it through the standard projection mechanisms:
 
-- **ConfigMap → env** (`envFrom`): `HOUBA_REGISTRIES`, `HOUBA_TRANSFORM_PACKAGE_MIRRORS`,
-  and other non-secret `HOUBA_*` settings.
-- **Secret/ConfigMap → volume**: CA cert files mounted at e.g. `/etc/houba/certs/`, with
-  `HOUBA_TRANSFORM_CA_CERTS` mapping each logical name to its mount path.
+- **ConfigMap → env** (`envFrom`): `KNOCK_REGISTRIES`, `KNOCK_TRANSFORM_PACKAGE_MIRRORS`,
+  and other non-secret `KNOCK_*` settings.
+- **Secret/ConfigMap → volume**: CA cert files mounted at e.g. `/etc/knock/certs/`, with
+  `KNOCK_TRANSFORM_CA_CERTS` mapping each logical name to its mount path.
 
-This keeps houba runnable identically in local/CI/any orchestrator — k8s is one deployment
+This keeps knock runnable identically in local/CI/any orchestrator — k8s is one deployment
 target, not a dependency. (Reading the k8s API directly would reintroduce coupling and
 defeat the extraction thesis.)
 

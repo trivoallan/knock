@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from houba.errors import AdapterError, UsageOracleError, exit_code_for
+from knock.errors import AdapterError, UsageOracleError, exit_code_for
 
 
 def test_usage_oracle_error_is_adapter_error_exit_2() -> None:

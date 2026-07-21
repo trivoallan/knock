@@ -7,7 +7,7 @@ sidebar_position: 3
 **Usage**:
 
 ```console
-$ houba [OPTIONS] COMMAND [ARGS]...
+$ knock [OPTIONS] COMMAND [ARGS]...
 ```
 
 **Options**:
@@ -21,18 +21,18 @@ $ houba [OPTIONS] COMMAND [ARGS]...
 * `attach`: Ingest a scan report produced upstream and...
 * `audit`: Walk the registry and report images that...
 * `gc`: Garbage-collect superseded scan-result...
-* `verify`: Read houba's facts for a digest and gate...
+* `verify`: Read knock's facts for a digest and gate...
 * `version`: Print the CLI version.
 * `scan`: Platform scan-pipeline commands (requires...
 
-## `houba reconcile`
+## `knock reconcile`
 
 Reconcile all MirrorPolicy files under DIRECTORY against their destinations.
 
 **Usage**:
 
 ```console
-$ houba reconcile [OPTIONS] DIRECTORY
+$ knock reconcile [OPTIONS] DIRECTORY
 ```
 
 **Arguments**:
@@ -43,20 +43,20 @@ $ houba reconcile [OPTIONS] DIRECTORY
 
 * `--dry-run`: Plan only — no copies, no deletes.
 * `-v, --verbose`: Unfold per-operation detail in text output.
-* `-j, --concurrency INTEGER RANGE`: Max parallel tag operations (overrides HOUBA_MAX_CONCURRENCY; 1 = sequential).  [x>=1]
+* `-j, --concurrency INTEGER RANGE`: Max parallel tag operations (overrides KNOCK_MAX_CONCURRENCY; 1 = sequential).  [x>=1]
 * `--shard-index INTEGER RANGE`: This shard's 0-based index (pass $JOB_COMPLETION_INDEX in an Indexed Job).  [default: 0; x>=0]
 * `--shard-count INTEGER RANGE`: Total shards N (1 = process all policies).  [default: 1; x>=1]
-* `--report-json`: Emit the reconcile report as JSON to stdout (for piping to `houba scan enqueue`).
+* `--report-json`: Emit the reconcile report as JSON to stdout (for piping to `knock scan enqueue`).
 * `--help`: Show this message and exit.
 
-## `houba purge`
+## `knock purge`
 
 Reap pending-deletion marks: purge tags not seen in prod within the idle window.
 
 **Usage**:
 
 ```console
-$ houba purge [OPTIONS]
+$ knock purge [OPTIONS]
 ```
 
 **Options**:
@@ -65,14 +65,14 @@ $ houba purge [OPTIONS]
 * `--apply`: Actually delete (default: dry-run, plan only).
 * `--help`: Show this message and exit.
 
-## `houba attach`
+## `knock attach`
 
 Ingest a scan report produced upstream and attach it as a stamped OCI referrer.
 
 **Usage**:
 
 ```console
-$ houba attach [OPTIONS] IMAGE_REF
+$ knock attach [OPTIONS] IMAGE_REF
 ```
 
 **Arguments**:
@@ -88,14 +88,14 @@ $ houba attach [OPTIONS] IMAGE_REF
 * `--fail-on [critical|high|medium|low|unknown]`: Exit non-zero if the scan has a finding at or above this severity (CI gate).
 * `--help`: Show this message and exit.
 
-## `houba audit`
+## `knock audit`
 
-Walk the registry and report images that do NOT carry houba's provenance stamp.
+Walk the registry and report images that do NOT carry knock's provenance stamp.
 
 **Usage**:
 
 ```console
-$ houba audit [OPTIONS]
+$ knock audit [OPTIONS]
 ```
 
 **Options**:
@@ -108,14 +108,14 @@ $ houba audit [OPTIONS]
 * `--limit INTEGER`: Stop after N images — bounded smoke-check / walk benchmark over a slice.
 * `--help`: Show this message and exit.
 
-## `houba gc`
+## `knock gc`
 
 Garbage-collect superseded scan-result referrers across the registry roster.
 
 **Usage**:
 
 ```console
-$ houba gc [OPTIONS]
+$ knock gc [OPTIONS]
 ```
 
 **Options**:
@@ -126,14 +126,14 @@ $ houba gc [OPTIONS]
 * `--apply`: Actually delete (default: dry-run, plan only).
 * `--help`: Show this message and exit.
 
-## `houba verify`
+## `knock verify`
 
-Read houba's facts for a digest and gate on them (exit 0 = pass, 1 = fail).
+Read knock's facts for a digest and gate on them (exit 0 = pass, 1 = fail).
 
 **Usage**:
 
 ```console
-$ houba verify [OPTIONS] IMAGE_REF
+$ knock verify [OPTIONS] IMAGE_REF
 ```
 
 **Arguments**:
@@ -149,28 +149,28 @@ $ houba verify [OPTIONS] IMAGE_REF
 * `--output TEXT`: Output format: 'text' (default) or 'json'.  [default: text]
 * `--help`: Show this message and exit.
 
-## `houba version`
+## `knock version`
 
 Print the CLI version.
 
 **Usage**:
 
 ```console
-$ houba version [OPTIONS]
+$ knock version [OPTIONS]
 ```
 
 **Options**:
 
 * `--help`: Show this message and exit.
 
-## `houba scan`
+## `knock scan`
 
-Platform scan-pipeline commands (requires `pip install houba[scan]`).
+Platform scan-pipeline commands (requires `pip install knock-oci[scan]`).
 
 **Usage**:
 
 ```console
-$ houba scan [OPTIONS] COMMAND [ARGS]...
+$ knock scan [OPTIONS] COMMAND [ARGS]...
 ```
 
 **Options**:
@@ -184,7 +184,7 @@ $ houba scan [OPTIONS] COMMAND [ARGS]...
 * `enqueue`: Read a reconcile JSON report from stdin...
 * `reaper`: Claim idle entries and route...
 
-### `houba scan reserve`
+### `knock scan reserve`
 
 Reserve one placed digest from the queue and write it to /shared for the
 scanner + attach steps. Exits 75 (EX_TEMPFAIL) when the queue is empty.
@@ -192,14 +192,14 @@ scanner + attach steps. Exits 75 (EX_TEMPFAIL) when the queue is empty.
 **Usage**:
 
 ```console
-$ houba scan reserve [OPTIONS]
+$ knock scan reserve [OPTIONS]
 ```
 
 **Options**:
 
 * `--help`: Show this message and exit.
 
-### `houba scan attach`
+### `knock scan attach`
 
 Read the reserved digest + the scanner's SARIF, attach the result, and ack.
 A missing/empty SARIF or a transient failure leaves the entry pending (the
@@ -208,35 +208,35 @@ reaper retries); a permanent failure dead-letters it.
 **Usage**:
 
 ```console
-$ houba scan attach [OPTIONS]
+$ knock scan attach [OPTIONS]
 ```
 
 **Options**:
 
 * `--help`: Show this message and exit.
 
-### `houba scan enqueue`
+### `knock scan enqueue`
 
 Read a reconcile JSON report from stdin and enqueue the placed image refs.
 
 **Usage**:
 
 ```console
-$ houba scan enqueue [OPTIONS]
+$ knock scan enqueue [OPTIONS]
 ```
 
 **Options**:
 
 * `--help`: Show this message and exit.
 
-### `houba scan reaper`
+### `knock scan reaper`
 
 Claim idle entries and route past-threshold ones to the dead stream.
 
 **Usage**:
 
 ```console
-$ houba scan reaper [OPTIONS]
+$ knock scan reaper [OPTIONS]
 ```
 
 **Options**:

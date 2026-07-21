@@ -23,7 +23,7 @@ One tool, one mechanism, configurable formats. A standalone `SbomGeneratorPort` 
 syft) scans the **placed image by digest** on **both** paths and returns one document per
 configured format; each is attached as an **OCI referrer**. buildkit's `attest:sbom` (and
 `BuildRequest.sbom`) is dropped; `attest:provenance` stays. Format set is global config
-`HOUBA_SBOM_FORMATS` (default `["spdx-json"]`, non-empty ⇒ always-on). syft is the same
+`KNOCK_SBOM_FORMATS` (default `["spdx-json"]`, non-empty ⇒ always-on). syft is the same
 engine buildkit packaged, so 0029's depth findings carry over.
 
 ## Consequences

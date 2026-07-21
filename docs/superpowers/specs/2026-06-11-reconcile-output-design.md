@@ -6,7 +6,7 @@
 
 ## Problem
 
-`houba reconcile` currently emits exactly one line:
+`knock reconcile` currently emits exactly one line:
 
 ```
 reconcile: imported=3 updated=1 deleted=0 aliased=2
@@ -16,8 +16,8 @@ Gaps:
 
 - No real-time progress — operations run silently, then a single line appears.
 - No per-policy / per-variant / per-operation detail.
-- The structlog infrastructure (`houba/logging.py`) exists but is **never wired** into the CLI; `HOUBA_LOG_FORMAT` / `HOUBA_LOG_LEVEL` are defined in config but unused.
-- The apply phase is **fail-fast**: any registry exception aborts the whole run and short-circuits even the summary line (`houba/use_cases/reconcile.py:101-163`).
+- The structlog infrastructure (`knock/logging.py`) exists but is **never wired** into the CLI; `KNOCK_LOG_FORMAT` / `KNOCK_LOG_LEVEL` are defined in config but unused.
+- The apply phase is **fail-fast**: any registry exception aborts the whole run and short-circuits even the summary line (`knock/use_cases/reconcile.py:101-163`).
 
 This serves none of the three jobs the output must do in CI: **debug post-mortem**, **change audit**, and **dry-run plan feedback**.
 
@@ -28,10 +28,10 @@ This serves none of the three jobs the output must do in CI: **debug post-mortem
 - **Two streams:**
   - **stdout** = structured *result* (machine contract).
   - **stderr** = *event journal* (structlog, verbosity-driven).
-  - Both adapt to `HOUBA_LOG_FORMAT` (`text` → human-readable; `json` → machine).
+  - Both adapt to `KNOCK_LOG_FORMAT` (`text` → human-readable; `json` → machine).
 - **Hierarchical result:** `run → policies → targets → variants → operations`, with aggregated counts at each level. JSON carries full detail; `text` stops at policy level by default, `--verbose` unfolds operations.
 - **Accumulate-and-continue:** per-policy isolation; a failure marks the policy `failed` and the run continues; exit ≠ 0 if any failure.
-- Respect the hexagonal layering (the reason houba exists): the journal is delivered through a **port**, not by coupling the use case to structlog.
+- Respect the hexagonal layering (the reason knock exists): the journal is delivered through a **port**, not by coupling the use case to structlog.
 
 ## Architecture
 
@@ -43,7 +43,7 @@ The stdout *result* is a rich return type rendered by the CLI — independent of
 
 ## Components
 
-### 1. Result model — `houba/use_cases/report.py` (new)
+### 1. Result model — `knock/use_cases/report.py` (new)
 
 **Pydantic** models (not dataclasses) so `model_json_schema()` can publish a schema of the report, consistent with the policy schema and the project's "JSON Schema wherever a declarative contract exists" rule.
 
@@ -79,7 +79,7 @@ Isolation unit is the **policy**. The first operation that fails within a policy
 - `reconcile_policies` no longer raises on a per-policy apply failure; it continues.
 - Errors **before** any mutation (alias-collision detection, config/registry resolution) stay **fail-fast** and propagate as today — they are plan errors, not apply errors, and there is nothing partial to report.
 
-### 3. `Reporter` port + stderr journal — `houba/ports/reporter.py` (new)
+### 3. `Reporter` port + stderr journal — `knock/ports/reporter.py` (new)
 
 `typing.Protocol` plus frozen-dataclass event models alongside it (house convention: each port has a data model beside it).
 
@@ -93,24 +93,24 @@ class Reporter(Protocol):
     def run_completed(self, report: RunReport) -> None: ...
 ```
 
-- **Adapter** `houba/adapters/structlog_reporter.py` (new): `StructlogReporter` binds `structlog.get_logger()`; each method emits one structured, timestamped event on **stderr**. Rendering is `text` (ConsoleRenderer) or `json` per `HOUBA_LOG_FORMAT`. No retry / network — purely an output adapter.
+- **Adapter** `knock/adapters/structlog_reporter.py` (new): `StructlogReporter` binds `structlog.get_logger()`; each method emits one structured, timestamped event on **stderr**. Rendering is `text` (ConsoleRenderer) or `json` per `KNOCK_LOG_FORMAT`. No retry / network — purely an output adapter.
 - **Fake** `tests/fakes/fake_reporter.py` (new): journals calls (`calls.operations`, `calls.failures`, …) so use-case tests assert "event X was emitted" without capturing stderr.
 - The use case takes `reporter: Reporter` as a parameter and emits as it goes.
 
-### 4. stdout rendering — `houba/cli/render.py` (new)
+### 4. stdout rendering — `knock/cli/render.py` (new)
 
 `render_report(report, *, fmt, verbose, stream=stdout)`:
 
 - **`text`**: one readable block per policy
   (`✓ name  imported=2 updated=1 skipped=4` / `✗ name  FAILED: AdapterError: …`), then a totals line. `--verbose` unfolds targets / variants / operations.
 - **`json`**: `report.model_dump_json()` — the full tree, stable contract, clean for `| jq`.
-- **Stream separation:** result on **stdout**, journal on **stderr**, so `houba reconcile … 2>/dev/null | jq` stays pure.
+- **Stream separation:** result on **stdout**, journal on **stderr**, so `knock reconcile … 2>/dev/null | jq` stays pure.
 
 ### 5. Wiring & schema publication
 
-- `houba/cli/main.py`: an `@app.callback` loads settings and calls `houba.logging.configure(format_=settings.log_format, level=settings.log_level)` **once** before any command. The `_run` wrapper stays for fail-fast plan errors.
-- `houba/cli/_di.py`: instantiate `StructlogReporter` and inject it into `reconcile_policies` (excluded from coverage — it is wiring).
-- `houba/cli/reconcile.py`: build the result, choose the exit code from `RunReport.status`, render via `render_report`. The `--verbose` flag is added here.
+- `knock/cli/main.py`: an `@app.callback` loads settings and calls `knock.logging.configure(format_=settings.log_format, level=settings.log_level)` **once** before any command. The `_run` wrapper stays for fail-fast plan errors.
+- `knock/cli/_di.py`: instantiate `StructlogReporter` and inject it into `reconcile_policies` (excluded from coverage — it is wiring).
+- `knock/cli/reconcile.py`: build the result, choose the exit code from `RunReport.status`, render via `render_report`. The `--verbose` flag is added here.
 - **JSON Schema:** publish `RunReport.model_json_schema()` via the same mechanism as the policy schema, so CI consumers can validate the report.
 - **C4:** no new actor / external system / integration (structlog is internal; no new outbound flow) → `workspace.dsl` **unchanged**. Verified explicitly.
 
@@ -125,7 +125,7 @@ class Reporter(Protocol):
 ## Decisions locked
 
 - **Reporter port (Approach A)** for the in-flight journal — not structlog-direct, not post-hoc reprojection.
-- **Two streams**: stdout = structured result, stderr = event journal; both driven by `HOUBA_LOG_FORMAT`.
+- **Two streams**: stdout = structured result, stderr = event journal; both driven by `KNOCK_LOG_FORMAT`.
 - **Hierarchical, Pydantic result model** with per-level counts; `text` stops at policy by default, `--verbose` unfolds; full detail always in JSON.
 - **Accumulate-and-continue**, isolation per **policy**; exit code = max numeric of failures' codes.
 - **`skipped` included** in the report (JSON + `--verbose`), excluded from the headline summary.

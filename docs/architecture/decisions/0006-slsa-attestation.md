@@ -11,24 +11,24 @@ Builds on [1. MirrorPolicy format & reconcile contract](0001-mirror-policy-forma
 ## Context
 
 The roadmap's first Phase-C item is "the label is the product" — freeze the provenance
-contract. The cheap, scanner-readable layer (OCI-standard annotations + `io.houba.*`
+contract. The cheap, scanner-readable layer (OCI-standard annotations + `io.knock.*`
 lineage) is already delivered by `domain/stamp.py`. The heavy, cryptographically
 verifiable layer is still missing.
 
 ## Decision
 
 Add SLSA / in-toto attestations on top of the annotation stamp: two attestations by
-design (build provenance + transform/SBOM evidence), configured via `HOUBA_ATTEST_*`,
+design (build provenance + transform/SBOM evidence), configured via `KNOCK_ATTEST_*`,
 placed per the hexagonal layering and built on the rebuild path (`buildkit_cli`).
 
 ## Consequences
 
 Provenance becomes cryptographically verifiable, not merely readable. **Implemented**
 (roadmap ①, plan `docs/superpowers/plans/2026-06-13-slsa-attestation.md`): a pure-domain
-transform predicate (`houba/domain/attestation.py`, `predicateType:
-https://houba.dev/predicate/transform/v1`), a pluggable `AttestorPort` with a single
+transform predicate (`knock/domain/attestation.py`, `predicateType:
+https://knock.dev/predicate/transform/v1`), a pluggable `AttestorPort` with a single
 `cosign` adapter (keyless / kms / key), and BuildKit's native `slsa.dev/provenance/v1`.
-Off by default (`HOUBA_ATTEST_SIGNER=""`), rebuild-only in v1.
+Off by default (`KNOCK_ATTEST_SIGNER=""`), rebuild-only in v1.
 
 **Deviation from the design spec, ratified:** the spec §4 sketched `tenacity` retry in the
 cosign adapter. To honor the load-bearing CLAUDE.md invariant ("no retry logic anywhere"),

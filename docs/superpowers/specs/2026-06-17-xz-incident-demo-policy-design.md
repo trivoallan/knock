@@ -11,9 +11,9 @@ recognizable incident** instead of a generic image. Reproduce the **XZ backdoor
 affected image — the front-door supply-chain story made concrete.
 
 **The claim — and the guardrail.** The demo says: *"the day the CVE was disclosed,
-blast-radius became one query, third-party images included."* It must **never** imply houba
-*detects* or *blocks* the backdoor. houba rebuilds faithfully from its mirror; if the mirror
-ships the backdoored `xz 5.6.1`, houba rebuilds *with* it — and stamps + SBOMs it, so the
+blast-radius became one query, third-party images included."* It must **never** imply knock
+*detects* or *blocks* the backdoor. knock rebuilds faithfully from its mirror; if the mirror
+ships the backdoored `xz 5.6.1`, knock rebuilds *with* it — and stamps + SBOMs it, so the
 post-disclosure query has an answer. The hero is the signed inventory at the front door, not a
 scanner. Any narration that suggests detection is a defect.
 
@@ -39,11 +39,11 @@ a Java-depth case. One incident, done well — not a catalogue.
 
 ## Architecture
 
-houba's rebuild path derives `FROM <source>` and applies transform steps (the `debian-tz`
+knock's rebuild path derives `FROM <source>` and applies transform steps (the `debian-tz`
 example rebuilds `library/debian` with `setTimezone`). There is **no "install package"
-transform**, and the houba SBOM is produced **only on the rebuild path** (copy does not SBOM).
+transform**, and the knock SBOM is produced **only on the rebuild path** (copy does not SBOM).
 So the vulnerable `xz` version must arrive via the **source image**, and the image must be
-**rebuilt** (not copied) to get a houba SBOM. The chosen shape (no houba core change):
+**rebuilt** (not copied) to get a knock SBOM. The chosen shape (no knock core change):
 
 ### Three artifacts
 
@@ -51,7 +51,7 @@ So the vulnerable `xz` version must arrive via the **source image**, and the ima
    A `Dockerfile` that starts from a sid snapshot and installs the backdoored `xz`:
    ```dockerfile
    # demo fixture — DELIBERATELY VULNERABLE (CVE-2024-3094, the XZ backdoor). Inert as a static
-   # layer (no sshd/systemd at runtime); built only to be rebuilt + inventoried by houba.
+   # layer (no sshd/systemd at runtime); built only to be rebuilt + inventoried by knock.
    FROM debian:sid
    RUN printf 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20240328T000000Z/ sid main\n' \
          > /etc/apt/sources.list && rm -f /etc/apt/sources.list.d/* \
@@ -60,18 +60,18 @@ So the vulnerable `xz` version must arrive via the **source image**, and the ima
     && dpkg-query -W xz-utils    # expect 5.6.1-1
    LABEL org.opencontainers.image.description="demo fixture — deliberately vulnerable, CVE-2024-3094"
    ```
-   Built **without** an SBOM attestation (houba's rebuild generates the real one) and pushed to
+   Built **without** an SBOM attestation (knock's rebuild generates the real one) and pushed to
    the demo registry as a pretend-upstream, e.g. `upstream/debian-xz:5.6.1`.
 
 2. **The hit — rebuilt through the front door.**
    A new MirrorPolicy sources the fixture and **rebuilds** it with a hardening transform
    (`setTimezone` — the only no-config built-in, and it reinforces "the front door hardens").
-   The rebuild re-scans the final filesystem → the houba SPDX SBOM captures the inherited
+   The rebuild re-scans the final filesystem → the knock SPDX SBOM captures the inherited
    `xz-utils 5.6.1-1` → stamp + sign → pushed to `demo/debian-xz`. `publish-sbom` uploads it →
    DT flags `DEBIAN-CVE-2024-3094`.
 
 3. **The bypass — the durable blind spot.**
-   An image copied **directly** into the registry with `regctl` (never through houba) — no
+   An image copied **directly** into the registry with `regctl` (never through knock) — no
    stamp, no SBOM, invisible to the inventory. e.g. `bypassed/debian-xz`. This is the *durable*
    coverage contrast: it survives the roadmap's future "SBOM on copied images" (the blind spot
    is "never came through the mandated door", not "copied vs rebuilt").
@@ -80,8 +80,8 @@ So the vulnerable `xz` version must arrive via the **source image**, and the ima
 
 - **DT** (`make dt-ui`): search `xz-utils` → `demo/debian-xz` is **red** (CVE-2024-3094); the
   clean stamped images (`demo/busybox`, `demo/debian-eu/-us`) stay **green** — precision, not FUD.
-- **Coverage** (`houba audit` has-SBOM dimension / `blast-radius.sh` "⚠ N artifact(s) carry NO
-  houba stamp"): `bypassed/debian-xz` is **uncovered** — the durable blind spot.
+- **Coverage** (`knock audit` has-SBOM dimension / `blast-radius.sh` "⚠ N artifact(s) carry NO
+  knock stamp"): `bypassed/debian-xz` is **uncovered** — the durable blind spot.
 - **Narration:** "XZ dropped at 2am; the front-door images answered in one query — including the
   third-party `debian-xz`. The bypass image is the unknown: what never came through the door is
   ungovernable."
@@ -93,7 +93,7 @@ So the vulnerable `xz` version must arrive via the **source image**, and the ima
 - **Incident policy**: `docs/examples/incidents/xz-cve-2024-3094/xz.yml` — `source` = the fixture
   in the demo registry; one import; `transform: [setTimezone]`; destination `demo/debian-xz`.
 - **Bypass placement**: one `regctl image copy <fixture> <registry>/bypassed/debian-xz` step,
-  out-of-band (explicitly *not* via houba).
+  out-of-band (explicitly *not* via knock).
 - **Coverage**: `BLAST_REPOS += demo/debian-xz bypassed/debian-xz` so the report walks both.
 - **Orchestration**: a `make incident-xz` target (or folded into `make demo`/`make local`) that
   chains: build+push fixture → reconcile the incident policy → place the bypass image →
@@ -110,7 +110,7 @@ So the vulnerable `xz` version must arrive via the **source image**, and the ima
 - **C4**: no model change expected — `snapshot.debian.org` is just another upstream source and
   the fixture is a demo artifact; neither is a new modeled actor/system. Add a one-line note to
   the deploy-view prose only if a reviewer finds it warranted.
-- **No houba core change** ⇒ no `make reference`, no coverage-gate impact. Everything lives in
+- **No knock core change** ⇒ no `make reference`, no coverage-gate impact. Everything lives in
   `docs/examples/`, `deploy/`, `scripts/`, and a fixture `Dockerfile`.
 
 ## Safety / honesty
@@ -125,7 +125,7 @@ So the vulnerable `xz` version must arrive via the **source image**, and the ima
 ## Out of scope (YAGNI)
 
 - Other incidents (Log4Shell, Heartbleed) — one incident, done well.
-- Any houba core change: no new transform, no new use case, no SBOM-format change.
+- Any knock core change: no new transform, no new use case, no SBOM-format change.
 - The roadmap's future "SBOM on copied images" — a separate item; this design is built to *not*
   depend on copy-vs-rebuild for the blind spot.
 - Re-triggering DT's vuln mirror — already handled by `make dt-vulns`.
@@ -157,4 +157,4 @@ Edited:
 - `Makefile` (`incident-xz` target; orchestration + narration echoes)
 - `deploy/overlays/local/README.md`, `docs/roadmap.md` (note the incident demo)
 
-Untouched: all of `houba/` (no core change), `make reference` output.
+Untouched: all of `knock/` (no core change), `make reference` output.

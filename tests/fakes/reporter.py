@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from houba.ports.reporter import Counts, ErrorInfo, OperationEvent
-from houba.use_cases.report import RunReport
+from knock.ports.reporter import Counts, ErrorInfo, OperationEvent
+from knock.use_cases.report import RunReport
 
 
 class FakeReporter:

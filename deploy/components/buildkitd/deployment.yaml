@@ -1,4 +1,4 @@
-# Rootless buildkitd — houba drives it over buildctl to run the hardening rebuild.
+# Rootless buildkitd — knock drives it over buildctl to run the hardening rebuild.
 # Rootless keeps the security posture honest (no privileged container); the trade-off
 # is the unconfined seccomp/apparmor profiles rootless needs. See the runbook for the
 # mTLS hardening you SHOULD add before exposing this beyond a single-node demo.

@@ -22,7 +22,7 @@ sidebar_position: 2
 | **Required**              | No          |
 | **Additional properties** | Not allowed |
 
-**Description:** houba's normalized scan summary — the signed, verifiable form of `io.houba.scan.*`.
+**Description:** knock's normalized scan summary — the signed, verifiable form of `io.knock.scan.*`.
 
 | Property                           | Pattern | Type   | Deprecated | Definition         | Title/Description |
 | ---------------------------------- | ------- | ------ | ---------- | ------------------ | ----------------- |
@@ -44,7 +44,7 @@ sidebar_position: 2
 | **Additional properties** | Not allowed     |
 | **Defined in**            | #/$defs/Scanner |
 
-**Description:** The upstream scanner that produced the report (houba did not run it).
+**Description:** The upstream scanner that produced the report (knock did not run it).
 
 | Property                       | Pattern | Type   | Deprecated | Definition | Title/Description |
 | ------------------------------ | ------- | ------ | ---------- | ---------- | ----------------- |
@@ -117,7 +117,7 @@ sidebar_position: 2
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-**Description:** ISO-8601 timestamp of when houba attached and signed this scan. The freshness clock: an admission controller enforces a max-age policy against it (admit only if now - attested_at <= max-age). This signed field is the only trustworthy freshness source — not the unsigned scan-timestamp annotation (the HOUBA_LABEL_PREFIX-prefixed key, e.g. io.houba.scan.timestamp), which exists only for gc.
+**Description:** ISO-8601 timestamp of when knock attached and signed this scan. The freshness clock: an admission controller enforces a max-age policy against it (admit only if now - attested_at <= max-age). This signed field is the only trustworthy freshness source — not the unsigned scan-timestamp annotation (the KNOCK_LABEL_PREFIX-prefixed key, e.g. io.knock.scan.timestamp), which exists only for gc.
 
 ## 6. Property `builder_id` {#builder_id}
 

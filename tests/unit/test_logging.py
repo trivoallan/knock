@@ -6,7 +6,7 @@ from io import StringIO
 import pytest
 import structlog
 
-from houba.logging import configure
+from knock.logging import configure
 
 
 @pytest.fixture(autouse=True)

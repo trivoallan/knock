@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from houba.domain.scan.detect import detect_format, resolve_format
-from houba.errors import UnknownFormatError
+from knock.domain.scan.detect import detect_format, resolve_format
+from knock.errors import UnknownFormatError
 
 SARIF = json.dumps({"version": "2.1.0", "runs": []}).encode()
 

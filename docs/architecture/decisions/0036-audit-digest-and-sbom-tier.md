@@ -1,4 +1,4 @@
-# 36. `houba audit` gains a digest on every outcome + an `--sbom` tier
+# 36. `knock audit` gains a digest on every outcome + an `--sbom` tier
 
 Date: 2026-06-17
 
@@ -11,7 +11,7 @@ both-paths SBOM referrer from [34. unify-SBOM-on-syft](0034-unify-sbom-on-syft.m
 
 ## Context
 
-The coverage portal consumes `houba audit`'s JSON report rather than re-walking the registry. It
+The coverage portal consumes `knock audit`'s JSON report rather than re-walking the registry. It
 joins images **by digest** (the tag is mutable; the digest survives Harbor's fan-out) and needs to
 know whether a package SBOM is present — both facts the report did not carry.
 

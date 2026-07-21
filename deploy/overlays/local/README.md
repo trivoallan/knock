@@ -11,11 +11,11 @@ make dt-vulns  # trigger DT's keyless OSV (Debian) vuln mirror, then re-run `mak
 make dt-ui     # browse Dependency-Track (the package-level blast-radius consumer)
 ```
 
-No Harbor, no ExternalSecret, no CA/mirror config — everything needed to run houba
+No Harbor, no ExternalSecret, no CA/mirror config — everything needed to run knock
 end-to-end fits in this single overlay.
 
-houba's lineage stamp answers *which images derive from base X* (`make blast-radius`); the CycloneDX
-SBOM referrer houba attaches, fetched by `make publish-sbom` and uploaded to Dependency-Track,
+knock's lineage stamp answers *which images derive from base X* (`make blast-radius`); the CycloneDX
+SBOM referrer knock attaches, fetched by `make publish-sbom` and uploaded to Dependency-Track,
 answers the **package**-level question *which images ship the vulnerable package X*. Component inventory works offline; CVE/severity
 correlation needs a mirrored vuln source. `dt-bootstrap` enables DT's **keyless OSV** Debian
 ecosystem; `make dt-vulns` restarts the apiserver to run the mirror (DT only mirrors on restart —
@@ -24,7 +24,7 @@ hence the data PVC, so the mirror isn't wiped). After it finishes (a few minutes
 demo uses OSV; production can add an NVD API key.)
 
 The demo reproduces a real incident: `demo/debian-xz` ships the backdoored `xz-utils 5.6.1-1`
-(CVE-2024-3094) and lights up red in DT; `bypassed/debian-xz` (never through houba) is the coverage
+(CVE-2024-3094) and lights up red in DT; `bypassed/debian-xz` (never through knock) is the coverage
 blind spot. See `docs/examples/reference/debian-xz/`.
 
 > **Heads-up — DT is RAM-hungry.** Dependency-Track hard-requires a **4 GB heap** (it refuses
@@ -32,7 +32,7 @@ blind spot. See `docs/examples/reference/debian-xz/`.
 > VM ≥ 8 GB or the apiserver pod stays `Pending`/`OOMKilled` and `make dt-ui` finds no service.
 
 Zot ships a **built-in web UI** (the `search` + `ui` extensions), so you can *see* what
-houba pushed — browse the mirrored repos/tags and the provenance annotations on each
+knock pushed — browse the mirrored repos/tags and the provenance annotations on each
 manifest, the stamp made visible:
 
 ```bash
@@ -45,7 +45,7 @@ same port as the registry API; a real cluster browses its own Harbor/Zot console
 ## The insecure-HTTP detail
 
 The rebuilt images are **pushed by buildkit** to the throwaway Zot registry, which serves
-plain HTTP. buildkitd defaults to HTTPS — but houba derives BuildKit's
+plain HTTP. buildkitd defaults to HTTPS — but knock derives BuildKit's
 `registry.insecure=true` push flag from the destination's `tls_verify=false` in the roster
 ([`secret-registries.yaml`](secret-registries.yaml)), the *same* primitive that makes
 `regctl` copy over HTTP (`--tls disabled`). So the copy and rebuild paths share one source
@@ -57,7 +57,7 @@ covers the *push*; base images here are pulled from Docker Hub over HTTPS.)
 
 The in-cluster `git-sync` clones `POLICY_REPO_REF` (default `main`), so the `reference/`
 examples are only visible once merged. To try them from a feature branch, add
-`POLICY_REPO_REF=<branch>` to the `houba-config` generator in `kustomization.yaml` and
+`POLICY_REPO_REF=<branch>` to the `knock-config` generator in `kustomization.yaml` and
 revert before merging.
 
 ## Docker Hub rate limits
@@ -67,7 +67,7 @@ rate-limited; if a run fails with `toomanyrequests` / `429`, authenticate the so
 Docker Hub username + access token:
 
 ```bash
-DOCKER_USER=<user> DOCKER_PASS=<token> make docker-auth   # seeds the optional houba-docker-config secret
+DOCKER_USER=<user> DOCKER_PASS=<token> make docker-auth   # seeds the optional knock-docker-config secret
 make local
 ```
 

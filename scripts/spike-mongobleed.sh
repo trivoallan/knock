@@ -14,7 +14,7 @@
 #
 # Run as a spike (go/no-go) or in CI as a regression guard. Exits non-zero on any broken assert.
 #
-# Deps: grype, syft, jq (Act 1).  + trivy (Act 1 scanner-blind-spot beat).  + regctl, houba,
+# Deps: grype, syft, jq (Act 1).  + trivy (Act 1 scanner-blind-spot beat).  + regctl, knock,
 #       a writable registry (Act 2, opt-in via --gate).
 #
 # Usage:
@@ -71,14 +71,14 @@ VER=$(jq -r --arg p "$MONGO_PKG" 'first(.artifacts[]|select(.name==$p)).version 
 # --- Act 2 gate (opt-in): the front door says no on a scanner-flagged image ---
 if [ -n "$GATE_REG" ]; then
   say "[Act 2] --fail-on gate on $XZ_IMG"
-  need regctl; need houba
+  need regctl; need knock
   REG="$GATE_REG/spike/$(basename "$XZ_IMG")"
   if regctl image copy "$XZ_IMG" "$REG" >/dev/null 2>&1; then
     grype "$REG" -o sarif > "$WORK/xz.sarif" 2>/dev/null
     XZHIT=$(jq -r --arg c "$XZ_CVE" '[.runs[0].results[]?|select(.ruleId==$c)]|length' "$WORK/xz.sarif")
     [ "${XZHIT:-0}" -ge 1 ] && ok "grype flags $XZ_CVE on the gate image" \
                             || bad "grype does not flag $XZ_CVE — the gate has nothing to block"
-    houba attach "$REG" --report "$WORK/xz.sarif" --fail-on "$THRESHOLD" >/dev/null 2>&1; RC=$?
+    knock attach "$REG" --report "$WORK/xz.sarif" --fail-on "$THRESHOLD" >/dev/null 2>&1; RC=$?
     case "$RC" in
       1) ok "attach --fail-on $THRESHOLD exits 1 — image GATED (the win)";;
       2) bad "attach exits 2 (AdapterError) — registry write failed; needs WRITE creds (finding D-a)";;

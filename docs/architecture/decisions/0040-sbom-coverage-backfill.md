@@ -30,8 +30,8 @@ kept digest missing any required SBOM referrer is routed to a `to_sbom` backfill
 **live** digest with syft and attaches the missing referrers — no rebuild. Detection keys on SBOM
 referrer presence (by media type), so it heals once and then converges (no duplicate referrers,
 despite syft's non-deterministic output). One unfiltered referrer probe per existing tag now feeds
-both coverage signals (signature + SBOM). Scans (`houba attach`, external/upstream) are out of
-scope — houba cannot regenerate them.
+both coverage signals (signature + SBOM). Scans (`knock attach`, external/upstream) are out of
+scope — knock cannot regenerate them.
 
 ## Consequences
 

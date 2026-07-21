@@ -1,12 +1,12 @@
-# `houba audit` — `digest` on every outcome + an `--sbom` tier — design
+# `knock audit` — `digest` on every outcome + an `--sbom` tier — design
 
 *Status: design. Date: 2026-06-17. Branch: `tritri/audit-digest-sbom-tier` (off `main`).*
 
 ## Why
 
-These are the two **houba-side asks** surfaced by the Backstage coverage-portal design
+These are the two **knock-side asks** surfaced by the Backstage coverage-portal design
 (`docs/superpowers/specs/2026-06-17-backstage-coverage-portal-design.md`, ADR 0035 — on another
-branch). The portal consumes `houba audit`'s JSON report rather than re-walking the registry, and it
+branch). The portal consumes `knock audit`'s JSON report rather than re-walking the registry, and it
 needs two things the report does not yet carry:
 
 1. **`digest` on every outcome** — the portal joins images **by digest** (the tag is mutable; the
@@ -24,7 +24,7 @@ trivial follow-on if a use emerges). `audit_exit_code` is unchanged.
 
 The SBOM media types already live in `domain/sbom.py` (#140): `FORMAT_MEDIA_TYPES = {"spdx-json":
 "application/spdx+json", "cyclonedx-json": "application/vnd.cyclonedx+json"}`. The probe reuses them so
-it stays in sync with what houba attaches. No new domain code.
+it stays in sync with what knock attaches. No new domain code.
 
 ## 2. Port + adapter — surface the digest from the existing annotation read (approach A)
 
@@ -68,10 +68,10 @@ is contained. (Verified: `reconcile`/`attach` use `inspect`/`annotate`, not `get
 
 ## 5. Edges / scope (assumed)
 
-- **`--sbom` probes only covered images** — an uncovered image never carries an houba SBOM, so `sbom`
+- **`--sbom` probes only covered images** — an uncovered image never carries an knock SBOM, so `sbom`
   stays `None` there (same shape as `signed`).
 - **Either SBOM format counts** — `with_sbom` is true if *any* known SBOM media type has a referrer
-  (a policy may emit spdx-json, cyclonedx-json, or both via `HOUBA_SBOM_FORMATS`).
+  (a policy may emit spdx-json, cyclonedx-json, or both via `KNOCK_SBOM_FORMATS`).
 - **`digest` on uncovered images too** — the portal joins dark images by digest as well, so it is not
   gated on `covered`.
 - **No cryptographic verification** — presence of the referrer, same ceiling as `--signed`.
@@ -87,7 +87,7 @@ is contained. (Verified: `reconcile`/`attach` use `inspect`/`annotate`, not `get
 - **Integration CLI (fake-bin `regctl`):** `audit --sbom` exits 0 and the JSON report carries `sbom`
   per covered image + the digest per image; without `--sbom`, `sbom` is `None`. Mirror the existing
   `--signed` integration test.
-- Coverage gates hold (≥ 80 % global, ≥ 90 % `houba.domain` — no domain change).
+- Coverage gates hold (≥ 80 % global, ≥ 90 % `knock.domain` — no domain change).
 
 ## 7. Docs to sync (same change)
 

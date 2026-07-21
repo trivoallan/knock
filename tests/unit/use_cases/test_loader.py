@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from houba.errors import PolicyValidationError
-from houba.use_cases.loader import load_policy_dir
+from knock.errors import PolicyValidationError
+from knock.use_cases.loader import load_policy_dir
 
 VALID = """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata: { name: %s }
 spec:

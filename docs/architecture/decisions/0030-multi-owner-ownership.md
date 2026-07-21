@@ -1,4 +1,4 @@
-# 30. Multi-owner ownership: io.houba.owners replaces io.houba.owner.team
+# 30. Multi-owner ownership: io.knock.owners replaces io.knock.owner.team
 
 Date: 2026-06-16
 
@@ -9,7 +9,7 @@ Accepted
 ## Context
 
 The provenance stamp carried ownership as a single free-text string,
-`io.houba.owner.team`, sourced from `metadata.labels["team"]`. An image is
+`io.knock.owner.team`, sourced from `metadata.labels["team"]`. An image is
 often co-owned, and ownership is better declared per import than per policy.
 The full design is in
 [the spec](../../superpowers/specs/2026-06-16-multi-owner-ownership-design.md).
@@ -22,15 +22,15 @@ The full design is in
 - An owner is a Backstage entity-ref string (`[kind:][namespace/]name`),
   validated by shape only — no catalog lookup. Forward-compatible with a future
   Backstage catalog integration at zero migration cost.
-- Clean break of the public contract: `io.houba.owner.team` is removed and
-  replaced by `io.houba.owners` (comma-joined, like `transform.steps`). No
+- Clean break of the public contract: `io.knock.owner.team` is removed and
+  replaced by `io.knock.owners` (comma-joined, like `transform.steps`). No
   dual-write. `metadata.labels["team"]` is no longer an ownership source.
-- `owners` stays optional; `io.houba.owners` is omitted when none resolve.
+- `owners` stays optional; `io.knock.owners` is omitted when none resolve.
   Mandatory ownership (enforcement) is out of scope.
 
 ## Consequences
 
-- Existing consumers of `io.houba.owner.team` must migrate to `io.houba.owners`
+- Existing consumers of `io.knock.owner.team` must migrate to `io.knock.owners`
   and split on commas. The reference consumer `scripts/blast-radius.sh` is
   migrated in the same change (`BLAST_TEAM` → `BLAST_OWNER`, membership filter).
 - No C4 change: Backstage is a future integration, not wired now.

@@ -1,6 +1,6 @@
 # KEDA drives the buildkitd Deployment from a warm floor of 1 up to K under build load.
 # minReplicaCount: 1 — NEVER scale to zero: the floor keeps buildkitd's local cache warm and
-# guarantees the Service always has an endpoint, so houba's first (no-retry) buildctl connection
+# guarantees the Service always has an endpoint, so knock's first (no-retry) buildctl connection
 # always lands. See ADR 0016 (decision D1).
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject

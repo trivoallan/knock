@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-houba needed a blessed, reproducible topology for running it in an organisation — one
+knock needed a blessed, reproducible topology for running it in an organisation — one
 that demonstrates the full loop locally yet doubles as a production blueprint, rather
 than diverging demo and prod manifests.
 

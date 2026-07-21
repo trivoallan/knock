@@ -6,12 +6,12 @@ Date: 2026-06-15
 
 Accepted
 
-Builds on [15. Sign the houba attach scan referrer](0015-scan-attestation.md) and mirrors the
+Builds on [15. Sign the knock attach scan referrer](0015-scan-attestation.md) and mirrors the
 `--fail-on-uncovered` pattern from [14. Coverage audit](0014-coverage-audit.md).
 
 ## Context
 
-`houba attach` is observational by default: it ingests a scan report and stamps it as a portable
+`knock attach` is observational by default: it ingests a scan report and stamps it as a portable
 OCI referrer, then exits 0. Nothing in the current CLI lets CI enforce a quality gate on the scan
 result without a separate tool reading the referrer back.
 
@@ -21,7 +21,7 @@ present without requiring a second pass.
 
 ## Decision
 
-`houba attach` accepts an optional `--fail-on <severity>` flag. Severity order (highest to
+`knock attach` accepts an optional `--fail-on <severity>` flag. Severity order (highest to
 lowest): `critical > high > medium > low > unknown`. `unknown` is the lowest targetable bucket
 and is folded in only at `--fail-on low` or `--fail-on unknown`; it is excluded at
 `--fail-on medium` and above.

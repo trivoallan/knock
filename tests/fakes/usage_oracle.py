@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from houba.errors import UsageOracleError
-from houba.ports.usage_oracle import UsageObservation, UsageQuery
+from knock.errors import UsageOracleError
+from knock.ports.usage_oracle import UsageObservation, UsageQuery
 
 
 class FakeUsageOraclePort:

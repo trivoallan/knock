@@ -3,10 +3,10 @@
 #   latest          → the highest version overall
 # Redis layers are larger than busybox, so the first copy takes a little longer.
 #
-# Heavier variant — drop it into the same dir and reconcile, or point houba at a
+# Heavier variant — drop it into the same dir and reconcile, or point knock at a
 # single file's directory.
 #
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis
@@ -18,7 +18,7 @@ spec:
   imports:
     - name: v7
       owners:
-        - group:default/data-platform     # stamped as io.houba.owners
+        - group:default/data-platform     # stamped as io.knock.owners
       tags:
         includeRegex: "^7\\.2\\."       # just the 7.2.x line, to keep the demo quick
         # semverOnly is true by default → non-semver tags (e.g. "latest", "alpine") are dropped

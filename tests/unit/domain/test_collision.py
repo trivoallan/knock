@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from houba.domain.collision import AliasTarget, detect_alias_collisions, detect_dest_repo_collisions
-from houba.errors import PolicyValidationError
+from knock.domain.collision import AliasTarget, detect_alias_collisions, detect_dest_repo_collisions
+from knock.errors import PolicyValidationError
 
 
 def test_no_collision_distinct_aliases() -> None:

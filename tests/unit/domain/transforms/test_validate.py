@@ -2,9 +2,9 @@ from typing import Any
 
 import pytest
 
-from houba.domain.mirror_policy import TransformStep
-from houba.domain.transforms.render import validate_transform_steps
-from houba.errors import PolicyValidationError
+from knock.domain.mirror_policy import TransformStep
+from knock.domain.transforms.render import validate_transform_steps
+from knock.errors import PolicyValidationError
 
 
 def _step(name: str, params: dict[str, Any]) -> TransformStep:

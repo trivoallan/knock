@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from houba.domain.scan.formats.sarif import SarifMapper
-from houba.errors import ScanReportError
+from knock.domain.scan.formats.sarif import SarifMapper
+from knock.errors import ScanReportError
 
 
 def _sarif(results: list[dict], rules: list[dict] | None = None) -> bytes:

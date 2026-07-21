@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
-# Reference usage oracle for `houba purge` (HOUBA_USAGE_ORACLE_CMD).
-# Replaceable: houba owns the idle threshold; THIS script owns "what counts as prod".
+# Reference usage oracle for `knock purge` (KNOCK_USAGE_ORACLE_CMD).
+# Replaceable: knock owns the idle threshold; THIS script owns "what counts as prod".
 # Contract: stdin = {"digest","image_ref","identity":{...},"since"}; stdout = {"last_seen": <ISO|null>}.
 # Requires: DD_API_KEY, DD_APP_KEY, DD_SITE (e.g. datadoghq.eu), and `jq`.
 set -eu

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from houba.domain.sharding import owns, policy_shard
+from knock.domain.sharding import owns, policy_shard
 
 
 def test_policy_shard_is_deterministic() -> None:

@@ -2,7 +2,7 @@
 # scan-one.sh fetch|attach — operate on the single reserved digest in /shared/digest.
 # Distilled from scan-attach.sh: no repo walk, one ref. SBOM->DT is Loop B (publish-sbom).
 set -euo pipefail
-: "${HOUBA_REGISTRIES:?set HOUBA_REGISTRIES}"
+: "${KNOCK_REGISTRIES:?set KNOCK_REGISTRIES}"
 MODE="${1:?usage: scan-one.sh fetch|attach}"
 REF="$(cat /shared/digest)"          # host/repo@sha256:...
 CDX_TYPE="application/vnd.cyclonedx+json"
@@ -13,7 +13,7 @@ HOST="${REF%%/*}"
 read -r TLS USER_NAME PASSWORD < <(
   HOST="$HOST" python3 - <<'PY'
 import json, os
-roster = json.loads(os.environ["HOUBA_REGISTRIES"])
+roster = json.loads(os.environ["KNOCK_REGISTRIES"])
 r = next(v for v in roster.values() if v["host"] == os.environ["HOST"])
 print(str(r.get("tls_verify", True)).lower(), r.get("username", "-"), r.get("password", "-"))
 PY
@@ -32,8 +32,8 @@ case "$MODE" in
   attach)
     # Loop A = scan + attach ONLY (SBOM->DT is Loop B). After attach, record the signed
     # attested_at for the confirmed-set, then ack via Streams.
-    houba attach "$REF" --report /shared/scan.sarif
-    houba verify "$REF" --field attested_at > /shared/attested_at 2>/dev/null \
+    knock attach "$REF" --report /shared/scan.sarif
+    knock verify "$REF" --field attested_at > /shared/attested_at 2>/dev/null \
       || date +%s > /shared/attested_at   # fallback: now, if verify can't surface it
     python3 /scripts/scan-ack.py
     ;;

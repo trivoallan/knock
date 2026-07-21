@@ -1,6 +1,6 @@
-workspace "houba" "Single front door / stamper for external container images." {
+workspace "knock" "Single front door / stamper for external container images." {
 
-    # houba is the subject of the Context / Container / Component / Deployment views — always
+    # knock is the subject of the Context / Container / Component / Deployment views — always
     # drawn as the boundary, never as a plain element — so the "element not on any view"
     # inspection false-positives on it (it does render as a box in the Landscape view).
     # Downgrade just that one inspection; every other inspection stays a hard CI gate.
@@ -9,19 +9,19 @@ workspace "houba" "Single front door / stamper for external container images." {
     }
 
     model {
-        platformEng = person "Platform / Security Engineer" "Owns the hardening policy and the registry roster; operates houba as the single front door for external images."
+        platformEng = person "Platform / Security Engineer" "Owns the hardening policy and the registry roster; operates knock as the single front door for external images."
         productTeam = person "Product / Application Team" "Declares its imports as MirrorPolicy files and consumes the hardened, stamped images."
-        incidentResponder = person "Incident Responder (SRE / Security)" "At CVE time, computes the blast-radius from houba's provenance stamp."
+        incidentResponder = person "Incident Responder (SRE / Security)" "At CVE time, computes the blast-radius from knock's provenance stamp."
 
-        houba = softwareSystem "houba" "Single front door / stamper: mirrors external container images, optionally rebuilds them through a hardening policy, and stamps them with standardized, portable provenance." "Target" {
-            # Documentation + decisions attached to houba (rendered in the viewer's panes):
+        knock = softwareSystem "knock" "Single front door / stamper: mirrors external container images, optionally rebuilds them through a hardening policy, and stamps them with standardized, portable provenance." "Target" {
+            # Documentation + decisions attached to knock (rendered in the viewer's panes):
             #   !docs → the design overview (docs/architecture/design.md).
             #   !adrs → the design specs as ADRs (docs/architecture/decisions/), linking out
             #           to the full specs under docs/superpowers/specs/.
             !docs design.md
             !adrs decisions
 
-            houbaCli = container "houba CLI" "Reconcile engine: loads MirrorPolicy files, mirrors or rebuilds images and stamps them with provenance. Runs as a CLI / Job; the runtime image bundles regctl + buildctl." "Python · Typer" {
+            knockCli = container "knock CLI" "Reconcile engine: loads MirrorPolicy files, mirrors or rebuilds images and stamps them with provenance. Runs as a CLI / Job; the runtime image bundles regctl + buildctl." "Python · Typer" {
 
                 group "CLI" {
                     cliMain = component "main" "Typer entrypoint; maps exceptions to exit codes." "Typer"
@@ -30,8 +30,8 @@ workspace "houba" "Single front door / stamper for external container images." {
                     cliAudit = component "audit" "The audit command: catalog-walks the registry, reports images missing the provenance stamp." "Typer"
                     cliAttach = component "attach" "The attach command: ingests an upstream scan report and attaches it as a stamped OCI referrer." "Typer"
                     cliGc = component "gc" "The gc command: catalog-walks the registry and deletes superseded scan-result referrers, keeping the N newest per (tool, format) older than a grace window." "Typer"
-                    cliVerify = component "verify" "The verify command: reads houba's facts for a digest (signed scan attestation, stamp, SBOM referrer) and produces a single exit-0/1 gate verdict." "Typer"
-                    cliScan = component "scan" "The scan command group (houba[scan] optional extra): reserve, attach, enqueue, reaper sub-commands for the incremental scan pipeline." "Typer"
+                    cliVerify = component "verify" "The verify command: reads knock's facts for a digest (signed scan attestation, stamp, SBOM referrer) and produces a single exit-0/1 gate verdict." "Typer"
+                    cliScan = component "scan" "The scan command group (knock-oci[scan] optional extra): reserve, attach, enqueue, reaper sub-commands for the incremental scan pipeline." "Typer"
                     cliRender = component "render" "Formats the RunReport to stdout (text / JSON)." "Python"
                     cliDi = component "_di" "Composition root: wires ports to adapters." "Python"
                 }
@@ -51,8 +51,8 @@ workspace "houba" "Single front door / stamper for external container images." {
                     domSchema = component "policy schema" "MirrorPolicy model + published JSON Schema." "Pydantic" "Domain"
                     domPlanning = component "planning pipeline" "Tag selection, aliases, semver, variants, expand, reconcile plan, collision, sharding, retention." "Pure Python" "Domain"
                     domTransform = component "transform engine" "Pluggable transform-step vocabulary: base, steps, registry, render, version." "Pure Python" "Domain"
-                    domStamp = component "provenance stamp" "Builds the OCI-standard + io.houba.* provenance annotations." "Pure Python" "Domain"
-                    domCoverage = component "coverage" "Pure stamp-presence predicate: is the image houba-stamped?" "Pure Python" "Domain"
+                    domStamp = component "provenance stamp" "Builds the OCI-standard + io.knock.* provenance annotations." "Pure Python" "Domain"
+                    domCoverage = component "coverage" "Pure stamp-presence predicate: is the image knock-stamped?" "Pure Python" "Domain"
                     domAttestation = component "attestation predicate" "Builds the in-toto transform Statement (predicate type /v1)." "Pure Python" "Domain"
                     domScan = component "scan ingestion" "Detects the scan-report format, parses it (e.g. SARIF), and summarizes it into stamp annotations." "Pure Python" "Domain"
                     domSbom = component "SBOM facts" "SBOM format media-types and referrer annotation builder (domain/sbom.py)." "Pure Python" "Domain"
@@ -67,19 +67,19 @@ workspace "houba" "Single front door / stamper for external container images." {
                     portUsageOracle = component "UsageOraclePort" "Was this image digest seen in prod since a given timestamp? (stateless, point-in-time query)." "typing.Protocol" "Port"
                     portAttestor = component "AttestorPort" "Sign an in-toto Statement (DSSE) + attach it as an OCI referrer. Verify: cosign verify-attestation over a predicate type → list[VerifiedPredicate]." "typing.Protocol" "Port"
                     portSbomGenerator = component "SbomGeneratorPort" "Generate package-level SBOM(s) for a placed image by digest; returns one document per format." "typing.Protocol" "Port"
-                    portQueue = component "QueuePort" "Enqueue a placed-image digest for scanning; claim the next Reservation (XAUTOCLAIM semantics); ACK or NACK. Optional — only present when houba[scan] is installed." "typing.Protocol" "Port"
+                    portQueue = component "QueuePort" "Enqueue a placed-image digest for scanning; claim the next Reservation (XAUTOCLAIM semantics); ACK or NACK. Optional — only present when knock-oci[scan] is installed." "typing.Protocol" "Port"
                 }
                 group "Adapters" {
                     adRegctl = component "RegctlAdapter" "Drives the regctl CLI via subprocess." "regctl" "Adapter"
                     adBuildkit = component "BuildkitAdapter" "Drives buildctl against buildkitd via subprocess (provenance attestation; no SBOM — superseded by SyftAdapter)." "buildctl" "Adapter"
                     adReporter = component "StructlogReporter" "Writes the event journal to stderr." "structlog" "Adapter"
                     adClock = component "SystemClock" "OS wall clock." "stdlib" "Adapter"
-                    adUsageOracle = component "CommandUsageAdapter" "Shells out to HOUBA_USAGE_ORACLE_CMD; passes digest + idle window via stdin (JSON); expects {last_seen} on stdout." "subprocess" "Adapter"
+                    adUsageOracle = component "CommandUsageAdapter" "Shells out to KNOCK_USAGE_ORACLE_CMD; passes digest + idle window via stdin (JSON); expects {last_seen} on stdout." "subprocess" "Adapter"
                     adCosign = component "CosignAdapter" "Drives the cosign CLI via subprocess (keyless | kms | key)." "cosign" "Adapter"
                     adSyft = component "SyftAdapter" "Drives the syft CLI via subprocess; config-file auth/TLS; lazy binary resolution." "syft" "Adapter"
-                    adRedisStreams = component "RedisStreamsAdapter" "Drives redis-py 8 Streams (XADD / XAUTOCLAIM / XACK / XTRIM); consumer-group semantics; RESP3. Part of the houba[scan] optional extra." "redis-py 8" "Adapter"
+                    adRedisStreams = component "RedisStreamsAdapter" "Drives redis-py 8 Streams (XADD / XAUTOCLAIM / XACK / XTRIM); consumer-group semantics; RESP3. Part of the knock-oci[scan] optional extra." "redis-py 8" "Adapter"
                 }
-                config = component "config" "Reads HOUBA_* settings + roster resolvers — the only os.environ reader." "Pydantic Settings"
+                config = component "config" "Reads KNOCK_* settings + roster resolvers — the only os.environ reader." "Pydantic Settings"
 
                 # Coarse layer components — rendered only by the synthetic "Hexagon" view
                 # (the detailed Component view excludes them). They sit alongside the
@@ -92,36 +92,36 @@ workspace "houba" "Single front door / stamper for external container images." {
             }
         }
 
-        redisBroker = softwareSystem "Redis (Streams)" "Message broker for the scan pipeline: reconcile enqueues placed-image digests; scan workers claim reservations via XAUTOCLAIM (consumer groups). Optional — only required when the houba[scan] extra is installed." "External"
+        redisBroker = softwareSystem "Redis (Streams)" "Message broker for the scan pipeline: reconcile enqueues placed-image digests; scan workers claim reservations via XAUTOCLAIM (consumer groups). Optional — only required when the knock-oci[scan] extra is installed." "External"
 
         sourceRegistries = softwareSystem "Source Registries" "External public OCI registries (Docker Hub, Quay, GHCR) the images originate from." "External"
         destRegistries = softwareSystem "Destination Registries" "The organization's private OCI registries — any dist-spec registry (Harbor, Zot, …); destination for the stamped images, addressed generically via regctl." "External"
-        buildkit = softwareSystem "BuildKit" "OCI build engine houba drives to rebuild and harden images." "External"
+        buildkit = softwareSystem "BuildKit" "OCI build engine knock drives to rebuild and harden images." "External"
         packageMirror = softwareSystem "Internal Package Mirror" "The organization's internal apt/apk mirror; the hardening rebuild rewrites the image's package sources to it." "External"
         observability = softwareSystem "Observability / CMDB" "The organization's existing query stack; reads the provenance stamp to answer blast-radius questions during an incident." "External,Downstream"
-        reaper = softwareSystem "Deletion reaper (external)" "Verifies prod usage and purges tags houba marked pending-deletion." "External,Downstream"
-        usageOracle = softwareSystem "Usage oracle / observability" "Answers 'was this image's content seen in production lately?' (e.g. Datadog). Queried point-in-time by houba purge; never owned by houba." "External"
-        signingService = softwareSystem "Signing / Key service" "KMS or Fulcio (keyless CA) that houba's attestor uses to sign in-toto attestations (DSSE). Trust is org configuration, not baked in." "External"
-        transparencyLog = softwareSystem "Transparency log (Rekor)" "Optional append-only signature log; blank in air-gapped orgs. houba can point at one but never deploys it." "External,Downstream"
-        upstreamScanner = softwareSystem "Upstream Scanner" "Produces vulnerability / EOL scan reports (CI pipeline, registry-native scanner, or scan service). houba ingests the report; it never calls the scanner." "External"
-        argocd = softwareSystem "ArgoCD" "GitOps controller: the App-of-Apps that syncs the houba install from git. This IS the reference deployment — and the demo on kind. The kubectl apply -k overlays/local path is the inner-loop escape hatch, not a separate blueprint." "External"
+        reaper = softwareSystem "Deletion reaper (external)" "Verifies prod usage and purges tags knock marked pending-deletion." "External,Downstream"
+        usageOracle = softwareSystem "Usage oracle / observability" "Answers 'was this image's content seen in production lately?' (e.g. Datadog). Queried point-in-time by knock purge; never owned by knock." "External"
+        signingService = softwareSystem "Signing / Key service" "KMS or Fulcio (keyless CA) that knock's attestor uses to sign in-toto attestations (DSSE). Trust is org configuration, not baked in." "External"
+        transparencyLog = softwareSystem "Transparency log (Rekor)" "Optional append-only signature log; blank in air-gapped orgs. knock can point at one but never deploys it." "External,Downstream"
+        upstreamScanner = softwareSystem "Upstream Scanner" "Produces vulnerability / EOL scan reports (CI pipeline, registry-native scanner, or scan service). knock ingests the report; it never calls the scanner." "External"
+        argocd = softwareSystem "ArgoCD" "GitOps controller: the App-of-Apps that syncs the knock install from git. This IS the reference deployment — and the demo on kind. The kubectl apply -k overlays/local path is the inner-loop escape hatch, not a separate blueprint." "External"
 
-        platformEng -> houba "Configures the hardening policy + registry roster, runs / schedules reconcile" "CLI"
-        productTeam -> houba "Declares its imports as MirrorPolicy files" "YAML"
-        houba -> sourceRegistries "Lists tags, inspects digests, copies images" "regctl"
-        houba -> destRegistries "Reads mirror state; copies, stamps, retags, deletes" "regctl (dist-spec)"
-        houba -> buildkit "Submits the hardening rebuild (internal CA trust, package mirror)" "buildctl"
+        platformEng -> knock "Configures the hardening policy + registry roster, runs / schedules reconcile" "CLI"
+        productTeam -> knock "Declares its imports as MirrorPolicy files" "YAML"
+        knock -> sourceRegistries "Lists tags, inspects digests, copies images" "regctl"
+        knock -> destRegistries "Reads mirror state; copies, stamps, retags, deletes" "regctl (dist-spec)"
+        knock -> buildkit "Submits the hardening rebuild (internal CA trust, package mirror)" "buildctl"
         buildkit -> packageMirror "Pulls packages during the hardening rebuild" "apt / apk"
         productTeam -> destRegistries "Pulls the hardened images" "docker pull (OCI)"
         observability -> destRegistries "Reads provenance stamps on images" "scan / API" "DataCoupling"
         incidentResponder -> observability "Queries blast-radius (at CVE time)" "Query UI"
         reaper -> destRegistries "Discovers pending-deletion referrers, verifies usage, purges" "OCI referrers API" "DataCoupling"
-        houba -> usageOracle "Queries prod usage at purge time (houba purge)" "subprocess (HOUBA_USAGE_ORACLE_CMD)"
-        houba -> signingService "Signs in-toto attestations (DSSE)" "cosign"
-        houba -> transparencyLog "Records the signature (optional; blank => skipped)" "cosign / rekor"
-        upstreamScanner -> houba "Produces scan reports ingested by" "SARIF / file"
-        houba -> redisBroker "Enqueues placed-image digests; scan workers claim reservations (houba[scan] optional)" "redis-py 8 / RESP3 Streams"
-        argocd -> houba "Syncs the install manifests from git into the cluster (App-of-Apps reference)" "GitOps"
+        knock -> usageOracle "Queries prod usage at purge time (knock purge)" "subprocess (KNOCK_USAGE_ORACLE_CMD)"
+        knock -> signingService "Signs in-toto attestations (DSSE)" "cosign"
+        knock -> transparencyLog "Records the signature (optional; blank => skipped)" "cosign / rekor"
+        upstreamScanner -> knock "Produces scan reports ingested by" "SARIF / file"
+        knock -> redisBroker "Enqueues placed-image digests; scan workers claim reservations (knock-oci[scan] optional)" "redis-py 8 / RESP3 Streams"
+        argocd -> knock "Syncs the install manifests from git into the cluster (App-of-Apps reference)" "GitOps"
 
         # Component-level relationships — the source of truth for the Component view.
         # Structurizr implies the container/system-level edges for the views above
@@ -135,7 +135,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         cliMain -> cliAttach "Registers the command" "Typer"
         cliMain -> cliGc "Registers the command" "Typer"
         cliMain -> cliVerify "Registers the command" "Typer"
-        cliMain -> cliScan "Registers the command group (houba[scan])" "Typer"
+        cliMain -> cliScan "Registers the command group (knock-oci[scan])" "Typer"
         cliAudit -> cliDi "Builds the composition root" "Python"
         cliAudit -> ucAudit "Runs the audit" "Python"
         ucAudit -> domCoverage "Classifies each image" "Python"
@@ -162,7 +162,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         cliReconcile -> ucReconcile "Runs reconciliation" "Python"
         cliReconcile -> cliRender "Renders the report" "Python"
         cliReconcile -> portClock "Reads now()" "Protocol"
-        cliDi -> config "Reads HOUBA_* settings" "Pydantic Settings"
+        cliDi -> config "Reads KNOCK_* settings" "Pydantic Settings"
         cliDi -> adRegctl "Wires" "DI"
         cliDi -> adBuildkit "Wires" "DI"
         cliDi -> adReporter "Wires" "DI"
@@ -202,7 +202,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         adRegctl -> sourceRegistries "Lists tags, inspects digests, copies images" "regctl"
         adRegctl -> destRegistries "Reads mirror state; copies, stamps, retags, deletes" "regctl (dist-spec)"
         adBuildkit -> buildkit "Submits the hardening rebuild (internal CA trust, package mirror)" "buildctl"
-        adUsageOracle -> usageOracle "Queries prod usage (HOUBA_USAGE_ORACLE_CMD)" "subprocess (stdin/stdout JSON)"
+        adUsageOracle -> usageOracle "Queries prod usage (KNOCK_USAGE_ORACLE_CMD)" "subprocess (stdin/stdout JSON)"
 
         ucReconcile -> domAttestation "Builds the transform Statement (rebuild path)" "Python"
         ucReconcile -> portAttestor "Signs the transform + SBOM predicates (both paths)" "Protocol"
@@ -223,7 +223,7 @@ workspace "houba" "Single front door / stamper for external container images." {
         ucScanWorker -> domScanQueue "Pure scan decision logic" "Python"
         ucScanWorker -> portQueue "Claims and ACKs/NACKs reservations" "Protocol"
         ucScanWorker -> ucAttach "Runs the scan-and-attach pipeline per reservation" "Python"
-        cliDi -> adRedisStreams "Wires (houba[scan] only)" "DI"
+        cliDi -> adRedisStreams "Wires (knock-oci[scan] only)" "DI"
         adRedisStreams -> portQueue "Implements" "Protocol"
         adRedisStreams -> redisBroker "XADD / XAUTOCLAIM / XACK / XTRIM via RESP3" "redis-py 8"
 
@@ -242,46 +242,46 @@ workspace "houba" "Single front door / stamper for external container images." {
         layAdapters -> usageOracle "Queries prod usage (purge)" "subprocess"
         layAdapters -> signingService "Signs attestations" "cosign"
         layAdapters -> transparencyLog "Records the signature (optional)" "cosign"
-        layAdapters -> redisBroker "Enqueues / claims scan reservations (houba[scan] optional)" "redis-py 8"
+        layAdapters -> redisBroker "Enqueues / claims scan reservations (knock-oci[scan] optional)" "redis-py 8"
 
         # Deployments — one environment per worked example, each scoped to the kind overlay
         # that runs it (the demo IS the blueprint), plus the production blueprint. The old
         # single "Reference (kind)" view merged every overlay into one cramped diagram; these
         # split it by example so each reads cleanly and carries its own overlay facts.
         # See docs/superpowers/specs/2026-06-11-reference-deployment-design.md, deploy/overlays/,
-        # and docs/examples/. Instance↔instance edges (houba→source/dest/buildkit,
+        # and docs/examples/. Instance↔instance edges (knock→source/dest/buildkit,
         # buildkit→packageMirror) are auto-replicated from the model; only the infrastructure-node
         # edges are declared per environment.
 
         # ── Greenfield — the full GitOps Argo App-of-Apps (Reference B, advanced). On kind it
         #    is the demo (`make demo`); the same App-of-Apps adopts to a real cluster (swap
         #    repo, vault, registry, image). Thesis-minimum operators: ESO + OpenBao (wave 0),
-        #    houba + buildkitd (wave 1). KEDA + Prometheus autoscaling is an optional add-on
+        #    knock + buildkitd (wave 1). KEDA + Prometheus autoscaling is an optional add-on
         #    (components/keda-buildkitd), deliberately NOT on this path.
         refEnv = deploymentEnvironment "Greenfield — full GitOps platform (Reference B, advanced)" {
-            deploymentNode "Git host" "github.com/trivoallan/houba (or a fork) — deploy/argocd/" "Git server" {
+            deploymentNode "Git host" "github.com/trivoallan/knock (or a fork) — deploy/argocd/" "Git server" {
                 rfRepo = infrastructureNode "Manifests repo" "root.yaml + apps/ + sources/* — a merged PR is the front door" "git / GitOps"
                 rfPolicyRepo = infrastructureNode "Policy repo (org)" "POLICY_REPO_URL — git-sync clones it; POLICY_DIR=docs/examples/reference (busybox copy + debian rebuild). ArgoCD never touches policies." "git / GitOps"
             }
             deploymentNode "Kubernetes cluster" "kind (the demo) or a real cluster — same manifests (anti-drift)" "Kubernetes" {
                 deploymentNode "namespace: argocd" "ArgoCD controller" "Namespace" {
-                    rfRoot = infrastructureNode "Application: houba-root" "App-of-Apps; syncs the apps/ children from git (no demo/prod split)" "ArgoCD"
+                    rfRoot = infrastructureNode "Application: knock-root" "App-of-Apps; syncs the apps/ children from git (no demo/prod split)" "ArgoCD"
                     rfArgo = softwareSystemInstance argocd
                 }
-                deploymentNode "namespace: houba" "houba workloads (wave 1)" "Namespace" {
-                    deploymentNode "CronJob: houba-reconcile" "BUILDKIT_HOST wired via config (no CronJob patch). On kind: image houba:dev; reconciles the reference policy (copy + rebuild)" "Kubernetes CronJob" {
-                        rfHouba = containerInstance houbaCli
+                deploymentNode "namespace: knock" "knock workloads (wave 1)" "Namespace" {
+                    deploymentNode "CronJob: knock-reconcile" "BUILDKIT_HOST wired via config (no CronJob patch). On kind: image knock:dev; reconciles the reference policy (copy + rebuild)" "Kubernetes CronJob" {
+                        rfKnock = containerInstance knockCli
                         rfGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
                     }
                     deploymentNode "Deployment: buildkitd (own app)" "Rebuild add-on (rootless build engine) — its own ArgoCD Application" "Kubernetes Deployment" {
                         rfBuild = softwareSystemInstance buildkit
                     }
-                    rfEsObj = infrastructureNode "ExternalSecret + ClusterSecretStore" "houba-secret-store → OpenBao (ESO vault provider)" "ExternalSecret"
+                    rfEsObj = infrastructureNode "ExternalSecret + ClusterSecretStore" "knock-secret-store → OpenBao (ESO vault provider)" "ExternalSecret"
                     rfBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/busybox demo/debian — reads stamps, answers the CVE-time query" "regctl"
-                    rfGc = infrastructureNode "CronJob: houba-gc" "Weekly houba gc --apply — collects superseded scan referrers (keep=2/older-than=30d). No git-sync/policies; walks the roster only." "Kubernetes CronJob"
-                    rfDt = infrastructureNode "Deployment: dependency-track (own app)" "Worked-example SBOM consumer (apiserver + frontend, embedded H2) — its own ArgoCD Application (ADR 0035). Currency layer: package-level blast-radius. Fed the CycloneDX SBOM referrer houba attaches (HOUBA_SBOM_FORMATS), uploaded by publish-sbom." "Kubernetes Deployment"
-                    rfPublishSbom = infrastructureNode "Job: houba-publish-sbom" "Fetches the CycloneDX SBOM referrer houba attaches to each placed image and uploads it to DT. regctl + python, no conversion. Twin of the blast-radius consumer." "Kubernetes Job"
-                    rfScanAttach = infrastructureNode "Job: houba-scan-attach" "Off-the-shelf grype evaluates the SBOM referrer houba attached (grype sbom:, no registry creds); houba attach binds the SARIF as a signed referrer on the same digest. regctl + grype + houba, no derived image. grype pulls its CVE DB from the internet (air-gapped => mirror)." "Kubernetes Job"
+                    rfGc = infrastructureNode "CronJob: knock-gc" "Weekly knock gc --apply — collects superseded scan referrers (keep=2/older-than=30d). No git-sync/policies; walks the roster only." "Kubernetes CronJob"
+                    rfDt = infrastructureNode "Deployment: dependency-track (own app)" "Worked-example SBOM consumer (apiserver + frontend, embedded H2) — its own ArgoCD Application (ADR 0035). Currency layer: package-level blast-radius. Fed the CycloneDX SBOM referrer knock attaches (KNOCK_SBOM_FORMATS), uploaded by publish-sbom." "Kubernetes Deployment"
+                    rfPublishSbom = infrastructureNode "Job: knock-publish-sbom" "Fetches the CycloneDX SBOM referrer knock attaches to each placed image and uploads it to DT. regctl + python, no conversion. Twin of the blast-radius consumer." "Kubernetes Job"
+                    rfScanAttach = infrastructureNode "Job: knock-scan-attach" "Off-the-shelf grype evaluates the SBOM referrer knock attached (grype sbom:, no registry creds); knock attach binds the SARIF as a signed referrer on the same digest. regctl + grype + knock, no derived image. grype pulls its CVE DB from the internet (air-gapped => mirror)." "Kubernetes Job"
                     rfMarkedWorkloads = deploymentNode "marked workloads (team-a/b/c)" "pause pods annotated with the placed/bypass digest — the runtime stand-in (namespaces-as-clusters)" "Kubernetes Deployment" {
                         rfPausePods = infrastructureNode "pause pods" "One pod per namespace (team-a/b/c), annotated with the placed/bypass digest; queried by blast-radius via kube API." "Kubernetes Pod"
                     }
@@ -290,7 +290,7 @@ workspace "houba" "Single front door / stamper for external container images." {
                     rfEso = infrastructureNode "External Secrets Operator" "Helm child; materializes the registry roster Secret" "ESO"
                 }
                 deploymentNode "namespace: openbao" "Secret backend (wave 0)" "Namespace" {
-                    rfBao = infrastructureNode "OpenBao" "Helm child (dev mode on kind); holds houba/registries" "OpenBao"
+                    rfBao = infrastructureNode "OpenBao" "Helm child (dev mode on kind); holds knock/registries" "OpenBao"
                 }
                 deploymentNode "namespace: registry" "Throwaway Zot — OCI registry + built-in web UI (make registry-ui); applied out-of-band by make demo, ArgoCD does not manage it" "Namespace" {
                     rfDest = softwareSystemInstance destRegistries
@@ -300,9 +300,9 @@ workspace "houba" "Single front door / stamper for external container images." {
                 rfSrc = softwareSystemInstance sourceRegistries
             }
             rfArgo -> rfRepo "Pulls manifests (App-of-Apps)" "git" "DataCoupling"
-            rfRoot -> rfHouba "Syncs the houba install" "ArgoCD"
+            rfRoot -> rfKnock "Syncs the knock install" "ArgoCD"
             rfRoot -> rfBuild "Syncs the buildkitd app" "ArgoCD"
-            rfEso -> rfBao "Reads houba/registries" "vault API" "DataCoupling"
+            rfEso -> rfBao "Reads knock/registries" "vault API" "DataCoupling"
             rfEsObj -> rfEso "Requests the roster Secret" "ESO"
             rfGit -> rfPolicyRepo "Pulls policies" "git"
             rfBlast -> rfDest "Reads provenance stamps" "regctl" "DataCoupling"
@@ -319,20 +319,20 @@ workspace "houba" "Single front door / stamper for external container images." {
             deploymentNode "Operator host" "Laptop / CI runner: runs kind, holds the policy clone" "macOS / Linux" {
                 loRepo = infrastructureNode "Policy repo" "docs/examples/reference — busybox copy + debian rebuild (git-sync'd)" "git / GitOps"
                 deploymentNode "kind cluster" "Single-node Kubernetes — overlay local (self-contained: buildkitd, no operators)" "kind" {
-                    deploymentNode "namespace: houba" "houba workloads" "Namespace" {
-                        deploymentNode "CronJob: houba-reconcile" "Suspended; one-shot via make local. Image houba:dev · team=platform · POLICY_DIR=docs/examples/reference" "Kubernetes CronJob" {
-                            loHouba = containerInstance houbaCli
+                    deploymentNode "namespace: knock" "knock workloads" "Namespace" {
+                        deploymentNode "CronJob: knock-reconcile" "Suspended; one-shot via make local. Image knock:dev · team=platform · POLICY_DIR=docs/examples/reference" "Kubernetes CronJob" {
+                            loKnock = containerInstance knockCli
                             loGit = infrastructureNode "git-sync sidecar" "Clones the policy repo into /policies" "git-sync"
                         }
                         deploymentNode "Deployment: buildkitd" "Rootless build engine; pushes to the plain-HTTP Zot via registry.insecure derived from the roster tls_verify (generic component, no daemon config)" "Kubernetes Deployment" {
                             loBuild = softwareSystemInstance buildkit
                         }
-                        loSecret = infrastructureNode "Secret: houba-registries" "Plain secret roster (no operators) — the inner-loop escape hatch" "Secret"
+                        loSecret = infrastructureNode "Secret: knock-registries" "Plain secret roster (no operators) — the inner-loop escape hatch" "Secret"
                         loBlast = infrastructureNode "Job: blast-radius" "BLAST_REPOS=demo/busybox demo/debian" "regctl"
-                        loGc = infrastructureNode "CronJob: houba-gc" "Suspended (like reconcile); fired on demand. houba gc --apply over the roster." "Kubernetes CronJob"
-                        loDt = infrastructureNode "Deployment: dependency-track (own app)" "Worked-example SBOM consumer (apiserver + frontend, embedded H2) — (ADR 0035). Currency layer: package-level blast-radius. Fed the CycloneDX SBOM referrer houba attaches (HOUBA_SBOM_FORMATS), uploaded by publish-sbom." "Kubernetes Deployment"
-                        loPublishSbom = infrastructureNode "Job: houba-publish-sbom" "Fetches the CycloneDX SBOM referrer houba attaches to each placed image and uploads it to DT. regctl + python, no conversion. Twin of the blast-radius consumer." "Kubernetes Job"
-                        loScanAttach = infrastructureNode "Job: houba-scan-attach" "grype (off-the-shelf) on the SBOM referrer => houba attach the SARIF. No derived image, no registry creds for grype; grype pulls its CVE DB from the internet (air-gapped => mirror)." "Kubernetes Job"
+                        loGc = infrastructureNode "CronJob: knock-gc" "Suspended (like reconcile); fired on demand. knock gc --apply over the roster." "Kubernetes CronJob"
+                        loDt = infrastructureNode "Deployment: dependency-track (own app)" "Worked-example SBOM consumer (apiserver + frontend, embedded H2) — (ADR 0035). Currency layer: package-level blast-radius. Fed the CycloneDX SBOM referrer knock attaches (KNOCK_SBOM_FORMATS), uploaded by publish-sbom." "Kubernetes Deployment"
+                        loPublishSbom = infrastructureNode "Job: knock-publish-sbom" "Fetches the CycloneDX SBOM referrer knock attaches to each placed image and uploads it to DT. regctl + python, no conversion. Twin of the blast-radius consumer." "Kubernetes Job"
+                        loScanAttach = infrastructureNode "Job: knock-scan-attach" "grype (off-the-shelf) on the SBOM referrer => knock attach the SARIF. No derived image, no registry creds for grype; grype pulls its CVE DB from the internet (air-gapped => mirror)." "Kubernetes Job"
                         loMarkedWorkloads = deploymentNode "marked workloads (team-a/b/c)" "pause pods annotated with the placed/bypass digest — the runtime stand-in (namespaces-as-clusters)" "Kubernetes Deployment" {
                             loPausePods = infrastructureNode "pause pods" "One pod per namespace (team-a/b/c), annotated with the placed/bypass digest; queried by blast-radius via kube API." "Kubernetes Pod"
                         }
@@ -353,27 +353,27 @@ workspace "houba" "Single front door / stamper for external container images." {
     }
 
     views {
-        systemLandscape "Landscape" "houba in its enterprise context, through to incident-time blast-radius." {
+        systemLandscape "Landscape" "knock in its enterprise context, through to incident-time blast-radius." {
             include *
             autolayout lr
         }
 
-        systemContext houba "Context" "houba and the systems it integrates with directly." {
+        systemContext knock "Context" "knock and the systems it integrates with directly." {
             include *
             autolayout lr
         }
 
-        container houba "Container" "houba as a single deployable CLI container, and the external systems it drives." {
+        container knock "Container" "knock as a single deployable CLI container, and the external systems it drives." {
             include *
             autolayout lr
         }
 
-        component houbaCli "Hexagon" "Synthetic hexagonal overview: cli → use cases → domain, with ports ← adapters making the dependency inversion explicit (use cases and adapters both point at the ports). The driven adapters reach the external systems." {
+        component knockCli "Hexagon" "Synthetic hexagonal overview: cli → use cases → domain, with ports ← adapters making the dependency inversion explicit (use cases and adapters both point at the ports). The driven adapters reach the external systems." {
             include layCli layUc layDomain layPorts layAdapters config platformEng productTeam sourceRegistries destRegistries buildkit usageOracle signingService transparencyLog redisBroker
             autolayout lr
         }
 
-        component houbaCli "Component" "Inside the houba CLI: every fine-grained component of the hexagonal layers — cli, use cases, the pure domain (4 concerns), the ports, and the adapters that reach the external systems." {
+        component knockCli "Component" "Inside the knock CLI: every fine-grained component of the hexagonal layers — cli, use cases, the pure domain (4 concerns), the ports, and the adapters that reach the external systems." {
             include *
             exclude layCli layUc layDomain layPorts layAdapters
             autolayout lr
@@ -381,11 +381,11 @@ workspace "houba" "Single front door / stamper for external container images." {
 
         # Two deployment views: the Argo reference (which is the demo) and the local
         # inner-loop overlay. The same kustomize base underlies both — the demo IS the blueprint.
-        deployment houba "Greenfield — full GitOps platform (Reference B, advanced)" "DeployReference" "The greenfield reference (Reference B): an Argo App-of-Apps that is both the production blueprint and the kind demo. ESO + OpenBao (wave 0), houba + buildkitd (wave 1); the reference policy (busybox copy + debian rebuild); a throwaway Zot (registry + built-in UI) applied out-of-band. KEDA/Prometheus autoscaling is an optional add-on, not on this path." {
+        deployment knock "Greenfield — full GitOps platform (Reference B, advanced)" "DeployReference" "The greenfield reference (Reference B): an Argo App-of-Apps that is both the production blueprint and the kind demo. ESO + OpenBao (wave 0), knock + buildkitd (wave 1); the reference policy (busybox copy + debian rebuild); a throwaway Zot (registry + built-in UI) applied out-of-band. KEDA/Prometheus autoscaling is an optional add-on, not on this path." {
             include *
             autolayout lr
         }
-        deployment houba "Brownfield — drop-in to existing intake (make demo-mongobleed / make local)" "DeployLocal" "The brownfield headline runtime: kubectl apply -k, plain Zot, no Argo/ESO operators. Drop-in to an existing cluster intake. Reconciles the same reference policy (copy + rebuild) and renders local, uncommitted manifests." {
+        deployment knock "Brownfield — drop-in to existing intake (make demo-mongobleed / make local)" "DeployLocal" "The brownfield headline runtime: kubectl apply -k, plain Zot, no Argo/ESO operators. Drop-in to an existing cluster intake. Reconciles the same reference policy (copy + rebuild) and renders local, uncommitted manifests." {
             include *
             autolayout lr
         }

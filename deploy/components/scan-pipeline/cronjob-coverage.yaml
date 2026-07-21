@@ -20,13 +20,13 @@ spec:
             app.kubernetes.io/component: scan-pipeline
         spec:
           restartPolicy: Never
-          serviceAccountName: houba
+          serviceAccountName: knock
           securityContext:
             runAsNonRoot: true
             seccompProfile: { type: RuntimeDefault }
           containers:
             - name: coverage
-              image: houba
+              image: knock
               imagePullPolicy: IfNotPresent
               command: ["python3", "/scripts/scan-coverage.py"]
               env:

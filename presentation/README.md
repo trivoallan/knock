@@ -1,4 +1,4 @@
-# houba — architecture deck
+# knock — architecture deck
 
 A narrative Slidev deck of the architecture (mirrors `docs/explanation/architecture.md`).
 

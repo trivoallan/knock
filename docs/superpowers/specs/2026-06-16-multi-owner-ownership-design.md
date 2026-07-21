@@ -1,14 +1,14 @@
-# Multi-owner ownership (`io.houba.owners`)
+# Multi-owner ownership (`io.knock.owners`)
 
 **Status:** designed (2026-06-16)
 **Scope:** enrich the ownership half of the provenance stamp — from a single
 free-text `team` to a list of owners declared per import, stamped as
-`io.houba.owners`, and consumed by the reference blast-radius script.
+`io.knock.owners`, and consumed by the reference blast-radius script.
 
 ## Problem
 
 Today ownership is a single optional free-text string sourced from
-`metadata.labels["team"]`, stamped as `io.houba.owner.team`, and rolled up by
+`metadata.labels["team"]`, stamped as `io.knock.owner.team`, and rolled up by
 `scripts/blast-radius.sh` to answer *"who do we page?"*. Two limits hurt at
 incident time:
 
@@ -22,7 +22,7 @@ incident time:
 
 - **Owner shape: Backstage entity-reference string, validated by shape only.**
   An owner is a string following Backstage's `[<kind>:][<namespace>/]<name>`
-  convention (e.g. `group:default/payments`, or short `payments`). houba
+  convention (e.g. `group:default/payments`, or short `payments`). knock
   validates the *form* with one permissive regex and **does not normalize** —
   the value is stamped exactly as written. This is forward-compatible with a
   future Backstage catalog integration (out of scope here) at zero migration
@@ -35,14 +35,14 @@ incident time:
   (wholesale, like `destinations`/`platforms` — not a union). `Variant` is
   unchanged and inherits its import's ownership.
 
-- **`owners` is optional.** When no owner resolves, `io.houba.owners` is omitted
+- **`owners` is optional.** When no owner resolves, `io.knock.owners` is omitted
   (same as `owner.team` today). Making ownership *mandatory* is enforcement,
   explicitly out of scope.
 
-- **Clean break of the public contract.** `io.houba.owner.team` is **removed**,
-  replaced by `io.houba.owners` (plural). The list serializes comma-joined
+- **Clean break of the public contract.** `io.knock.owner.team` is **removed**,
+  replaced by `io.knock.owners` (plural). The list serializes comma-joined
   (Backstage refs never contain commas), consistent with
-  `io.houba.transform.steps`. No dual-write, no transitional alias — the
+  `io.knock.transform.steps`. No dual-write, no transitional alias — the
   reference consumer migrates in the same change. Recorded as an ADR.
 
 - **Clean break of the source.** `metadata.labels["team"]` is **no longer**
@@ -73,7 +73,7 @@ incident time:
   resolved import's `owners` in the `build_stamp_annotations` call.
 
 ### `scripts/blast-radius.sh` (the reference consumer — the **D** of this work)
-- Read `io.houba.owners`, `split(",")`.
+- Read `io.knock.owners`, `split(",")`.
 - "Who to page" rollup is multi-owner: an image with N owners counts in each of
   its N owner groups.
 - Rename `BLAST_TEAM` → `BLAST_OWNER`; filter by **membership** (does the image
@@ -87,22 +87,22 @@ incident time:
 - `docs/examples/README.md`: update the walkthrough (new key, multi-owner
   rollup, `BLAST_OWNER`).
 - ADR under `docs/architecture/decisions/`: the clean contract break
-  (`io.houba.owner.team` → `io.houba.owners`, multi-valued, source = `owners`
+  (`io.knock.owner.team` → `io.knock.owners`, multi-valued, source = `owners`
   field), linking this spec.
-- `docs/architecture/design.md`: mention `io.houba.owners` where `owner.team`
+- `docs/architecture/design.md`: mention `io.knock.owners` where `owner.team`
   is described.
 - C4 `workspace.dsl`: **no change** — Backstage is a future integration, not
   wired now; no new actor/external system at context/landscape level.
 
 ### Tests (TDD, one behavior per commit)
-- `tests/unit/domain/test_stamp.py`: owners joined into `io.houba.owners`;
+- `tests/unit/domain/test_stamp.py`: owners joined into `io.knock.owners`;
   omitted when empty; `owner.team` no longer emitted.
 - `tests/unit/domain/test_mirror_policy.py`: parse `owners` on defaults +
   import; reject malformed owner refs.
 - `tests/unit/domain/test_policy_merge.py`: defaults→import override.
 - `tests/unit/use_cases/test_reconcile.py`: resolved owners land in the stamp;
-  update the existing `owner.team` assertion to `io.houba.owners`.
-- Coverage gates hold: ≥ 90 % `houba.domain`, ≥ 80 % global.
+  update the existing `owner.team` assertion to `io.knock.owners`.
+- Coverage gates hold: ≥ 90 % `knock.domain`, ≥ 80 % global.
 
 ## Out of scope
 

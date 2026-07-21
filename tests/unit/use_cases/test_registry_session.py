@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from houba.config import RegistryConfig
-from houba.use_cases.registry_session import ensure_registry_session
+from knock.config import RegistryConfig
+from knock.use_cases.registry_session import ensure_registry_session
 from tests.fakes.registry import FakeRegistryPort
 
 

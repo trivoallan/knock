@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from houba.domain.deletion_mode import DeletionMode
-from houba.domain.mirror_policy import (
+from knock.domain.deletion_mode import DeletionMode
+from knock.domain.mirror_policy import (
     Archive,
     ArtifactType,
     Defaults,
@@ -19,7 +19,7 @@ from houba.domain.mirror_policy import (
     mirror_policy_json_schema,
     parse_mirror_policy,
 )
-from houba.errors import PolicyValidationError
+from knock.errors import PolicyValidationError
 
 
 def test_source_parses() -> None:
@@ -253,7 +253,7 @@ def test_spec_generic_forbids_transform_in_import() -> None:
 
 
 VALID_YAML = """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis
@@ -271,7 +271,7 @@ spec:
 def test_parse_valid_policy() -> None:
     policy = parse_mirror_policy(VALID_YAML)
     assert isinstance(policy, MirrorPolicy)
-    assert policy.api_version == "houba.io/v1alpha1"
+    assert policy.api_version == "knock.io/v1alpha1"
     assert policy.kind == "MirrorPolicy"
     assert policy.metadata.name == "redis"
     assert policy.metadata.labels == {"team": "platform-data"}
@@ -281,7 +281,7 @@ def test_parse_valid_policy() -> None:
 def test_parse_rejects_wrong_kind() -> None:
     with pytest.raises(PolicyValidationError):
         parse_mirror_policy(
-            "apiVersion: houba.io/v1alpha1\nkind: Wrong\nmetadata: {name: x}\n"
+            "apiVersion: knock.io/v1alpha1\nkind: Wrong\nmetadata: {name: x}\n"
             "spec: {artifactType: image, source: {registry: d, repository: r}, "
             "imports: [{name: v, tags: {}}]}\n"
         )
@@ -300,7 +300,7 @@ def test_parse_rejects_invalid_yaml() -> None:
 def test_parse_wraps_validation_error() -> None:
     with pytest.raises(PolicyValidationError):
         parse_mirror_policy(
-            "apiVersion: houba.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
+            "apiVersion: knock.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
             "spec: {source: {registry: d, repository: r}, imports: [{name: v, tags: {}}]}\n"
         )
 
@@ -324,7 +324,7 @@ def test_json_schema_is_stable_and_serializable() -> None:
 
 
 _BASE = """
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis
@@ -353,7 +353,7 @@ def test_deletion_mode_parses_mark() -> None:
 
 def test_owners_parsed_on_import_and_defaults() -> None:
     policy = parse_mirror_policy(
-        "apiVersion: houba.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
+        "apiVersion: knock.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
         "spec:\n"
         "  artifactType: image\n"
         "  source: {registry: docker.io, repository: library/redis}\n"
@@ -369,7 +369,7 @@ def test_owners_parsed_on_import_and_defaults() -> None:
 
 def test_short_owner_form_accepted() -> None:
     policy = parse_mirror_policy(
-        "apiVersion: houba.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
+        "apiVersion: knock.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
         "spec:\n"
         "  artifactType: image\n"
         "  source: {registry: docker.io, repository: library/redis}\n"
@@ -381,7 +381,7 @@ def test_short_owner_form_accepted() -> None:
 def test_malformed_owner_rejected() -> None:
     with pytest.raises(PolicyValidationError):
         parse_mirror_policy(
-            "apiVersion: houba.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
+            "apiVersion: knock.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
             "spec:\n"
             "  artifactType: image\n"
             "  source: {registry: docker.io, repository: library/redis}\n"

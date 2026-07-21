@@ -9,12 +9,12 @@ import os
 
 import redis
 
-from houba.domain.scan_queue import coverage_gap, should_dead_letter
+from knock.domain.scan_queue import coverage_gap, should_dead_letter
 
-WORK = os.environ.get("REDIS_WORK_STREAM", "houba:scan:work")
-DEAD = os.environ.get("REDIS_DEAD_STREAM", "houba:scan:dead")
-CONFIRMED = os.environ.get("REDIS_CONFIRMED_ZSET", "houba:scan:confirmed")
-PLACED = os.environ.get("REDIS_PLACED_SET", "houba:scan:placed")
+WORK = os.environ.get("REDIS_WORK_STREAM", "knock:scan:work")
+DEAD = os.environ.get("REDIS_DEAD_STREAM", "knock:scan:dead")
+CONFIRMED = os.environ.get("REDIS_CONFIRMED_ZSET", "knock:scan:confirmed")
+PLACED = os.environ.get("REDIS_PLACED_SET", "knock:scan:placed")
 GROUP = os.environ.get("REDIS_GROUP", "scan")
 
 

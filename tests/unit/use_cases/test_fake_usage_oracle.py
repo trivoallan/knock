@@ -4,9 +4,9 @@ from datetime import UTC, datetime
 
 import pytest
 
-from houba.domain.lifecycle import MarkIdentity
-from houba.errors import UsageOracleError
-from houba.ports.usage_oracle import UsageQuery
+from knock.domain.lifecycle import MarkIdentity
+from knock.errors import UsageOracleError
+from knock.ports.usage_oracle import UsageQuery
 from tests.fakes.usage_oracle import FakeUsageOraclePort
 
 

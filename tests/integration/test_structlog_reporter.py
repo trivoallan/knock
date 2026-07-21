@@ -3,10 +3,10 @@ from __future__ import annotations
 import io
 import json
 
-from houba.adapters.structlog_reporter import StructlogReporter
-from houba.logging import configure
-from houba.ports.reporter import Counts, ErrorInfo, OperationEvent
-from houba.use_cases.report import RunReport
+from knock.adapters.structlog_reporter import StructlogReporter
+from knock.logging import configure
+from knock.ports.reporter import Counts, ErrorInfo, OperationEvent
+from knock.use_cases.report import RunReport
 
 
 def test_structlog_reporter_emits_json_events() -> None:

@@ -228,64 +228,6 @@ wheels = [
 ]
 
 [[package]]
-name = "houba"
-version = "0.8.0"
-source = { editable = "." }
-dependencies = [
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "pyyaml" },
-    { name = "structlog" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-scan = [
-    { name = "redis" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "hypothesis" },
-    { name = "jsonschema" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "redis" },
-    { name = "ruff" },
-    { name = "syrupy" },
-    { name = "types-pyyaml" },
-]
-docs = [
-    { name = "json-schema-for-humans" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pydantic", specifier = ">=2.7" },
-    { name = "pydantic-settings", specifier = ">=2.3" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "redis", marker = "extra == 'scan'", specifier = ">=8" },
-    { name = "structlog", specifier = ">=24.1" },
-    { name = "typer", specifier = ">=0.12" },
-]
-provides-extras = ["scan"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "hypothesis", specifier = ">=6.100" },
-    { name = "jsonschema", specifier = ">=4.26.0" },
-    { name = "mypy", specifier = ">=1.10" },
-    { name = "pytest", specifier = ">=8.2" },
-    { name = "pytest-cov", specifier = ">=5.0" },
-    { name = "redis", specifier = ">=8" },
-    { name = "ruff", specifier = ">=0.5" },
-    { name = "syrupy", specifier = ">=4.6" },
-    { name = "types-pyyaml", specifier = ">=6.0" },
-]
-docs = [{ name = "json-schema-for-humans", specifier = ">=1.0" }]
-
-[[package]]
 name = "hypothesis"
 version = "6.155.7"
 source = { registry = "https://pypi.org/simple" }
@@ -372,6 +314,64 @@ sdist = { url = "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa
 wheels = [
     { url = "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl", hash = "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe", size = 18437, upload-time = "2025-09-08T01:34:57.871Z" },
 ]
+
+[[package]]
+name = "knock-oci"
+version = "0.8.0"
+source = { editable = "." }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pyyaml" },
+    { name = "structlog" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+scan = [
+    { name = "redis" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "hypothesis" },
+    { name = "jsonschema" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "redis" },
+    { name = "ruff" },
+    { name = "syrupy" },
+    { name = "types-pyyaml" },
+]
+docs = [
+    { name = "json-schema-for-humans" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.7" },
+    { name = "pydantic-settings", specifier = ">=2.3" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "redis", marker = "extra == 'scan'", specifier = ">=8" },
+    { name = "structlog", specifier = ">=24.1" },
+    { name = "typer", specifier = ">=0.12" },
+]
+provides-extras = ["scan"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "hypothesis", specifier = ">=6.100" },
+    { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "mypy", specifier = ">=1.10" },
+    { name = "pytest", specifier = ">=8.2" },
+    { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "redis", specifier = ">=8" },
+    { name = "ruff", specifier = ">=0.5" },
+    { name = "syrupy", specifier = ">=4.6" },
+    { name = "types-pyyaml", specifier = ">=6.0" },
+]
+docs = [{ name = "json-schema-for-humans", specifier = ">=1.0" }]
 
 [[package]]
 name = "librt"

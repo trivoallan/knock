@@ -138,9 +138,9 @@ sidebar_position: 1
 | **Type**     | `const` |
 | **Required** | Yes     |
 
-**Description:** API version; pinned to `houba.io/v1alpha1`.
+**Description:** API version; pinned to `knock.io/v1alpha1`.
 
-Specific value: `"houba.io/v1alpha1"`
+Specific value: `"knock.io/v1alpha1"`
 
 ## 2. Property `kind` {#kind}
 
@@ -182,7 +182,7 @@ Specific value: `"MirrorPolicy"`
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-**Description:** Policy name; stamped as `io.houba.policy` and used for collision checks.
+**Description:** Policy name; stamped as `io.knock.policy` and used for collision checks.
 
 ### 3.2. Property `labels` {#metadata_labels}
 
@@ -1496,7 +1496,7 @@ Must be one of:
 | **Additional properties** | Any type allowed |
 | **Default**               | `null`           |
 
-**Description:** Owners as Backstage entity refs (stamped as `io.houba.owners`).
+**Description:** Owners as Backstage entity refs (stamped as `io.knock.owners`).
 
 | Any of(Option)                                |
 | --------------------------------------------- |

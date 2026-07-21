@@ -4,15 +4,15 @@
 
 ## Why
 
-houba's roster of real registries — host, credentials, TLS verification, per-registry CA — is declared
-once in `HOUBA_REGISTRIES` and consumed by `reconcile`, `audit`, and `purge`. Each of those, before
+knock's roster of real registries — host, credentials, TLS verification, per-registry CA — is declared
+once in `KNOCK_REGISTRIES` and consumed by `reconcile`, `audit`, and `purge`. Each of those, before
 touching a registry, calls the same two-line block: configure the registry's TLS/CA, then log in if
 credentials are present.
 
-`houba attach` does **not**. It calls `registry.inspect` / `put_referrer` / (optionally) `attest`
+`knock attach` does **not**. It calls `registry.inspect` / `put_referrer` / (optionally) `attest`
 straight on the `<ref>` and relies on whatever ambient regctl/docker config the pod happens to carry.
 That is the one command in the fleet whose registry access is *not* governed by the declared roster —
-an inconsistency the roadmap calls out: *"Wire the `HOUBA_REGISTRIES` roster into `attach` as in
+an inconsistency the roadmap calls out: *"Wire the `KNOCK_REGISTRIES` roster into `attach` as in
 `reconcile`, instead of relying on ambient regctl config."*
 
 This is **parity**, not a new capability: `attach` should reach a registry exactly the way the other
@@ -39,7 +39,7 @@ different way: **by matching the ref's host against `cfg.host`.**
   and the ref's host is in no roster entry (including a ref with no host token → docker.io implied, and
   an empty roster), `attach` configures nothing and lets regctl use its existing config. Rationale:
   `attach` targets images that often live in public or already-reachable registries, and the roster
-  holds houba's **destination** registries, not necessarily every registry it might stamp. `attach`
+  holds knock's **destination** registries, not necessarily every registry it might stamp. `attach`
   does not rewrite the image — it attaches a referrer — so the "always wired" guarantee buys little
   here and forcing roster membership would add friction for no benefit.
 
@@ -109,7 +109,7 @@ Passes `roster=container.settings.registries` and `registry_override=<flag>` int
 - **non-regression**: existing `reconcile` / `audit` tests stay green after the extraction.
 
 Coverage gates unchanged: the new pure helpers (`registry_host`, `match_registry_by_host`) land under
-the ≥ 90 % `houba.domain` / config resolver expectations; the use-case helper under the ≥ 80 % global
+the ≥ 90 % `knock.domain` / config resolver expectations; the use-case helper under the ≥ 80 % global
 gate.
 
 ## Docs / architecture sync (same change)
@@ -125,4 +125,4 @@ gate.
 
 - Generalizing `attach` beyond CVE (the `regis` / Trivy-native / CycloneDX mappers) — separate Now item.
 - The signed-coverage audit tier — separate Now item.
-- Any change to how the roster itself is declared (`HOUBA_REGISTRIES` schema is untouched).
+- Any change to how the roster itself is declared (`KNOCK_REGISTRIES` schema is untouched).

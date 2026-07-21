@@ -1,18 +1,18 @@
-# `houba attach --fail-on <severity>` — design
+# `knock attach --fail-on <severity>` — design
 
 *Status: design. Roadmap item: **Now → "Let the front door say no"**. Date: 2026-06-15.*
 
 ## Why
 
 The single-front-door mandate is confirmed; *coverage gates value* now needs an **enforcement lever**.
-Today `houba attach` only *observes* — it ingests a scan report, attaches it as a signed OCI referrer,
+Today `knock attach` only *observes* — it ingests a scan report, attaches it as a signed OCI referrer,
 and always exits 0. `--fail-on <severity>` turns that ingestion into a **CI gate**: the front door can
 say *no*. It is the first step from "we record provenance" to "we block what fails policy".
 
 ## The rule
 
 `attach` stays **observational by default**. With `--fail-on <severity>`, after the normal ingestion
-(referrer attached, attestation signed when configured — all unchanged), houba exits **1** when the
+(referrer attached, attestation signed when configured — all unchanged), knock exits **1** when the
 scan contains at least one finding **at the given severity or above**, else **0**. The gate never
 changes what is attached — it only influences the exit code. This mirrors the established
 `audit --fail-on-uncovered` pattern (`use_cases/audit.py:audit_exit_code` → `cli/audit.py` →

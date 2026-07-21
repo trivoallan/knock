@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from houba.errors import CosignError
-from houba.ports.attestor import VerifiedPredicate
+from knock.errors import CosignError
+from knock.ports.attestor import VerifiedPredicate
 from tests.fakes.attestor import FakeAttestor
 
 
 def _statement() -> dict:
     return {
-        "predicateType": "https://houba.dev/predicate/transform/v1",
+        "predicateType": "https://knock.dev/predicate/transform/v1",
         "predicate": {"policy": "p"},
     }
 
@@ -18,7 +18,7 @@ def test_fake_journals_calls_and_returns_ref() -> None:
     fake = FakeAttestor()
     ref = fake.attest("reg/x@sha256:out", _statement())
     assert fake.attested == [("reg/x@sha256:out", _statement())]
-    assert ref.predicate_type == "https://houba.dev/predicate/transform/v1"
+    assert ref.predicate_type == "https://knock.dev/predicate/transform/v1"
     assert ref.referrer_digest.startswith("sha256:")
 
 
@@ -30,6 +30,6 @@ def test_fake_fail_raises_cosign_error() -> None:
 def test_fake_attestor_verify_returns_seeded_and_journals():
     pred = VerifiedPredicate(summary={"vuln.high": "0"}, attested_at="2026-06-24T00:00:00+00:00")
     fake = FakeAttestor(predicates=[pred])
-    out = fake.verify("reg/app@sha256:abc", "https://houba.dev/predicate/scan/v1")
+    out = fake.verify("reg/app@sha256:abc", "https://knock.dev/predicate/scan/v1")
     assert out == [pred]
-    assert fake.verified == [("reg/app@sha256:abc", "https://houba.dev/predicate/scan/v1")]
+    assert fake.verified == [("reg/app@sha256:abc", "https://knock.dev/predicate/scan/v1")]

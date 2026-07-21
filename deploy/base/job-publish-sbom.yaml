@@ -3,7 +3,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: houba-publish-sbom
+  name: knock-publish-sbom
   annotations:
     argocd.argoproj.io/sync-wave: "3"   # after bootstrap (wave 2)
 spec:
@@ -12,10 +12,10 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: houba
+        app.kubernetes.io/name: knock
         app.kubernetes.io/component: publish-sbom
     spec:
-      serviceAccountName: houba
+      serviceAccountName: knock
       restartPolicy: Never
       securityContext:
         runAsNonRoot: true
@@ -23,7 +23,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: publish-sbom
-          image: houba # rewritten by the kustomize images transformer; has regctl + python3
+          image: knock # rewritten by the kustomize images transformer; has regctl + python3
           command: ["bash", "/scripts/publish-sbom.sh"]
           env:
             - name: HOME # regctl persists its registry config under $HOME/.regctl
@@ -31,7 +31,7 @@ spec:
             - name: BLAST_REPOS
               valueFrom:
                 configMapKeyRef:
-                  name: houba-config
+                  name: knock-config
                   key: BLAST_REPOS
             - name: DT_API_KEY
               valueFrom:
@@ -41,7 +41,7 @@ spec:
                   optional: true
           envFrom:
             - secretRef:
-                name: houba-registries # same roster houba uses (host + creds)
+                name: knock-registries # same roster knock uses (host + creds)
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -56,7 +56,7 @@ spec:
       volumes:
         - name: scripts
           configMap:
-            name: houba-publish-sbom
+            name: knock-publish-sbom
             defaultMode: 0755
         - name: home
           emptyDir: {}

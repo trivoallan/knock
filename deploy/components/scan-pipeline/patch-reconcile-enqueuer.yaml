@@ -1,23 +1,23 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: houba-reconcile
+  name: knock-reconcile
 spec:
   jobTemplate:
     spec:
       template:
         spec:
           containers:
-            - name: houba
+            - name: knock
               # Emit the JSON machine report, then ALWAYS write the sentinel and
               # preserve reconcile's exit code — so the enqueuer never hangs and a
               # reconcile failure stays a clean Job failure (decoupled from the glue).
               args:
-                - 'HOUBA_LOG_FORMAT=json houba reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX" --shard-count "$SHARD_COUNT" > /shared/report.json; rc=$?; touch /shared/reconcile.done; exit $rc'
+                - 'KNOCK_LOG_FORMAT=json knock reconcile "$POLICY_DIR" --shard-index "$JOB_COMPLETION_INDEX" --shard-count "$SHARD_COUNT" > /shared/report.json; rc=$?; touch /shared/reconcile.done; exit $rc'
               volumeMounts:
                 - { name: scan-shared, mountPath: /shared }
             - name: enqueuer
-              image: houba   # rewritten by the kustomize images transformer; has python3
+              image: knock   # rewritten by the kustomize images transformer; has python3
               # Explicit: kind-loaded image, never pull from a registry. Without this the
               # field defaults to Always for an untagged image and that value persists in
               # the CronJob even after the tag is fixed, forcing a doomed docker.io pull.
@@ -27,12 +27,12 @@ spec:
               # and ALWAYS exit 0 — the enqueuer can never fail or hang the reconcile Job.
               args:
                 - 'i=0; while [ ! -f /shared/reconcile.done ] && [ "$i" -lt 150 ]; do sleep 2; i=$((i+1)); done;
-                   houba scan enqueue < /shared/report.json || true; exit 0'
+                   knock scan enqueue < /shared/report.json || true; exit 0'
               env:
-                - name: HOUBA_SCAN_REDIS
-                  value: '{"addr":"scan-queue-redis:6379","work":"houba:scan:work","dead":"houba:scan:dead","confirmed":"houba:scan:confirmed","placed":"houba:scan:placed","group":"scan"}'
+                - name: KNOCK_SCAN_REDIS
+                  value: '{"addr":"scan-queue-redis:6379","work":"knock:scan:work","dead":"knock:scan:dead","confirmed":"knock:scan:confirmed","placed":"knock:scan:placed","group":"scan"}'
               envFrom:
-                - secretRef: { name: houba-registries }
+                - secretRef: { name: knock-registries }
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true

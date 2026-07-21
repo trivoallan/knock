@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from houba.domain.aliases import render_template, resolve_aliases
+from knock.domain.aliases import render_template, resolve_aliases
 
 
 def test_render_semver_components() -> None:

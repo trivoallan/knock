@@ -31,7 +31,7 @@ good enough to onboard a target org *without us*. Four quality gaps remain:
 ### 1. Architecture narrative page — `docs/explanation/architecture.md`
 
 A new published Explanation page (wired into the Explanation sidebar). It **tells the story** of the
-hexagon: who uses houba and what it talks to (the scene), why the layering is load-bearing, the two
+hexagon: who uses knock and what it talks to (the scene), why the layering is load-bearing, the two
 paths (copy / rebuild), and why the stamp + SBOM *is* the product. It is **not** a copy of
 `design.md`. `design.md` and the full Structurizr C4 model remain the GitHub deep-dive, linked at the
 foot of the page for depth. Single source preserved: the page narrates; `design.md` stays
@@ -42,7 +42,7 @@ authoritative for rationale.
 All hand-authored Mermaid (not Structurizr exports), in narrative order:
 
 1. **Landscape light** — the scene: actors (platform/security engineer, app team) + external systems
-   (source/destination registries, BuildKit, signer, scanner, usage oracle, consumers) around houba.
+   (source/destination registries, BuildKit, signer, scanner, usage oracle, consumers) around knock.
    A simplified, readable redraw of the C4 Context — *not* the verbose export.
 2. **Hexagon** — internal structure. **Reuse the existing clean flowchart in `design.md`** (it is
    already hand-authored), trimmed for the narrative.

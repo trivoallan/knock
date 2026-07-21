@@ -1,5 +1,5 @@
-from houba.domain.transforms.base import ContextFile, Fragment, ResolvedResource, ResourceRef
-from houba.domain.transforms.steps import InjectCA, RewritePackageSources, SetTimezone
+from knock.domain.transforms.base import ContextFile, Fragment, ResolvedResource, ResourceRef
+from knock.domain.transforms.steps import InjectCA, RewritePackageSources, SetTimezone
 
 
 def _cert(name: str, content: str) -> ResolvedResource:

@@ -4,14 +4,14 @@ from datetime import UTC, datetime
 
 import pytest
 
-from houba.config import RegistryConfig
-from houba.domain.lifecycle import (
+from knock.config import RegistryConfig
+from knock.domain.lifecycle import (
     PENDING_DELETION_ARTIFACT_TYPE,
     build_pending_deletion_annotations,
 )
-from houba.errors import ConfigError
-from houba.ports.registry import ImageInfo, Referrer
-from houba.use_cases.purge import purge_exit_code, purge_marks
+from knock.errors import ConfigError
+from knock.ports.registry import ImageInfo, Referrer
+from knock.use_cases.purge import purge_exit_code, purge_marks
 from tests.fakes.registry import FakeRegistryPort
 from tests.fakes.usage_oracle import FakeUsageOraclePort
 
@@ -24,7 +24,7 @@ def _mark(tag: str) -> Referrer:
         digest=f"sha256:ref-{tag}",
         artifact_type=PENDING_DELETION_ARTIFACT_TYPE,
         annotations=build_pending_deletion_annotations(
-            prefix="io.houba",
+            prefix="io.knock",
             marked_at=NOW,
             reason="dropped-from-selection",
             policy="redis",
@@ -61,7 +61,7 @@ def test_apply_purges_only_the_unused_tag_and_clears_its_mark() -> None:
         oracle=oracle,
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         min_idle_days=15,
         now=NOW,
         apply=True,
@@ -83,7 +83,7 @@ def test_dry_run_mutates_nothing() -> None:
         oracle=oracle,
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         min_idle_days=15,
         now=NOW,
         apply=False,
@@ -102,7 +102,7 @@ def test_oracle_error_is_fail_closed_protect_not_purge() -> None:
         oracle=oracle,
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         min_idle_days=15,
         now=NOW,
         apply=True,
@@ -120,7 +120,7 @@ def test_delete_failure_is_recorded_and_reddens_exit() -> None:
         oracle=oracle,
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         min_idle_days=15,
         now=NOW,
         apply=True,
@@ -138,7 +138,7 @@ def test_unknown_only_registry_raises_config_error() -> None:
             oracle=FakeUsageOraclePort(),
             roster=_ROSTER,
             only_registry="nope",
-            label_prefix="io.houba",
+            label_prefix="io.knock",
             min_idle_days=15,
             now=NOW,
             apply=True,
@@ -153,7 +153,7 @@ def test_inspect_failure_is_recorded_and_does_not_block_siblings() -> None:
         oracle=oracle,
         roster=_ROSTER,
         only_registry=None,
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         min_idle_days=15,
         now=NOW,
         apply=True,

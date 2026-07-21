@@ -8,7 +8,7 @@
 
 ## Problem
 
-`rewritePackageSources` (`houba/domain/transforms/steps.py`) rewrites an image's package sources to
+`rewritePackageSources` (`knock/domain/transforms/steps.py`) rewrites an image's package sources to
 an internal mirror during the hardening rebuild. Its apt branch currently host-swaps:
 
 - `/etc/apt/sources.list` (one-line apt)
@@ -30,7 +30,7 @@ sed is sufficient and keeps the step pure and dependency-free (YAGNI).
 
 - **apt only.** deb822 is an apt format; the apk branch is unchanged.
 - **No `transform_version` change.** `transform_version` hashes only the *declared* inputs (step
-  name/params + resolved resource data), not houba's codegen. Adding the `.sources` rewrite changes
+  name/params + resolved resource data), not knock's codegen. Adding the `.sources` rewrite changes
   the emitted fragment but not the hash, so already-hardened deb822 images do **not** mass-rebuild;
   they pick up the fix on their next natural rebuild (source digest moves, or the transform changes).
   This keeps the clean invariant `transform_version = f(declared transform)`. Documented behaviour.
@@ -52,7 +52,7 @@ empty-rewrites short-circuit) is unchanged.
 
 ## Files
 
-- **Modify** `houba/domain/transforms/steps.py` — the one rewrite line above.
+- **Modify** `knock/domain/transforms/steps.py` — the one rewrite line above.
 - **Modify** `tests/unit/domain/transforms/test_steps.py` — assert the `.sources` rewrite is emitted
   in the apt fragment (and that the apt-only / apk cases still hold).
 - **Docs** — `docs/architecture/design.md` (the living status doc): remove deb822 from the "Deferred"
@@ -72,7 +72,7 @@ Pure-domain unit tests (TDD):
    is covered by the same regex).
 
 No `transform_version` test change (hashed inputs are unchanged — existing version tests stay green).
-Gates: `uv run pytest` (≥ 80 % global, ≥ 90 % `houba.domain`), `ruff`, `mypy houba`.
+Gates: `uv run pytest` (≥ 80 % global, ≥ 90 % `knock.domain`), `ruff`, `mypy knock`.
 
 ## Out of scope
 

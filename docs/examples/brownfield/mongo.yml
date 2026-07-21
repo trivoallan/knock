@@ -7,12 +7,12 @@
 #
 # The `8.0` alias is deliberately re-pointed by `make seed-incident` (from
 # 8.0.15 → 8.0.16) so that a tag-only query on the "before" copy is ambiguous
-# while a digest-bound query on the houba copy is exact.
+# while a digest-bound query on the knock copy is exact.
 #
-#   uv run houba reconcile docs/examples/brownfield --dry-run
-#   uv run houba reconcile docs/examples/brownfield
+#   uv run knock reconcile docs/examples/brownfield --dry-run
+#   uv run knock reconcile docs/examples/brownfield
 #
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: mongo-brownfield
@@ -24,7 +24,7 @@ spec:
   imports:
     - name: mongobleed
       owners:
-        - group:default/data-platform    # stamped as io.houba.owners
+        - group:default/data-platform    # stamped as io.knock.owners
       tags:
         includeRegex: "^8\\.0\\.(15|16)$"   # both mongobleed-affected tags for the Act-1 corpus
         aliases:

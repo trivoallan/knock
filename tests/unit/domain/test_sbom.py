@@ -4,14 +4,14 @@ from datetime import UTC, datetime
 
 import pytest
 
-from houba.domain.sbom import (
+from knock.domain.sbom import (
     FORMAT_MEDIA_TYPES,
     SBOM_PREDICATE_TYPES,
     build_sbom_annotations,
     build_sbom_statement,
     media_type_for,
 )
-from houba.errors import UnknownFormatError
+from knock.errors import UnknownFormatError
 
 TS = datetime(2026, 6, 17, tzinfo=UTC)
 
@@ -32,30 +32,30 @@ def test_format_media_types_keys_are_the_allowed_set() -> None:
 
 def test_build_sbom_annotations_emits_namespaced_facts() -> None:
     ann = build_sbom_annotations(
-        prefix="io.houba",
+        prefix="io.knock",
         subject_digest="sha256:abc",
         fmt="spdx-json",
         tool="syft",
         tool_version="1.20.0",
         timestamp=TS,
     )
-    assert ann["io.houba.sbom.tool"] == "syft"
-    assert ann["io.houba.sbom.format"] == "spdx-json"
-    assert ann["io.houba.sbom.subject"] == "sha256:abc"
-    assert ann["io.houba.sbom.timestamp"] == TS.isoformat()
-    assert ann["io.houba.sbom.tool.version"] == "1.20.0"
+    assert ann["io.knock.sbom.tool"] == "syft"
+    assert ann["io.knock.sbom.format"] == "spdx-json"
+    assert ann["io.knock.sbom.subject"] == "sha256:abc"
+    assert ann["io.knock.sbom.timestamp"] == TS.isoformat()
+    assert ann["io.knock.sbom.tool.version"] == "1.20.0"
 
 
 def test_build_sbom_annotations_omits_empty_version() -> None:
     ann = build_sbom_annotations(
-        prefix="io.houba",
+        prefix="io.knock",
         subject_digest="sha256:abc",
         fmt="spdx-json",
         tool="syft",
         tool_version="",
         timestamp=TS,
     )
-    assert "io.houba.sbom.tool.version" not in ann
+    assert "io.knock.sbom.tool.version" not in ann
 
 
 def test_build_sbom_annotations_empty_prefix_emits_nothing() -> None:

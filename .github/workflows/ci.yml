@@ -39,7 +39,7 @@ jobs:
         run: uv run ruff format --check .
 
       - name: mypy strict
-        run: uv run mypy houba
+        run: uv run mypy knock
 
       - name: reference docs in sync (regenerate, fail on drift)
         run: |
@@ -78,10 +78,10 @@ jobs:
       - name: pytest (global coverage ≥ 80%)
         env:
           REDIS_TEST_ADDR: 127.0.0.1:6379
-        run: uv run pytest -v --cov=houba --cov-report=term-missing --cov-fail-under=80
+        run: uv run pytest -v --cov=knock --cov-report=term-missing --cov-fail-under=80
 
       - name: pytest domain (coverage ≥ 90%)
-        run: uv run pytest tests/unit/domain -v --cov=houba.domain --cov-report=term-missing --cov-fail-under=90
+        run: uv run pytest tests/unit/domain -v --cov=knock.domain --cov-report=term-missing --cov-fail-under=90
 
   manifests:
     name: manifests (kustomize render + dry-run)
@@ -95,7 +95,7 @@ jobs:
       - name: Render the ArgoCD kustomize sources
         run: |
           set -euo pipefail
-          for src in houba buildkitd registry; do
+          for src in knock buildkitd registry; do
             echo "== rendering deploy/argocd/sources/$src =="
             kubectl kustomize --load-restrictor LoadRestrictionsNone "deploy/argocd/sources/$src" >/dev/null
           done
@@ -114,7 +114,7 @@ jobs:
       - name: Verify root.yaml renders
         run: |
           set -euo pipefail
-          ARGOCD_REPO_URL=https://github.com/trivoallan/houba ARGOCD_REPO_REF=main \
+          ARGOCD_REPO_URL=https://github.com/trivoallan/knock ARGOCD_REPO_REF=main \
             envsubst < deploy/argocd/root.yaml \
             | python3 -c "import yaml,sys; d=yaml.safe_load(sys.stdin); assert d['spec']['source']['path']=='deploy/argocd/apps', d['spec']['source']['path']"
 
@@ -134,12 +134,12 @@ jobs:
           context: .
           push: false
           load: true              # load the built image into the docker daemon so the smoke test can run it
-          tags: houba:ci-${{ github.sha }}
+          tags: knock:ci-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Smoke test image
         run: |
-          docker run --rm houba:ci-${{ github.sha }} version
-          docker run --rm --entrypoint sh houba:ci-${{ github.sha }} -c \
+          docker run --rm knock:ci-${{ github.sha }} version
+          docker run --rm --entrypoint sh knock:ci-${{ github.sha }} -c \
             'command -v buildctl'

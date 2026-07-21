@@ -1,6 +1,6 @@
 # Section index pages vs. auto-generated indexes — design
 
-*Status: design (brainstormed 2026-06-17). Scope: docs site only — no houba code, schema, or
+*Status: design (brainstormed 2026-06-17). Scope: docs site only — no knock code, schema, or
 architecture change.*
 
 ## Problem
@@ -26,7 +26,7 @@ checker, but by making the index *derive* from the pages.
 
 **Non-goals:** uniformity for its own sake (we deliberately do **not** add indexes to `reference/`
 or `tutorials/`, which gain nothing from a landing page); reworking `examples/README.md` (a genuine
-narrative catalogue, not a bare index); any change to houba code, the policy/config schema, the C4
+narrative catalogue, not a bare index); any change to knock code, the policy/config schema, the C4
 model, or the ADR set.
 
 ## Decision
@@ -58,11 +58,11 @@ sidebar_position: <n>               # preserve today's curated reading order
 …and the redundant body `# H1` is **removed** (Docusaurus renders the page heading from
 front-matter `title`; keeping the H1 would double it). `title` then drives the sidebar entry, the
 `generated-index` card heading, the browser tab, and the meta description (an SEO bonus). Command
-names (`houba attach`, etc.) already appear in the blurbs, so dropping the longer H1 loses nothing.
+names (`knock attach`, etc.) already appear in the blurbs, so dropping the longer H1 loses nothing.
 
 *Rejected alternative (minimal):* keep the `# H1`, add only `sidebar_label` + `description`. The
 `generated-index` card would then show the long raw H1 (e.g. "Attaching a scan result
-(`houba attach`)") instead of the short curated label. Rejected in favour of short, consistent
+(`knock attach`)") instead of the short curated label. Rejected in favour of short, consistent
 titles everywhere.
 
 ### 2. `_category_.json` — the index becomes generated
@@ -79,7 +79,7 @@ section's intro prose in `description` (rendered as markdown):
     "type": "generated-index",
     "slug": "/how-to",
     "title": "How-to guides",
-    "description": "Task-oriented guides — each solves one concrete problem against a running houba. … More task walkthroughs live alongside the runnable example policies."
+    "description": "Task-oriented guides — each solves one concrete problem against a running knock. … More task walkthroughs live alongside the runnable example policies."
   }
 }
 ```
@@ -90,7 +90,7 @@ list remains.
 **`explanation/` carries extra content that `generated-index` will not auto-list.** Its current
 index mixes three local sibling docs (`deletion-and-retention`, `attestations`, `sbom`) with three
 **external** GitHub links (`architecture/design.md`, `roadmap.md`, the ADR directory — all
-`exclude`d from the site, so they are GitHub URLs, not in-site docs) and a "Why houba" pointer.
+`exclude`d from the site, so they are GitHub URLs, not in-site docs) and a "Why knock" pointer.
 
 A `generated-index` description is rendered as **plain text** (`<p>{description}</p>` in
 `DocCategoryGeneratedIndexPage` — verified against the installed `@docusaurus/theme-classic`), so
@@ -98,7 +98,7 @@ markdown links placed there would **not** be clickable. The three external point
 to the **site footer** (empty today — `links: []`), where they become reachable from every page
 rather than from this one landing — strictly better discoverability. The category `description`
 keeps only plain-text intro prose; the three local pages are covered by the auto-generated card
-list. "Why houba" is the site landing page (`/`) and needs no extra pointer.
+list. "Why knock" is the site landing page (`/`) and needs no extra pointer.
 
 ### 3. Navbar (`website/docusaurus.config.ts`)
 

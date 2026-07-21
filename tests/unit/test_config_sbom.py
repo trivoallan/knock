@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from houba.config import Settings
+from knock.config import Settings
 
 
 def test_sbom_formats_default_is_spdx() -> None:

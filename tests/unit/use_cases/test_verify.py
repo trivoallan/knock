@@ -2,11 +2,11 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from houba.domain.scan.summary import Severity
-from houba.domain.verify import Requirement
-from houba.errors import ConfigError
-from houba.ports.attestor import VerifiedPredicate
-from houba.ports.registry import Referrer
+from knock.domain.scan.summary import Severity
+from knock.domain.verify import Requirement
+from knock.errors import ConfigError
+from knock.ports.attestor import VerifiedPredicate
+from knock.ports.registry import Referrer
 from tests.fakes.attestor import FakeAttestor
 from tests.fakes.clock import FakeClock
 from tests.fakes.registry import FakeRegistryPort
@@ -24,7 +24,7 @@ def _registry(*, annotations=None, referrers=None):
 
 
 def test_verify_scan_pass_green():
-    from houba.use_cases.verify import verify_exit_code, verify_image
+    from knock.use_cases.verify import verify_exit_code, verify_image
 
     attestor = FakeAttestor(
         predicates=[
@@ -37,17 +37,17 @@ def test_verify_scan_pass_green():
         registry=_registry(),
         attestor=attestor,
         clock=FakeClock(NOW),
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         max_severity=Severity.high,
         max_age=timedelta(days=7),
     )
     assert report.passed is True
     assert verify_exit_code(report) == 1 - int(report.passed)  # 0 when passed
-    assert attestor.verified == [(REF, "https://houba.dev/predicate/scan/v1")]
+    assert attestor.verified == [(REF, "https://knock.dev/predicate/scan/v1")]
 
 
 def test_verify_is_read_only():
-    from houba.use_cases.verify import verify_image
+    from knock.use_cases.verify import verify_image
 
     reg = _registry()
     verify_image(
@@ -56,7 +56,7 @@ def test_verify_is_read_only():
         registry=reg,
         attestor=FakeAttestor(predicates=[]),
         clock=FakeClock(NOW),
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         max_severity=Severity.high,
         max_age=timedelta(days=7),
     )
@@ -65,10 +65,10 @@ def test_verify_is_read_only():
 
 
 def test_verify_stamp_and_sbom_presence():
-    from houba.use_cases.verify import verify_image
+    from knock.use_cases.verify import verify_image
 
     reg = _registry(
-        annotations={"io.houba.artifact.type": "rebuild"},
+        annotations={"io.knock.artifact.type": "rebuild"},
         referrers=[
             Referrer(
                 digest="sha256:b",
@@ -84,7 +84,7 @@ def test_verify_stamp_and_sbom_presence():
         registry=reg,
         attestor=None,
         clock=FakeClock(NOW),
-        label_prefix="io.houba",
+        label_prefix="io.knock",
         max_severity=Severity.high,
         max_age=timedelta(days=7),
     )
@@ -92,7 +92,7 @@ def test_verify_stamp_and_sbom_presence():
 
 
 def test_verify_scan_pass_without_attestor_is_config_error():
-    from houba.use_cases.verify import verify_image
+    from knock.use_cases.verify import verify_image
 
     with pytest.raises(ConfigError):
         verify_image(
@@ -101,7 +101,7 @@ def test_verify_scan_pass_without_attestor_is_config_error():
             registry=_registry(),
             attestor=None,
             clock=FakeClock(NOW),
-            label_prefix="io.houba",
+            label_prefix="io.knock",
             max_severity=Severity.high,
             max_age=timedelta(days=7),
         )

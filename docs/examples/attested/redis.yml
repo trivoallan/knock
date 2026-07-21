@@ -3,26 +3,26 @@
 # Same rebuild as ../hardened/redis.yml (inject internal CA + rewrite package
 # sources), but with signing turned on so the output carries TWO attestations:
 #   1. BuildKit's slsa.dev/provenance/v1 (the build facts), and
-#   2. houba's https://houba.dev/predicate/transform/v1 (the hardening lineage),
+#   2. knock's https://knock.dev/predicate/transform/v1 (the hardening lineage),
 # signed by the configured signer and attached as OCI referrers to the digest.
 #
 # Attestation is off by default; enable it with the signer config (the policy file
 # itself stays portable — signing is org configuration, not policy):
 #
-#   export HOUBA_ATTEST_SIGNER=keyless                       # or: kms | key
-#   export HOUBA_ATTEST_BUILDER_ID=https://houba.example/builders/main
+#   export KNOCK_ATTEST_SIGNER=keyless                       # or: kms | key
+#   export KNOCK_ATTEST_BUILDER_ID=https://knock.example/builders/main
 #   # keyless: optional internal CA + transparency log (blank rekor => no log entry)
-#   export HOUBA_ATTEST_FULCIO_URL=https://fulcio.corp
-#   export HOUBA_ATTEST_REKOR_URL=https://rekor.corp
-#   # kms/key instead: export HOUBA_ATTEST_KEY_REF=awskms://alias/houba (or a key path)
+#   export KNOCK_ATTEST_FULCIO_URL=https://fulcio.corp
+#   export KNOCK_ATTEST_REKOR_URL=https://rekor.corp
+#   # kms/key instead: export KNOCK_ATTEST_KEY_REF=awskms://alias/knock (or a key path)
 #
 # Plus the rebuild config from the hardened example:
-#   HOUBA_TRANSFORM_CA_CERTS='{"corp": {"path": "/etc/houba/certs/corp-root.pem"}}'
-#   HOUBA_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian"}}'
+#   KNOCK_TRANSFORM_CA_CERTS='{"corp": {"path": "/etc/knock/certs/corp-root.pem"}}'
+#   KNOCK_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian"}}'
 #
-# Run it with `houba reconcile docs/examples/attested` (needs buildctl + cosign on PATH).
+# Run it with `knock reconcile docs/examples/attested` (needs buildctl + cosign on PATH).
 #
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis-attested
@@ -34,7 +34,7 @@ spec:
   imports:
     - name: v7
       owners:
-        - group:default/data-platform     # stamped as io.houba.owners
+        - group:default/data-platform     # stamped as io.knock.owners
       tags:
         includeRegex: "^7\\.2\\."
       transform:

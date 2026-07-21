@@ -1,4 +1,4 @@
-from houba.domain.scan_queue import (
+from knock.domain.scan_queue import (
     classify_exception,
     classify_failure,
     coverage_gap,
@@ -58,7 +58,7 @@ def test_classify_failure_transient_registry_5xx():
 def test_classify_failure_signer_missing():
     f = classify_failure(stage="attach", exit_code=2, stderr="CosignError: no signer configured")
     assert f.kind == "transient"
-    assert "HOUBA_ATTEST_SIGNER" in f.suggested_action
+    assert "KNOCK_ATTEST_SIGNER" in f.suggested_action
 
 
 def test_coverage_gap_is_placed_minus_fresh_confirmed():

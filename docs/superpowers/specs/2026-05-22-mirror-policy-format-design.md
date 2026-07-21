@@ -2,7 +2,7 @@
 
 **Status:** Draft — pending review
 **Date:** 2026-05-22
-**Scope:** The declarative `MirrorPolicy` format, the named-registries config model, and the `houba reconcile` command contract. This is the design for Phase C ① (provenance/policy schema) and the entry point of ② (the derive-and-stamp engine).
+**Scope:** The declarative `MirrorPolicy` format, the named-registries config model, and the `knock reconcile` command contract. This is the design for Phase C ① (provenance/policy schema) and the entry point of ② (the derive-and-stamp engine).
 
 > Written in English to match the rest of `docs/` and the public-repo convention. The schema field names are the public API.
 
@@ -10,14 +10,14 @@
 
 ## 1. Context & motivation
 
-houba is a **stamper / single front door** for external OCI artifacts (see [roadmap](../../roadmap.md)): it pulls upstream artifacts, optionally rebuilds images through a hardening policy, and stamps everything with standardized, portable provenance so that — the morning a CVE drops — blast-radius is one query in the org's observability stack.
+knock is a **stamper / single front door** for external OCI artifacts (see [roadmap](../../roadmap.md)): it pulls upstream artifacts, optionally rebuilds images through a hardening policy, and stamps everything with standardized, portable provenance so that — the morning a CVE drops — blast-radius is one query in the org's observability stack.
 
 Today the declaration is a flat `properties.yml` per product: one source, one destination, one tag selection, with org-specific residue (`harbor: blue|orange|both`). This design replaces it with a versioned, identifiable **`MirrorPolicy`** object, and defines how a directory of them is reconciled.
 
 Two product decisions drive the shape:
 
-- **The label is the product.** Because houba's value flows through the stamp into someone else's query tool, the schema is the public API. It must be versioned (`apiVersion`), identifiable (`metadata`), and tool-recognized.
-- **Coverage gates value.** houba is meant to be the mandatory path for external artifacts; the format and the reconcile model assume "a directory of policies, converged as a set."
+- **The label is the product.** Because knock's value flows through the stamp into someone else's query tool, the schema is the public API. It must be versioned (`apiVersion`), identifiable (`metadata`), and tool-recognized.
+- **Coverage gates value.** knock is meant to be the mandatory path for external artifacts; the format and the reconcile model assume "a directory of policies, converged as a set."
 
 ---
 
@@ -41,7 +41,7 @@ The schema is designed whole; the **implementation is bounded**. The schema admi
 | `reconcile` contract (exit codes, `--dry-run`, partial failure, stateless) | ✅ | |
 | Reference deployment manifests (Argo/CronJob/GH Actions) | ❌ | `examples/deploy/` — multi-trigger, never single |
 
-Explicitly **out of scope** (not just deferred — a different product): runtime presence / fleet inventory / an operator. houba stamps; the blast-radius query is assembled in the org's observability stack. End-of-life awareness lives in the sibling tool `regis`.
+Explicitly **out of scope** (not just deferred — a different product): runtime presence / fleet inventory / an operator. knock stamps; the blast-radius query is assembled in the org's observability stack. End-of-life awareness lives in the sibling tool `regis`.
 
 ---
 
@@ -50,7 +50,7 @@ Explicitly **out of scope** (not just deferred — a different product): runtime
 ### 3.1 Worked example (everything together)
 
 ```yaml
-apiVersion: houba.io/v1alpha1
+apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
 metadata:
   name: redis
@@ -100,7 +100,7 @@ spec:
 
 ### 3.2 Envelope
 
-- `apiVersion: houba.io/v1alpha1` — schema version. Evolves `v1alpha1 → v1beta1 → v1` with conversion. **Non-negotiable from day one** (the schema is the API).
+- `apiVersion: knock.io/v1alpha1` — schema version. Evolves `v1alpha1 → v1beta1 → v1` with conversion. **Non-negotiable from day one** (the schema is the API).
 - `kind: MirrorPolicy` — reserves the kind namespace. A future `kind: TransformProfile` (a reusable, named `transform` list referenced by policies) and `kind: HardeningProfile` are anticipated; the `kind` field makes them additive.
 - `metadata.name` — identity, unique within the reconciled set. Used for dedup, selection, and as the stable provenance key.
 - `metadata.labels` — free-form; `team` is the conventional stable owner key stamped into provenance.
@@ -204,14 +204,14 @@ aliases: ["{flavor}"]   # debian → highest debian-*, alpine → highest alpine
 Alias rules:
 
 - Aliases are **moving**: re-evaluated every reconcile, re-pointed to the current highest. They are **exempt** from the concrete-tag immutability / 7-day digest-stability window (they are *meant* to move).
-- An alias does **not** re-stamp: it points at an already-stamped digest. The `org.opencontainers.image.*` / `io.houba.*` provenance records the *concrete* tag actually imported, never the alias.
+- An alias does **not** re-stamp: it points at an already-stamped digest. The `org.opencontainers.image.*` / `io.knock.*` provenance records the *concrete* tag actually imported, never the alias.
 - **Aliases must be unique per destination repository.** If two templates, two imports, or a variant suffix collision would produce the same alias pointing into the same destination repository, reconcile **fails fast with a validation error** — never last-wins. (Collisions are detected during the load-and-validate phase, §8, before any mutation.)
 
 ---
 
 ## 6. Artifact types
 
-`spec.artifactType` discriminates the `transform` vocabulary and the execution path. houba does two separable things; only the first is universal:
+`spec.artifactType` discriminates the `transform` vocabulary and the execution path. knock does two separable things; only the first is universal:
 
 1. **Mirror + stamp** — copy the artifact, add provenance annotations. Works for **any** OCI artifact type. The blast-radius thesis applies to charts and every other type ("which Helm charts are hit by this CVE?").
 2. **Transform** — rebuild content. Meaningful only for some types; the vocabulary is type-specific.
@@ -226,11 +226,11 @@ Alias rules:
 
 - `generic` is the **catch-all**: it covers the entire OCI long tail (WASM, SBOMs, signatures, OPA bundles, …) without enumerating them. New named types are added only when they earn a transform vocabulary.
 - `artifactType` is recorded in provenance, so blast-radius queries can filter by type.
-- The deferred `helmChart` transform `rewriteImageRefs` is high-value: a hardened chart that points at *houba-mirrored* images closes the loop. It is its own design.
+- The deferred `helmChart` transform `rewriteImageRefs` is high-value: a hardened chart that points at *knock-mirrored* images closes the loop. It is its own design.
 
 ### 6.1 Registry client & stamping non-image artifacts
 
-houba's registry client is **regctl** (regclient), replacing skopeo. regctl covers list-tags, inspect, copy, **annotate** (`regctl image mod --annotation`), and retag at the OCI dist-spec level — on any registry. This matters because:
+knock's registry client is **regctl** (regclient), replacing skopeo. regctl covers list-tags, inspect, copy, **annotate** (`regctl image mod --annotation`), and retag at the OCI dist-spec level — on any registry. This matters because:
 
 - Stamping an artifact that is *not* rebuilt cannot use plain `skopeo copy` (skopeo cannot add annotations; changing the manifest changes the digest). The copy-and-annotate path — **pull manifest → add annotations → push** (new digest) — is a `regctl image mod`. This is the execution path for `generic`/`helmChart`, alongside the image rebuild.
 - The `image` path bakes annotations during the **BuildKit** (`buildctl`) rebuild; regctl is not a builder, so `buildctl` stays.
@@ -242,7 +242,7 @@ A tag usually resolves to an OCI **index** (manifest list) referencing one image
 
 - **No transform steps** (empty `transform`, any `artifactType` — including `image`) → **copy + annotate** path → **multi-arch**. regctl copies the whole index (honouring `platforms`) and annotates the index. Available in v1alpha1.
 - **With transform steps** (`image` hardening) → **rebuild** path → **single-platform** in v1alpha1 (default: the builder's native platform). A policy that combines `transform` steps with more than one `platforms` entry is a **validation error** — no platform is silently dropped.
-- **Deferred:** full multi-arch rebuild (BuildKit `--platform <list>` + index reassembly). When it lands, providing arm64/etc. build capacity (QEMU/binfmt or native builder nodes) is a **deployment concern** — houba issues the multi-platform build; the infra provides the builders, like the reconcile trigger.
+- **Deferred:** full multi-arch rebuild (BuildKit `--platform <list>` + index reassembly). When it lands, providing arm64/etc. build capacity (QEMU/binfmt or native builder nodes) is a **deployment concern** — knock issues the multi-platform build; the infra provides the builders, like the reconcile trigger.
 
 So in v1alpha1 a *copied* or *un-hardened* image is multi-arch; only a *hardened* image is single-arch, until rebuild-multi-arch lands.
 
@@ -256,45 +256,45 @@ Multi-registry destinations are the generic replacement for the removed org-spec
 
 ### 7.1 Config model — env-roster
 
-Preserves the 12-factor contract and the rule that `houba/config.py` is the only reader of the environment:
+Preserves the 12-factor contract and the rule that `knock/config.py` is the only reader of the environment:
 
 ```bash
-HOUBA_REGISTRIES=harbor-eu,harbor-us                    # the roster
-HOUBA_REGISTRY_HARBOR_EU_URL=https://harbor-eu.example  # name normalized: uppercase, '-' → '_'
-HOUBA_REGISTRY_HARBOR_EU_USER=robot$houba
-HOUBA_REGISTRY_HARBOR_EU_PASSWORD=...                   # secret per registry, via env
-HOUBA_REGISTRY_HARBOR_US_URL=...
-HOUBA_REGISTRY_HARBOR_US_USER=...
-HOUBA_REGISTRY_HARBOR_US_PASSWORD=...
+KNOCK_REGISTRIES=harbor-eu,harbor-us                    # the roster
+KNOCK_REGISTRY_HARBOR_EU_URL=https://harbor-eu.example  # name normalized: uppercase, '-' → '_'
+KNOCK_REGISTRY_HARBOR_EU_USER=robot$knock
+KNOCK_REGISTRY_HARBOR_EU_PASSWORD=...                   # secret per registry, via env
+KNOCK_REGISTRY_HARBOR_US_URL=...
+KNOCK_REGISTRY_HARBOR_US_USER=...
+KNOCK_REGISTRY_HARBOR_US_PASSWORD=...
 ```
 
 - A custom Pydantic settings source reads the roster and builds a `dict[name → RegistrySettings]`.
 - Each registry: `{ url, user, password (SecretStr), type: harbor }`. `type` is forward-compatible; `harbor` is the only value in v1alpha1, `oci` reserved.
-- The single-`HOUBA_HARBOR_*` settings are **replaced** by the roster; a single-registry deployment defines exactly one entry.
+- The single-`KNOCK_HARBOR_*` settings are **replaced** by the roster; a single-registry deployment defines exactly one entry.
 - An alternative (registries declared in a versioned `registries.yaml`, secrets via env) is rejected: it breaks the env-only invariant and raises secrets-in-files questions.
 
 ### 7.2 Composition root
 
-`houba/cli/_di.py` builds a `dict[name → HarborHttpAdapter]`. The reconcile use case resolves the adapter per `destination.registry`. A policy referencing a registry not in the roster → **`ConfigError`, fail fast at reconcile start**, before any mutation.
+`knock/cli/_di.py` builds a `dict[name → HarborHttpAdapter]`. The reconcile use case resolves the adapter per `destination.registry`. A policy referencing a registry not in the roster → **`ConfigError`, fail fast at reconcile start**, before any mutation.
 
 ---
 
 ## 8. The `reconcile` command contract
 
 ```
-houba reconcile <dir> [--dry-run]
+knock reconcile <dir> [--dry-run]
 ```
 
 - **Load & validate first.** All `MirrorPolicy` files under `<dir>` are discovered **recursively** (subdirectories included, so policies can be organized by team/registry), then parsed and validated — including cross-policy alias-collision checks (§5.2) — before any mutation. If *any* file is invalid or any collision is detected, abort non-zero — never partial-apply a broken set.
 - **Stateless.** Actual state is read from each destination registry at run time. No state store.
-- **Change detection for derived artifacts.** A *transformed* image's mirror digest differs from its source — so houba cannot compare `mirror-digest == source-digest`. It compares the source digest recorded in the stamp (`org.opencontainers.image.base.digest`) against the current source digest; for multi-arch, that source digest is the **index** digest. The stamp is the idempotency key. (This is a `tag_filter` refinement in `domain/`; it also subsumes the 7-day digest-stability window, which keys on the same source digest.)
+- **Change detection for derived artifacts.** A *transformed* image's mirror digest differs from its source — so knock cannot compare `mirror-digest == source-digest`. It compares the source digest recorded in the stamp (`org.opencontainers.image.base.digest`) against the current source digest; for multi-arch, that source digest is the **index** digest. The stamp is the idempotency key. (This is a `tag_filter` refinement in `domain/`; it also subsumes the 7-day digest-stability window, which keys on the same source digest.)
 - **Partial failure.** Reconcile proceeds policy-by-policy with continue-on-error; per-policy/import/variant/destination status is collected. Exit non-zero if *any* unit failed (so a scheduler/CI sees red), but one failing policy does not block the others.
 - **`--dry-run`.** Compute and print the plan (per destination: tags to import/update/delete, aliases to move, variants and transform steps) without mutating. For GitOps PR-preview and CI "plan" stages. Maps to the existing dry-run settings.
 - **Idempotent.** Re-running converges to the same state; safe at any cadence.
 - **Concurrency.** No internal locking; the scheduler owns non-overlap (e.g. CronJob `concurrencyPolicy: Forbid`).
 - **Output.** Structured (structlog JSON) run summary, per unit, ingestible without regex.
 
-The trigger (Argo Workflows, k8s CronJob, GitHub Actions, cron) is a deployment detail, **not** houba's concern. Reference manifests are deferred to a multi-trigger `examples/deploy/` so no single orchestrator becomes a dependency.
+The trigger (Argo Workflows, k8s CronJob, GitHub Actions, cron) is a deployment detail, **not** knock's concern. Reference manifests are deferred to a multi-trigger `examples/deploy/` so no single orchestrator becomes a dependency.
 
 ---
 
@@ -303,7 +303,7 @@ The trigger (Argo Workflows, k8s CronJob, GitHub Actions, cron) is a deployment 
 Universal across artifact types; baked during the image rebuild, or added on the copy-and-annotate path for non-images.
 
 - **OCI-standard annotations** for standard facts: `org.opencontainers.image.source`, `.revision`, `.base.name`, `.base.digest`, `.created`. Any scanner/registry reads them for free.
-- **`io.houba.*`** only for the genuinely novel lineage: `io.houba.policy` (= `metadata.name`), `io.houba.import`, `io.houba.variant`, `io.houba.transform.version`, `io.houba.artifact.type`, `io.houba.owner.team` (the stable key from `metadata.labels.team`).
+- **`io.knock.*`** only for the genuinely novel lineage: `io.knock.policy` (= `metadata.name`), `io.knock.import`, `io.knock.variant`, `io.knock.transform.version`, `io.knock.artifact.type`, `io.knock.owner.team` (the stable key from `metadata.labels.team`).
 - **Immutable build facts only.** No location fact: the `import.harbor` label is **dropped** — the same digest can live in many registries, so "which registry" is a runtime/location fact resolved downstream, not baked provenance. The human owner is resolved downstream from the stable `team` key, never stamped as a person.
 
 Annotations are set by `buildctl` during the image rebuild, or by `regctl image mod` on the copy path — **not** by Harbor's proprietary label API. The Phase B Harbor label methods (`ensure_label`/`add_label_to_artifact`) are therefore *not* the provenance mechanism in this design. Consequently the Harbor write surface shrinks: tag create/delete, artifact deletion, and annotation move to the dist-spec level (any registry, via regctl), and the Harbor HTTP API is needed only for genuinely Harbor-specific concerns (immutable tag *rules*, projects).
@@ -314,7 +314,7 @@ Annotations are set by `buildctl` during the image rebuild, or by `regctl image 
 
 This design touches, beyond `domain/`:
 
-- **`config.py`** — env-roster custom settings source; `RegistrySettings`; removal of single-`HOUBA_HARBOR_*`.
+- **`config.py`** — env-roster custom settings source; `RegistrySettings`; removal of single-`KNOCK_HARBOR_*`.
 - **`cli/_di.py`** — `dict[name → adapter]`; per-destination resolution.
 - **New domain** — `MirrorPolicy` models (replacing `Properties`), the alias-template resolver, the merge engine, the variant expander, the selection engine extended with `names`.
 - **Registry adapter** — `skopeo_cli` is **replaced by a regctl adapter** (list/inspect/copy/annotate/retag), which also provides the copy-and-annotate path for `generic`/`helmChart`. `buildctl` stays for the image rebuild. The runtime image bundles **regctl + buildctl + git** (was skopeo + buildctl + git).

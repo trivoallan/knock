@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from houba.domain.scan.summary import ScanSummary, Severity, build_scan_annotations, gate_breached
+from knock.domain.scan.summary import ScanSummary, Severity, build_scan_annotations, gate_breached
 
 TS = datetime(2026, 6, 12, 9, 30, tzinfo=UTC)
 
@@ -17,21 +17,21 @@ def _summary() -> ScanSummary:
 
 def test_common_envelope_keys_present() -> None:
     a = build_scan_annotations(
-        _summary(), prefix="io.houba", subject_digest="sha256:abc", fmt="sarif", timestamp=TS
+        _summary(), prefix="io.knock", subject_digest="sha256:abc", fmt="sarif", timestamp=TS
     )
-    assert a["io.houba.scan.tool"] == "trivy"
-    assert a["io.houba.scan.tool.version"] == "0.50.1"
-    assert a["io.houba.scan.format"] == "sarif"
-    assert a["io.houba.scan.timestamp"] == "2026-06-12T09:30:00+00:00"
-    assert a["io.houba.scan.subject"] == "sha256:abc"
+    assert a["io.knock.scan.tool"] == "trivy"
+    assert a["io.knock.scan.tool.version"] == "0.50.1"
+    assert a["io.knock.scan.format"] == "sarif"
+    assert a["io.knock.scan.timestamp"] == "2026-06-12T09:30:00+00:00"
+    assert a["io.knock.scan.subject"] == "sha256:abc"
 
 
 def test_facts_are_namespaced_under_scan() -> None:
     a = build_scan_annotations(
-        _summary(), prefix="io.houba", subject_digest="sha256:abc", fmt="sarif", timestamp=TS
+        _summary(), prefix="io.knock", subject_digest="sha256:abc", fmt="sarif", timestamp=TS
     )
-    assert a["io.houba.scan.vuln.critical"] == "3"
-    assert a["io.houba.scan.vuln.high"] == "12"
+    assert a["io.knock.scan.vuln.critical"] == "3"
+    assert a["io.knock.scan.vuln.high"] == "12"
 
 
 def test_empty_prefix_yields_no_annotations() -> None:
@@ -44,10 +44,10 @@ def test_empty_prefix_yields_no_annotations() -> None:
 def test_empty_tool_version_omits_the_key() -> None:
     s = ScanSummary(tool="grype", tool_version="", facts={})
     a = build_scan_annotations(
-        s, prefix="io.houba", subject_digest="sha256:abc", fmt="sarif", timestamp=TS
+        s, prefix="io.knock", subject_digest="sha256:abc", fmt="sarif", timestamp=TS
     )
-    assert "io.houba.scan.tool.version" not in a
-    assert a["io.houba.scan.tool"] == "grype"
+    assert "io.knock.scan.tool.version" not in a
+    assert a["io.knock.scan.tool"] == "grype"
 
 
 def _facts(**counts: int) -> dict[str, str]:

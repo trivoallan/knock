@@ -6,24 +6,24 @@ blast-radius to base-image level). Date: 2026-06-16.*
 
 ## Why
 
-houba's value lands at incident time, through one blast-radius query — *the label is the product*.
+knock's value lands at incident time, through one blast-radius query — *the label is the product*.
 But the provenance stamp carries **lineage** (`base.digest`, `transform.steps`, `owners`), not
 **contents**. Lineage answers *"which images derive from base X"*; it cannot answer *"which images
-contain package P"* — and almost every real CVE is a content question. Worse, houba's own hardening
+contain package P"* — and almost every real CVE is a content question. Worse, knock's own hardening
 (`rewritePackageSources`) updates packages, so you cannot even infer package versions from
 `base.digest`. The stamp, alone, answers the rarest incident class and is blind to the common ones.
 
-A scan report (`houba attach`) does not fill this gap: a scan is *known-vulnerable as of its run
+A scan report (`knock attach`) does not fill this gap: a scan is *known-vulnerable as of its run
 date*. On the day a zero-day drops, every prior scan reads "clean" because the CVE did not exist yet.
 Only an **SBOM** — a CVE-agnostic inventory of what is present — answers *"which images contain P"*
 retroactively, the instant a new CVE lands.
 
-houba is the single front door, so it is the one place that sees every external image exactly once,
+knock is the single front door, so it is the one place that sees every external image exactly once,
 at entry, on bytes it controls (99% of intake is rebuild). That makes it the natural choke point to
 guarantee **100% SBOM coverage** — what *coverage gates value* demands — versus the best-effort,
 opt-in, async coverage a registry scanner gives.
 
-Goal: **every image houba rebuilds carries a portable SPDX SBOM**, deep enough to surface
+Goal: **every image knock rebuilds carries a portable SPDX SBOM**, deep enough to surface
 application-layer dependencies (nested JARs), attached as a referrer, so the org's observability
 stack can answer package-level blast-radius at incident time.
 
@@ -45,7 +45,7 @@ The scanner emits **purls** — the exact identifiers CVE feeds key on — inclu
 `upstream=` source-package mapping (so a query against `xz-utils` finds the installed `liblzma5`).
 Depth, OS-package precision, and the runtime boundary all hold. The specific versions present happen
 to be patched; irrelevant — the test proves *capture and queryability*, not vuln presence. The CVE
-*match* (`version → CVE-xxxx`) stays downstream in the org's stack; houba produces the queryable
+*match* (`version → CVE-xxxx`) stays downstream in the org's stack; knock produces the queryable
 inventory, nothing more.
 
 ## Known coverage limit — bare-binary middleware
@@ -63,7 +63,7 @@ So a MongoDB-class CVE is blast-radius-answerable **iff** the middleware arrived
 language ecosystem; a `curl|tar`'d binary in an upstream Dockerfile is invisible. Mitigations are
 partial and not relied upon: syft ships content classifiers for a curated set of server binaries
 (redis, nginx, postgres, node, go, haproxy…), so *some* bare binaries are still caught — coverage of
-any specific one depends on the pinned scanner version (verify, do not assume). And houba's own
+any specific one depends on the pinned scanner version (verify, do not assume). And knock's own
 `rewritePackageSources` hardening pushes installs toward the package path (SBOM-visible) as a side
 effect — but cannot rewrite an upstream that fetches a raw binary. **This is a documented, bounded
 limit, not engineered around in v1.** The CI acceptance matrix records it explicitly (a bare-binary
@@ -71,20 +71,20 @@ middleware fixture asserted *absent*, so the gap is visible, not silently assume
 
 ## The unifying rule
 
-houba already enables buildkit's native **provenance** attestation via one flag
+knock already enables buildkit's native **provenance** attestation via one flag
 (`BuildRequest.provenance` → `--opt=attest:provenance=mode=max`), attached as a referrer at push.
 **SBOM is the same shape:** one flag, attached for free at push. No new port, no new adapter, no
 extraction pipeline for *presence*.
 
-This splits cleanly along houba's own coverage ladder (`uncovered < stamped < signed`):
+This splits cleanly along knock's own coverage ladder (`uncovered < stamped < signed`):
 
 | Tier | What | Priority |
 |---|---|---|
 | **present** | buildkit attaches the SPDX SBOM referrer at push | **P0 — answers blast-radius** |
-| **signed** | houba cosign-signs the SBOM under its identity | **P1 — the trust layer** |
+| **signed** | knock cosign-signs the SBOM under its identity | **P1 — the trust layer** |
 
 The present-but-unsigned SBOM already delivers the promise (answer the query). Signing is the
-*trustworthy* tier — sequenced exactly as houba sequenced stamp-then-sign for the annotation.
+*trustworthy* tier — sequenced exactly as knock sequenced stamp-then-sign for the annotation.
 
 ## 1. The flag (`ports/image_builder.py`, `adapters/buildkit_cli.py`)
 
@@ -134,7 +134,7 @@ actual blast-radius value.
 detecting the index-embedded SBOM needs an index-inspection probe, not the referrer mirror first
 assumed.
 
-**P1 (trust tier, fast-follow):** cosign-sign the SBOM under houba's identity, slotting into the
+**P1 (trust tier, fast-follow):** cosign-sign the SBOM under knock's identity, slotting into the
 existing `signed` ladder. The present-but-unsigned SBOM already answers blast-radius; signing
 protects the inventory from tampering.
 
@@ -145,7 +145,7 @@ protects the inventory from tampering.
 - SBOM backfill on already-mirrored images — the attestation-coverage idempotent-backfill pattern
   applies, but YAGNI for MVP.
 - The blast-radius **query engine** / CVE matching / runtime fleet inventory — downstream in the
-  org's observability stack, houba's standing non-goal.
+  org's observability stack, knock's standing non-goal.
 
 ## Decisions ratified (2026-06-16)
 
@@ -176,7 +176,7 @@ protects the inventory from tampering.
   `log4j-core` (nested), `libssl3`/`openssl`, `liblzma5`, and `redis-server` (middleware via
   package) — each with version+purl — and **does not contain** `runc` (host runtime) nor a
   bare-binary `mongod` (the documented middleware blind spot, asserted absent so the gap stays
-  visible). This is the permanent guard against silent regression — it must run against houba's
+  visible). This is the permanent guard against silent regression — it must run against knock's
   actual buildkit scanner config, not standalone syft.
 
 ## Docs to sync (same change as ship)
@@ -184,7 +184,7 @@ protects the inventory from tampering.
 - ADR mirror: [0029-sbom-generation.md](../../architecture/decisions/0029-sbom-generation.md).
 - C4 model: **unchanged** — no new port, adapter, actor, or external system. The
   `buildkit-syft-scanner` is internal to buildkit's operation (like its provenance generator,
-  which carries no C4 node); houba only passes a flag. Reuses `ImageBuilderPort` / `RegistryPort`.
+  which carries no C4 node); knock only passes a flag. Reuses `ImageBuilderPort` / `RegistryPort`.
 - `docs/examples/`: refresh an `attested`/SBOM example to show the SBOM referrer once it exists
   (conditional, like the attestation-coverage spec) — no new `MirrorPolicy` field, so no policy
   example to add; this is a build-time flag, not policy.
