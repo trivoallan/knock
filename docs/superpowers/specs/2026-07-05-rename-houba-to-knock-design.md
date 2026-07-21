@@ -49,8 +49,11 @@ upgrade path.
    rename changes only what **new** images receive.
 5. The predicate URIs (`https://houba.dev/predicate/*/v1`) and artifact types
    (`application/vnd.houba.*`) are stamped on existing attestations and referrers in registries.
-   These are **frozen** — verification of already-signed attestations must not break. New images
-   get the new URIs; the verifier must accept both until the old cohort ages out.
+   ~~These are frozen; the verifier must accept both until the old cohort ages out.~~ **Decided
+   against (ADR 0045): no dual-accept.** Consistent with the clean-break stance (premise 3), the
+   verifier recognizes only the new `knock.dev` / `vnd.knock.*` families; attestations signed before
+   the rename do not verify and are re-placed (rebuild/copy) to re-stamp under the new identifiers.
+   The pre-1.0 status (premise 1) and absent user base (premise 2) make this acceptable.
 
 ## Scope
 

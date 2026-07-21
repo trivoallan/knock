@@ -32,24 +32,24 @@ door.
   itself be a deferral). Operators take a one-time migration: re-key `HOUBA_*` env to `KNOCK_*`,
   and add an `io.knock.*` arm to any label-keyed admission/policy. Images placed before the cutover
   keep `io.houba.*` (knock never rewrites placed manifests); images placed after carry `io.knock.*`.
-- **Frozen provenance identifiers move with the rename.** The predicate URIs
+- **Frozen provenance identifiers move with the rename — no dual-accept.** The predicate URIs
   (`https://knock.dev/predicate/{transform,scan}/v1`) and artifact types
-  (`application/vnd.knock.*`) are renamed on the write side. Per the spec's premise 5, these are
-  stamped on **already-signed** attestations/referrers; verification of the pre-rename cohort
-  (`houba.dev` / `vnd.houba.*`) requires the verifier to accept **both** old and new until that
-  cohort ages out. **This dual-accept read path is NOT yet implemented** — see Consequences.
+  (`application/vnd.knock.*`) are renamed on **both** the write and read sides. `verify` recognizes
+  only the `knock.dev` / `vnd.knock.*` families. This **overrides the spec's premise 5**, which
+  contemplated a transitional dual-accept: it was **considered and rejected** for the same reason as
+  the env/label shim — a pre-1.0 clean break, not a compatibility surface to carry. Consequence:
+  attestations signed *before* the rename (bearing `houba.dev` / `vnd.houba.*`) do not verify; the
+  intended path for any such artifact is to re-place (rebuild/copy) it, which re-stamps and re-signs
+  it under the new identifiers.
 - **Historical ADRs/specs rewritten** to "knock" for consistency (filenames too); the glossary
   records the former name.
 
 ## Consequences
 
-- A **clean end-to-end rename** — no naming mismatch survives on the write side. The config
-  breakage is intentional and bounded to the two contract *values*, documented for operators.
-- **Open follow-up (read-side compat):** with the predicate URIs / artifact types renamed but no
-  dual-accept in `verify`, verification of attestations signed **before** the rename (bearing
-  `houba.dev` / `vnd.houba.*`) will not match. If any signed cohort exists in a registry, `verify`
-  must be taught to accept both identifier families until it ages out. Tracked as the sole
-  non-mechanical loose end of this rename.
+- A **clean end-to-end rename** — no naming mismatch survives, write side *or* read side. The
+  breakage is intentional and bounded: the two config contract *values* (env prefix, label default)
+  and the provenance identifiers (`houba.dev` / `vnd.houba.*`), all documented for operators. No
+  compatibility shim, no open follow-up — the rename is complete in one change.
 - **Zero domain logic and zero schema-shape change** — internal symbols (`RegctlAdapter`, …) never
   carried the brand, so the change is import-path + prose churn (plus the contract values) under
   the existing test/type/coverage gates (global ≥80 %, `knock.domain` ≥90 %), which stay green.
