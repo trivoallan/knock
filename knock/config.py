@@ -43,8 +43,9 @@ class RegistryConfig(BaseModel):
     tls_verify: bool = Field(
         default=True,
         description="Set to `false` for plain-HTTP registries; knock then pushes "
-        "insecurely on both paths — `regctl registry set … --tls disabled` for "
-        "copies and `registry.insecure=true` for BuildKit rebuilds.",
+        "insecurely everywhere — `regctl registry set … --tls disabled` for "
+        "copies, `registry.insecure=true` for BuildKit rebuilds, and "
+        "`--allow-insecure-registry --allow-http-registry` for cosign attest/verify.",
     )
     ca_cert: str | None = Field(
         default=None,
