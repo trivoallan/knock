@@ -436,8 +436,9 @@ def _apply_plan(
         out_digest: str, *, variant: str, vplan: VariantPlan, out_tag: str, source_digest: str
     ) -> None:
         assert attestor is not None  # callers guard on attestor before calling
+        subject = f"{plan.dest_repo}@{out_digest}"
         attestor.attest(
-            f"{plan.dest_repo}@{out_digest}",
+            subject,
             build_transform_statement(
                 subject_name=f"{plan.dest_repo}:{out_tag}",
                 subject_digest=out_digest,
@@ -453,6 +454,10 @@ def _apply_plan(
                 transformed=bool(vplan.transform),
             ),
         )
+        # Admission is the last act: the image is signed only once its attestations are
+        # placed, and only when the policy asserts admission. Never unsigned afterwards.
+        if plan.policy.spec.admit:
+            attestor.sign(subject)
 
     def _do_import(w: _ImportWork) -> Operation:
         steps = [s.name for s in w.vplan.transform] or None  # applied steps; None on a copy
@@ -907,6 +912,12 @@ class RegistryPlanner:
         alias_entries: list[AliasTarget] = []
         plans: list[tuple[MirrorPolicy, list[_Plan]]] = []
         for policy in policies:
+            if policy.spec.admit and self.attestor is None:
+                # Placing an admitted image unsigned would be a silent gap: refuse up front.
+                raise ConfigError(
+                    f"policy {policy.metadata.name!r} is admit: true but no "
+                    "KNOCK_ATTEST_SIGNER is configured to sign its images"
+                )
             # Configure the source registry's TLS/auth (from the roster) before listing its tags —
             # a plain-HTTP or custom-CA source registry otherwise fails the plan-phase `tag ls`.
             # Sources not in the roster (public upstreams like docker.io) keep ambient HTTPS config.

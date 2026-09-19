@@ -3,10 +3,14 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from knock.adapters.local_archiver import LocalArchiver
 from knock.config import CACertSource, PackageMirror, RegistryConfig
 from knock.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE, PREDICATE_TYPE
 from knock.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
+from knock.errors import ConfigError, CosignError
+from knock.ports.attestor import AttestationRef
 from knock.ports.registry import ImageInfo, Referrer
 from knock.use_cases.reconcile import reconcile_policies
 from knock.use_cases.report import RunReport
@@ -256,3 +260,98 @@ def test_backfill_attestation_failure_is_visible() -> None:
     attested_ops = [op for op in ops if op.kind == "attested"]
     assert len(attested_ops) == 1
     assert attested_ops[0].error is not None
+
+
+# --- image signature at admission (spec.admit) ---
+
+
+def _admitted(policy: MirrorPolicy) -> MirrorPolicy:
+    return policy.model_copy(update={"spec": policy.spec.model_copy(update={"admit": True})})
+
+
+def _busybox_registry(mirror_tags: list[str] | None = None, **over: object) -> FakeRegistryPort:
+    src = "docker.io/library/busybox"
+    dest_repo = "reg.local/demo/busybox"
+    infos = {f"{src}:1.36.0": ImageInfo(digest="sha256:s", created=NOW, annotations={})}
+    for tag in mirror_tags or []:
+        infos[f"{dest_repo}:{tag}"] = ImageInfo(
+            digest="sha256:mirrordigest",
+            created=NOW,
+            annotations={"org.opencontainers.image.base.digest": "sha256:s"},
+        )
+    return FakeRegistryPort(
+        tags={src: ["1.36.0"], dest_repo: list(mirror_tags or [])},
+        infos=infos,
+        **over,  # type: ignore[arg-type]
+    )
+
+
+def test_admitted_import_signs_the_attested_digest() -> None:
+    attestor = FakeAttestor()
+    _run(_admitted(_copy_policy()), _busybox_registry(), attestor=attestor)
+    assert len(attestor.signed) == 1
+    assert attestor.signed[0] == attestor.attested[0][0]  # the stamped output digest
+
+
+def test_admitted_rebuild_signs_the_attested_digest() -> None:
+    attestor = FakeAttestor()
+    _run(_admitted(_hardened_policy()), _hardened_registry(), attestor=attestor)
+    assert attestor.signed == [attestor.attested[0][0]]
+
+
+def test_non_admitted_import_is_attested_but_never_signed() -> None:
+    attestor = FakeAttestor()
+    _run(_copy_policy(), _busybox_registry(), attestor=attestor)
+    assert len(attestor.attested) == 1
+    assert attestor.signed == []
+
+
+class _AttestFails(FakeAttestor):
+    def attest(self, subject_ref: str, statement: dict[str, object]) -> AttestationRef:
+        raise CosignError("attest down")
+
+
+def test_attestation_failure_leaves_admitted_image_unsigned() -> None:
+    attestor = _AttestFails()
+    report = _run(_admitted(_copy_policy()), _busybox_registry(), attestor=attestor)
+    assert report.status == "failed"
+    assert attestor.signed == []
+
+
+def test_sign_failure_fails_the_operation() -> None:
+    class _SignFails(FakeAttestor):
+        def sign(self, subject_ref: str) -> None:
+            raise CosignError("sign down")
+
+    report = _run(_admitted(_copy_policy()), _busybox_registry(), attestor=_SignFails())
+    op = report.policies[0].targets[0].variants[0].operations[0]
+    assert op.error is not None and op.error.type == "CosignError"
+
+
+def test_admitted_backfill_signs_alongside_the_attestation() -> None:
+    attestor = FakeAttestor()
+    _run(_admitted(_copy_policy()), _busybox_registry(["1.36.0"]), attestor=attestor)
+    assert attestor.signed == ["reg.local/demo/busybox@sha256:mirrordigest"]
+
+
+def test_admit_without_signer_is_refused_before_placing() -> None:
+    registry = _busybox_registry()
+    with pytest.raises(ConfigError, match="admit"):
+        _run(_admitted(_copy_policy()), registry, attestor=None)
+    assert registry.copied == []
+
+
+def test_revoking_admit_removes_no_signature() -> None:
+    # A previously admitted, signed (and attested) digest reconciled with admit: false.
+    bundle = Referrer(
+        digest="sha256:bundle",
+        artifact_type=COSIGN_ATTESTATION_ARTIFACT_TYPE,
+        annotations={},
+        subject_tag="1.36.0",
+    )
+    registry = _busybox_registry(["1.36.0"], referrers={"reg.local/demo/busybox:1.36.0": [bundle]})
+    attestor = FakeAttestor()
+    _run(_copy_policy(), registry, attestor=attestor)
+    assert registry.deleted == []
+    assert registry.unmarked == []
+    assert attestor.signed == []
