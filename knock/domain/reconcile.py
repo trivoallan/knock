@@ -63,6 +63,9 @@ class VariantReconcile:
     aliases: dict[str, str]
     to_sign: list[str] = field(default_factory=list)
     to_sbom: list[str] = field(default_factory=list)
+    # The subset of `to_update` caused by a transform change (a rebuild), whether or not the
+    # upstream digest also moved. The gate's plan tells the two apart; the report does not.
+    to_rebuild: list[str] = field(default_factory=list)
     # pinned tags whose upstream digest is not the pin: withheld this run, placed state untouched
     pin_mismatch: list[str] = field(default_factory=list)
 
@@ -86,6 +89,7 @@ def reconcile_variant(
     to_update: list[str] = []
     to_sign: list[str] = []
     to_sbom: list[str] = []
+    to_rebuild: list[str] = []
     pin_mismatch: list[str] = []
     for src_tag in plan.tags:
         out_tag = src_tag + plan.suffix
@@ -113,6 +117,9 @@ def reconcile_variant(
             to_import.append(out_tag)
         elif decision == "update":
             to_update.append(out_tag)
+            assert mir is not None  # _classify returns "update" only when the mirror is present
+            if mir.transform_version != desired_transform_version:
+                to_rebuild.append(out_tag)
         else:  # "keep" — backfill coverage on the kept digest, signature and SBOM independently
             assert mir is not None  # _classify returns "keep" only when the mirror is present
             if not mir.attested:
@@ -132,6 +139,7 @@ def reconcile_variant(
         aliases=aliases,
         to_sign=to_sign,
         to_sbom=to_sbom,
+        to_rebuild=to_rebuild,
         pin_mismatch=pin_mismatch,
     )
 

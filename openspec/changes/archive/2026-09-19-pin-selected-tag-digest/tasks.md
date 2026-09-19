@@ -14,4 +14,4 @@
 
 - [x] 3.1 `make reference`
 - [x] 3.2 `docs/examples/admission/admitted-redis.yml` pins its tag
-- [x] 3.3 ADR 0051 mirrors this change
+- [x] 3.3 ADR 0052 mirrors this change

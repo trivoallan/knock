@@ -23,6 +23,7 @@ from knock.domain.collision import (
     detect_dest_repo_collisions,
 )
 from knock.domain.deletion_mode import DeletionMode
+from knock.domain.gate import Gate
 from knock.domain.mirror_policy import Archive, MirrorPolicy
 from knock.domain.policy_merge import resolve_imports
 from knock.domain.sharding import owns
@@ -83,6 +84,7 @@ def reconcile_policies(
     sbom_generator: SbomGeneratorPort | None = None,
     sbom_formats: list[str] | None = None,
     retention_global: Archive | None = None,
+    gate: Gate | None = None,
 ) -> RunReport:
     mode: RunMode = "dry-run" if (dry_run_tags or dry_run_deletions) else "apply"
     sbom_formats = sbom_formats or []
@@ -124,6 +126,7 @@ def reconcile_policies(
             sbom_generator=sbom_generator,
             sbom_formats=sbom_formats,
             retention_global=retention_global,
+            gate=gate,
         ),
         GitPlanner(
             registry=registry,

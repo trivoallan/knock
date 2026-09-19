@@ -80,6 +80,7 @@ class StructlogReporter:
             marked=totals.marked,
             attested=totals.attested,
             sbom=totals.sbom,
+            withheld=totals.withheld,
             pin_mismatch=totals.pin_mismatch,
             failed=totals.failed,
         )
@@ -97,6 +98,7 @@ class StructlogReporter:
             marked=report.totals.marked,
             attested=report.totals.attested,
             sbom=report.totals.sbom,
+            withheld=report.totals.withheld,
             pin_mismatch=report.totals.pin_mismatch,
             failed=report.totals.failed,
         )

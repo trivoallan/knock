@@ -1,0 +1,15 @@
+{
+  "apiVersion": "knock.io/v1alpha1",
+  "kind": "ReconcilePlan",
+  "operations": [
+    {
+      "policy": "redis-gated",
+      "kind": "import",
+      "destination": "harbor.example/hub/redis",
+      "tag": "7.2.5",
+      "source": "docker.io/library/redis",
+      "sourceTag": "7.2.5",
+      "sourceDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-# 51. Pin the digest of a selected tag
+# 52. Pin the digest of a selected tag
 
 Date: 2026-09-19
 
@@ -30,8 +30,9 @@ is never removed, so a comparison after placement is too late.
 
 ## Consequences
 
-- The first **withheld** plan entry: removed from the apply, desired set kept, reported apart. This
-  is the seam the proposed gate between plan and apply needs.
+- Composes with [51. The gate between plan and apply](0051-gate-between-plan-and-apply.md): a pin
+  mismatch is withheld before the plan is written, so it never reaches `--plan-out`; a matching
+  pin still goes through the gate like any other operation.
 - A pin judges the **source** digest. A rebuild's output digest is still signed under `admit`
   without a verdict on that output.
 - No new port, adapter or C4 element.

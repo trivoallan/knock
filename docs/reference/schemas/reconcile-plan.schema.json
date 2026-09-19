@@ -1,0 +1,77 @@
+{
+  "$defs": {
+    "PlannedOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "title": "Policy",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "import",
+            "update",
+            "rebuild"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "destination": {
+          "title": "Destination",
+          "type": "string"
+        },
+        "tag": {
+          "title": "Tag",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "sourceTag": {
+          "title": "Sourcetag",
+          "type": "string"
+        },
+        "sourceDigest": {
+          "title": "Sourcedigest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "policy",
+        "kind",
+        "destination",
+        "tag",
+        "source",
+        "sourceTag",
+        "sourceDigest"
+      ],
+      "title": "PlannedOperation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "const": "knock.io/v1alpha1",
+      "default": "knock.io/v1alpha1",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "ReconcilePlan",
+      "default": "ReconcilePlan",
+      "title": "Kind",
+      "type": "string"
+    },
+    "operations": {
+      "items": {
+        "$ref": "#/$defs/PlannedOperation"
+      },
+      "title": "Operations",
+      "type": "array"
+    }
+  },
+  "title": "ReconcilePlan (the gate's plan file)",
+  "type": "object"
+}

@@ -30,6 +30,7 @@ from knock.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE, build_tra
 from knock.domain.collision import AliasTarget
 from knock.domain.deletion_mode import DeletionMode, resolve_deletion_mode
 from knock.domain.expand import ExpandedImport, VariantPlan, expand_import
+from knock.domain.gate import Gate, PlannedOperation
 from knock.domain.lifecycle import (
     PENDING_DELETION_ARTIFACT_TYPE,
     build_pending_deletion_annotations,
@@ -294,6 +295,7 @@ def _apply_plan(
     sbom_generator: SbomGeneratorPort | None,
     sbom_formats: list[str],
     retention_global: Archive | None = None,
+    gate: Gate | None = None,
 ) -> TargetReport:
     registry_source = _require_registry_source(plan.policy)
     src_repo = f"{registry_source.registry}/{registry_source.repository}"
@@ -433,7 +435,13 @@ def _apply_plan(
                 )
 
     def _attest(
-        out_digest: str, *, variant: str, vplan: VariantPlan, out_tag: str, source_digest: str
+        out_digest: str,
+        *,
+        variant: str,
+        vplan: VariantPlan,
+        out_tag: str,
+        source_digest: str,
+        sign: bool,
     ) -> None:
         assert attestor is not None  # callers guard on attestor before calling
         subject = f"{plan.dest_repo}@{out_digest}"
@@ -456,7 +464,7 @@ def _apply_plan(
         )
         # Admission is the last act: the image is signed only once its attestations are
         # placed, and only when the policy asserts admission. Never unsigned afterwards.
-        if plan.policy.spec.admit:
+        if sign and plan.policy.spec.admit:
             attestor.sign(subject)
 
     def _do_import(w: _ImportWork) -> Operation:
@@ -527,6 +535,8 @@ def _apply_plan(
                         vplan=w.vplan,
                         out_tag=w.out_tag,
                         source_digest=source[w.src_tag].digest,
+                        # under the gate, only approved operations reach this point
+                        sign=True,
                     )
             op = Operation(
                 kind=w.kind,
@@ -568,6 +578,9 @@ def _apply_plan(
                     vplan=w.vplan,
                     out_tag=w.out_tag,
                     source_digest=mirror[w.out_tag].base_digest,
+                    # Under the gate a signature means "this digest was approved"; a kept
+                    # digest was not judged this round, so it is attested, never signed.
+                    sign=gate is None,
                 )
             op = Operation(
                 kind="attested",
@@ -758,6 +771,41 @@ def _apply_plan(
                     formats=missing_sbom[out_tag],
                 )
             )
+    withheld_ops: list[tuple[str, Operation]] = []
+    if gate is not None:
+        rebuilds = {(vr.variant, t) for vr in result.variants for t in vr.to_rebuild}
+        admitted: list[_ImportWork] = []
+        for w in import_items:
+            planned = PlannedOperation(
+                policy=policy_name,
+                kind=(
+                    "import"
+                    if w.kind == "imported"
+                    else "rebuild"
+                    if (w.variant, w.out_tag) in rebuilds
+                    else "update"
+                ),
+                destination=plan.dest_repo,
+                tag=w.out_tag,
+                source=src_repo,
+                source_tag=w.src_tag,
+                source_digest=source[w.src_tag].digest,
+            )
+            if gate.admits(planned):
+                admitted.append(w)
+                continue
+            op = Operation(
+                kind="withheld",
+                out_tag=w.out_tag,
+                src_tag=w.src_tag,
+                digest=source[w.src_tag].digest,
+                applied=False,
+            )
+            emit_applied(op, w.variant)
+            withheld_ops.append((w.variant, op))
+        import_items = admitted
+    # A withheld import does not exist in the destination: an alias must not move onto it.
+    withheld_imports = {op.out_tag for _v, op in withheld_ops} - set(mirror)
     import_ops = _run_stage(import_items, _do_import, executor=executor)
     # Barrier. Backfill stage: sign skipped-but-unsigned mirror tags (already up-to-date).
     sign_ops = _run_stage(sign_items, _do_sign, executor=executor)
@@ -768,6 +816,8 @@ def _apply_plan(
     alias_items: list[_AliasWork] = []
     for vr in result.variants:
         for alias_name, target in vr.aliases.items():
+            if target in withheld_imports:
+                continue
             alias_items.append(_AliasWork(variant=vr.variant, alias=alias_name, target=target))
     alias_ops = _run_stage(alias_items, _do_alias, executor=executor)
 
@@ -815,6 +865,8 @@ def _apply_plan(
     attested_by_variant: dict[str, list[Operation]] = defaultdict(list)
     for sit, op in zip(sign_items, sign_ops, strict=True):
         attested_by_variant[sit.variant].append(op)
+    for wv, op in withheld_ops:
+        imports_by_variant[wv].append(op)
     sbom_by_variant: dict[str, list[Operation]] = defaultdict(list)
     for sbit, op in zip(sbom_items, sbom_ops, strict=True):
         sbom_by_variant[sbit.variant].append(op)
@@ -904,6 +956,7 @@ class RegistryPlanner:
     sbom_generator: SbomGeneratorPort | None = None
     sbom_formats: list[str] = field(default_factory=list)
     retention_global: Archive | None = None
+    gate: Gate | None = None  # None ⇒ ungated reconcile (see knock.domain.gate)
     # A field rather than a local because `plan` and `apply` must share ONE session
     # set: `plan` logs into the source registries, `apply` into the destinations, and
     # a second set would re-login hosts already configured. Public so a driver can
@@ -1015,6 +1068,7 @@ class RegistryPlanner:
                             sbom_generator=self.sbom_generator,
                             sbom_formats=self.sbom_formats,
                             retention_global=self.retention_global,
+                            gate=self.gate,
                         )
                     )
                 all_ops = [op for t in targets for v in t.variants for op in v.operations] + [

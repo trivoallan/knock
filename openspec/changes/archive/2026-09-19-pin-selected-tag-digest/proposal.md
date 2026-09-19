@@ -65,4 +65,4 @@ the evaluated digest" (D-24's V-8 case):
 - Use cases: `reconcile_registry` (emits the outcome), `report` (counts and schema).
 - CLI: `render` (text recap).
 - Docs: `docs/reference/` regenerated; `docs/examples/admission/admitted-redis.yml` pins its tag;
-  ADR 0051.
+  ADR 0052.
