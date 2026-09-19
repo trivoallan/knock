@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/trivoallan/knock/compare/v0.11.0...v0.12.0) (2026-09-19)
+
+
+### Features
+
+* **cli:** publish the knock audit JSON report as a versioned contract ([#289](https://github.com/trivoallan/knock/issues/289)) ([53203a4](https://github.com/trivoallan/knock/commit/53203a41d4fa3b765828bbb9de026a005b85f10d))
+
 ## [0.11.0](https://github.com/trivoallan/knock/compare/v0.10.0...v0.11.0) (2026-09-19)
 
 
