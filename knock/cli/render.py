@@ -42,7 +42,8 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
             stream.write(
                 f"{mark} {p.name}{label}  imported={t.imported} updated={t.updated} "
                 f"deleted={t.deleted} aliased={t.aliased} skipped={t.skipped} "
-                f"marked={t.marked} attested={t.attested} sbom={t.sbom} failed={t.failed}\n"
+                f"marked={t.marked} attested={t.attested} sbom={t.sbom} "
+                f"pin_mismatch={t.pin_mismatch} failed={t.failed}\n"
             )
         if verbose:
             for tgt in p.targets:
@@ -58,7 +59,7 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
         f"reconcile [{report.mode}] status={report.status}  "
         f"imported={t.imported} updated={t.updated} deleted={t.deleted} "
         f"aliased={t.aliased} skipped={t.skipped} marked={t.marked} "
-        f"attested={t.attested} sbom={t.sbom} failed={t.failed} "
+        f"attested={t.attested} sbom={t.sbom} pin_mismatch={t.pin_mismatch} failed={t.failed} "
         f"failed_policies={report.failed_policies}\n"
     )
 

@@ -825,9 +825,21 @@ def _apply_plan(
         ops: list[Operation] = list(imports_by_variant[vr.variant])
         ops.extend(attested_by_variant[vr.variant])
         ops.extend(sbom_by_variant[vr.variant])
+        withheld = set(vr.pin_mismatch)
         for tag in vplan.tags:
             out_tag = tag + vplan.suffix
-            if out_tag not in changed:
+            if out_tag in withheld:
+                pop = Operation(
+                    kind="pin_mismatch",
+                    out_tag=out_tag,
+                    src_tag=tag,
+                    digest=source[tag].digest,
+                    pinned_digest=vplan.pins[tag],
+                    applied=False,
+                )
+                ops.append(pop)
+                emit_applied(pop, vr.variant)
+            elif out_tag not in changed:
                 sop = Operation(
                     kind="skipped",
                     out_tag=out_tag,

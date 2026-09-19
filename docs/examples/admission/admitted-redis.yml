@@ -20,7 +20,11 @@ spec:
   imports:
     - name: v7
       tags:
-        names: ["7.2.5"]  # pinned: an admitted tag that moves upstream would be re-signed unjudged
+        names: ["7.2.5"]
+        # The digest the evaluator judged. If upstream republishes 7.2.5, knock withholds it
+        # (reported as `pin_mismatch`) instead of placing and signing an unjudged digest.
+        pins:
+          "7.2.5": sha256:0000000000000000000000000000000000000000000000000000000000000000
       destinations:
         - project: hub
           repository: redis

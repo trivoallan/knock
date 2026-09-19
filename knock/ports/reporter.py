@@ -13,7 +13,15 @@ if TYPE_CHECKING:
     from knock.use_cases.report import RunReport
 
 OperationKind = Literal[
-    "imported", "updated", "deleted", "aliased", "skipped", "marked", "attested", "sbom"
+    "imported",
+    "updated",
+    "deleted",
+    "aliased",
+    "skipped",
+    "marked",
+    "attested",
+    "sbom",
+    "pin_mismatch",
 ]
 
 
@@ -28,6 +36,7 @@ class Counts:
     attested: int = 0
     sbom: int = 0
     failed: int = 0
+    pin_mismatch: int = 0  # pinned tags withheld: upstream no longer serves the pinned digest
 
 
 @dataclass(frozen=True)
