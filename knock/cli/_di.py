@@ -39,7 +39,11 @@ class Container:
 
 def build_container(settings: Settings | None = None) -> Container:
     settings = settings or Settings()
-    attestor = CosignAdapter(settings.attest) if settings.attest_signer else None
+    attestor = (
+        CosignAdapter(settings.attest, roster=settings.registries)
+        if settings.attest_signer
+        else None
+    )
     return Container(
         settings=settings,
         registry=RegctlAdapter(),

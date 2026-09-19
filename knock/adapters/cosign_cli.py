@@ -18,7 +18,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from knock.config import AttestSettings
+from knock.config import AttestSettings, RegistryConfig, match_registry_by_host
 from knock.domain.attestation import build_signing_config
 from knock.errors import CosignError
 from knock.ports.attestor import AttestationRef, VerifiedPredicate
@@ -27,8 +27,14 @@ _DIGEST_RE = re.compile(r"sha256:[0-9a-f]{64}(?![0-9a-f])")
 
 
 class CosignAdapter:
-    def __init__(self, config: AttestSettings, binary: str | None = None) -> None:
+    def __init__(
+        self,
+        config: AttestSettings,
+        binary: str | None = None,
+        roster: dict[str, RegistryConfig] | None = None,
+    ) -> None:
         self._config = config
+        self._roster = roster or {}
         # Lazy resolution (cf. buildkit/regctl): does not block Container construction
         # in environments where cosign is not installed.
         if binary is not None:
@@ -55,6 +61,14 @@ class CosignAdapter:
             return ["--key", cfg.key_ref]
         return []
 
+    def _registry_args(self, subject_ref: str) -> list[str]:
+        # The roster's tls_verify is the single source of truth, as for regctl/BuildKit:
+        # `false` means plain HTTP, so cosign must both allow HTTP and skip TLS checks.
+        match = match_registry_by_host(subject_ref, self._roster)
+        if match is None or match[1].tls_verify:
+            return []
+        return ["--allow-insecure-registry", "--allow-http-registry"]
+
     def attest(self, subject_ref: str, statement: dict[str, Any]) -> AttestationRef:
         cfg = self._config
         predicate_type = str(statement.get("predicateType", ""))
@@ -78,6 +92,7 @@ class CosignAdapter:
                 "--predicate",
                 str(pred_path),
                 *self._key_args(),
+                *self._registry_args(subject_ref),
                 "--signing-config",
                 str(scfg_path),
                 subject_ref,
@@ -113,7 +128,14 @@ class CosignAdapter:
         ]
 
     def verify(self, subject_ref: str, predicate_type: str) -> list[VerifiedPredicate]:
-        args = ["verify-attestation", "--type", predicate_type, *self._verify_args(), subject_ref]
+        args = [
+            "verify-attestation",
+            "--type",
+            predicate_type,
+            *self._verify_args(),
+            *self._registry_args(subject_ref),
+            subject_ref,
+        ]
         try:
             r = subprocess.run(  # noqa: S603
                 [self._resolve(), *args],

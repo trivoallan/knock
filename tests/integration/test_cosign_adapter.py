@@ -38,3 +38,42 @@ def test_verify_passes_key_and_tlog_flags(fake_bin_path, tmp_path, monkeypatch):
     assert "verify-attestation" in argv
     assert "--key" in argv
     assert "--insecure-ignore-tlog=true" in argv
+
+
+INSECURE = "--allow-insecure-registry --allow-http-registry"
+
+
+def _roster_adapter():
+    from knock.config import RegistryConfig
+
+    return CosignAdapter(
+        AttestSettings(signer="key", key_ref="/tmp/cosign.pub"),
+        roster={
+            "local": RegistryConfig(host="registry.local:5000", tls_verify=False),
+            "corp": RegistryConfig(host="reg.example"),
+        },
+    )
+
+
+def test_attest_and_verify_allow_http_when_roster_says_tls_verify_false(
+    fake_bin_path, tmp_path, monkeypatch
+):
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    subject = "registry.local:5000/app@sha256:" + "c" * 64
+    adapter = _roster_adapter()
+    adapter.attest(subject, {"predicateType": "https://knock.dev/p", "predicate": {}})
+    adapter.verify(subject, "https://knock.dev/p")
+    attest_line, verify_line = log.read_text().splitlines()
+    assert INSECURE in attest_line
+    assert INSECURE in verify_line
+
+
+def test_tls_or_unknown_registry_gets_no_insecure_flags(fake_bin_path, tmp_path, monkeypatch):
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    adapter = _roster_adapter()
+    for subject in (SUBJECT, "other.example/app@sha256:" + "c" * 64):
+        adapter.attest(subject, {"predicateType": "https://knock.dev/p", "predicate": {}})
+        adapter.verify(subject, "https://knock.dev/p")
+    assert "--allow-" not in log.read_text()

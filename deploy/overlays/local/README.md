@@ -50,7 +50,9 @@ plain HTTP. buildkitd defaults to HTTPS — but knock derives BuildKit's
 ([`secret-registries.yaml`](secret-registries.yaml)), the *same* primitive that makes
 `regctl` copy over HTTP (`--tls disabled`). So the copy and rebuild paths share one source
 of truth and the shared [`components/buildkitd`](../../components/buildkitd) is used as-is —
-no overlay-local `buildkitd.toml`, no `--config` patch. (BuildKit's `registry.insecure`
+no overlay-local `buildkitd.toml`, no `--config` patch. The same flag makes cosign attest and
+verify over HTTP (`--allow-insecure-registry --allow-http-registry`) when `KNOCK_ATTEST_SIGNER`
+is set. (BuildKit's `registry.insecure`
 covers the *push*; base images here are pulled from Docker Hub over HTTPS.)
 
 ## Running before merge

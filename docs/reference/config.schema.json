@@ -149,7 +149,7 @@
         },
         "tls_verify": {
           "default": true,
-          "description": "Set to `false` for plain-HTTP registries; knock then pushes insecurely on both paths \u2014 `regctl registry set \u2026 --tls disabled` for copies and `registry.insecure=true` for BuildKit rebuilds.",
+          "description": "Set to `false` for plain-HTTP registries; knock then pushes insecurely everywhere \u2014 `regctl registry set \u2026 --tls disabled` for copies, `registry.insecure=true` for BuildKit rebuilds, and `--allow-insecure-registry --allow-http-registry` for cosign attest/verify.",
           "title": "Tls Verify",
           "type": "boolean"
         },
