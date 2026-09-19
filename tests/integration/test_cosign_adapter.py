@@ -77,3 +77,64 @@ def test_tls_or_unknown_registry_gets_no_insecure_flags(fake_bin_path, tmp_path,
         adapter.attest(subject, {"predicateType": "https://knock.dev/p", "predicate": {}})
         adapter.verify(subject, "https://knock.dev/p")
     assert "--allow-" not in log.read_text()
+
+
+def test_sign_signs_the_image_with_key_and_signing_config(fake_bin_path, tmp_path, monkeypatch):
+    log = tmp_path / "cosign.log"
+    scfg = tmp_path / "scfg.json"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    monkeypatch.setenv("FAKE_COSIGN_SIGNING_CONFIG", str(scfg))
+    _adapter().sign(SUBJECT)
+    argv = log.read_text().split()
+    assert argv[0] == "sign"
+    assert "--yes" in argv
+    assert argv[argv.index("--key") + 1] == "/tmp/cosign.pub"
+    assert argv[-1] == SUBJECT
+    assert "--type" not in argv  # an image signature, not a predicate
+    assert scfg.exists()  # same signing-config as attest
+
+
+def test_sign_failure_raises(fake_bin_path, monkeypatch):
+    import pytest
+
+    from knock.errors import CosignError
+
+    monkeypatch.setenv("FAKE_COSIGN_SCENARIO", "fail")
+    with pytest.raises(CosignError, match="cosign sign failed"):
+        _adapter().sign(SUBJECT)
+
+
+def test_verify_signature_true_on_image_signature_claim(fake_bin_path, tmp_path, monkeypatch):
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    monkeypatch.setenv("FAKE_COSIGN_SIGVERIFY_SCENARIO", "signed")
+    assert _adapter().verify_signature(SUBJECT) is True
+    argv = log.read_text().split()
+    assert argv[0] == "verify"
+    assert "--insecure-ignore-tlog=true" in argv
+
+
+def test_verify_signature_rejects_attestation_only_claim(fake_bin_path, monkeypatch):
+    # cosign v3 `verify` exits 0 on an attestation-only image: the claim type decides.
+    monkeypatch.setenv("FAKE_COSIGN_SIGVERIFY_SCENARIO", "attested-only")
+    assert _adapter().verify_signature(SUBJECT) is False
+
+
+def test_verify_signature_false_when_none_or_garbage(fake_bin_path, monkeypatch):
+    for scenario in ("none", "garbage"):
+        monkeypatch.setenv("FAKE_COSIGN_SIGVERIFY_SCENARIO", scenario)
+        assert _adapter().verify_signature(SUBJECT) is False
+
+
+def test_sign_and_verify_signature_allow_http_on_plain_http_registry(
+    fake_bin_path, tmp_path, monkeypatch
+):
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    subject = "registry.local:5000/app@sha256:" + "c" * 64
+    adapter = _roster_adapter()
+    adapter.sign(subject)
+    adapter.verify_signature(subject)
+    sign_line, verify_line = log.read_text().splitlines()
+    assert INSECURE in sign_line
+    assert INSECURE in verify_line
