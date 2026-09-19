@@ -1,0 +1,29 @@
+# A gated policy (D-30): every import, update and rebuild goes through an external verdict
+# before knock applies it. knock does not call the evaluator; it writes the plan and applies
+# a filtered one. The orchestrator sits between the two runs:
+#
+#   knock reconcile docs/examples/gate --plan-out plan.json      # places nothing
+#   # for each entry: evaluate {source}@{sourceDigest}; drop the refused entries
+#   knock reconcile docs/examples/gate --apply-plan plan.json    # applies what remains
+#
+# Unlike docs/examples/admission/admitted-redis.yml, the selection need not be pinned: an
+# upstream re-push is an `update` entry, judged on its new digest like any import. Under
+# --apply-plan, `admit: true` signs only what the filtered plan approved (ADR 0051).
+apiVersion: knock.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis-gated
+spec:
+  artifactType: image
+  admit: true
+  source:
+    registry: docker.io
+    repository: library/redis
+  imports:
+    - name: v7
+      tags:
+        includeRegex: "^7\\.2\\.[0-9]+$"
+        aliases: ["7.2"]
+      destinations:
+        - project: hub
+          repository: redis

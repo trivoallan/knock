@@ -47,6 +47,8 @@ $ knock reconcile [OPTIONS] {directory}
 * `--shard-index <int range>`: This shard's 0-based index (pass $JOB_COMPLETION_INDEX in an Indexed Job).  [default: 0; x>=0]
 * `--shard-count <int range>`: Total shards N (1 = process all policies).  [default: 1; x>=1]
 * `--report-json`: Emit the reconcile report as JSON to stdout (for piping to `knock scan enqueue`).
+* `--plan-out <path>`: Gate, step 1: place nothing, write every import/update/rebuild the run would perform to FILE (a ReconcilePlan) for an external evaluator.
+* `--apply-plan <path>`: Gate, step 2: reconcile, but apply an import/update/rebuild only if FILE (a filtered ReconcilePlan) still names it; report the others as withheld.
 * `--help`: Show this message and exit.
 
 ## `knock purge`

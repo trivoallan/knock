@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 import knock.cli.reconcile as cli_reconcile
 from knock.cli.main import app
 from knock.domain.deletion_mode import DeletionMode
-from knock.errors import PolicyValidationError
+from knock.errors import ConfigError, PolicyValidationError
 
 POLICY = """
 apiVersion: knock.io/v1alpha1
@@ -208,3 +208,106 @@ def test_cli_threads_global_deletion_mode(
     result = CliRunner().invoke(app, ["reconcile", str(tmp_path), "--dry-run"])
     assert result.exit_code == 0, result.stdout
     assert captured["deletion_mode"] is DeletionMode.mark
+
+
+# --- the gate: --plan-out / --apply-plan ---
+
+
+def _copies(log: Path) -> list[str]:
+    return [ln for ln in log.read_text().splitlines() if ln.startswith("image copy")]
+
+
+def test_plan_out_writes_the_plan_and_places_nothing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    import json
+
+    _env(monkeypatch)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "tags-redis")
+    log = tmp_path / "regctl.log"
+    monkeypatch.setenv("FAKE_REGCTL_LOG", str(log))
+    policies = tmp_path / "policies"
+    policies.mkdir()
+    (policies / "redis.yml").write_text(POLICY)
+    plan = tmp_path / "plan.json"
+
+    result = CliRunner().invoke(app, ["reconcile", str(policies), "--plan-out", str(plan)])
+
+    assert result.exit_code == 0, result.stdout
+    assert "reconcile [dry-run]" in result.stdout
+    doc = json.loads(plan.read_text())
+    assert doc["kind"] == "ReconcilePlan"
+    assert [(o["kind"], o["tag"], o["destination"]) for o in doc["operations"]] == [
+        ("import", "7.2.0", "harbor.corp/lib/redis"),
+        ("import", "7.3.0", "harbor.corp/lib/redis"),
+    ]
+    assert all(o["sourceDigest"].startswith("sha256:") for o in doc["operations"])
+    assert _copies(log) == []
+
+
+def test_apply_plan_places_only_the_filtered_plan(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    import json
+
+    _env(monkeypatch)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "tags-redis")
+    log = tmp_path / "regctl.log"
+    monkeypatch.setenv("FAKE_REGCTL_LOG", str(log))
+    policies = tmp_path / "policies"
+    policies.mkdir()
+    (policies / "redis.yml").write_text(POLICY)
+    plan = tmp_path / "plan.json"
+    assert (
+        CliRunner().invoke(app, ["reconcile", str(policies), "--plan-out", str(plan)]).exit_code
+        == 0
+    )
+    # The orchestrator refuses 7.3.0: it removes the entry.
+    doc = json.loads(plan.read_text())
+    doc["operations"] = [o for o in doc["operations"] if o["tag"] != "7.3.0"]
+    plan.write_text(json.dumps(doc))
+
+    result = CliRunner().invoke(
+        app, ["reconcile", str(policies), "--apply-plan", str(plan), "--report-json"]
+    )
+
+    assert result.exit_code == 0, result.stdout
+    copies = _copies(log)
+    assert len(copies) == 1 and copies[0].endswith("harbor.corp/lib/redis:7.2.0")
+    report = json.loads(result.stdout)
+    assert report["totals"]["imported"] == 1
+    assert report["totals"]["withheld"] == 1
+
+
+def test_plan_out_and_apply_plan_are_exclusive(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    _env(monkeypatch)
+    (tmp_path / "redis.yml").write_text(POLICY)
+    result = CliRunner().invoke(
+        app,
+        ["reconcile", str(tmp_path), "--plan-out", "a.json", "--apply-plan", "b.json"],
+    )
+    assert isinstance(result.exception, ConfigError)  # exit 3 through knock.cli.main
+
+
+def test_invalid_plan_file_is_refused_before_placing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    _env(monkeypatch)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "tags-redis")
+    log = tmp_path / "regctl.log"
+    monkeypatch.setenv("FAKE_REGCTL_LOG", str(log))
+    policies = tmp_path / "policies"
+    policies.mkdir()
+    (policies / "redis.yml").write_text(POLICY)
+    plan = tmp_path / "plan.json"
+    plan.write_text(
+        '{"apiVersion": "knock.io/v1alpha1", "kind": "ReconcilePlan", '
+        '"operations": [{"policy": "redis", "kind": "delete"}]}'
+    )
+
+    result = CliRunner().invoke(app, ["reconcile", str(policies), "--apply-plan", str(plan)])
+
+    assert isinstance(result.exception, ConfigError)  # exit 3 through knock.cli.main
+    assert not log.exists() or _copies(log) == []
