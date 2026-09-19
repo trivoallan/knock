@@ -56,5 +56,5 @@ admitted tags), so knock needs a contract for knowing that an image is admitted.
 - No new port, adapter, external system or C4 actor: `AttestorPort` gains `sign` and
   `verify_signature` on the existing cosign adapter.
 
-Full change: [openspec/changes/sign-image-at-admission](../../../openspec/changes/sign-image-at-admission/proposal.md)
-([design](../../../openspec/changes/sign-image-at-admission/design.md)).
+Full change: [openspec/changes/archive/2026-09-19-sign-image-at-admission](../../../openspec/changes/archive/2026-09-19-sign-image-at-admission/proposal.md)
+([design](../../../openspec/changes/archive/2026-09-19-sign-image-at-admission/design.md)).
