@@ -40,5 +40,5 @@ evaluator between two runs (b).
 - No new port, adapter, external system or C4 actor: the orchestrator and evaluator stay outside
   knock, which reads and writes a file.
 
-Full change: [openspec/changes/gate-between-plan-and-apply](../../../openspec/changes/gate-between-plan-and-apply/proposal.md)
-([design](../../../openspec/changes/gate-between-plan-and-apply/design.md)).
+Full change: [openspec/changes/archive/2026-09-19-gate-between-plan-and-apply](../../../openspec/changes/archive/2026-09-19-gate-between-plan-and-apply/proposal.md)
+([design](../../../openspec/changes/archive/2026-09-19-gate-between-plan-and-apply/design.md)).

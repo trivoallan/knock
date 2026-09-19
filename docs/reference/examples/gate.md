@@ -25,4 +25,4 @@ What `--apply-plan` guarantees:
 - with `admit: true`, only approved placements are signed.
 
 A `rebuild` is judged on its source digest; the rebuilt output is not evaluated before it is
-placed. See the [design](https://github.com/trivoallan/knock/blob/main/openspec/changes/gate-between-plan-and-apply/design.md).
+placed. See the [design](https://github.com/trivoallan/knock/blob/main/openspec/changes/archive/2026-09-19-gate-between-plan-and-apply/design.md).
