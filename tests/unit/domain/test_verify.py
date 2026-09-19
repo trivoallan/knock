@@ -116,3 +116,16 @@ def test_scan_pass_picks_freshest_predicate():
 def test_scan_pass_fails_closed_on_unparseable_attested_at():
     out = _eval({Requirement.scan_pass}, scan_predicates=[_pred("not-a-date", high=0)]).outcomes[0]
     assert out.passed is False and "unparseable" in out.detail
+
+
+def test_parse_requirements_accepts_image_signature():
+    assert parse_requirements("image-signature,stamp") == {
+        Requirement.image_signature,
+        Requirement.stamp,
+    }
+
+
+def test_image_signature_passes_only_when_signed():
+    assert _eval({Requirement.image_signature}, image_signed=True).passed is True
+    out = _eval({Requirement.image_signature}, image_signed=False).outcomes[0]
+    assert out.passed is False and "image signature" in out.detail

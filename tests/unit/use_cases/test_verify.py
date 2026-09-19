@@ -105,3 +105,34 @@ def test_verify_scan_pass_without_attestor_is_config_error():
             max_severity=Severity.high,
             max_age=timedelta(days=7),
         )
+
+
+def _verify_signature(attestor):
+    from knock.use_cases.verify import verify_image
+
+    return verify_image(
+        REF,
+        requirements={Requirement.image_signature},
+        registry=_registry(),
+        attestor=attestor,
+        clock=FakeClock(NOW),
+        label_prefix="io.knock",
+        max_severity=Severity.high,
+        max_age=timedelta(days=7),
+    )
+
+
+def test_verify_image_signature_reads_the_pinned_digest():
+    attestor = FakeAttestor(image_signed=True)
+    assert _verify_signature(attestor).passed is True
+    assert attestor.signature_verified == [REF]
+
+
+def test_verify_image_signature_fails_closed_when_unsigned():
+    # e.g. an image carrying knock's attestations but never admitted
+    assert _verify_signature(FakeAttestor(image_signed=False)).passed is False
+
+
+def test_verify_image_signature_without_attestor_is_config_error():
+    with pytest.raises(ConfigError, match="image-signature"):
+        _verify_signature(None)
