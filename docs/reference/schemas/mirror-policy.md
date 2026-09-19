@@ -72,6 +72,8 @@ sidebar_position: 1
             - [4.5.1.4.1.4.1. names items](#spec_defaults_anyOf_i0_tags_anyOf_i0_names_items)
           - [4.5.1.4.1.5. Property `aliases`](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases)
             - [4.5.1.4.1.5.1. aliases items](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items)
+          - [4.5.1.4.1.6. Property `pins`](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins)
+            - [4.5.1.4.1.6.1. Property `additionalProperties`](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins_additionalProperties)
         - [4.5.1.4.2. Property `item 1`](#spec_defaults_anyOf_i0_tags_anyOf_i1)
       - [4.5.1.5. Property `platforms`](#spec_defaults_anyOf_i0_platforms)
         - [4.5.1.5.1. Property `item 0`](#spec_defaults_anyOf_i0_platforms_anyOf_i0)
@@ -911,6 +913,7 @@ Must be one of:
 | - [semverOnly](#spec_defaults_anyOf_i0_tags_anyOf_i0_semverOnly )     | No      | boolean         | No         | -          | Semveronly        |
 | - [names](#spec_defaults_anyOf_i0_tags_anyOf_i0_names )               | No      | array of string | No         | -          | Names             |
 | - [aliases](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases )           | No      | array of string | No         | -          | Aliases           |
+| - [pins](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins )                 | No      | object          | No         | -          | Pins              |
 
 ###### 4.5.1.4.1.1. Property `includeRegex` {#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex}
 
@@ -1045,6 +1048,33 @@ Must be one of:
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
+
+###### 4.5.1.4.1.6. Property `pins` {#spec_defaults_anyOf_i0_tags_anyOf_i0_pins}
+
+**Title:** Pins
+
+|                           |                                                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                               |
+| **Required**              | No                                                                                                                     |
+| **Additional properties** | [Each additional property must conform to the schema](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins_additionalProperties) |
+
+**Description:** Tag → the digest it must still resolve to upstream (e.g. the digest an evaluator judged). A pin constrains a selected tag, it never selects one. When the upstream digest differs, the tag is withheld for the run — not imported, updated, signed nor deleted — and reported as `pin_mismatch`; when it matches, the tag is updated without waiting out the digest-stability window.
+
+| Property                                                               | Pattern | Type   | Deprecated | Definition | Title/Description |
+| ---------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ----------------- |
+| - [](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins_additionalProperties ) | No      | string | No         | -          | -                 |
+
+###### 4.5.1.4.1.6.1. Property `additionalProperties` {#spec_defaults_anyOf_i0_tags_anyOf_i0_pins_additionalProperties}
+
+|              |          |
+| ------------ | -------- |
+| **Type**     | `string` |
+| **Required** | No       |
+
+| Restrictions                      |                                                                                                                                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Must match regular expression** | ```^(sha256:[0-9a-f]{64}\|sha512:[0-9a-f]{128})$``` [Test](https://regex101.com/?regex=%5E%28sha256%3A%5B0-9a-f%5D%7B64%7D%7Csha512%3A%5B0-9a-f%5D%7B128%7D%29%24) |
 
 ###### 4.5.1.4.2. Property `item 1` {#spec_defaults_anyOf_i0_tags_anyOf_i1}
 

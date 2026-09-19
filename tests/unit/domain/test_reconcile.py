@@ -424,3 +424,68 @@ def test_within_grace_unattested_still_backfills_signature() -> None:
     result = reconcile_variant(plan, source, mirror, _now())
     assert result.to_update == []  # within grace
     assert result.to_sign == ["7.2.5"]
+
+
+# --- pins: the digest the selection was judged on -------------------------------------
+
+PIN = "sha256:" + "a" * 64
+MOVED = "sha256:" + "b" * 64
+
+
+def _pinned(pins: dict[str, str], aliases: dict[str, str] | None = None) -> VariantPlan:
+    return VariantPlan(
+        name="default",
+        suffix="",
+        transform=[],
+        tags=["7.2.5"],
+        aliases=aliases or {},
+        pins=pins,
+    )
+
+
+def test_pin_mismatch_withholds_a_first_import() -> None:
+    source = {"7.2.5": _src(MOVED, 30)}
+    result = reconcile_variant(_pinned({"7.2.5": PIN}), source, {}, NOW)
+    assert result.pin_mismatch == ["7.2.5"]
+    assert result.to_import == []
+
+
+def test_pin_mismatch_leaves_the_placed_tag_untouched() -> None:
+    # stale base, settled upstream move, unsigned, no SBOM: every route would fire unpinned
+    source = {"7.2.5": _src(MOVED, 30)}
+    mirror = {"7.2.5": MirrorArtifact(base_digest=PIN, attested=False, sbom_covered=False)}
+    result = reconcile_variant(_pinned({"7.2.5": PIN}), source, mirror, NOW)
+    assert result.pin_mismatch == ["7.2.5"]
+    assert (result.to_import, result.to_update, result.to_sign, result.to_sbom) == ([], [], [], [])
+
+
+def test_pin_mismatch_does_not_repoint_its_alias() -> None:
+    source = {"7.2.5": _src(MOVED, 30)}
+    result = reconcile_variant(_pinned({"7.2.5": PIN}, {"latest": "7.2.5"}), source, {}, NOW)
+    assert result.aliases == {}
+
+
+def test_pin_mismatch_keeps_the_tag_desired() -> None:
+    plan = _pinned({"7.2.5": PIN})
+    expanded = ExpandedImport(
+        name="v7", destinations=None, platforms=None, archive=None, variants=[plan]
+    )
+    mirror = {"7.2.5": MirrorArtifact(base_digest=PIN)}
+    result = reconcile_import(expanded, {"7.2.5": _src(MOVED, 30)}, mirror, NOW)
+    assert result.to_delete == []
+    assert result.variants[0].pin_mismatch == ["7.2.5"]
+
+
+def test_matching_pin_supersedes_the_stability_window() -> None:
+    source = {"7.2.5": _src(PIN, 1)}  # moved to the pinned digest yesterday
+    mirror = {"7.2.5": MirrorArtifact(base_digest=MOVED)}
+    result = reconcile_variant(_pinned({"7.2.5": PIN}), source, mirror, NOW)
+    assert result.to_update == ["7.2.5"]
+    assert result.pin_mismatch == []
+
+
+def test_unpinned_tag_keeps_the_stability_window() -> None:
+    source = {"7.2.5": _src(PIN, 1)}
+    mirror = {"7.2.5": MirrorArtifact(base_digest=MOVED)}
+    result = reconcile_variant(_pinned({}), source, mirror, NOW)
+    assert result.to_update == []

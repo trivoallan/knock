@@ -141,6 +141,9 @@ class Destination(_CamelModel):
     repository: str = Field(description="Destination repository.")
 
 
+Digest = Annotated[str, Field(pattern=r"^(sha256:[0-9a-f]{64}|sha512:[0-9a-f]{128})$")]
+
+
 class TagSelection(_CamelModel):
     include_regex: str | None = Field(
         default=None,
@@ -160,6 +163,14 @@ class TagSelection(_CamelModel):
         default_factory=list,
         description="Moving-tag alias templates (e.g. `{major}.{minor}`, `latest`) "
         "re-pointed every run.",
+    )
+    pins: dict[str, Digest] = Field(
+        default_factory=dict,
+        description="Tag → the digest it must still resolve to upstream (e.g. the digest an "
+        "evaluator judged). A pin constrains a selected tag, it never selects one. When the "
+        "upstream digest differs, the tag is withheld for the run — not imported, updated, "
+        "signed nor deleted — and reported as `pin_mismatch`; when it matches, the tag is "
+        "updated without waiting out the digest-stability window.",
     )
 
 
