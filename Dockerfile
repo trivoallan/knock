@@ -11,16 +11,16 @@ RUN pip install --no-cache-dir uv && uv build
 FROM python:3.13-alpine AS runtime
 
 # buildctl comes from the official upstream image (static Go binary).
-COPY --from=moby/buildkit:v0.32.2 /usr/bin/buildctl /usr/bin/buildctl
+COPY --from=moby/buildkit:v0.33.0 /usr/bin/buildctl /usr/bin/buildctl
 
 # regctl is knock's registry client (list/copy/annotate/delete/login/registry-set).
-COPY --from=regclient/regctl:v0.11.5 /regctl /usr/bin/regctl
+COPY --from=regclient/regctl:v0.11.6 /regctl /usr/bin/regctl
 
 # cosign signs the in-toto attestations on the rebuild path (KNOCK_ATTEST_*).
 COPY --from=ghcr.io/sigstore/cosign/cosign:v3.1.3 /ko-app/cosign /usr/bin/cosign
 
 # syft generates the package-level SBOM on both paths (KNOCK_SBOM_FORMATS).
-COPY --from=anchore/syft:v1.51.1 /syft /usr/bin/syft
+COPY --from=anchore/syft:v1.52.0 /syft /usr/bin/syft
 
 # bash: the demo/ops Jobs (reconcile helpers, blast-radius, publish-sbom, scan-attach, seed-incident)
 # run bash scripts mounted into this image — Alpine ships only busybox sh, so add bash (regression
