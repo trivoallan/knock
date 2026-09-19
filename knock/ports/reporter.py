@@ -22,6 +22,7 @@ OperationKind = Literal[
     "attested",
     "sbom",
     "withheld",  # refused by the gate (--apply-plan): not applied, destination untouched
+    "pin_mismatch",
 ]
 
 
@@ -37,6 +38,7 @@ class Counts:
     sbom: int = 0
     withheld: int = 0
     failed: int = 0
+    pin_mismatch: int = 0  # pinned tags withheld: upstream no longer serves the pinned digest
 
 
 @dataclass(frozen=True)

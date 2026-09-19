@@ -7,7 +7,7 @@ suffix is carried, not applied; Phase 3 applies it when reconciling.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from knock.domain.aliases import resolve_aliases
 from knock.domain.mirror_policy import Archive, Destination, TransformStep
@@ -23,6 +23,7 @@ class VariantPlan:
     transform: list[TransformStep]
     tags: list[str]  # selected concrete source tags (un-suffixed)
     aliases: dict[str, str]  # alias name → concrete target tag (un-suffixed)
+    pins: dict[str, str] = field(default_factory=dict)  # source tag → expected source digest
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,7 @@ def expand_import(resolved: ResolvedImport, source_tags: list[str]) -> ExpandedI
             transform=v.transform,
             tags=tags,
             aliases=aliases,
+            pins=resolved.tags.pins,
         )
         for v in expand_variants(resolved)
     ]

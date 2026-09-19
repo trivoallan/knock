@@ -508,6 +508,15 @@
           },
           "title": "Aliases",
           "type": "array"
+        },
+        "pins": {
+          "additionalProperties": {
+            "pattern": "^(sha256:[0-9a-f]{64}|sha512:[0-9a-f]{128})$",
+            "type": "string"
+          },
+          "description": "Tag \u2192 the digest it must still resolve to upstream (e.g. the digest an evaluator judged). A pin constrains a selected tag, it never selects one. When the upstream digest differs, the tag is withheld for the run \u2014 not imported, updated, signed nor deleted \u2014 and reported as `pin_mismatch`; when it matches, the tag is updated without waiting out the digest-stability window.",
+          "title": "Pins",
+          "type": "object"
         }
       },
       "title": "TagSelection",

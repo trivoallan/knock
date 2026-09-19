@@ -66,6 +66,8 @@ class VariantReconcile:
     # The subset of `to_update` caused by a transform change (a rebuild), whether or not the
     # upstream digest also moved. The gate's plan tells the two apart; the report does not.
     to_rebuild: list[str] = field(default_factory=list)
+    # pinned tags whose upstream digest is not the pin: withheld this run, placed state untouched
+    pin_mismatch: list[str] = field(default_factory=list)
 
 
 def reconcile_variant(
@@ -88,6 +90,7 @@ def reconcile_variant(
     to_sign: list[str] = []
     to_sbom: list[str] = []
     to_rebuild: list[str] = []
+    pin_mismatch: list[str] = []
     for src_tag in plan.tags:
         out_tag = src_tag + plan.suffix
         try:
@@ -97,9 +100,18 @@ def reconcile_variant(
                 f"source tag {src_tag!r} absent from source state — "
                 "expand_import selection and source fetch must be consistent"
             ) from exc
+        pin = plan.pins.get(src_tag)
+        if pin is not None and src.digest != pin:
+            pin_mismatch.append(out_tag)  # never place (nor sign) a digest the pin did not name
+            continue
         mir = mirror.get(out_tag)
         decision = _classify(
-            src, mir, now, grace, desired_transform_version=desired_transform_version
+            src,
+            mir,
+            now,
+            # a pin is the judgement the stability window stands in for
+            timedelta(0) if pin is not None else grace,
+            desired_transform_version=desired_transform_version,
         )
         if decision == "import":
             to_import.append(out_tag)
@@ -114,7 +126,12 @@ def reconcile_variant(
                 to_sign.append(out_tag)
             if not mir.sbom_covered:
                 to_sbom.append(out_tag)
-    aliases = {alias + plan.suffix: target + plan.suffix for alias, target in plan.aliases.items()}
+    # an alias onto a withheld tag stays where it is (still desired, so never deleted)
+    aliases = {
+        alias + plan.suffix: target + plan.suffix
+        for alias, target in plan.aliases.items()
+        if target + plan.suffix not in pin_mismatch
+    }
     return VariantReconcile(
         variant=plan.name,
         to_import=to_import,
@@ -123,6 +140,7 @@ def reconcile_variant(
         to_sign=to_sign,
         to_sbom=to_sbom,
         to_rebuild=to_rebuild,
+        pin_mismatch=pin_mismatch,
     )
 
 

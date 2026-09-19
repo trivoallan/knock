@@ -1165,3 +1165,54 @@ spec:
     assert report.status == "ok"
     assert fake.copied == [("docker.io/library/busybox@sha256:a", "harbor.corp/lib/busybox:1.38.0")]
     assert report.totals.imported == 1
+
+
+_PIN = "sha256:" + "a" * 64
+_MOVED = "sha256:" + "b" * 64
+PINNED_POLICY = parse_mirror_policy(f"""
+apiVersion: knock.io/v1alpha1
+kind: MirrorPolicy
+metadata: {{ name: redis }}
+spec:
+  artifactType: image
+  source: {{ registry: docker.io, repository: library/redis }}
+  imports:
+    - name: v7
+      tags: {{ includeRegex: "^$", names: ["7.2.5", "7.3.0"], pins: {{ "7.2.5": "{_PIN}" }} }}
+      destinations: [{{ project: lib, repository: redis }}]
+""")
+
+
+def test_a_moved_pinned_tag_is_reported_not_placed() -> None:
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.5", "7.3.0"], "harbor.corp/lib/redis": []},
+        infos={
+            "docker.io/library/redis:7.2.5": _info(_MOVED),  # republished since evaluation
+            "docker.io/library/redis:7.3.0": _info("sha256:c"),  # unpinned: today's behaviour
+        },
+    )
+    report = _run([PINNED_POLICY], registry=fake)
+    assert [dst for _, dst in fake.copied] == ["harbor.corp/lib/redis:7.3.0"]
+    assert report.status == "ok"
+    assert (report.totals.imported, report.totals.pin_mismatch) == (1, 1)
+    [op] = [o for o in report.policies[0].targets[0].variants[0].operations if o.src_tag == "7.2.5"]
+    assert (op.kind, op.digest, op.pinned_digest, op.applied) == (
+        "pin_mismatch",
+        _MOVED,
+        _PIN,
+        False,
+    )
+
+
+def test_a_moved_pinned_tag_leaves_the_placed_digest_alone() -> None:
+    placed = {"org.opencontainers.image.base.digest": _PIN}
+    fake = FakeRegistryPort(
+        tags={"docker.io/library/redis": ["7.2.5"], "harbor.corp/lib/redis": ["7.2.5"]},
+        infos={
+            "docker.io/library/redis:7.2.5": _info(_MOVED),
+            "harbor.corp/lib/redis:7.2.5": _info("sha256:m", placed),
+        },
+    )
+    report = _run([PINNED_POLICY], registry=fake)
+    assert (fake.copied, fake.annotated, fake.deleted) == ([], [], [])
+    assert report.totals.pin_mismatch == 1

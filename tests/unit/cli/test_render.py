@@ -193,3 +193,17 @@ def test_render_text_marks_failed_policy_with_only_operation_errors() -> None:
     assert "debian-tz" in out
     assert "FAILED" in out
     assert "failed=1" in out
+
+
+def test_render_text_counts_pin_mismatch_without_failing() -> None:
+    from knock.use_cases.report import report_exit_code
+
+    report = _report()
+    report.totals = Counts(pin_mismatch=1)
+    report.policies[0].totals = Counts(pin_mismatch=1)
+    buf = io.StringIO()
+    render_report(report, fmt="text", verbose=False, stream=buf)
+    lines = buf.getvalue().splitlines()
+    assert "pin_mismatch=1" in lines[0]  # policy line
+    assert "pin_mismatch=1" in lines[-1]  # run recap
+    assert report_exit_code(report) == 0

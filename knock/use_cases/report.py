@@ -30,6 +30,7 @@ class Operation(BaseModel):
     error: ErrorInfo | None = None  # set => this operation failed
     transform_steps: list[str] | None = None  # applied step names (rebuild); None on a copy
     out_digest: str | None = None  # produced (post-annotate) digest; None unless applied
+    pinned_digest: str | None = None  # the pin, set on a pin_mismatch (`digest` = observed)
 
 
 class VariantReport(BaseModel):
@@ -104,6 +105,7 @@ def merge_counts(parts: list[Counts]) -> Counts:
         sbom=sum(c.sbom for c in parts),
         withheld=sum(c.withheld for c in parts),
         failed=sum(c.failed for c in parts),
+        pin_mismatch=sum(c.pin_mismatch for c in parts),
     )
 
 
@@ -125,6 +127,7 @@ def counts_of(operations: list[Operation]) -> Counts:
         sbom=n("sbom"),
         withheld=n("withheld"),
         failed=sum(1 for op in operations if op.error is not None),
+        pin_mismatch=n("pin_mismatch"),
     )
 
 

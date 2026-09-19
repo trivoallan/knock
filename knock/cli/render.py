@@ -45,6 +45,7 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
                 f"marked={t.marked} attested={t.attested} sbom={t.sbom}"
                 # only under the gate (--apply-plan): ungated output is unchanged
                 + (f" withheld={t.withheld}" if t.withheld else "")
+                + (f" pin_mismatch={t.pin_mismatch}" if t.pin_mismatch else "")
                 + f" failed={t.failed}\n"
             )
         if verbose:
@@ -63,6 +64,7 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
         f"aliased={t.aliased} skipped={t.skipped} marked={t.marked} "
         f"attested={t.attested} sbom={t.sbom}"
         + (f" withheld={t.withheld}" if t.withheld else "")
+        + (f" pin_mismatch={t.pin_mismatch}" if t.pin_mismatch else "")
         + f" failed={t.failed} "
         f"failed_policies={report.failed_policies}\n"
     )

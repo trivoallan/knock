@@ -54,3 +54,17 @@ def test_names_bypass_exclude() -> None:
 def test_result_has_no_duplicates() -> None:
     got = select_tags(_sel(includeRegex=r"^1\.36", semverOnly=False, names=["1.36.0"]), SOURCE)
     assert sorted(got) == sorted(set(got))
+
+
+def test_a_pin_constrains_but_never_selects() -> None:
+    pin = "sha256:" + "a" * 64
+    got = select_tags(_sel(includeRegex="^$", names=["1.36.0"], pins={"1.37.0": pin}), SOURCE)
+    assert got == ["1.36.0"]
+
+
+def test_a_malformed_pin_is_rejected() -> None:
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        _sel(pins={"1.36.0": "latest"})
