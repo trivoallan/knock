@@ -80,6 +80,7 @@ class StructlogReporter:
             marked=totals.marked,
             attested=totals.attested,
             sbom=totals.sbom,
+            withheld=totals.withheld,
             failed=totals.failed,
         )
 
@@ -96,5 +97,6 @@ class StructlogReporter:
             marked=report.totals.marked,
             attested=report.totals.attested,
             sbom=report.totals.sbom,
+            withheld=report.totals.withheld,
             failed=report.totals.failed,
         )
