@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import itertools
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from knock.config import RegistryConfig, resolve_registry
 from knock.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE
@@ -23,13 +23,34 @@ from knock.use_cases.registry_session import ensure_registry_session, walk_repo_
 
 
 class CoverageOutcome(BaseModel):
-    image_ref: str
-    digest: str | None = None  # manifest digest — the portal's stable join key; None on read error
-    covered: bool = False
-    signed: bool | None = None  # None = not probed; set only for covered images when check_signed
-    sbom: bool | None = None  # None = not probed; set only for covered images when check_sbom
-    policy: str | None = None  # {prefix}.policy when covered & present (audit context)
-    error: ErrorInfo | None = None  # set => a hard failure reading this image
+    image_ref: str = Field(description="The image walked, as `<registry>/<repository>:<tag>`.")
+    digest: str | None = Field(
+        default=None,
+        description="Manifest digest — the stable join key. Null when reading the image failed.",
+    )
+    covered: bool = Field(default=False, description="The image carries knock's provenance stamp.")
+    signed: bool | None = Field(
+        default=None,
+        description="A signed attestation referrer was found. Null unless `--signed` and covered.",
+    )
+    sbom: bool | None = Field(
+        default=None,
+        description="An SBOM referrer was found. Null unless `--sbom` and covered.",
+    )
+    sbom_formats: list[str] | None = Field(
+        default=None,
+        description=(
+            "Sorted SBOM formats (`cyclonedx-json`, `spdx-json`) whose referrer was found; empty "
+            "when none. Null unless `--sbom` and covered. `sbom` is true exactly when non-empty."
+        ),
+    )
+    policy: str | None = Field(
+        default=None,
+        description="The stamped `{prefix}.policy`, when covered and the label prefix is set.",
+    )
+    error: ErrorInfo | None = Field(
+        default=None, description="Set when reading this image failed; the probes did not run."
+    )
 
 
 class CoverageCounts(BaseModel):
@@ -44,6 +65,17 @@ class CoverageCounts(BaseModel):
 
 
 class CoverageReport(BaseModel):
+    """The `knock audit` JSON report. Compatibility rule: within one `apiVersion`, only optional
+    fields are added; removing, renaming, retyping or changing the meaning of a field bumps it."""
+
+    # Same envelope convention as `ReconcilePlan` (camelCase on the wire); the rest of the report
+    # stays snake_case, as it was published before the envelope existed.
+    model_config = ConfigDict(populate_by_name=True)
+
+    api_version: Literal["knock.io/v1alpha1"] = Field(
+        default="knock.io/v1alpha1", alias="apiVersion"
+    )
+    kind: Literal["CoverageReport"] = "CoverageReport"
     registries: list[str]
     counts: CoverageCounts
     outcomes: list[CoverageOutcome]
@@ -51,7 +83,7 @@ class CoverageReport(BaseModel):
 
 def coverage_report_json_schema() -> dict[str, Any]:
     """Published JSON Schema for the coverage report (derived, never hand-written)."""
-    return CoverageReport.model_json_schema()
+    return CoverageReport.model_json_schema(by_alias=True)
 
 
 def audit_exit_code(
@@ -87,15 +119,20 @@ def _classify(
         signed: bool | None = None
         if check_signed and covered:
             signed = bool(registry.list_referrers(image_ref, COSIGN_ATTESTATION_ARTIFACT_TYPE))
-        sbom: bool | None = None
+        sbom_formats: list[str] | None = None
         if check_sbom and covered:
-            sbom = any(registry.list_referrers(image_ref, mt) for mt in FORMAT_MEDIA_TYPES.values())
+            sbom_formats = sorted(
+                fmt
+                for fmt, mt in FORMAT_MEDIA_TYPES.items()
+                if registry.list_referrers(image_ref, mt)
+            )
         return CoverageOutcome(
             image_ref=image_ref,
             digest=digest,
             covered=covered,
             signed=signed,
-            sbom=sbom,
+            sbom=None if sbom_formats is None else bool(sbom_formats),
+            sbom_formats=sbom_formats,
             policy=policy,
         )
     except KnockError as exc:

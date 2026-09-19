@@ -48,7 +48,15 @@ def audit(
         ),
     ] = None,
 ) -> None:
-    """Walk the registry and report images that do NOT carry knock's provenance stamp."""
+    """Walk the registry and report images that do NOT carry knock's provenance stamp.
+
+    With KNOCK_LOG_FORMAT=json, stdout is one JSON document: `apiVersion` (knock.io/v1alpha1),
+    `kind` (CoverageReport), `registries`, `counts`, and `outcomes` — one per image, with
+    `image_ref`, `digest`, `covered`, `policy`, `signed` (with --signed), `sbom` and
+    `sbom_formats` (with --sbom: the SBOM formats found, e.g. ["cyclonedx-json", "spdx-json"]),
+    and `error`. A probe that did not run is null. Within one apiVersion, fields are only added;
+    a removal, rename or change of meaning bumps it. Schema: docs/reference/schemas/coverage-report.
+    """
     container = build_container()
     settings = container.settings
     configure(format_=settings.log_format, level=settings.log_level)
@@ -73,7 +81,7 @@ def audit(
 
 def _render(report: CoverageReport, *, fmt: str, check_signed: bool, check_sbom: bool) -> None:
     if fmt == "json":
-        sys.stdout.write(report.model_dump_json() + "\n")
+        sys.stdout.write(report.model_dump_json(by_alias=True) + "\n")
         return
     # Text: list only the gaps (uncovered, unsigned, no-sbom, read errors); summary carries totals.
     for o in report.outcomes:
