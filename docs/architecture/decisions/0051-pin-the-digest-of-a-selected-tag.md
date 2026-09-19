@@ -36,4 +36,4 @@ is never removed, so a comparison after placement is too late.
   without a verdict on that output.
 - No new port, adapter or C4 element.
 
-Full change: [openspec/changes/pin-selected-tag-digest](../../../openspec/changes/pin-selected-tag-digest/proposal.md).
+Full change: [openspec/changes/archive/2026-09-19-pin-selected-tag-digest](../../../openspec/changes/archive/2026-09-19-pin-selected-tag-digest/proposal.md).
