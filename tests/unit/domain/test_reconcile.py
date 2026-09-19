@@ -424,3 +424,15 @@ def test_within_grace_unattested_still_backfills_signature() -> None:
     result = reconcile_variant(plan, source, mirror, _now())
     assert result.to_update == []  # within grace
     assert result.to_sign == ["7.2.5"]
+
+
+def test_rebuild_is_the_update_subset_caused_by_a_transform_change() -> None:
+    plan = VariantPlan(name="h", suffix="-h", transform=[], tags=["1", "2"], aliases={})
+    source = {"1": _src("sha256:a", 30), "2": _src("sha256:new", 30)}
+    mirror = {
+        "1-h": MirrorArtifact(base_digest="sha256:a", transform_version="old"),
+        "2-h": MirrorArtifact(base_digest="sha256:old", transform_version="v2"),
+    }
+    vr = reconcile_variant(plan, source, mirror, NOW, desired_transform_version="v2")
+    assert vr.to_update == ["1-h", "2-h"]
+    assert vr.to_rebuild == ["1-h"]  # transform changed; "2-h" is an upstream update

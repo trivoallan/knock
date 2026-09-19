@@ -26,6 +26,7 @@ from typer.cli import get_docs_for_click
 
 from knock.cli.main import app as cli_app
 from knock.config import Settings, settings_json_schema
+from knock.domain.gate import reconcile_plan_json_schema
 from knock.domain.mirror_policy import mirror_policy_json_schema
 from knock.domain.scan.attestation import scan_predicate_json_schema
 
@@ -36,6 +37,7 @@ SCHEMAS_OUT = OUT / "schemas"
 SCHEMAS: dict[str, tuple[Any, str, int]] = {
     "mirror-policy": (mirror_policy_json_schema, "MirrorPolicy", 1),
     "scan-predicate": (scan_predicate_json_schema, "Scan attestation predicate (/scan/v1)", 2),
+    "reconcile-plan": (reconcile_plan_json_schema, "ReconcilePlan (the gate's plan file)", 3),
 }
 
 # json-schema-for-humans marks headings with HTML anchors (`## <a name="x"></a>Title`)

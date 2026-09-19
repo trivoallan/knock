@@ -13,7 +13,15 @@ if TYPE_CHECKING:
     from knock.use_cases.report import RunReport
 
 OperationKind = Literal[
-    "imported", "updated", "deleted", "aliased", "skipped", "marked", "attested", "sbom"
+    "imported",
+    "updated",
+    "deleted",
+    "aliased",
+    "skipped",
+    "marked",
+    "attested",
+    "sbom",
+    "withheld",  # refused by the gate (--apply-plan): not applied, destination untouched
 ]
 
 
@@ -27,6 +35,7 @@ class Counts:
     marked: int = 0
     attested: int = 0
     sbom: int = 0
+    withheld: int = 0
     failed: int = 0
 
 

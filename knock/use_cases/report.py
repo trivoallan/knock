@@ -102,6 +102,7 @@ def merge_counts(parts: list[Counts]) -> Counts:
         marked=sum(c.marked for c in parts),
         attested=sum(c.attested for c in parts),
         sbom=sum(c.sbom for c in parts),
+        withheld=sum(c.withheld for c in parts),
         failed=sum(c.failed for c in parts),
     )
 
@@ -122,6 +123,7 @@ def counts_of(operations: list[Operation]) -> Counts:
         marked=n("marked"),
         attested=n("attested"),
         sbom=n("sbom"),
+        withheld=n("withheld"),
         failed=sum(1 for op in operations if op.error is not None),
     )
 
