@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0](https://github.com/trivoallan/knock/compare/v0.10.0...v0.11.0) (2026-09-19)
+
+
+### Features
+
+* **domain:** pin the digest of a selected tag ([#285](https://github.com/trivoallan/knock/issues/285)) ([9f169bc](https://github.com/trivoallan/knock/commit/9f169bc84c798870f9c8daa35b54ac7f7fb69c0a))
+* gate between reconcile's plan and its application (--plan-out / --apply-plan) ([#284](https://github.com/trivoallan/knock/issues/284)) ([5dee28c](https://github.com/trivoallan/knock/commit/5dee28cc4c9963464a96dfca2f4bd5f1b01a414d))
+
 ## [0.10.0](https://github.com/trivoallan/knock/compare/v0.9.3...v0.10.0) (2026-09-19)
 
 
