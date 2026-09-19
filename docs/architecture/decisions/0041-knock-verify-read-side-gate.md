@@ -4,7 +4,8 @@ Date: 2026-06-24
 
 ## Status
 
-Accepted.
+Accepted. Amended by [50. knock signs the image at admission](0050-knock-signs-the-image-at-admission.md):
+knock now places the image signature for `admit: true` policies; enforcing it stays outside knock.
 
 Builds on [15. Sign the knock attach scan referrer](0015-scan-attestation.md),
 [21. `attach --fail-on` severity CI gate](0021-attach-fail-on-gate.md),
