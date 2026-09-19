@@ -1,0 +1,212 @@
+{
+  "$defs": {
+    "CoverageCounts": {
+      "properties": {
+        "scanned": {
+          "default": 0,
+          "title": "Scanned",
+          "type": "integer"
+        },
+        "covered": {
+          "default": 0,
+          "title": "Covered",
+          "type": "integer"
+        },
+        "uncovered": {
+          "default": 0,
+          "title": "Uncovered",
+          "type": "integer"
+        },
+        "signed": {
+          "default": 0,
+          "title": "Signed",
+          "type": "integer"
+        },
+        "unsigned": {
+          "default": 0,
+          "title": "Unsigned",
+          "type": "integer"
+        },
+        "with_sbom": {
+          "default": 0,
+          "title": "With Sbom",
+          "type": "integer"
+        },
+        "without_sbom": {
+          "default": 0,
+          "title": "Without Sbom",
+          "type": "integer"
+        },
+        "errored": {
+          "default": 0,
+          "title": "Errored",
+          "type": "integer"
+        }
+      },
+      "title": "CoverageCounts",
+      "type": "object"
+    },
+    "CoverageOutcome": {
+      "properties": {
+        "image_ref": {
+          "description": "The image walked, as `<registry>/<repository>:<tag>`.",
+          "title": "Image Ref",
+          "type": "string"
+        },
+        "digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Manifest digest \u2014 the stable join key. Null when reading the image failed.",
+          "title": "Digest"
+        },
+        "covered": {
+          "default": false,
+          "description": "The image carries knock's provenance stamp.",
+          "title": "Covered",
+          "type": "boolean"
+        },
+        "signed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A signed attestation referrer was found. Null unless `--signed` and covered.",
+          "title": "Signed"
+        },
+        "sbom": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "An SBOM referrer was found. Null unless `--sbom` and covered.",
+          "title": "Sbom"
+        },
+        "sbom_formats": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Sorted SBOM formats (`cyclonedx-json`, `spdx-json`) whose referrer was found; empty when none. Null unless `--sbom` and covered. `sbom` is true exactly when non-empty.",
+          "title": "Sbom Formats"
+        },
+        "policy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The stamped `{prefix}.policy`, when covered and the label prefix is set.",
+          "title": "Policy"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set when reading this image failed; the probes did not run."
+        }
+      },
+      "required": [
+        "image_ref"
+      ],
+      "title": "CoverageOutcome",
+      "type": "object"
+    },
+    "ErrorInfo": {
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "exit_code": {
+          "title": "Exit Code",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type",
+        "message",
+        "exit_code"
+      ],
+      "title": "ErrorInfo",
+      "type": "object"
+    }
+  },
+  "description": "The `knock audit` JSON report. Compatibility rule: within one `apiVersion`, only optional\nfields are added; removing, renaming, retyping or changing the meaning of a field bumps it.",
+  "properties": {
+    "apiVersion": {
+      "const": "knock.io/v1alpha1",
+      "default": "knock.io/v1alpha1",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "CoverageReport",
+      "default": "CoverageReport",
+      "title": "Kind",
+      "type": "string"
+    },
+    "registries": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Registries",
+      "type": "array"
+    },
+    "counts": {
+      "$ref": "#/$defs/CoverageCounts"
+    },
+    "outcomes": {
+      "items": {
+        "$ref": "#/$defs/CoverageOutcome"
+      },
+      "title": "Outcomes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "registries",
+    "counts",
+    "outcomes"
+  ],
+  "title": "CoverageReport (knock audit JSON output)",
+  "type": "object"
+}

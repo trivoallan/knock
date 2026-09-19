@@ -250,6 +250,54 @@ def test_check_sbom_matches_cyclonedx_too() -> None:
     )
     by = {o.image_ref: o for o in report.outcomes}
     assert by[f"{_REPO}:7.1"].sbom is True
+    assert by[f"{_REPO}:7.1"].sbom_formats == ["cyclonedx-json"]
+
+
+def test_check_sbom_reports_every_format_found_sorted() -> None:
+    subject = f"{_REPO}:7.1"
+    refs = [_sbom_ref(subject), _sbom_ref(subject, "application/vnd.cyclonedx+json")]
+    report = audit_coverage(
+        registry=_reg(referrers={subject: refs}),
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.knock",
+        check_sbom=True,
+    )
+    by = {o.image_ref: o for o in report.outcomes}
+    assert by[subject].sbom is True
+    assert by[subject].sbom_formats == ["cyclonedx-json", "spdx-json"]
+    assert by[f"{_REPO}:7.2"].sbom_formats is None  # uncovered -> not probed
+
+
+def test_check_sbom_without_referrer_reports_no_format() -> None:
+    report = audit_coverage(
+        registry=_reg(),
+        roster=_ROSTER,
+        only_registry=None,
+        label_prefix="io.knock",
+        check_sbom=True,
+    )
+    by = {o.image_ref: o for o in report.outcomes}
+    assert by[f"{_REPO}:7.1"].sbom is False
+    assert by[f"{_REPO}:7.1"].sbom_formats == []
+
+
+def test_check_sbom_off_leaves_sbom_formats_none() -> None:
+    report = audit_coverage(
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.knock"
+    )
+    assert all(o.sbom_formats is None for o in report.outcomes)
+
+
+def test_report_carries_its_version_marker() -> None:
+    report = audit_coverage(
+        registry=_reg(), roster=_ROSTER, only_registry=None, label_prefix="io.knock"
+    )
+    dumped = report.model_dump(by_alias=True)
+    assert dumped["apiVersion"] == "knock.io/v1alpha1"
+    assert dumped["kind"] == "CoverageReport"
+    schema = coverage_report_json_schema()
+    assert {"apiVersion", "kind"} <= schema["properties"].keys()
 
 
 def test_limit_caps_the_walk() -> None:

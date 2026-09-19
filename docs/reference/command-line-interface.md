@@ -94,6 +94,13 @@ $ knock attach [OPTIONS] {image_ref}
 
 Walk the registry and report images that do NOT carry knock's provenance stamp.
 
+With KNOCK_LOG_FORMAT=json, stdout is one JSON document: `apiVersion` (knock.io/v1alpha1),
+`kind` (CoverageReport), `registries`, `counts`, and `outcomes` — one per image, with
+`image_ref`, `digest`, `covered`, `policy`, `signed` (with --signed), `sbom` and
+`sbom_formats` (with --sbom: the SBOM formats found, e.g. ["cyclonedx-json", "spdx-json"]),
+and `error`. A probe that did not run is null. Within one apiVersion, fields are only added;
+a removal, rename or change of meaning bumps it. Schema: docs/reference/schemas/coverage-report.
+
 **Usage**:
 
 ```console

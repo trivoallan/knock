@@ -29,6 +29,7 @@ from knock.config import Settings, settings_json_schema
 from knock.domain.gate import reconcile_plan_json_schema
 from knock.domain.mirror_policy import mirror_policy_json_schema
 from knock.domain.scan.attestation import scan_predicate_json_schema
+from knock.use_cases.audit import coverage_report_json_schema
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "reference"
 SCHEMAS_OUT = OUT / "schemas"
@@ -38,6 +39,7 @@ SCHEMAS: dict[str, tuple[Any, str, int]] = {
     "mirror-policy": (mirror_policy_json_schema, "MirrorPolicy", 1),
     "scan-predicate": (scan_predicate_json_schema, "Scan attestation predicate (/scan/v1)", 2),
     "reconcile-plan": (reconcile_plan_json_schema, "ReconcilePlan (the gate's plan file)", 3),
+    "coverage-report": (coverage_report_json_schema, "CoverageReport (knock audit JSON output)", 4),
 }
 
 # json-schema-for-humans marks headings with HTML anchors (`## <a name="x"></a>Title`)

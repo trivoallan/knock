@@ -27,7 +27,9 @@ An image counts as covered when it carries the knock lineage annotation (`io.kno
 the OCI `org.opencontainers.image.base.digest` when `KNOCK_LABEL_PREFIX` is empty). That
 `base.digest` fallback only applies to image-derived artifacts; a source-derived artifact (e.g.
 a git-ingested skill) has no base image, so it requires a non-empty `KNOCK_LABEL_PREFIX` to be
-stamped at all. `KNOCK_LOG_FORMAT=json` emits the full structured `CoverageReport`.
+stamped at all. `KNOCK_LOG_FORMAT=json` emits the full structured `CoverageReport`, a
+versioned document (`apiVersion: knock.io/v1alpha1`) whose contract is the published
+[coverage-report schema](../reference/schemas/coverage-report.md).
 
 ## The trustworthiness tier
 
@@ -52,7 +54,8 @@ uv run knock audit --fail-on-unsigned    # exit 1 if unsigned > 0
 
 For the SBOM tier, add `--sbom`: for each *stamped* image it also probes for a package SBOM
 referrer (a present SPDX or CycloneDX referrer ⇒ with SBOM; no content verification), distinguishing
-*with SBOM* from *merely stamped*:
+*with SBOM* from *merely stamped*. In the JSON report, `sbom_formats` names which formats were
+found (e.g. `["cyclonedx-json", "spdx-json"]`):
 
 ```bash
 uv run knock audit --sbom

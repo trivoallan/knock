@@ -4,10 +4,12 @@ import json
 import os
 from pathlib import Path
 
+import jsonschema
 import pytest
 from typer.testing import CliRunner
 
 from knock.cli.main import app
+from knock.use_cases.audit import coverage_report_json_schema
 
 runner = CliRunner()
 
@@ -88,6 +90,10 @@ def test_audit_sbom_reports_with_sbom_count(
     assert data["counts"]["without_sbom"] == 0
     # per-outcome digest flows through
     assert all(o["digest"] == "sha256:abc123" for o in data["outcomes"])
+    assert data["apiVersion"] == "knock.io/v1alpha1"
+    assert data["kind"] == "CoverageReport"
+    assert all(o["sbom_formats"] for o in data["outcomes"])
+    jsonschema.validate(instance=data, schema=coverage_report_json_schema())
 
 
 def test_audit_limit_caps_scanned(monkeypatch: pytest.MonkeyPatch, fake_bin_path: Path) -> None:
