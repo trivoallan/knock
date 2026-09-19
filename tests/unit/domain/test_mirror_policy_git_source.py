@@ -368,3 +368,21 @@ def test_image_policy_may_still_declare_archive_and_deletion_mode() -> None:
     assert policy.spec.deletion_mode is not None
     assert policy.spec.defaults is not None and policy.spec.defaults.archive is not None
     assert policy.spec.imports[0].archive is not None
+
+
+def test_admit_defaults_to_false() -> None:
+    assert parse_mirror_policy(REGISTRY_POLICY).spec.admit is False
+
+
+def test_registry_policy_accepts_admit() -> None:
+    text = REGISTRY_POLICY.replace(
+        "  artifactType: image\n", "  artifactType: image\n  admit: true\n"
+    )
+    assert parse_mirror_policy(text).spec.admit is True
+
+
+def test_git_source_refuses_admit() -> None:
+    # The skill path signs no image: an `admit` that would silently do nothing is refused.
+    text = GIT_POLICY.replace("  artifactType: skill\n", "  artifactType: skill\n  admit: true\n")
+    with pytest.raises(PolicyValidationError, match="admit"):
+        parse_mirror_policy(text)

@@ -24,8 +24,18 @@ lives upstream where the scanner runs.
 | `scan-pass` | the **signed** in-toto scan attestation (`knock/predicate/scan/v1`) | **signature-verified** via cosign; freshness from the signed `attested_at` |
 | `stamp` | manifest annotations | **presence** of `{KNOCK_LABEL_PREFIX}.artifact.type` |
 | `sbom` | OCI referrers | **presence** of an SPDX or CycloneDX referrer |
+| `image-signature` | the image's own cosign signature, placed by `reconcile` for `admit: true` policies | **signature-verified** via `cosign verify`; the claim type must be `https://sigstore.dev/cosign/sign/v1` |
 
-Use `--require scan-pass,stamp,sbom` to require all three; any comma-separated subset is valid.
+Use `--require scan-pass,stamp,sbom,image-signature` to require all four; any comma-separated
+subset is valid.
+
+:::caution An attestation is not an admission
+With cosign v3, an image signature and an attestation are stored as the same referrer type, and a
+bare `cosign verify` **accepts an image that only carries attestations**. Every image knock places
+is attested, so every one of them passes a bare `cosign verify`. `image-signature` checks the
+claim type so that only an admitted image passes (ADR 0050). An enforcer outside knock must make
+the same distinction.
+:::
 
 ## 2. Gate a CI step on a signed scan
 

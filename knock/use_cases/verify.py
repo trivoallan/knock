@@ -1,5 +1,6 @@
-"""Resolve a digest's facts (stamp annotations, SBOM referrers, verified scan predicates)
-and evaluate them into a single pass/fail report. Read-only: no copy / annotate / put / delete.
+"""Resolve a digest's facts (stamp annotations, SBOM referrers, verified scan predicates,
+the verified image signature) and evaluate them into a single pass/fail report.
+Read-only: no copy / annotate / put / delete.
 """
 
 from __future__ import annotations
@@ -63,6 +64,14 @@ def verify_image(
             )
         scan_predicates = attestor.verify(subject, SCAN_PREDICATE_TYPE)
 
+    image_signed = False
+    if Requirement.image_signature in requirements:
+        if attestor is None:
+            raise ConfigError(
+                "knock verify --require image-signature needs KNOCK_ATTEST_SIGNER configured"
+            )
+        image_signed = attestor.verify_signature(subject)
+
     return evaluate(
         requirements=requirements,
         stamp_present=stamp_present,
@@ -71,4 +80,5 @@ def verify_image(
         max_severity=max_severity,
         max_age=max_age,
         now=clock.now(),
+        image_signed=image_signed,
     )

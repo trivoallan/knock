@@ -1,5 +1,6 @@
 """subprocess wrapper around cosign: signs an in-toto attestation (DSSE) and
-attaches it as an OCI referrer to the subject digest.
+attaches it as an OCI referrer to the subject digest, and signs the image itself
+at admission (`cosign sign`).
 
 Fail-fast like regctl/buildctl (CLAUDE.md: no retry logic in adapters —
 cosign handles its own network retries internally). The trust model
@@ -69,44 +70,55 @@ class CosignAdapter:
             return []
         return ["--allow-insecure-registry", "--allow-http-registry"]
 
-    def attest(self, subject_ref: str, statement: dict[str, Any]) -> AttestationRef:
+    def _run(self, args: list[str]) -> subprocess.CompletedProcess[str]:
+        try:
+            return subprocess.run(  # noqa: S603
+                [self._resolve(), *args],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+        except (OSError, subprocess.TimeoutExpired) as e:
+            raise CosignError(str(e)) from e
+
+    def _write_signing_config(self, tmp: str) -> Path:
         cfg = self._config
+        path = Path(tmp) / "signing-config.json"
+        path.write_text(
+            json.dumps(
+                build_signing_config(
+                    fulcio_url=cfg.fulcio_url,
+                    rekor_url=cfg.rekor_url,
+                    operator=cfg.builder_id or "knock",
+                    keyless=cfg.signer == "keyless",
+                ),
+                sort_keys=True,
+            )
+        )
+        return path
+
+    def attest(self, subject_ref: str, statement: dict[str, Any]) -> AttestationRef:
         predicate_type = str(statement.get("predicateType", ""))
         predicate = statement.get("predicate", {})
-        signing_config = build_signing_config(
-            fulcio_url=cfg.fulcio_url,
-            rekor_url=cfg.rekor_url,
-            operator=cfg.builder_id or "knock",
-            keyless=cfg.signer == "keyless",
-        )
         with tempfile.TemporaryDirectory(prefix="knock-attest-") as tmp:
             pred_path = Path(tmp) / "predicate.json"
             pred_path.write_text(json.dumps(predicate, sort_keys=True))
-            scfg_path = Path(tmp) / "signing-config.json"
-            scfg_path.write_text(json.dumps(signing_config, sort_keys=True))
-            args = [
-                "attest",
-                "--yes",
-                "--type",
-                predicate_type,
-                "--predicate",
-                str(pred_path),
-                *self._key_args(),
-                *self._registry_args(subject_ref),
-                "--signing-config",
-                str(scfg_path),
-                subject_ref,
-            ]
-            try:
-                r = subprocess.run(  # noqa: S603
-                    [self._resolve(), *args],
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=300,
-                )
-            except (OSError, subprocess.TimeoutExpired) as e:
-                raise CosignError(str(e)) from e
+            r = self._run(
+                [
+                    "attest",
+                    "--yes",
+                    "--type",
+                    predicate_type,
+                    "--predicate",
+                    str(pred_path),
+                    *self._key_args(),
+                    *self._registry_args(subject_ref),
+                    "--signing-config",
+                    str(self._write_signing_config(tmp)),
+                    subject_ref,
+                ]
+            )
         if r.returncode != 0:
             raise CosignError(f"cosign attest failed: {r.stderr.strip()}")
         m = _DIGEST_RE.search(r.stderr) or _DIGEST_RE.search(r.stdout)
@@ -114,6 +126,24 @@ class CosignAdapter:
             predicate_type=predicate_type,
             referrer_digest=m.group(0) if m else "",
         )
+
+    def sign(self, subject_ref: str) -> None:
+        # The image signature — admission. Same signer, signing-config and TLS handling as
+        # attest; only the payload differs (cosign's simple-signing claim, no predicate).
+        with tempfile.TemporaryDirectory(prefix="knock-sign-") as tmp:
+            r = self._run(
+                [
+                    "sign",
+                    "--yes",
+                    *self._key_args(),
+                    *self._registry_args(subject_ref),
+                    "--signing-config",
+                    str(self._write_signing_config(tmp)),
+                    subject_ref,
+                ]
+            )
+        if r.returncode != 0:
+            raise CosignError(f"cosign sign failed: {r.stderr.strip()}")
 
     def _verify_args(self) -> list[str]:
         cfg = self._config
@@ -128,27 +158,46 @@ class CosignAdapter:
         ]
 
     def verify(self, subject_ref: str, predicate_type: str) -> list[VerifiedPredicate]:
-        args = [
-            "verify-attestation",
-            "--type",
-            predicate_type,
-            *self._verify_args(),
-            *self._registry_args(subject_ref),
-            subject_ref,
-        ]
-        try:
-            r = subprocess.run(  # noqa: S603
-                [self._resolve(), *args],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=300,
-            )
-        except (OSError, subprocess.TimeoutExpired) as e:
-            raise CosignError(str(e)) from e
+        r = self._run(
+            [
+                "verify-attestation",
+                "--type",
+                predicate_type,
+                *self._verify_args(),
+                *self._registry_args(subject_ref),
+                subject_ref,
+            ]
+        )
         if r.returncode != 0:
             return []  # cosign ran, nothing verifiable -> fail-closed at the gate
         return _parse_verified_predicates(r.stdout)
+
+    def verify_signature(self, subject_ref: str) -> bool:
+        r = self._run(
+            ["verify", *self._verify_args(), *self._registry_args(subject_ref), subject_ref]
+        )
+        return r.returncode == 0 and _has_image_signature_claim(r.stdout)
+
+
+# cosign v3 `verify` also accepts an attestation-only image (both are sigstore bundles);
+# only the claim type tells an image signature from an attestation.
+IMAGE_SIGNATURE_CLAIM_TYPE = "https://sigstore.dev/cosign/sign/v1"
+
+
+def _has_image_signature_claim(stdout: str) -> bool:
+    for line in stdout.splitlines():
+        try:
+            claims = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(claims, list) and any(
+            isinstance(c, dict)
+            and isinstance(c.get("critical"), dict)
+            and c["critical"].get("type") == IMAGE_SIGNATURE_CLAIM_TYPE
+            for c in claims
+        ):
+            return True
+    return False
 
 
 def _parse_verified_predicates(stdout: str) -> list[VerifiedPredicate]:

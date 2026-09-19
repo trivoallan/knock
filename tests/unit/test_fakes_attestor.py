@@ -33,3 +33,21 @@ def test_fake_attestor_verify_returns_seeded_and_journals():
     out = fake.verify("reg/app@sha256:abc", "https://knock.dev/predicate/scan/v1")
     assert out == [pred]
     assert fake.verified == [("reg/app@sha256:abc", "https://knock.dev/predicate/scan/v1")]
+
+
+def test_fake_sign_journals_subject() -> None:
+    fake = FakeAttestor()
+    fake.sign("reg/x@sha256:out")
+    assert fake.signed == ["reg/x@sha256:out"]
+
+
+def test_fake_verify_signature_returns_seed_and_journals() -> None:
+    fake = FakeAttestor(image_signed=True)
+    assert fake.verify_signature("reg/x@sha256:out") is True
+    assert FakeAttestor().verify_signature("reg/x@sha256:out") is False
+    assert fake.signature_verified == ["reg/x@sha256:out"]
+
+
+def test_fake_fail_raises_on_sign() -> None:
+    with pytest.raises(CosignError):
+        FakeAttestor(fail=True).sign("reg/x@sha256:out")

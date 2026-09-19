@@ -1,4 +1,5 @@
-"""Port for signing + attaching an in-toto attestation as an OCI referrer.
+"""Port for signing + attaching an in-toto attestation as an OCI referrer, and for
+signing the image itself at admission.
 
 The domain builds the Statement (pure, `domain/attestation.py`); this port signs it
 (DSSE) and attaches it to the subject digest. Like every port: a typing.Protocol +
@@ -35,5 +36,17 @@ class AttestorPort(Protocol):
 
         Empty list = cosign ran but found no verifiable attestation (fail-closed at the gate).
         Raises only when cosign cannot run.
+        """
+        ...
+
+    def sign(self, subject_ref: str) -> None:
+        """Sign the image `subject_ref` itself (not a predicate) — the act of admission."""
+        ...
+
+    def verify_signature(self, subject_ref: str) -> bool:
+        """True iff `subject_ref` carries a verified *image* signature.
+
+        An attestation alone must not count (cosign v3 stores both as the same bundle type).
+        False = cosign ran, nothing verifiable (fail-closed). Raises only when cosign cannot run.
         """
         ...

@@ -21,6 +21,7 @@ class Requirement(enum.StrEnum):
     stamp = "stamp"
     scan_pass = "scan-pass"  # noqa: S105
     sbom = "sbom"
+    image_signature = "image-signature"
 
 
 _DURATION_RE = re.compile(r"^(\d+)([dhms])$")
@@ -82,6 +83,14 @@ def _sbom_outcome(present: bool) -> RequirementOutcome:
     )
 
 
+def _signature_outcome(signed: bool) -> RequirementOutcome:
+    return RequirementOutcome(
+        Requirement.image_signature,
+        signed,
+        "verified image signature (admitted)" if signed else "no verifiable image signature",
+    )
+
+
 def _to_utc(text: str) -> datetime:
     dt = datetime.fromisoformat(text)
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
@@ -136,6 +145,7 @@ def evaluate(
     max_severity: Severity,
     max_age: timedelta,
     now: datetime,
+    image_signed: bool = False,
 ) -> VerifyReport:
     outcomes: list[RequirementOutcome] = []
     if Requirement.stamp in requirements:
@@ -144,4 +154,6 @@ def evaluate(
         outcomes.append(_scan_outcome(scan_predicates, max_severity, max_age, now))
     if Requirement.sbom in requirements:
         outcomes.append(_sbom_outcome(sbom_present))
+    if Requirement.image_signature in requirements:
+        outcomes.append(_signature_outcome(image_signed))
     return VerifyReport(outcomes=tuple(outcomes))

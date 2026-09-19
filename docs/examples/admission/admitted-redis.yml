@@ -1,0 +1,26 @@
+# An admitted set: everything this policy places is signed by knock (`cosign sign`), after
+# its provenance + SBOM attestations, with the KNOCK_ATTEST_* signer (ADR 0050).
+#
+# `admit` is opt-in because a signature is never removed from a version in service. Typical
+# author: an orchestrator that evaluated candidate versions and derives this policy naming
+# only the admitted tags. Keep non-admitted placements (a transit / quarantine project) in a
+# policy WITHOUT `admit` — they are still stamped and attested, just not signed.
+#
+# Gate on it:  knock verify <ref>@<digest> --require image-signature
+apiVersion: knock.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis-admitted
+spec:
+  artifactType: image
+  admit: true
+  source:
+    registry: docker.io
+    repository: library/redis
+  imports:
+    - name: v7
+      tags:
+        names: ["7.2.5"]  # pinned: an admitted tag that moves upstream would be re-signed unjudged
+      destinations:
+        - project: hub
+          repository: redis

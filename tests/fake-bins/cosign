@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 # Fake cosign for integration tests.
-# attest scenario via FAKE_COSIGN_SCENARIO; verify-attestation via FAKE_COSIGN_VERIFY_SCENARIO.
+# attest/sign scenario via FAKE_COSIGN_SCENARIO; verify-attestation via
+# FAKE_COSIGN_VERIFY_SCENARIO; verify (image signature) via FAKE_COSIGN_SIGVERIFY_SCENARIO.
 # Every call's argv is appended to FAKE_COSIGN_LOG.
 set -e
 
@@ -26,7 +27,21 @@ print(base64.b64encode(json.dumps(stmt).encode()).decode())
     exit 0
 fi
 
-# --- attest (unchanged) ---
+if [ "$1" = "verify" ]; then
+    # Image-signature verification. cosign v3 prints the verified claims as a JSON array;
+    # an attestation-only image ALSO verifies, with the predicate type as critical.type.
+    claim() { echo "[{\"critical\":{\"identity\":{},\"image\":{},\"type\":\"$1\"},\"optional\":{}}]"; }
+    case "${FAKE_COSIGN_SIGVERIFY_SCENARIO:-signed}" in
+        signed) claim "https://sigstore.dev/cosign/sign/v1" ;;
+        attested-only) claim "https://knock.dev/predicate/transform/v1" ;;
+        garbage) echo "not json" ;;
+        none) echo "no signatures found" >&2; exit 1 ;;
+        *) echo "fake-cosign: unknown sigverify scenario" >&2; exit 99 ;;
+    esac
+    exit 0
+fi
+
+# --- attest / sign (same shape: sign pushes a bundle and prints its digest) ---
 if [ -n "${FAKE_COSIGN_SIGNING_CONFIG:-}" ]; then
     prev=""
     for arg in "$@"; do

@@ -427,6 +427,12 @@
           "default": null,
           "description": "Policy-level deletion mode; `null` \u21d2 defer to the destination/global cascade."
         },
+        "admit": {
+          "default": false,
+          "description": "Everything this policy places is admitted: knock also signs the placed image (`cosign sign`, after its attestations) with the `KNOCK_ATTEST_*` signer. Opt-in because a signature is never removed from a version in service. Requires a registry source and a configured signer.",
+          "title": "Admit",
+          "type": "boolean"
+        },
         "defaults": {
           "anyOf": [
             {

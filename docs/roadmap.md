@@ -111,8 +111,10 @@ CLI verbs: `reconcile · purge · attach · audit · gc · verify · scan · ver
 - **Two-phase placement.** Place into a private staging area, then promote: copy the digest, with its
   attestations, to the destination. This is the staging a rebuild gate needs, and it keeps a refused
   digest out of every destination.
-- **Sign the image at admission**, not only its attestations. knock signs no image today, and ADR 0041
-  says the image's own signature is Kyverno's job; doing this takes an ADR that revisits that line.
+- **Sign the image at admission**, not only its attestations. Proposed in ADR 0050 (amends 0041): an
+  opt-in `spec.admit` makes `reconcile` sign the placed image after its attestations, and
+  `knock verify --require image-signature` reads it. Admission is still a policy-level assertion
+  until the gate above lands and the verdict decides each signature.
 - **Origin metadata on the copy path.** The upstream inventory and signature are not carried across.
   Stamping changes the digest, so an upstream signature cannot simply travel with the placed image.
 
