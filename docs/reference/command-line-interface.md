@@ -142,7 +142,7 @@ $ knock verify [OPTIONS] {image_ref}
 
 **Options**:
 
-* `--require <str>`: Comma-separated: scan-pass,stamp,sbom.  [default: scan-pass]
+* `--require <str>`: Comma-separated: scan-pass,stamp,sbom,image-signature.  [default: scan-pass]
 * `--max-severity <critical|high|medium|low|unknown>`: Fail at or above this scan severity.  [default: high]
 * `--max-age <str>`: Scan freshness SLA (e.g. 7d, 12h, 30m).  [default: 7d]
 * `--registry <str>`: Roster entry to authenticate against.
