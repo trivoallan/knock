@@ -6,6 +6,9 @@ Date: 2026-09-19
 
 Proposed.
 
+Amended by [53. knock signs a standalone artifact at admission](0053-knock-signs-a-standalone-artifact-at-admission.md),
+which supersedes the clause refusing `admit` on a git source.
+
 Amends [41. `knock verify` — read-side gate over knock's referrers](0041-knock-verify-read-side-gate.md):
 the boundary that left "the image's own cosign signature" to Kyverno moves. Builds on
 [15. Sign the knock attach scan referrer](0015-scan-attestation.md).
@@ -32,7 +35,8 @@ admitted tags), so knock needs a contract for knowing that an image is admitted.
   someone forgets the flag, an admitted image is left unsigned, which is visible and can be
   backfilled. The opposite default would sign images that were never admitted, and that cannot be
   undone. The flag is refused on a git source, and refused (`ConfigError`) when no signer is
-  configured.
+  configured. (The git-source refusal is superseded by ADR 0053: `admit` is accepted there, and
+  knock signs the placed artifact before its alias designates it.)
 - **knock signs last.** It runs `cosign sign` on the stamped output digest, after the SBOM and
   provenance attestations succeed, on both the copy and rebuild paths and on the attestation
   backfill. It uses the same `KNOCK_ATTEST_*` signer and signing-config, and the roster's

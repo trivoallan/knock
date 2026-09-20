@@ -136,3 +136,45 @@ def test_verify_image_signature_fails_closed_when_unsigned():
 def test_verify_image_signature_without_attestor_is_config_error():
     with pytest.raises(ConfigError, match="image-signature"):
         _verify_signature(None)
+
+
+# A skill placed from git: an OCI artifact, not an image, addressed by its ref name.
+SKILL_REF = "reg.example/skills/example-skill:v1.2.0"
+SKILL_DIGEST = "sha256:" + "c" * 64
+
+
+def _verify_skill_signature(attestor):
+    from knock.use_cases.verify import verify_image
+
+    return verify_image(
+        SKILL_REF,
+        requirements={Requirement.image_signature},
+        registry=FakeRegistryPort(
+            annotations={SKILL_REF: {"io.knock.artifact.type": "skill"}},
+            digests={SKILL_REF: SKILL_DIGEST},
+        ),
+        attestor=attestor,
+        clock=FakeClock(NOW),
+        label_prefix="io.knock",
+        max_severity=Severity.high,
+        max_age=timedelta(days=7),
+    )
+
+
+def test_a_signed_skill_passes_the_signature_gate():
+    # The gate takes no image-specific input: it pins the ref to its digest and asks
+    # cosign. A skill placed by an `admit: true` policy is therefore promotable through
+    # the same gate an image is.
+    attestor = FakeAttestor(image_signed=True)
+    report = _verify_skill_signature(attestor)
+    assert report.passed is True
+    # Pinned to the digest, so the verdict does not depend on where the alias points next.
+    assert attestor.signature_verified == [f"reg.example/skills/example-skill@{SKILL_DIGEST}"]
+
+
+def test_an_unsigned_skill_fails_the_signature_gate():
+    from knock.use_cases.verify import verify_exit_code
+
+    report = _verify_skill_signature(FakeAttestor(image_signed=False))
+    assert report.passed is False
+    assert verify_exit_code(report) == 1

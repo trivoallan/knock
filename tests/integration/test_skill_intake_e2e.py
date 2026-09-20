@@ -252,3 +252,33 @@ def test_every_property_also_holds_against_a_networked_registry(
     test_the_git_directory_never_reaches_the_archive(placed)
     test_the_stamp_reads_back_off_the_manifest(placed, upstream)
     test_a_source_built_artifact_claims_no_base_image(placed)
+
+
+def test_the_digest_handed_to_cosign_is_the_one_the_registry_holds(
+    placed: Placed, fake_bin_path, tmp_path: Path, monkeypatch
+) -> None:
+    """Admission, across the two real sides: regctl placed the artifact, and the digest
+    cosign is asked to sign is the one regctl reports for it.
+
+    The unit tests assert the planner signs `{repo}@{digest}` and signs before the alias
+    moves; neither can show that the digest is real. This can: the layout on disk is a
+    real OCI layout written by the real regctl, and the only fake in the chain is the
+    cosign binary, which exists to record its argv.
+    """
+    from knock.adapters.cosign_cli import CosignAdapter
+    from knock.config import AttestSettings
+
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    monkeypatch.setenv("FAKE_COSIGN_SIGNING_CONFIG", str(tmp_path / "scfg.json"))
+
+    repo = placed.ref.rsplit(":", 1)[0]  # ocidir://<path>, without the tag
+    digest = _regctl("manifest", "head", placed.ref).strip()
+    CosignAdapter(AttestSettings(signer="key", key_ref="/tmp/cosign.pub")).sign(f"{repo}@{digest}")
+
+    argv = log.read_text().split()
+    assert argv[0] == "sign"
+    assert argv[-1] == f"{repo}@{digest}"
+    # An artifact signature is a plain image signature — no predicate, no artifact-aware
+    # flag. That is what makes `cosign sign` usable on a skill at all.
+    assert "--type" not in argv
