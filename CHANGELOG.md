@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.13.0](https://github.com/trivoallan/knock/compare/v0.12.0...v0.13.0) (2026-09-20)
+
+
+### Features
+
+* **docs:** opt the website into Docusaurus v4 behaviours ([#297](https://github.com/trivoallan/knock/issues/297)) ([b59dddd](https://github.com/trivoallan/knock/commit/b59ddddcfc045821364e9b78a9ef6f3ad3d4c7de))
+* sign a git-placed artifact at admission (spec.admit on a git source) ([#292](https://github.com/trivoallan/knock/issues/292)) ([2f8e7d8](https://github.com/trivoallan/knock/commit/2f8e7d8014f2f4123a47f28adf98f1e50f1364d6))
+
+
+### Documentation
+
+* archive cosign-honours-tls-verify, sync registry-tls, and clear the spec TBDs ([#296](https://github.com/trivoallan/knock/issues/296)) ([e1519b4](https://github.com/trivoallan/knock/commit/e1519b4fb576e7f99adac95483855213ace9809f))
+
 ## [0.12.0](https://github.com/trivoallan/knock/compare/v0.11.0...v0.12.0) (2026-09-19)
 
 
