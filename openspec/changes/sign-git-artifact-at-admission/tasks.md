@@ -82,5 +82,6 @@
 - [x] 7.2 Verify coverage gates hold:
       `uv run pytest --cov=knock --cov-report=term-missing --cov-fail-under=80` and
       `uv run pytest tests/unit/domain --cov=knock.domain --cov-fail-under=90`
-- [ ] 7.3 Verify `uv run pytest` is green end to end, then confirm `sign-image-at-admission` is
-      archived before this change is
+- [x] 7.3 Verify `uv run pytest` is green end to end; `sign-image-at-admission` archived
+      2026-09-20, and this change carries the `image-signature` delta retracting the git-source
+      refusal that archive published — verified by `openspec validate --strict`

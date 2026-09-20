@@ -116,10 +116,17 @@ planned signature on a digest that does not exist yet would be a fact about noth
 - **The backfill costs one referrer listing per converged artifact per run, on `admit: true`
   policies only.** → It is a registry read on a digest the planner has already resolved, and it is
   paid only when admission is on. `admit: false` policies — the default — pay nothing.
-- **This change contradicts a requirement of the still-unarchived `sign-image-at-admission`
-  change** ("Git source refuses admit"). → Archive `sign-image-at-admission` first, then this one.
-  The ADR written here amends ADR 0050 and says the refusal is superseded, so the decision record
-  reads correctly even if the archive order slips.
+- **This change retracts a requirement `sign-image-at-admission` published** ("Git source refuses
+  admit"). → It was archived on 2026-09-20, so that clause is now live in
+  `openspec/specs/image-signature/spec.md` and contradicts the shipped code. A delta on the new
+  `artifact-signature` capability cannot retract it; only a delta on `image-signature` can, and
+  this change carries one. Note the correction to the original plan here: archiving 0050's change
+  first does not avoid the conflict, it *materialises* it — which is what made the delta necessary
+  rather than optional.
+- **The retraction is spelled REMOVED + ADDED, not MODIFIED.** `openspec validate` refuses a
+  MODIFIED block that drops a scenario the current spec still has, and dropping "Git source refuses
+  admit" is precisely the point. So the requirement is removed with a reason and re-stated under a
+  widened name.
 
 ## Migration Plan
 

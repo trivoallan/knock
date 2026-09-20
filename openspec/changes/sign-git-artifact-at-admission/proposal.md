@@ -39,10 +39,11 @@ org is least likely to have any other provenance for.
   git source — when knock signs it, what it signs, idempotence, and refusal without a signer.
 
 ### Modified Capabilities
-<!-- None. `image-signature` is still an unarchived change, so its spec is not yet under
-     openspec/specs/. The one requirement of it this change contradicts — "Git source refuses
-     admit" — is superseded explicitly by `artifact-signature`, recorded in design.md and in the
-     ADR amendment. Archive `sign-image-at-admission` before this change. -->
+- `image-signature`: the requirement "A policy declares admission explicitly" is removed and
+  re-stated as "…, whatever its source", without the git-source refusal (a MODIFIED block cannot
+  retract a scenario). `sign-image-at-admission` has since been archived, so that clause is now a live
+  statement in `openspec/specs/image-signature/spec.md` and contradicts the shipped code — a new
+  capability alone cannot retract it, only a delta on this one can.
 
 ## Impact
 
