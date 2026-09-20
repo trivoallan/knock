@@ -1,3 +1,9 @@
+## Purpose
+
+How knock tells its signer that a destination registry speaks plain HTTP. The roster's
+`tls_verify` flag already drives regctl and BuildKit; this capability is the rule that it drives
+cosign identically, so a registry reachable by one tool is reachable by all three.
+
 ## ADDED Requirements
 
 ### Requirement: Attestation signing and verification honour the roster's tls_verify
