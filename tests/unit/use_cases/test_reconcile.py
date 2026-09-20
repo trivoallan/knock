@@ -16,6 +16,7 @@ from knock.use_cases.reconcile import reconcile_policies
 from knock.use_cases.reconcile_git import REVISION_TAG_PREFIX
 from knock.use_cases.reconcile_registry import to_mirror_artifact, to_source_artifact
 from knock.use_cases.report import RunReport
+from tests.fakes.attestor import FakeAttestor
 from tests.fakes.image_builder import FakeImageBuilder
 from tests.fakes.registry import FakeRegistryPort
 from tests.fakes.reporter import FakeReporter
@@ -114,6 +115,7 @@ def _run(policies, **kw):  # type: ignore[no-untyped-def]
         source=kw.pop("source", FakeSourcePort()),
         archiver=kw.pop("archiver", LocalArchiver()),
         work_dir=kw.pop("work_dir", None),
+        attestor=kw.pop("attestor", None),
     )
     return reconcile_policies(policies, **defaults)
 
@@ -1216,3 +1218,44 @@ def test_a_moved_pinned_tag_leaves_the_placed_digest_alone() -> None:
     report = _run([PINNED_POLICY], registry=fake)
     assert (fake.copied, fake.annotated, fake.deleted) == ([], [], [])
     assert report.totals.pin_mismatch == 1
+
+
+ADMIT_GIT_POLICY = parse_mirror_policy("""
+apiVersion: knock.io/v1alpha1
+kind: MirrorPolicy
+metadata: { name: example-skill }
+spec:
+  artifactType: skill
+  admit: true
+  source: { url: "https://github.com/example/agent-skill.git", ref: v1.2.0 }
+  imports:
+    - name: release
+      tags: {}
+      destinations: [{ project: skills, repository: example-skill }]
+""")
+
+
+def test_the_driver_hands_its_attestor_to_the_git_planner(tmp_path: Path) -> None:
+    # The wiring assertion: the driver already holds an attestor for the registry
+    # planner, and an admitted git policy is only reachable because it reaches this one
+    # too. Without the wiring this raises ConfigError at plan time instead.
+    fake = FakeRegistryPort(tags={_SKILL_DEST: []})
+    attestor = FakeAttestor()
+    report = _run(
+        [ADMIT_GIT_POLICY],
+        registry=fake,
+        source=_skill_source(_SKILL_TREE),
+        work_dir=tmp_path,
+        attestor=attestor,
+    )
+    assert next(p for p in report.policies if p.name == "example-skill").status == "ok"
+    assert attestor.signed != []
+
+
+def test_an_admitted_git_policy_without_a_signer_fails_the_run(tmp_path: Path) -> None:
+    fake = FakeRegistryPort(tags={_SKILL_DEST: []})
+    source = _skill_source(_SKILL_TREE)
+    with pytest.raises(ConfigError, match="example-skill"):
+        _run([ADMIT_GIT_POLICY], registry=fake, source=source, work_dir=tmp_path, attestor=None)
+    assert source.fetched == []
+    assert fake.artifacts == []

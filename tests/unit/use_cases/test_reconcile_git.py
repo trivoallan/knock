@@ -14,12 +14,16 @@ import pytest
 
 from knock.adapters.local_archiver import LocalArchiver
 from knock.config import RegistryConfig
+from knock.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE
 from knock.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
-from knock.errors import InternalError, SourceError
+from knock.errors import ConfigError, InternalError, SourceError, exit_code_for
+from knock.ports.attestor import AttestorPort
+from knock.ports.registry import Referrer
 from knock.ports.source import FetchedSource
 from knock.use_cases.policy_planner import PolicyPlanner
 from knock.use_cases.reconcile_git import REVISION_TAG_PREFIX, GitPlanner
 from knock.use_cases.report import Operation, PolicyReport
+from tests.fakes.attestor import FakeAttestor
 from tests.fakes.registry import FakeRegistryPort
 from tests.fakes.reporter import FakeReporter
 from tests.fakes.source import FakeSourcePort
@@ -57,6 +61,8 @@ spec:
       destinations: [{ project: lib, repository: redis }]
 """
 
+_ADMIT_SKILL = _SKILL.replace("  artifactType: skill\n", "  artifactType: skill\n  admit: true\n")
+
 _ROSTER = {"default": RegistryConfig(host="registry.example")}
 _DEST = "registry.example/skills/example-skill"
 
@@ -77,6 +83,7 @@ def _planner(
     *,
     dry_run_tags: bool = False,
     work_dir: Path | None = None,
+    attestor: AttestorPort | None = None,
 ) -> GitPlanner:
     return GitPlanner(
         registry=registry,
@@ -87,6 +94,7 @@ def _planner(
         label_prefix="io.knock",
         dry_run_tags=dry_run_tags,
         work_dir=work_dir,
+        attestor=attestor,
     )
 
 
@@ -369,3 +377,215 @@ def test_one_failing_policy_does_not_abort_the_batch(policy: MirrorPolicy, tmp_p
     assert by_name["example-skill"].status == "ok"
     assert [ref for ref, *_ in registry.artifacts] == [f"{_DEST}:{REVISION_TAG_PREFIX}{_REV}"]
     assert [name for name, _ in reporter.failures] == ["broken"]
+
+
+class _OrderedAttestor(FakeAttestor):
+    """Snapshots how many aliases had been moved at each `sign` call.
+
+    Two fakes journal into two lists, so ordering between them is not otherwise
+    observable — and the ordering is the requirement here. Test-local on purpose: no
+    other test needs it, and the shared fake stays the shape of the port.
+    """
+
+    def __init__(self, registry: FakeRegistryPort) -> None:
+        super().__init__()
+        self._registry = registry
+        self.copies_at_sign: list[int] = []
+
+    def sign(self, subject_ref: str) -> None:
+        self.copies_at_sign.append(len(self._registry.copied))
+        super().sign(subject_ref)
+
+
+# --- Admission (artifact-signature) -------------------------------------------------
+
+
+@pytest.fixture
+def admit_policy() -> MirrorPolicy:
+    return parse_mirror_policy(_ADMIT_SKILL)
+
+
+def test_admit_without_a_signer_is_refused_at_plan_time(admit_policy: MirrorPolicy) -> None:
+    # Before the ref is resolved and before any tag list is read: placing an admitted
+    # artifact unsigned would be exactly the silent gap the flag exists to close.
+    source = FakeSourcePort(revisions={(_URL, _REF): _REV}, tree=_TREE)
+    registry = FakeRegistryPort(tags={_DEST: []})
+    planner = _planner(source, registry, attestor=None)
+    with pytest.raises(ConfigError, match="example-skill"):
+        planner.plan([admit_policy])
+    assert source.resolved == []
+    assert registry.listed_tags == []
+
+
+def test_admit_without_a_signer_exits_three(admit_policy: MirrorPolicy) -> None:
+    planner = _planner(FakeSourcePort(), FakeRegistryPort(tags={_DEST: []}), attestor=None)
+    with pytest.raises(ConfigError) as excinfo:
+        planner.plan([admit_policy])
+    assert exit_code_for(excinfo.value) == 3
+
+
+def test_a_non_admitting_batch_needs_no_signer(policy: MirrorPolicy, tmp_path: Path) -> None:
+    # The default path pays nothing: no signer, no signature, no refusal.
+    source = FakeSourcePort(revisions={(_URL, _REF): _REV}, tree=_TREE)
+    registry = FakeRegistryPort(tags={_DEST: []})
+    planner = _planner(source, registry, work_dir=tmp_path, attestor=None)
+    planner.plan([policy])
+    reports = planner.apply(reporter=FakeReporter(), executor=None)
+    assert _kinds(reports) == ["imported", "aliased"]
+
+
+def test_an_admitted_placement_is_signed_before_its_alias_moves(
+    admit_policy: MirrorPolicy, tmp_path: Path
+) -> None:
+    # The ordering is the requirement, not an implementation detail: whoever installs by
+    # ref name resolves through the alias, so a signature landing after the copy leaves a
+    # window where the alias designates an unsigned digest.
+    source = FakeSourcePort(revisions={(_URL, _REF): _REV}, tree=_TREE)
+    registry = FakeRegistryPort(tags={_DEST: []})
+    attestor = _OrderedAttestor(registry)
+    planner = _planner(source, registry, work_dir=tmp_path, attestor=attestor)
+    planner.plan([admit_policy])
+    reports = planner.apply(reporter=FakeReporter(), executor=None)
+
+    assert _kinds(reports) == ["imported", "aliased"]
+    placed = next(op for op in _operations(reports) if op.kind == "imported")
+    # Signed on the digest, never on a tag: the signature has to survive the alias
+    # moving away from this revision later.
+    assert attestor.signed == [f"{_DEST}@{placed.out_digest}"]
+    assert attestor.copies_at_sign == [0]  # nothing had been aliased yet
+
+
+def test_a_signing_failure_fails_the_operation_and_leaves_the_alias_alone(
+    admit_policy: MirrorPolicy, tmp_path: Path
+) -> None:
+    source = FakeSourcePort(revisions={(_URL, _REF): _REV}, tree=_TREE)
+    registry = FakeRegistryPort(tags={_DEST: []})
+    planner = _planner(source, registry, work_dir=tmp_path, attestor=FakeAttestor(fail=True))
+    planner.plan([admit_policy])
+    reports = planner.apply(reporter=FakeReporter(), executor=None)
+
+    assert [r.status for r in reports] == ["failed"]
+    assert reports[0].error is not None and reports[0].error.type == "CosignError"
+    assert registry.copied == []  # the alias never moved onto an unsigned digest
+
+
+def test_a_non_admitted_placement_is_stamped_and_never_signed(
+    policy: MirrorPolicy, tmp_path: Path
+) -> None:
+    source = FakeSourcePort(revisions={(_URL, _REF): _REV}, tree=_TREE)
+    registry = FakeRegistryPort(tags={_DEST: []})
+    attestor = FakeAttestor()
+    planner = _planner(source, registry, work_dir=tmp_path, attestor=attestor)
+    planner.plan([policy])
+    reports = planner.apply(reporter=FakeReporter(), executor=None)
+
+    assert _kinds(reports) == ["imported", "aliased"]
+    assert registry.artifacts != []  # placed and stamped
+    assert attestor.signed == []
+
+
+def test_a_dry_run_of_an_admitted_policy_signs_nothing(
+    admit_policy: MirrorPolicy, tmp_path: Path
+) -> None:
+    # A planned signature on a digest that does not exist yet would be a fact about
+    # nothing, so the dry run stays silent about it.
+    source = FakeSourcePort(revisions={(_URL, _REF): _REV}, tree=_TREE)
+    registry = FakeRegistryPort(tags={_DEST: []})
+    attestor = FakeAttestor()
+    planner = _planner(source, registry, dry_run_tags=True, work_dir=tmp_path, attestor=attestor)
+    planner.plan([admit_policy])
+    reports = planner.apply(reporter=FakeReporter(), executor=None)
+
+    assert _kinds(reports) == ["imported", "aliased"]
+    assert [op.applied for op in _operations(reports)] == [False, False]
+    assert source.fetched == []
+    assert registry.artifacts == []
+    assert attestor.signed == []
+
+
+def _bundle(subject_tag: str) -> Referrer:
+    """A cosign bundle on a knock-placed artifact means exactly one thing: it was signed.
+
+    Unlike the image path, where the same artifactType covers attestations too, the git
+    path attaches none — so this marker is unambiguous here.
+    """
+    return Referrer(
+        digest="sha256:bundle",
+        artifact_type=COSIGN_ATTESTATION_ARTIFACT_TYPE,
+        annotations={},
+        subject_tag=subject_tag,
+    )
+
+
+def test_turning_admit_on_signs_what_is_already_placed(
+    admit_policy: MirrorPolicy, tmp_path: Path
+) -> None:
+    # Without this, switching an existing mirror to `admit: true` would sign nothing
+    # ever: every revision it declares is already converged.
+    source = FakeSourcePort(revisions={(_URL, _REF): _REV}, tree=_TREE)
+    registry = _converged()
+    attestor = FakeAttestor()
+    planner = _planner(source, registry, work_dir=tmp_path, attestor=attestor)
+    planner.plan([admit_policy])
+    reports = planner.apply(reporter=FakeReporter(), executor=None)
+
+    revision_ref = f"{_DEST}:{REVISION_TAG_PREFIX}{_REV}"
+    digest, _ann = FakeRegistryPort().get_annotations(revision_ref)
+    assert attestor.signed == [f"{_DEST}@{digest}"]
+    assert _kinds(reports) == ["skipped"]  # still no transfer: only the signature
+    assert source.fetched == []
+    assert registry.artifacts == []
+
+
+def test_a_converged_and_already_signed_artifact_is_not_signed_twice(
+    admit_policy: MirrorPolicy, tmp_path: Path
+) -> None:
+    revision_ref = f"{_DEST}:{REVISION_TAG_PREFIX}{_REV}"
+    registry = _converged()
+    registry._referrers = {revision_ref: [_bundle(REVISION_TAG_PREFIX + _REV)]}
+    source = FakeSourcePort(revisions={(_URL, _REF): _REV}, tree=_TREE)
+    attestor = FakeAttestor()
+    planner = _planner(source, registry, work_dir=tmp_path, attestor=attestor)
+    planner.plan([admit_policy])
+    planner.apply(reporter=FakeReporter(), executor=None)
+
+    assert attestor.signed == []
+    assert source.fetched == []
+    # One read answers it — the digest is never fetched when the bundle is already there.
+    assert registry.listed_referrers == [(revision_ref, COSIGN_ATTESTATION_ARTIFACT_TYPE)]
+    assert registry.got_annotations == [f"{_DEST}:{_REF}"]  # the plan-phase alias read only
+
+
+def test_a_stale_alias_over_a_signed_revision_repoints_without_re_signing(
+    admit_policy: MirrorPolicy, tmp_path: Path
+) -> None:
+    revision_ref = f"{_DEST}:{REVISION_TAG_PREFIX}{_REV}"
+    registry = FakeRegistryPort(
+        tags={_DEST: [f"{REVISION_TAG_PREFIX}{_REV}", f"{REVISION_TAG_PREFIX}{_REV_B}", _REF]},
+        annotations={f"{_DEST}:{_REF}": {_REVISION_KEY: _REV_B}},
+        referrers={revision_ref: [_bundle(REVISION_TAG_PREFIX + _REV)]},
+    )
+    source = FakeSourcePort(revisions={(_URL, _REF): _REV}, tree=_TREE)
+    attestor = FakeAttestor()
+    planner = _planner(source, registry, work_dir=tmp_path, attestor=attestor)
+    planner.plan([admit_policy])
+    reports = planner.apply(reporter=FakeReporter(), executor=None)
+
+    assert _kinds(reports) == ["aliased"]
+    assert registry.copied == [(revision_ref, f"{_DEST}:{_REF}")]
+    assert attestor.signed == []
+
+
+def test_a_non_admitting_policy_never_pays_the_backfill_read(
+    policy: MirrorPolicy, tmp_path: Path
+) -> None:
+    # The default posture costs nothing: no referrer listing, no signature.
+    source = FakeSourcePort(revisions={(_URL, _REF): _REV}, tree=_TREE)
+    registry = _converged()
+    attestor = FakeAttestor()
+    planner = _planner(source, registry, work_dir=tmp_path, attestor=attestor)
+    planner.plan([policy])
+    planner.apply(reporter=FakeReporter(), executor=None)
+
+    assert registry.listed_referrers == []
+    assert attestor.signed == []
