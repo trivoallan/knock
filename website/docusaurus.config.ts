@@ -16,13 +16,23 @@ export default async function createConfig(): Promise<Config> {
   projectName: 'knock',
 
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'throw',
+
+  // Opt into the v4 behaviours now, while the site is small enough that a
+  // regression is cheap to spot. `v4: true` also flips `fasterByDefault`,
+  // which is what pulls in the Rspack/SWC/Lightning CSS toolchain.
+  future: {
+    v4: true,
+  },
 
   // .md => CommonMark (NOT MDX), so the machine-generated reference under docs/reference/
   // renders without MDX parse errors. Pages needing JSX opt in with a .mdx extension.
   markdown: {
     format: 'detect',
     mermaid: true,
+    // v4 removes the top-level `onBrokenMarkdownLinks`; this is its new home.
+    hooks: {
+      onBrokenMarkdownLinks: 'throw',
+    },
   },
   themes: [
     '@docusaurus/theme-mermaid',
