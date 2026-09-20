@@ -1,7 +1,9 @@
 # image-signature Specification
 
 ## Purpose
-TBD - created by archiving change sign-image-at-admission. Update Purpose after archive.
+Admission signing for an image knock places — when the signature is placed relative to the
+attestations, what `knock verify --require image-signature` accepts, and why a signature is never
+removed from a version in service. The git-sourced counterpart is `artifact-signature`.
 
 ## Requirements
 
