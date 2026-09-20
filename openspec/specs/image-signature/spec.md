@@ -5,22 +5,6 @@ TBD - created by archiving change sign-image-at-admission. Update Purpose after 
 
 ## Requirements
 
-### Requirement: A policy declares admission explicitly
-
-The `MirrorPolicy` schema SHALL carry a boolean `spec.admit`, defaulting to `false`. `admit: true`
-SHALL mean that every image this policy places is admitted. The system SHALL refuse `admit: true`
-on a policy whose source is a git repository (`PolicyValidationError`).
-
-#### Scenario: Default is not admitted
-
-- **WHEN** a policy omits `admit`
-- **THEN** knock places and attests its images and signs none of them
-
-#### Scenario: Git source refuses admit
-
-- **WHEN** a policy with a git source declares `admit: true`
-- **THEN** parsing the policy fails with a `PolicyValidationError`
-
 ### Requirement: knock signs the image of an admitted placement
 
 When the policy is `admit: true`, the system SHALL sign the placed image (`cosign sign`) on the copy
@@ -77,3 +61,25 @@ exit 2. Requiring `image-signature` without a configured signer SHALL exit 3.
 
 - **WHEN** the digest carries knock attestations but no image signature
 - **THEN** `image-signature` fails with exit 1
+
+### Requirement: A policy declares admission explicitly, whatever its source
+
+The `MirrorPolicy` schema SHALL carry a boolean `spec.admit`, defaulting to `false`. `admit: true`
+SHALL mean that every artifact this policy places is admitted. The system SHALL NOT refuse `admit`
+on the grounds of the policy's source class. What knock signs on the git path, and in what order,
+is specified by `artifact-signature`.
+
+#### Scenario: Default is not admitted
+
+- **WHEN** a policy omits `admit`
+- **THEN** knock places and attests its images and signs none of them
+
+#### Scenario: Git source accepts admit
+
+- **WHEN** a policy with a git source declares `admit: true`
+- **THEN** the policy parses and validates
+
+#### Scenario: Registry source accepts admit
+
+- **WHEN** a policy with a registry source declares `admit: true`
+- **THEN** the policy parses and validates
