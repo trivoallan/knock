@@ -381,8 +381,12 @@ def test_registry_policy_accepts_admit() -> None:
     assert parse_mirror_policy(text).spec.admit is True
 
 
-def test_git_source_refuses_admit() -> None:
-    # The skill path signs no image: an `admit` that would silently do nothing is refused.
+def test_git_source_accepts_admit() -> None:
+    # The git path signs what it places (artifact-signature), so `admit` is a posture of
+    # the policy, not a property of where its bytes come from.
     text = GIT_POLICY.replace("  artifactType: skill\n", "  artifactType: skill\n  admit: true\n")
-    with pytest.raises(PolicyValidationError, match="admit"):
-        parse_mirror_policy(text)
+    assert parse_mirror_policy(text).spec.admit is True
+
+
+def test_git_source_admit_defaults_to_false() -> None:
+    assert parse_mirror_policy(GIT_POLICY).spec.admit is False

@@ -431,7 +431,7 @@ Must be one of:
 | **Required** | No        |
 | **Default**  | `false`   |
 
-**Description:** Everything this policy places is admitted: knock also signs the placed image (`cosign sign`, after its attestations) with the `KNOCK_ATTEST_*` signer. Opt-in because a signature is never removed from a version in service. Requires a registry source and a configured signer.
+**Description:** Everything this policy places is admitted: knock also signs what it places (`cosign sign`) with the `KNOCK_ATTEST_*` signer — an image after its attestations, a git-sourced artifact before its alias designates it. Opt-in because a signature is never removed from a version in service. Requires a configured signer.
 
 ### 4.5. Property `defaults` {#spec_defaults}
 
