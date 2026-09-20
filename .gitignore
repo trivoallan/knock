@@ -36,3 +36,13 @@ website/.docusaurus/
 
 # gstack session artefacts (local tooling, never project content)
 .gstack/
+
+# nanopm PM wiki — the schema (NANOPM-WIKI.md) and the generated catalog (wiki/index.md)
+# ARE committed: they are the compounding artifact, and agents read them fresh each run.
+# Two exceptions:
+#   .lock   an advisory flock taken by every writer — pure runtime state.
+#   raw/    verbatim archives of feedback, interviews and data exports. THIS REPO IS
+#           PUBLIC (see CLAUDE.md): committing raw sources would publish customer
+#           material. Drop this line if a deployment ever wants them tracked.
+.nanopm/wiki/.lock
+.nanopm/raw/
