@@ -84,6 +84,7 @@ bytes) but the tag list is unbounded.
 | `tags: {}` is required and **read by nothing** | Selection for a git source is the `ref`, not a tag regex. The empty mapping is the honest spelling — a regex here would look like it selects something |
 | **No `transform:`**, anywhere in the policy | A skill is placed as published. There is no base image to re-root onto, so hardening has nothing to act on; declaring a step is a validation error, not a silent no-op |
 | **No `archive:` and no `deletionMode:`** | Skills are never deleted — see above. Refused rather than ignored, for the same reason as `transform`: an author who declares retention believes their policy prunes, and it never will |
+| `admit:` **does** apply, unlike `transform` and `archive` | It is simply not set here, so this example runs with no signer. See *Admission* below |
 | `path:` is optional, and does real work here | It re-roots the tree onto `skills/mcp-builder`, so one skill is placed rather than the whole 4.3 MiB monorepo. The layout check then runs against the *re-rooted* tree — which is why the sub-directory's own `SKILL.md` is what satisfies it |
 | `ref:` may be a branch, a tag, or a commit | All three resolve to an immutable sha before anything is packaged, and the resolved value is what is stamped. The example pins a commit because a provenance product should show the immutable case |
 
@@ -99,6 +100,32 @@ Because there is no base image, the empty-prefix fallback that `is_stamped` reli
 nothing to anchor to — the OCI-standard keys alone would be indistinguishable from an unstamped
 artifact. So intake **requires** a non-empty `KNOCK_LABEL_PREFIX` and refuses with a `ConfigError`
 (exit 3) rather than placing an artifact whose provenance cannot later be detected.
+
+## Admission — signing what gets placed
+
+`spec.admit: true` says everything the policy places is admitted, so knock signs it with the
+`KNOCK_ATTEST_*` signer. It applies to a git source exactly as it does to a registry one — the
+worked policy is [`docs/examples/admission/admitted-skill.yml`](../admission/admitted-skill.yml),
+kept out of this example so that `knock reconcile docs/examples/skills` needs no signer.
+
+Two things differ from the image path, and both follow from there being no base image:
+
+- **knock signs before the alias moves.** The signature lands on the placed revision's digest,
+  and only then is the ref-name alias copied onto it. On the image path the signature comes *last*,
+  after the attestations; here there is nothing to attest, and whoever installs by ref name resolves
+  through the alias — so signing afterwards would leave a window in which the alias designates an
+  unsigned digest.
+- **A signature and nothing else.** A git-placed artifact carries no in-toto attestation and no
+  SBOM. The stamp already records the provenance as annotations, and syft over a source tree would
+  attach coverage that is not there. So an admitted skill answers `knock verify --require
+  image-signature` and deliberately does not answer `--require sbom` or `--require scan-pass`.
+
+Turning `admit` on over an existing mirror signs it on the next run: every converged revision whose
+digest carries no signature is signed, and a steady-state run signs nothing twice. `admit: true`
+with no signer configured is refused at plan time (`ConfigError`, exit 3) before anything is
+fetched — knock never places an admitted artifact and leaves it unsigned. Setting `admit` back to
+`false` stops new signatures and removes none: a signature is never deleted from a version in
+service.
 
 ## The load-bearing identity is the blob digest
 
@@ -134,4 +161,5 @@ URL and can embed a credential.
 
 - [ADR 0048 — Non-registry sources and the skill artifact class](../../architecture/decisions/0048-non-registry-sources-and-the-skill-artifact-class.md) — the intake path itself
 - [ADR 0049 — Reconciling git sources](../../architecture/decisions/0049-reconciling-git-sources.md) — the tag scheme and convergence rules above
+- [ADR 0053 — knock signs a standalone artifact at admission](../../architecture/decisions/0053-knock-signs-a-standalone-artifact-at-admission.md) — the admission rules above
 - [`docs/examples/reference/`](../reference/) — the registry-sourced equivalents

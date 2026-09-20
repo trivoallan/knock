@@ -36,6 +36,7 @@ class FakeRegistryPort:
         self._fail_get = fail_get or set()
         self._digests = digests or {}
         self.listed_tags: list[str] = []
+        self.listed_referrers: list[tuple[str, str | None]] = []
         # Journalled like `listed_tags`, and for the same reason: on the git path this
         # read is the second half of the convergence decision, and "was it paid at all"
         # is the assertable claim behind not paying for it when it cannot change the
@@ -104,6 +105,9 @@ class FakeRegistryPort:
         self.logins.append((host, username, tls_verify))
 
     def list_referrers(self, image_ref: str, artifact_type: str | None = None) -> list[Referrer]:
+        # Journalled like `listed_tags`: a use case that must NOT pay this read (the
+        # non-admitting git path) has no other way to assert it stayed away.
+        self.listed_referrers.append((image_ref, artifact_type))
         refs = self._referrers.get(image_ref, [])
         if artifact_type is None:
             return list(refs)

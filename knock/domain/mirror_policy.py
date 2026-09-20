@@ -315,10 +315,11 @@ class Spec(_CamelModel):
     admit: bool = Field(
         default=False,
         description=(
-            "Everything this policy places is admitted: knock also signs the placed image "
-            "(`cosign sign`, after its attestations) with the `KNOCK_ATTEST_*` signer. "
+            "Everything this policy places is admitted: knock also signs what it places "
+            "(`cosign sign`) with the `KNOCK_ATTEST_*` signer — an image after its "
+            "attestations, a git-sourced artifact before its alias designates it. "
             "Opt-in because a signature is never removed from a version in service. "
-            "Requires a registry source and a configured signer."
+            "Requires a configured signer."
         ),
     )
     defaults: Defaults | None = Field(
@@ -345,13 +346,6 @@ class Spec(_CamelModel):
             raise PolicyValidationError(
                 f"artifactType '{kind}' requires a git source, found a {found}"
             )
-        return self
-
-    @model_validator(mode="after")
-    def _admit_needs_registry_source(self) -> Self:
-        # The git placement path signs no image, so `admit` there is refused, not ignored.
-        if self.admit and not isinstance(self.source, RegistrySource):
-            raise PolicyValidationError("admit requires a registry source")
         return self
 
     @model_validator(mode="after")

@@ -137,6 +137,7 @@ def reconcile_policies(
             label_prefix=label_prefix,
             dry_run_tags=dry_run_tags,
             work_dir=work_dir,
+            attestor=attestor,
         ),
     ]
     batches = [(pl, [p for p in policies if pl.handles(p)]) for pl in planners]

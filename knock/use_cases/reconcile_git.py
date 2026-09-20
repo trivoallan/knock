@@ -33,11 +33,13 @@ from datetime import datetime
 from pathlib import Path
 
 from knock.config import RegistryConfig, resolve_registry
+from knock.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE
 from knock.domain.collision import AliasTarget
 from knock.domain.mirror_policy import GitSource, MirrorPolicy
 from knock.domain.policy_merge import resolve_imports
-from knock.errors import InternalError, exit_code_for
+from knock.errors import ConfigError, InternalError, exit_code_for
 from knock.ports.archiver import ArchiverPort
+from knock.ports.attestor import AttestorPort
 from knock.ports.registry import RegistryPort
 from knock.ports.reporter import Counts, ErrorInfo, OperationEvent, OperationKind, Reporter
 from knock.ports.source import SourcePort
@@ -121,6 +123,9 @@ class GitPlanner:
     label_prefix: str
     dry_run_tags: bool
     work_dir: Path | None = None
+    # None is the legitimate default — no signer configured. `plan` is what turns that
+    # into an error, and only for a policy that actually asks for admission.
+    attestor: AttestorPort | None = None
     # Shared with the other planners by the driver — see RegistryPlanner.logged_in: a
     # per-planner set would re-login hosts a sibling planner just configured.
     logged_in: set[str] = field(default_factory=set)
@@ -136,6 +141,14 @@ class GitPlanner:
         aliases: list[AliasTarget] = []
         plans: list[_GitPlan] = []
         for policy in policies:
+            if policy.spec.admit and self.attestor is None:
+                # Up front, before the ref is resolved and before a tag list is read:
+                # placing an admitted artifact unsigned is the silent gap `admit` exists
+                # to close, so it must never get as far as a fetch.
+                raise ConfigError(
+                    f"policy {policy.metadata.name!r} is admit: true but no "
+                    "KNOCK_ATTEST_SIGNER is configured to sign its artifacts"
+                )
             src = policy.spec.source
             if not isinstance(src, GitSource):
                 # The driver partitions its worklist by `handles` before planning, so a
@@ -253,6 +266,11 @@ class GitPlanner:
         if plan.converged:
             # Nothing to transfer AND nothing to move: the revision tag is immutable and
             # the alias already designates it. No fetch, no push, no re-point.
+            #
+            # A signature is the one thing that can still be missing here, because
+            # `admit` may have been turned on after these revisions were placed. The
+            # backfill is the whole reason this branch is not a bare return.
+            self._backfill_admission(plan)
             skipped = Operation(
                 kind="skipped",
                 out_tag=plan.revision_tag,
@@ -275,6 +293,10 @@ class GitPlanner:
         revision_ref = f"{plan.dest_repo}:{plan.revision_tag}"
         operations: list[Operation] = []
         digest, out_digest = plan.revision, None
+        if plan.already_placed:
+            # Only the alias is out of step. The artifact itself may still predate
+            # `admit`, so the same backfill applies before the alias moves onto it.
+            self._backfill_admission(plan)
         if not plan.already_placed:
             if self.work_dir is not None:
                 self.work_dir.mkdir(parents=True, exist_ok=True)
@@ -305,6 +327,7 @@ class GitPlanner:
             operations.append(
                 _operation(plan, "imported", applied=True, digest=digest, out_digest=out_digest)
             )
+            self._admit(plan, out_digest)
         # The alias moves after the revision tag exists, so a reader following the ref
         # name never resolves to a tag that is not there yet. Reached with an empty
         # `operations` when only the alias was stale: the artifact is already in the
@@ -316,6 +339,59 @@ class GitPlanner:
         for op in operations:
             self._emit(plan, op, reporter=reporter)
         return _target_report(plan, operations)
+
+    def _admit(self, plan: _GitPlan, out_digest: str) -> None:
+        """Sign the placed artifact, when the policy declares admission.
+
+        Called *before* the alias moves onto this digest, which inverts the image path's
+        "admission is the last act" on purpose. There, the signature comes last because
+        the attestations must precede it. Here there are no attestations, and what must
+        follow the signature is the alias: whoever installs by ref name resolves through
+        it, so signing afterwards would leave a window in which the alias designates an
+        unsigned digest.
+
+        On the digest, never on a tag — the signature has to outlive the alias moving
+        away from this revision.
+        """
+        if not plan.policy.spec.admit:
+            return
+        if self.attestor is None:
+            # `plan` refuses this combination up front; reaching it means the batch was
+            # applied without being planned, which `apply` already guards.
+            raise InternalError("admit: true reached apply with no attestor")
+        self.attestor.sign(f"{plan.dest_repo}@{out_digest}")
+
+    def _backfill_admission(self, plan: _GitPlan) -> None:
+        """Sign an already-placed revision that carries no signature yet.
+
+        Turning `admit` on would otherwise sign nothing, ever: every revision an
+        existing mirror declares is already converged.
+
+        Idempotence is answered by one referrer listing rather than by
+        `verify_signature`, which would cost a cosign invocation per artifact per run.
+        A cosign bundle is ambiguous on the image path — cosign v3 stores attestations
+        and signatures as the same bundle type — but the git path attaches no
+        attestations, so here it means exactly one thing: this digest was signed. The
+        upgrade path, if another tool ever writes bundles to these digests, is the one
+        `domain/attestation.py` names: a knock-owned marker referrer.
+
+        Tag-then-digest, in that order: the listing answers the common case off the tag
+        that `plan` already proved is there, and the digest read is only paid on the run
+        that actually signs.
+        """
+        if not plan.policy.spec.admit:
+            return
+        if self.attestor is None:
+            raise InternalError("admit: true reached apply with no attestor")
+        # Before the listing, not after: on the fully converged arrival nothing else has
+        # configured the destination yet, and a referrer read is as authenticated as any
+        # other. Idempotent — the repoint arrival has already paid it.
+        ensure_registry_session(self.registry, plan.config, self.logged_in)
+        revision_ref = f"{plan.dest_repo}:{plan.revision_tag}"
+        if self.registry.list_referrers(revision_ref, COSIGN_ATTESTATION_ARTIFACT_TYPE):
+            return
+        digest, _annotations = self.registry.get_annotations(revision_ref)
+        self.attestor.sign(f"{plan.dest_repo}@{digest}")
 
     def _emit(self, plan: _GitPlan, op: Operation, *, reporter: Reporter) -> None:
         reporter.operation_applied(

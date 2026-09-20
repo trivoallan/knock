@@ -24,7 +24,7 @@ lives upstream where the scanner runs.
 | `scan-pass` | the **signed** in-toto scan attestation (`knock/predicate/scan/v1`) | **signature-verified** via cosign; freshness from the signed `attested_at` |
 | `stamp` | manifest annotations | **presence** of `{KNOCK_LABEL_PREFIX}.artifact.type` |
 | `sbom` | OCI referrers | **presence** of an SPDX or CycloneDX referrer |
-| `image-signature` | the image's own cosign signature, placed by `reconcile` for `admit: true` policies | **signature-verified** via `cosign verify`; the claim type must be `https://sigstore.dev/cosign/sign/v1` |
+| `image-signature` | the artifact's own cosign signature, placed by `reconcile` for `admit: true` policies — an image or a git-placed skill alike | **signature-verified** via `cosign verify`; the claim type must be `https://sigstore.dev/cosign/sign/v1` |
 
 Use `--require scan-pass,stamp,sbom,image-signature` to require all four; any comma-separated
 subset is valid.
@@ -35,6 +35,20 @@ bare `cosign verify` **accepts an image that only carries attestations**. Every 
 is attested, so every one of them passes a bare `cosign verify`. `image-signature` checks the
 claim type so that only an admitted image passes (ADR 0050). An enforcer outside knock must make
 the same distinction.
+:::
+
+:::note `image-signature` also applies to a placed skill
+Despite the name, the requirement takes no image-specific input: `verify` pins the ref to its digest
+and asks cosign. A skill placed by an `admit: true` git policy is therefore promotable through the
+same gate (ADR 0053):
+
+```bash
+knock verify registry.example.com/skills/mcp-builder:v1.2.0 --require image-signature
+```
+
+A git-placed artifact carries a signature and nothing else — no in-toto attestation and no SBOM — so
+`--require sbom` and `--require scan-pass` do not apply to it. Those facts are genuinely absent, not
+merely unplaced, and the gate fails closed on them.
 :::
 
 ## 2. Gate a CI step on a signed scan

@@ -124,7 +124,7 @@ graph LR
           style 44 fill:#e9d8fd,stroke:#a397b1,color:#322659
           45("<div style='font-weight: bold'>UsageOraclePort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Was this image digest seen in<br />prod since a given timestamp?<br />(stateless, point-in-time<br />query).</div>")
           style 45 fill:#e9d8fd,stroke:#a397b1,color:#322659
-          46("<div style='font-weight: bold'>AttestorPort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Sign an in-toto Statement<br />(DSSE) + attach it as an OCI<br />referrer. Verify: cosign<br />verify-attestation over a<br />predicate type →<br />list[VerifiedPredicate].</div>")
+          46("<div style='font-weight: bold'>AttestorPort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Sign an in-toto Statement<br />(DSSE) + attach it as an OCI<br />referrer. Verify: cosign<br />verify-attestation over a<br />predicate type →<br />list[VerifiedPredicate].<br />sign()/verify_signature() are<br />the admission half,<br />ref-generic: an image digest<br />or a git-placed artifact<br />digest alike.</div>")
           style 46 fill:#e9d8fd,stroke:#a397b1,color:#322659
           47("<div style='font-weight: bold'>SbomGeneratorPort</div><div style='font-size: 70%; margin-top: 0px'>[Component: typing.Protocol]</div><div style='font-size: 80%; margin-top:10px'>Generate package-level<br />SBOM(s) for a placed image by<br />digest; returns one document<br />per format.</div>")
           style 47 fill:#e9d8fd,stroke:#a397b1,color:#322659
@@ -147,7 +147,7 @@ graph LR
           style 18 fill:#cdd5df,stroke:#8f959c,color:#1f2933
           19("<div style='font-weight: bold'>reconcile_registry</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>The registry-sourced planner:<br />tag selection, variant<br />expansion, copy or hardening<br />rebuild, stamp, retention and<br />deletion.</div>")
           style 19 fill:#cdd5df,stroke:#8f959c,color:#1f2933
-          20("<div style='font-weight: bold'>reconcile_git</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>The git-sourced planner:<br />resolve the ref to a<br />revision, compare against the<br />destination's sha-<revision><br />tags and moving ref-name<br />alias, then import and/or<br />re-point. Convergence =<br />revision placed AND alias<br />current.</div>")
+          20("<div style='font-weight: bold'>reconcile_git</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>The git-sourced planner:<br />resolve the ref to a<br />revision, compare against the<br />destination's sha-<revision><br />tags and moving ref-name<br />alias, then import and/or<br />re-point. Convergence =<br />revision placed AND alias<br />current. Under spec.admit it<br />also signs the placed digest<br />— before the alias, and<br />backfilled onto converged<br />revisions that carry no<br />signature.</div>")
           style 20 fill:#cdd5df,stroke:#8f959c,color:#1f2933
           21("<div style='font-weight: bold'>intake</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Fetch, verify the revision,<br />stamp, package into a<br />byte-reproducible zip and put<br />one skill as an OCI artifact.<br />Refuses a ref that moved<br />between the caller's resolve<br />and this fetch, before<br />anything is pushed.</div>")
           style 21 fill:#cdd5df,stroke:#8f959c,color:#1f2933
@@ -235,6 +235,7 @@ graph LR
     20-. "<div>Uses</div><div style='font-size: 70%'>[Protocol]</div>" .->43
     20-. "<div>Configures TLS/CA + login per<br />registry</div><div style='font-size: 70%'>[Python]</div>" .->29
     20-. "<div>Places one revision (passes<br />the planned revision as<br />expected_revision)</div><div style='font-size: 70%'>[Python]</div>" .->21
+    20-. "<div>Signs the placed artifact at<br />admission (spec.admit),<br />before the alias designates<br />it</div><div style='font-size: 70%'>[Protocol]</div>" .->46
     21-. "<div>fetch(): materialises the<br />tree at the ref</div><div style='font-size: 70%'>[Protocol]</div>" .->49
     21-. "<div>Walks the tree and writes the<br />reproducible zip</div><div style='font-size: 70%'>[Protocol]</div>" .->50
     21-. "<div>Plans the archive; refuses an<br />unsafe or oversized tree</div><div style='font-size: 70%'>[Python]</div>" .->40

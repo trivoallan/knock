@@ -16,7 +16,7 @@
 # KNOCK_LABEL_PREFIX — a base-less stamp under an empty prefix could never read back as
 # covered, so intake refuses it). Add `--dry-run` to see the plan without cloning.
 #
-# FOUR SHAPE RULES THAT ARE NOT OBVIOUS
+# FIVE SHAPE RULES THAT ARE NOT OBVIOUS
 #
 #   1. `artifactType: skill` REQUIRES a git source, and accepts nothing else. `image`
 #      and `helmChart` are the mirror rule: registry only. (`generic` deliberately
@@ -31,7 +31,18 @@
 #      published; there is no base image to re-root onto, so hardening has nothing to
 #      act on. Declaring a step is a validation error, not a silent no-op.
 #
-#   4. NO `archive:` and NO `deletionMode:` — skills are never deleted. The soft-delete
+#   4. `admit: true` DOES apply here, unlike `transform` and `archive` — it is simply
+#      not set in THIS policy, so that this example runs with no signer configured.
+#      Setting it says everything the policy places is admitted, so knock signs the
+#      placed artifact's digest — *before* the ref-name alias is copied onto it, so
+#      nobody resolving through the alias ever lands on an unsigned digest. A signed
+#      skill then passes `knock verify --require image-signature`. Signature only: a
+#      git-placed artifact carries no attestation and no SBOM (ADR 0053), so
+#      `--require sbom` / `--require scan-pass` do not apply to it. `admit: true`
+#      without a configured signer is refused at plan time (exit 3) — which is why it
+#      lives in `docs/examples/admission/admitted-skill.yml` rather than here.
+#
+#   5. NO `archive:` and NO `deletionMode:` — skills are never deleted. The soft-delete
 #      pipeline asks a usage oracle "is this still running in prod"; a skill is
 #      installed on workstations, where the oracle has no answer, and pruning a revision
 #      someone pinned breaks their install silently. Declaring either is a validation

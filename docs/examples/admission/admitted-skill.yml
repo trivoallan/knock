@@ -1,0 +1,47 @@
+# An admitted skill: the git-sourced half of admission (ADR 0053).
+#
+# `admit` means the same thing here as on `admitted-redis.yml` — everything this policy
+# places is admitted, so knock signs it with the KNOCK_ATTEST_* signer. What differs is
+# WHEN and WHAT:
+#
+#   WHEN — knock signs the placed revision's digest and THEN copies the ref-name alias
+#   onto it. That is the opposite order from the image path, where the signature comes
+#   last (after the attestations). There is nothing to attest here, and whoever installs
+#   by ref name resolves through the alias, so signing afterwards would leave a window in
+#   which the alias designates an unsigned digest.
+#
+#   WHAT — a signature and nothing else. A git-placed artifact carries no in-toto
+#   attestation and no SBOM: the stamp already records the provenance as annotations, and
+#   syft over a source tree would attach coverage that is not there. So this digest
+#   answers `--require image-signature` and deliberately does NOT answer `--require sbom`
+#   or `--require scan-pass`.
+#
+# Turning `admit` on over a mirror that is ALREADY placed signs it on the next run: knock
+# lists each converged revision's referrers and signs the ones carrying no signature. A
+# steady-state run signs nothing twice.
+#
+# Needs a configured signer: `admit: true` with no KNOCK_ATTEST_SIGNER is refused at plan
+# time (ConfigError, exit 3) before anything is fetched — never placed-then-unsigned.
+#
+# Gate on it:  knock verify <dest>/skills/mcp-builder:<ref> --require image-signature
+apiVersion: knock.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: mcp-builder-admitted
+spec:
+  artifactType: skill
+  admit: true
+  source:
+    url: https://github.com/anthropics/skills.git
+    # Pinned to a commit: an admitted placement should name exactly what was admitted.
+    # A branch would let the next run admit whatever the branch has moved to.
+    ref: 3b3fad96af16a10759d930941b4520ba0c40edae   # main @ 2026-08-21
+    path: skills/mcp-builder
+  imports:
+    - name: release
+      owners:
+        - group:default/developer-experience
+      tags: {}                  # required, unread — selection for a git source is `ref`
+      destinations:
+        - project: skills
+          repository: mcp-builder
