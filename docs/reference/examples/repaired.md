@@ -20,4 +20,4 @@ What to know before you use it:
 - **Only OS packages are repaired.** The application binary, statically linked helpers and bundled language modules are not touched: on `redis:7.2.0`, every fixable finding on Debian packages goes away, while those on the `redis` binary and on the Go modules of the bundled `gosu` remain. Only a newer upstream image removes them.
 - **knock does not judge the result.** The rebuilt image is pushed to the destination as any rebuild is. Evaluate it with your scanner or gate before relying on it. `apt-get upgrade` does not install new dependencies, so a fix that needs one stays unapplied and your scanner will still report it.
 
-Decision record: [54. `upgradePackages`, the repair step](../../architecture/decisions/0054-upgrade-packages-step.md).
+Decision record: [ADR 0054 — `upgradePackages`, the repair step](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0054-upgrade-packages-step.md).
