@@ -118,9 +118,8 @@ def test_upgrade_packages_apt_branch() -> None:
     run = _upgrade_run()
     apt = run[run.index("if command -v apt-get") : run.index("elif command -v apk")]
     assert "export DEBIAN_FRONTEND=noninteractive" in apt
-    assert "apt-get update" in apt
     assert "apt-get -o APT::Get::Always-Include-Phased-Updates=true -y upgrade" in apt
-    assert "rm -rf /var/lib/apt/lists/*" in apt
+    assert apt.rstrip("; ").endswith("rm -rf /var/lib/apt/lists/*")
     # docker-clean would empty the cache mount: set aside for the upgrade, restored after it.
     aside = apt.index("mv /etc/apt/apt.conf.d/docker-clean /tmp/knock-docker-clean")
     upgrade = apt.index("-y upgrade")
@@ -130,6 +129,22 @@ def test_upgrade_packages_apt_branch() -> None:
     added = apt.index("> /etc/apt/apt.conf.d/knock-keep-cache")
     removed = apt.index("rm -f /etc/apt/apt.conf.d/knock-keep-cache")
     assert added < upgrade < removed
+
+
+def test_upgrade_packages_fails_when_the_package_index_cannot_be_fetched() -> None:
+    run = _upgrade_run()
+    apt = run[run.index("if command -v apt-get") : run.index("elif command -v apk")]
+    # By default `apt-get update` exits 0 when a repository cannot be reached: the upgrade
+    # then finds nothing to do and the build succeeds without upgrading anything.
+    update = apt.index("apt-get -o APT::Update::Error-Mode=any update")
+    # Debian 10's apt ignores that option: start from no index, require one afterwards.
+    wipe = apt.index("rm -rf /var/lib/apt/lists/*")
+    guard = apt.index(
+        "ls /var/lib/apt/lists/*Release >/dev/null 2>&1 || "
+        '{ echo "upgradePackages: no package index fetched" >&2; exit 1; }'
+    )
+    upgrade = apt.index("-y upgrade")
+    assert wipe < update < guard < upgrade
 
 
 def test_upgrade_packages_apk_branch() -> None:

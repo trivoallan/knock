@@ -66,6 +66,18 @@ names, the stamp, the SBOM and the signature of the existing rebuild path.
   scanner will keep reporting those; only a newer upstream image removes them.
 - A base distribution past its end of life cannot be repaired this way: its security
   repositories stop serving packages and the upgrade fails (loudly, nothing is pushed).
+- **An unreachable mirror fails the rebuild.** By default `apt-get update` exits 0 when a
+  repository cannot be fetched, the upgrade then finds nothing to do, and the build would succeed
+  with nothing upgraded. The step runs the update with `APT::Update::Error-Mode=any`, so any
+  fetch failure is fatal, including one repository out of several. Debian 10's apt ignores that
+  option (Debian 11 and later, and Ubuntu 18.04 and later, honour it), so the step also starts
+  from an empty index and requires one after the update. That older-apt guard only
+  catches a mirror that serves nothing at all. `apk upgrade --no-cache` already refuses to
+  continue on an unavailable repository. Verified with real builds on Debian 10 and 12 and
+  Alpine 3.20.
+- `rewritePackageSources` points **every** repository the image declares at the mirror host. An
+  image that adds a vendor repository next to its distribution's needs the mirror to serve each
+  of them under its original path, or the upgrade fails on the missing one.
 - rpm-based and distroless images are out of reach of this step (`rewritePackageSources` knows
   apt and apk only). They fail loudly; the copy path remains.
 - The rebuilt output is still pushed to the destination without a verdict on it (ADR 0051's

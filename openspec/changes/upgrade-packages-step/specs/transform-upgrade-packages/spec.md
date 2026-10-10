@@ -82,10 +82,24 @@ When the image has neither `apt-get` nor `apk`, the rebuild SHALL fail with a me
 step and the missing package managers. The operation SHALL be reported as failed, nothing SHALL be
 pushed for that tag, and the signed lineage SHALL never claim the step was applied.
 
+When a package repository the image points at cannot be fetched, the rebuild SHALL fail the same
+way: a repair that upgraded nothing because the mirror did not answer SHALL NOT be reported as
+done. This holds when every repository is unreachable and when only one of several is.
+
 #### Scenario: Distroless or rpm-based source
 
 - **WHEN** a policy with `upgradePackages` selects a tag whose image has no apt and no apk
 - **THEN** the rebuild fails, the operation is reported failed for that tag with the step named, and the destination tag is left as it was
+
+#### Scenario: Mirror unreachable
+
+- **WHEN** a policy with `upgradePackages` rebuilds an apt or apk image and the mirror host does not resolve or does not answer
+- **THEN** the rebuild fails, the operation is reported failed for that tag, and the destination tag is left as it was
+
+#### Scenario: One repository of several is unreachable
+
+- **WHEN** the image declares two apt repositories and only one of them can be fetched
+- **THEN** the rebuild fails instead of upgrading from the reachable one alone
 
 #### Scenario: Failure repeats on every pass
 

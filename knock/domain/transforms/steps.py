@@ -144,7 +144,15 @@ class UpgradePackages(TransformStepCompiler[_UpgradePackagesParams]):
                 # upgrade and put it back, so the image keeps its own apt configuration.
                 f"if [ -f {_DOCKER_CLEAN} ]; then mv {_DOCKER_CLEAN} {_DOCKER_CLEAN_ASIDE}; fi",
                 f"echo 'Binary::apt::APT::Keep-Downloaded-Packages \"true\";' > {_KEEP_CACHE}",
-                "apt-get update",
+                # `apt-get update` exits 0 when a repository cannot be reached, and the
+                # upgrade then finds nothing to do: the build would succeed with nothing
+                # upgraded. Error-Mode=any makes any fetch failure fatal. Some older apt
+                # releases ignore the option (Debian 10's does), so also start from no index
+                # and require one afterwards.
+                "rm -rf /var/lib/apt/lists/*",
+                "apt-get -o APT::Update::Error-Mode=any update",
+                "ls /var/lib/apt/lists/*Release >/dev/null 2>&1 || "
+                '{ echo "upgradePackages: no package index fetched" >&2; exit 1; }',
                 # Ubuntu holds some fixes back as phased updates; a repair must not skip them.
                 # The option is ignored on Debian.
                 "apt-get -o APT::Get::Always-Include-Phased-Updates=true -y upgrade",
