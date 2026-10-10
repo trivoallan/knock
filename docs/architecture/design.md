@@ -192,7 +192,7 @@ self-contained class + one registry entry**, with zero edits to the I/O layer:
 - `base.py` — the pure contracts: `TransformStepCompiler` (an ABC with `name`, a Pydantic
   `params_model`, `resource_refs()`, `fragment()`), plus `Fragment`, `ResourceRef`,
   `ResolvedResource`, `ContextFile`.
-- `steps.py` — the three built-ins: `injectCA`, `rewritePackageSources`, `setTimezone`.
+- `steps.py` — the four built-ins: `injectCA`, `rewritePackageSources`, `setTimezone`, `upgradePackages`.
 - `registry.py` — `DEFAULT_REGISTRY`, an explicit tuple of built-ins plus name lookup.
 - `render.py` — `validate_transform_steps`, `render` (assemble the Dockerfile + context files),
   and `transform_version` (the content hash that drives change detection). There is **no

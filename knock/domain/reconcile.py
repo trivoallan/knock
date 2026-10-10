@@ -25,6 +25,7 @@ class SourceArtifact:
     digest: str  # current source digest (index digest for multi-arch)
     pushed_at: datetime
     revision: str | None = None  # upstream-declared org.opencontainers.image.revision, if any
+    user: str = ""  # image-config User as the source declares it; untrusted, validated at render
 
 
 @dataclass(frozen=True)

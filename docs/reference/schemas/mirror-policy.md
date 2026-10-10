@@ -50,6 +50,9 @@ sidebar_position: 1
             - [4.5.1.2.1.1.3. Property `item 2`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2)
               - [4.5.1.2.1.1.3.1. Property `setTimezone`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone)
                 - [4.5.1.2.1.1.3.1.1. Property `zone`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone_zone)
+            - [4.5.1.2.1.1.4. Property `item 3`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3)
+              - [4.5.1.2.1.1.4.1. Property `upgradePackages`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages)
+                - [4.5.1.2.1.1.4.1.1. Property `epoch`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages_epoch)
         - [4.5.1.2.2. Property `item 1`](#spec_defaults_anyOf_i0_transform_anyOf_i1)
       - [4.5.1.3. Property `archive`](#spec_defaults_anyOf_i0_archive)
         - [4.5.1.3.1. Property `Archive`](#spec_defaults_anyOf_i0_archive_anyOf_i0)
@@ -636,6 +639,7 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i1) |
 | [item 2](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2) |
+| [item 3](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3) |
 
 ###### 4.5.1.2.1.1.1. Property `item 0` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i0}
 
@@ -768,6 +772,45 @@ Must be one of:
 | Restrictions   |   |
 | -------------- | - |
 | **Min length** | 1 |
+
+###### 4.5.1.2.1.1.4. Property `item 3` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3}
+
+|                           |             |
+| ------------------------- | ----------- |
+| **Type**                  | `object`    |
+| **Required**              | No          |
+| **Additional properties** | Not allowed |
+
+| Property                                                                                        | Pattern | Type   | Deprecated | Definition | Title/Description      |
+| ----------------------------------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ---------------------- |
+| + [upgradePackages](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages ) | No      | object | No         | -          | _UpgradePackagesParams |
+
+###### 4.5.1.2.1.1.4.1. Property `upgradePackages` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages}
+
+**Title:** _UpgradePackagesParams
+
+|                           |             |
+| ------------------------- | ----------- |
+| **Type**                  | `object`    |
+| **Required**              | Yes         |
+| **Additional properties** | Not allowed |
+
+| Property                                                                                    | Pattern | Type   | Deprecated | Definition | Title/Description |
+| ------------------------------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ----------------- |
+| + [epoch](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages_epoch ) | No      | string | No         | -          | Epoch             |
+
+###### 4.5.1.2.1.1.4.1.1. Property `epoch` {#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages_epoch}
+
+**Title:** Epoch
+
+|              |          |
+| ------------ | -------- |
+| **Type**     | `string` |
+| **Required** | Yes      |
+
+| Restrictions                      |                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[A-Za-z0-9._-]{1,64}$``` [Test](https://regex101.com/?regex=%5E%5BA-Za-z0-9._-%5D%7B1%2C64%7D%24) |
 
 ###### 4.5.1.2.2. Property `item 1` {#spec_defaults_anyOf_i0_transform_anyOf_i1}
 

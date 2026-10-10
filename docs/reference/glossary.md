@@ -96,7 +96,7 @@ The act of writing provenance annotations — and attaching SBOM and attestation
 
 ### transform
 
-A declarative hardening primitive in a MirrorPolicy (`injectCA`, `rewritePackageSources`, `setTimezone`). Declaring one or more transforms in a policy switches the import from the copy path to the rebuild path; their application is recorded in the provenance stamp. See [Attestations](../explanation/attestations.md).
+A declarative hardening primitive in a MirrorPolicy (`injectCA`, `rewritePackageSources`, `setTimezone`, `upgradePackages`). Declaring one or more transforms in a policy switches the import from the copy path to the rebuild path; their application is recorded in the provenance stamp. See [Attestations](../explanation/attestations.md).
 
 ### usage oracle
 

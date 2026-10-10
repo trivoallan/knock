@@ -17,6 +17,7 @@ from knock.errors import (
     RegctlError,
     ScanReportError,
     UnknownFormatError,
+    UnsafeSourceUserError,
     exit_code_for,
 )
 
@@ -127,3 +128,9 @@ def test_artifact_annotation_error_is_domain_exit_1():
 def test_artifact_blob_path_error_is_domain_exit_1():
     assert issubclass(ArtifactBlobPathError, DomainError)
     assert exit_code_for(ArtifactBlobPathError("not a file")) == 1
+
+
+def test_unsafe_source_user_is_a_domain_error() -> None:
+    # Exit 1: the input (an upstream image's declared user) is refused, nothing was attempted.
+    assert issubclass(UnsafeSourceUserError, DomainError)
+    assert exit_code_for(UnsafeSourceUserError("x")) == 1

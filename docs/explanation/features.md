@@ -59,6 +59,8 @@ scripts — so any organisation's hardening becomes *configuration*:
 - **`injectCA`** — trust internal certificate authorities.
 - **`rewritePackageSources`** — point package managers at internal mirrors (deb822-aware).
 - **`setTimezone`** — pin the image timezone.
+- **`upgradePackages`** — upgrade the installed OS packages (apt, apk) from the internal mirror,
+  on an operator-chosen `epoch`: the repair for a version flagged with a fixable CVE.
 
 Transform steps and their version are recorded in the stamp as lineage, so a placed image
 declares exactly how it was hardened.

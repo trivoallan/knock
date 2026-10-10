@@ -598,6 +598,30 @@
           "required": [
             "setTimezone"
           ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "upgradePackages": {
+              "additionalProperties": false,
+              "properties": {
+                "epoch": {
+                  "pattern": "^[A-Za-z0-9._-]{1,64}$",
+                  "title": "Epoch",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "epoch"
+              ],
+              "title": "_UpgradePackagesParams",
+              "type": "object"
+            }
+          },
+          "required": [
+            "upgradePackages"
+          ]
         }
       ]
     },

@@ -1,5 +1,10 @@
 from knock.domain.transforms.base import ContextFile, Fragment, ResolvedResource, ResourceRef
-from knock.domain.transforms.steps import InjectCA, RewritePackageSources, SetTimezone
+from knock.domain.transforms.steps import (
+    InjectCA,
+    RewritePackageSources,
+    SetTimezone,
+    UpgradePackages,
+)
 
 
 def _cert(name: str, content: str) -> ResolvedResource:
@@ -84,3 +89,75 @@ def test_set_timezone_fragment_is_pure_no_context() -> None:
         "&& echo Europe/Paris > /etc/timezone",
         "ENV TZ=Europe/Paris",
     )
+
+
+def _upgrade_run(epoch: str = "2026-10-10") -> str:
+    p = UpgradePackages.params_model(epoch=epoch)
+    frag = UpgradePackages().fragment(p, ())
+    assert frag.context_files == ()
+    (run,) = frag.instructions  # one RUN: update and upgrade must share a layer
+    return run
+
+
+def test_upgrade_packages_needs_no_resources() -> None:
+    p = UpgradePackages.params_model(epoch="2026-10-10")
+    assert UpgradePackages().resource_refs(p) == ()
+
+
+def test_upgrade_packages_is_one_run_with_the_epoch_marker() -> None:
+    run = _upgrade_run("2026-10-10")
+    assert run.startswith(
+        "RUN --mount=type=cache,target=/var/cache/apt,sharing=locked set -eux; "
+        ': "knock-upgrade-epoch=2026-10-10"; '
+    )
+    # A new epoch must change the instruction text, or BuildKit serves the cached layer.
+    assert _upgrade_run("2026-10-11") != run
+
+
+def test_upgrade_packages_apt_branch() -> None:
+    run = _upgrade_run()
+    apt = run[run.index("if command -v apt-get") : run.index("elif command -v apk")]
+    assert "export DEBIAN_FRONTEND=noninteractive" in apt
+    assert "apt-get -o APT::Get::Always-Include-Phased-Updates=true -y upgrade" in apt
+    assert apt.rstrip("; ").endswith("rm -rf /var/lib/apt/lists/*")
+    # docker-clean would empty the cache mount: set aside for the upgrade, restored after it.
+    aside = apt.index("mv /etc/apt/apt.conf.d/docker-clean /tmp/knock-docker-clean")
+    upgrade = apt.index("-y upgrade")
+    restore = apt.index("mv /tmp/knock-docker-clean /etc/apt/apt.conf.d/docker-clean")
+    assert aside < upgrade < restore
+    # The keep-cache snippet is knock's, and does not survive into the image.
+    added = apt.index("> /etc/apt/apt.conf.d/knock-keep-cache")
+    removed = apt.index("rm -f /etc/apt/apt.conf.d/knock-keep-cache")
+    assert added < upgrade < removed
+
+
+def test_upgrade_packages_fails_when_the_package_index_cannot_be_fetched() -> None:
+    run = _upgrade_run()
+    apt = run[run.index("if command -v apt-get") : run.index("elif command -v apk")]
+    # By default `apt-get update` exits 0 when a repository cannot be reached: the upgrade
+    # then finds nothing to do and the build succeeds without upgrading anything.
+    update = apt.index("apt-get -o APT::Update::Error-Mode=any update")
+    # Debian 10's apt ignores that option: start from no index, require one afterwards.
+    wipe = apt.index("rm -rf /var/lib/apt/lists/*")
+    guard = apt.index(
+        "ls /var/lib/apt/lists/*Release >/dev/null 2>&1 || "
+        '{ echo "upgradePackages: no package index fetched" >&2; exit 1; }'
+    )
+    upgrade = apt.index("-y upgrade")
+    assert wipe < update < guard < upgrade
+
+
+def test_upgrade_packages_apk_branch() -> None:
+    run = _upgrade_run()
+    apk = run[run.index("elif command -v apk") : run.index("else ")]
+    assert "apk upgrade --no-cache" in apk
+
+
+def test_upgrade_packages_fails_loudly_without_a_package_manager() -> None:
+    run = _upgrade_run()
+    assert run.endswith('else echo "upgradePackages: no apt-get or apk in image" >&2; exit 1; fi')
+
+
+def test_upgrade_packages_never_emits_a_syntax_directive() -> None:
+    # A `# syntax=` line would make buildkitd pull the frontend image from a public registry.
+    assert "syntax=" not in _upgrade_run()

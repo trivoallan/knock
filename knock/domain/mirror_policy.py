@@ -182,7 +182,7 @@ class TransformStep(_CamelModel):
 
     name: str = Field(
         description="Transform step name, e.g. `injectCA` / `rewritePackageSources` / "
-        "`setTimezone`.",
+        "`setTimezone` / `upgradePackages`.",
     )
     params: dict[str, Any] = Field(
         default_factory=dict, description="Step parameters (shape depends on the step)."

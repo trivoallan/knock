@@ -5,13 +5,19 @@ from __future__ import annotations
 from typing import Any
 
 from knock.domain.transforms.base import TransformStepCompiler
-from knock.domain.transforms.steps import InjectCA, RewritePackageSources, SetTimezone
+from knock.domain.transforms.steps import (
+    InjectCA,
+    RewritePackageSources,
+    SetTimezone,
+    UpgradePackages,
+)
 from knock.errors import PolicyValidationError
 
 BUILTIN_STEPS: tuple[TransformStepCompiler[Any], ...] = (
     InjectCA(),
     RewritePackageSources(),
     SetTimezone(),
+    UpgradePackages(),
 )
 
 

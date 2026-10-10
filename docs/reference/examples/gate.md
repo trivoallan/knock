@@ -1,7 +1,7 @@
 ---
 title: "Gate between plan and apply"
 description: "Every import, update and rebuild goes through an external verdict before knock applies it."
-sidebar_position: 8
+sidebar_position: 9
 ---
 
 knock places nothing an evaluator has not seen. `reconcile --plan-out` writes a
