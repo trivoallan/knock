@@ -191,17 +191,19 @@ def test_a_staged_image_is_attested_and_not_signed() -> None:
 
 def test_the_sbom_is_generated_and_attached_in_staging() -> None:
     policy, registry, sbom = _policy(), _registry(), FakeSbomGenerator()
-    _run(
+    report = _run(
         policy,
         registry,
         gate=_approved(policy, registry),
         staging=_staging(),
         sbom_generator=sbom,
-        sbom_formats=["spdx"],
+        sbom_formats=["spdx-json"],
     )
     assert sbom.calls and all(ref.startswith(f"{STAGED}@") for ref, _f, _t in sbom.calls)
     assert {tls for _r, _f, tls in sbom.calls} == {False}
+    assert registry.artifact_referrers
     assert all(ref.startswith(f"{STAGED}@") for ref, *_ in registry.artifact_referrers)
+    assert report.totals.staged == 2 and report.totals.failed == 0
 
 
 def test_a_dry_run_stages_nothing() -> None:

@@ -32,10 +32,10 @@
 
 ## 6. Use case: promotion
 
-- [ ] 6.1 Failing tests then `knock/use_cases/promote.py` for the happy path: copy by digest with referrers, verification at the destination (SBOM referrers, signed attestation when a signer is configured, and the no-signer case), tag written last, `imported` / `updated` reported, signed when `admit: true`, second run on the same file a no-op; verify the tests pass
-- [ ] 6.2 Failing tests then every refusal of spec requirement "promote refuses an entry it cannot trust" (policy missing, destination not declared, staged reference outside the staging registry, digest changed, image gone, stamp naming another policy, referrers lost by the copy, undeclared alias), each leaving the destination untouched and the other entries promoted; verify the tests pass
-- [ ] 6.3 Failing tests then the recorded aliases written after the tag (promoted tag becomes the target, an alias of a removed entry is not written and is not moved by other entries); verify the tests pass
-- [ ] 6.4 Run the entries through the stage executor reconcile already uses, so a pass with many entries does not promote one at a time; verify with a use-case test of several entries that results keep their order and one failure does not stop the others
+- [x] 6.1 Failing tests then `knock/use_cases/promote.py` for the happy path: copy by digest with referrers, verification at the destination (SBOM referrers, signed attestation when a signer is configured, and the no-signer case), tag written last, `imported` / `updated` reported, signed when `admit: true`, second run on the same file a no-op; verify the tests pass
+- [x] 6.2 Failing tests then every refusal of spec requirement "promote refuses an entry it cannot trust" (policy missing, destination not declared, staged reference outside the staging registry, digest changed, image gone, stamp naming another policy, referrers lost by the copy, undeclared alias), each leaving the destination untouched and the other entries promoted; verify the tests pass
+- [x] 6.3 Failing tests then the recorded aliases written after the tag (promoted tag becomes the target, an alias of a removed entry is not written and is not moved by other entries); verify the tests pass
+- [x] 6.4 Run the entries through the stage executor reconcile already uses, so a pass with many entries does not promote one at a time; verify with a use-case test of several entries that results keep their order and one failure does not stop the others
 
 ## 7. CLI
 
