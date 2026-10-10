@@ -129,6 +129,13 @@ def test_plan_out_marks_a_transform_change_as_rebuild() -> None:
     assert [(op.tag, op.kind, op.source_digest) for op in gate.planned] == [
         ("7.2.5", "rebuild", "sha256:same")
     ]
+    assert [op.transformed for op in gate.planned] == [True]  # the policy declares a transform
+
+
+def test_plan_out_says_a_copy_is_not_transformed() -> None:
+    gate = Gate()
+    _run(_policy(), _registry(), gate, dry_run_tags=True, dry_run_deletions=True)
+    assert [op.transformed for op in gate.planned] == [False, False]
 
 
 def test_plan_out_marks_a_settled_upstream_move_as_update() -> None:

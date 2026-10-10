@@ -38,6 +38,10 @@ class PlannedOperation(_CamelModel):
     source: str  # source repository, e.g. docker.io/library/redis
     source_tag: str
     source_digest: str  # what the evaluator judges: {source}@{sourceDigest}
+    # Whether applying this operation BUILDS an image (the policy resolves a transform onto it)
+    # or copies the source. Informative: not part of the key, so an approval stays bound to the
+    # digest and a plan filtered by a tool that drops the field still applies.
+    transformed: bool = False
 
     def key(self) -> GateKey:
         return (self.policy, self.destination, self.tag, self.kind, self.source_digest)

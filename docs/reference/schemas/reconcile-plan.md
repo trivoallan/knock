@@ -15,6 +15,7 @@ sidebar_position: 3
     - [3.1.5. Property `source`](#operations_items_source)
     - [3.1.6. Property `sourceTag`](#operations_items_sourceTag)
     - [3.1.7. Property `sourceDigest`](#operations_items_sourceDigest)
+    - [3.1.8. Property `transformed`](#operations_items_transformed)
 
 **Title:** ReconcilePlan (the gate's plan file)
 
@@ -95,6 +96,7 @@ Specific value: `"ReconcilePlan"`
 | + [source](#operations_items_source )             | No      | string           | No         | -          | Source            |
 | + [sourceTag](#operations_items_sourceTag )       | No      | string           | No         | -          | Sourcetag         |
 | + [sourceDigest](#operations_items_sourceDigest ) | No      | string           | No         | -          | Sourcedigest      |
+| - [transformed](#operations_items_transformed )   | No      | boolean          | No         | -          | Transformed       |
 
 #### 3.1.1. Property `policy` {#operations_items_policy}
 
@@ -163,5 +165,15 @@ Must be one of:
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | Yes      |
+
+#### 3.1.8. Property `transformed` {#operations_items_transformed}
+
+**Title:** Transformed
+
+|              |           |
+| ------------ | --------- |
+| **Type**     | `boolean` |
+| **Required** | No        |
+| **Default**  | `false`   |
 
 ----------------------------------------------------------------------------------------------------------------------------

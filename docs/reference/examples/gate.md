@@ -10,6 +10,10 @@ would perform, each with the source digest to evaluate. The orchestrator evaluat
 `{source}@{sourceDigest}` with the playbook of the policy's regime, **removes the refused
 entries**, and runs `reconcile --apply-plan` on what remains. Absence is refusal.
 
+Each entry also says whether applying it **builds** an image (`transformed: true`, the policy
+resolves a transform onto it) or copies the source. An orchestrator reads it to know which
+operations a staging registry will hold; it is not part of what binds an approval.
+
 ```yaml title="docs/examples/gate/redis.yml" file=../../examples/gate/redis.yml
 ```
 

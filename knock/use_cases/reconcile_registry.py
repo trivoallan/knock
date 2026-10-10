@@ -869,6 +869,7 @@ def _apply_plan(
                 source=src_repo,
                 source_tag=w.src_tag,
                 source_digest=source[w.src_tag].digest,
+                transformed=stages(transformed=bool(w.vplan.transform)),
             )
             if gate.admits(planned):
                 admitted.append(w)
