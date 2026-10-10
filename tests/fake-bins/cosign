@@ -7,6 +7,15 @@ set -e
 
 [ -n "${FAKE_COSIGN_LOG:-}" ] && echo "$@" >> "$FAKE_COSIGN_LOG"
 
+if [ "$1" = "public-key" ]; then
+    case "${FAKE_COSIGN_PUBKEY_SCENARIO:-ok}" in
+        ok) printf -- "-----BEGIN PUBLIC KEY-----\nZmFrZQ==\n-----END PUBLIC KEY-----\n" ;;
+        fail) echo "error: decrypt: wrong password" >&2; exit 1 ;;
+        *) echo "fake-cosign: unknown public-key scenario" >&2; exit 99 ;;
+    esac
+    exit 0
+fi
+
 if [ "$1" = "verify-attestation" ]; then
     case "${FAKE_COSIGN_VERIFY_SCENARIO:-verified}" in
         verified)

@@ -153,6 +153,18 @@ alias lags its promoted tag by one pass).
 staged digest; the summary line prints `staged=N`. `promote` reports each entry under its original
 kind (`imported` / `updated`), so dashboards built on those counts keep meaning "placed".
 
+### 9. Verify with the public half of a file key
+
+`_verify_args` passes `KNOCK_ATTEST_KEY_REF` to `cosign verify --key`. For a KMS URI that is right.
+For a private key file cosign v3 refuses it, and the adapter maps the failure to "nothing verified".
+In `key` mode the adapter now reads the file: a public key is used as is; otherwise the public key
+is derived with `cosign public-key --key <ref>` into the call's temporary directory and passed
+instead. A derivation failure raises `CosignError`: a broken key is a fault, not an absence of
+attestations.
+
+*Rejected:* a second setting for the verification key. One reference already identifies the key
+pair, and a verify-only deployment can point it at the public key.
+
 ## Risks / Trade-offs
 
 - [Referrers do not survive the copy with the deployed registry or tool versions] → task 1.1 runs

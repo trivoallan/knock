@@ -21,6 +21,8 @@
 - [ ] 4.2 `RegctlAdapter.copy` adds the flags recorded in 1.1 when `referrers=True`; extend the `regctl` fake-bin and the integration test to assert the exact argv in both cases
 - [ ] 4.3 `Counts.staged` and the `staged` operation kind in the reporter port, `StructlogReporter` and the CLI summary renderer; verify the rendered summary line shows `staged=N` and existing summary tests are updated
 
+- [x] 4.4 Failing integration tests then the fix of design decision 9 in `CosignAdapter`: private key file (a `public-key` call, then `--key` on the derived file), public key file (used as is, no derivation), derivation failure (`CosignError`), KMS unchanged; extend the `cosign` fake-bin with `public-key`; verify the tests pass and the existing verify tests still do
+
 ## 5. Use case: staging during apply
 
 - [ ] 5.1 Failing use-case tests for spec requirement "Building operations are staged instead of placed" (import with transforms staged, rebuild of a placed tag leaves it in service, copy-path import placed directly, `admit: true` staged image attested and not signed, dry-run tags stage nothing), then route building operations to the staging reference in `reconcile_registry.py`; verify the tests pass

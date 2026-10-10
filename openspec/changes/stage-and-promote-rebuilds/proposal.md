@@ -37,8 +37,12 @@ staging registry, and any policy field that chooses when a rebuild or a repair i
 
 ### Modified Capabilities
 
-None. `reconcile-gate` keeps its requirements: a staged image is not a placement, so the rule
-"only approved placements are signed" already covers it.
+- `image-signature`: verification with a file key uses its public half. Found while verifying this
+  change's premise: with `signer: key` and a key file, verification returned nothing on any
+  registry. The promotion's arrival check depends on it.
+
+`reconcile-gate` keeps its requirements: a staged image is not a placement, so the rule "only
+approved placements are signed" already covers it.
 
 ## Impact
 

@@ -138,3 +138,77 @@ def test_sign_and_verify_signature_allow_http_on_plain_http_registry(
     sign_line, verify_line = log.read_text().splitlines()
     assert INSECURE in sign_line
     assert INSECURE in verify_line
+
+
+# --- verification with a file key (design decision 9 of stage-and-promote-rebuilds) ---
+
+_KIND = "ENCRYPTED SIGSTORE PRIVATE KEY"
+PRIVATE = f"-----BEGIN {_KIND}-----\nZmFrZQ==\n-----END {_KIND}-----\n"
+PUBLIC = "-----BEGIN PUBLIC KEY-----\nZmFrZQ==\n-----END PUBLIC KEY-----\n"
+
+
+def _key_after(line: str) -> str:
+    argv = line.split()
+    return argv[argv.index("--key") + 1]
+
+
+def test_verify_with_a_private_key_file_derives_the_public_key(
+    fake_bin_path, tmp_path, monkeypatch
+):
+    key = tmp_path / "cosign.key"
+    key.write_text(PRIVATE)
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    adapter = CosignAdapter(AttestSettings(signer="key", key_ref=str(key)))
+    assert adapter.verify(SUBJECT, "https://knock.dev/predicate/scan/v1") != []
+    derive, verify = log.read_text().splitlines()
+    # cosign refuses a private key for verification: derive its public half first.
+    assert derive.split()[0] == "public-key" and _key_after(derive) == str(key)
+    assert verify.split()[0] == "verify-attestation" and _key_after(verify) != str(key)
+
+
+def test_verify_signature_with_a_private_key_file_derives_the_public_key(
+    fake_bin_path, tmp_path, monkeypatch
+):
+    key = tmp_path / "cosign.key"
+    key.write_text(PRIVATE)
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    adapter = CosignAdapter(AttestSettings(signer="key", key_ref=str(key)))
+    assert adapter.verify_signature(SUBJECT) is True
+    derive, verify = log.read_text().splitlines()
+    assert derive.split()[0] == "public-key"
+    assert verify.split()[0] == "verify" and _key_after(verify) != str(key)
+
+
+def test_verify_with_a_public_key_file_uses_it_as_is(fake_bin_path, tmp_path, monkeypatch):
+    key = tmp_path / "cosign.pub"
+    key.write_text(PUBLIC)
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    CosignAdapter(AttestSettings(signer="key", key_ref=str(key))).verify(SUBJECT, "https://k/p")
+    (verify,) = log.read_text().splitlines()
+    assert _key_after(verify) == str(key)
+
+
+def test_verify_with_an_unusable_private_key_is_an_error(fake_bin_path, tmp_path, monkeypatch):
+    import pytest
+
+    from knock.errors import CosignError
+
+    key = tmp_path / "cosign.key"
+    key.write_text(PRIVATE)
+    monkeypatch.setenv("FAKE_COSIGN_PUBKEY_SCENARIO", "fail")
+    adapter = CosignAdapter(AttestSettings(signer="key", key_ref=str(key)))
+    # A broken key is a fault, not "no attestation found".
+    with pytest.raises(CosignError, match="public key"):
+        adapter.verify(SUBJECT, "https://k/p")
+
+
+def test_verify_with_kms_passes_the_reference_unchanged(fake_bin_path, tmp_path, monkeypatch):
+    log = tmp_path / "cosign.log"
+    monkeypatch.setenv("FAKE_COSIGN_LOG", str(log))
+    ref = "awskms:///alias/knock"
+    CosignAdapter(AttestSettings(signer="kms", key_ref=ref)).verify(SUBJECT, "https://k/p")
+    (verify,) = log.read_text().splitlines()
+    assert _key_after(verify) == ref
