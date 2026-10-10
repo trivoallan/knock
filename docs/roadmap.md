@@ -55,6 +55,10 @@ no further than a design and an ADR. The rest are *Deferred* below or already ou
 - **Enforcement, after placement.** `attach --fail-on` (ADR 0021); `audit` coverage tiers
   `uncovered < stamped < signed < has-SBOM` with `--fail-on-unsigned` (ADRs 0026, 0036); and
   `knock verify`, the decision verb a promotion gate asks (ADR 0041).
+- **Admission, before placement.** A plan/apply seam an external evaluator filters
+  (`--plan-out` / `--apply-plan`, ADR 0051), and a staging registry for what knock rebuilds:
+  held images are judged by digest, and `promote` places the ones a filtered file still names,
+  with their evidence (ADR 0055).
 - **Scale.** In-pod concurrency, cross-pod sharding, KEDA-scaled buildkit, and an incremental,
   reconcile-fed scan pipeline driven by `knock scan`, shipped as the optional `knock-oci[scan]` extra
   so that core knock stays redis-free (ADRs 0042, 0043).
@@ -64,7 +68,7 @@ no further than a design and an ADR. The rest are *Deferred* below or already ou
   publishes stamped, SBOM-carrying, keyless-signed images every week
   ([Verify a published stamp](how-to/verify-published-stamp.md), ADR 0046).
 
-CLI verbs: `reconcile · purge · attach · audit · gc · verify · scan · version`.
+CLI verbs: `reconcile · promote · purge · attach · audit · gc · verify · scan · version`.
 
 ## Now — admission: the door says no before it places
 
@@ -107,10 +111,7 @@ CLI verbs: `reconcile · purge · attach · audit · gc · verify · scan · ver
   Terraform-style plan/apply seam (`--plan-out` / `--apply-plan`) with the evaluator outside knock,
   which keeps knock free of evaluator-specific code — the line ADR 0039 draws for analyzers. Both
   share one limit: for a rebuild, the bytes worth evaluating are the output, so the gate needs a
-  staging area to evaluate them in.
-- **Two-phase placement.** Place into a private staging area, then promote: copy the digest, with its
-  attestations, to the destination. This is the staging a rebuild gate needs, and it keeps a refused
-  digest out of every destination.
+  staging area to evaluate them in. ADR 0055 provides it.
 - **Sign the image at admission**, not only its attestations. Proposed in ADR 0050 (amends 0041): an
   opt-in `spec.admit` makes `reconcile` sign the placed image after its attestations, and
   `knock verify --require image-signature` reads it. Admission is still a policy-level assertion

@@ -16,6 +16,8 @@ See `proposal.md` for the motivation. What shapes the approach:
   host, TLS and credentials per registry.
 - `docs/roadmap.md` lists two-phase placement as "design and ADR only". `TODOS.md` asks for the
   ADR first, then a Deployment view in the C4 model.
+  The Deployment view is not added: the reference deployment deploys no staging registry in
+  this change, so the model would drift from the manifests.
 
 ## Goals / Non-Goals
 

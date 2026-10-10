@@ -143,3 +143,13 @@ def test_staged_repository_refuses_a_destination_outside_its_host() -> None:
 def test_only_an_operation_that_builds_is_staged() -> None:
     assert stages(transformed=True)
     assert not stages(transformed=False)  # a copy is byte-identical to the judged source
+
+
+def test_the_documented_staged_example_is_a_valid_document() -> None:
+    from pathlib import Path
+
+    doc = StagedRebuilds.model_validate_json(Path("docs/examples/gate/staged.json").read_text())
+    [entry] = doc.entries
+    assert entry.staged == staged_repository(
+        entry.destination, destination_host="harbor.example", staging_host="staging.example"
+    )
