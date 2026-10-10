@@ -113,7 +113,22 @@ next to `SourceRevisionMismatchError`.
 destination (decision 5), then write the tag inside the destination repository, as an alias write
 does today. Promoting twice is a no-op: the second run finds the tag at the staged digest.
 
-This is the first thing to verify against real tools, before the rest is written: that after such
+**Verified on 2026-10-10** (task 1.1; regctl v0.11.6, cosign v3.1.3, `registry:2` on both sides,
+BuildKit v0.30.0 rootless, `signer: key`): a plain copy by digest brings the manifest and **no**
+referrer; `regctl image copy --referrers` brings all three (SPDX SBOM and the two sigstore bundles)
+and the referrers fallback tag; `--digest-tags` is not needed. The digest is identical on both
+sides. A digest-only destination (`repo@sha256:...`) is accepted and leaves no tag; the tag is then
+written by a copy inside the destination repository. `knock verify --require stamp` and
+`--require sbom` pass against the second registry, and `cosign verify-attestation` with the public
+key passes there.
+
+**Found while verifying, not caused by this change:** with `signer: key` and a key *file*,
+`AttestorPort.verify` returns no predicate on any registry. The adapter passes `KNOCK_ATTEST_KEY_REF`
+(the private key) to `cosign verify-attestation --key`, which cosign v3 refuses, and the adapter
+maps that failure to an empty result. Verification works with a KMS URI or a public key. The
+arrival check of decision 5 depends on `verify`, so this must be settled before task 6.1.
+
+The original premise, kept for the record: that after such
 a copy the SBOM referrers and the attestations are attached to the same digest in the target, and
 that `knock verify` passes there. If it does not hold, promotion must re-attach and re-attest in
 the destination and decision 2 changes.

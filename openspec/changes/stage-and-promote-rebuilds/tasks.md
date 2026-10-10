@@ -2,8 +2,8 @@
 
 ## 1. Verify the premise with real tools
 
-- [ ] 1.1 Create branch `feat/stage-and-promote-rebuilds` from `main`. With two local registries, the runtime image and a rootless BuildKit daemon, rebuild one image as today, then `regctl image copy --referrers` it by digest to the second registry; verify the digest is identical, the SBOM referrers and attestations are listed on it there, and `knock verify` passes against the second registry. Also verify that the copy accepts a digest-only destination (`repo@sha256:...`) and that the tag can then be written inside the destination repository. Record the exact flags needed (`--referrers`, `--digest-tags`) and the tool versions in `design.md` decision 6. If it does not hold, stop and revise decisions 2 and 6 before any other task
-- [ ] 1.2 Tear the trial stack down; verify `docker ps -a` and `docker network ls` show nothing of it
+- [x] 1.1 Create branch `feat/stage-and-promote-rebuilds` from `main`. With two local registries, the runtime image and a rootless BuildKit daemon, rebuild one image as today, then `regctl image copy --referrers` it by digest to the second registry; verify the digest is identical, the SBOM referrers and attestations are listed on it there, and `knock verify` passes against the second registry. Also verify that the copy accepts a digest-only destination (`repo@sha256:...`) and that the tag can then be written inside the destination repository. Record the exact flags needed (`--referrers`, `--digest-tags`) and the tool versions in `design.md` decision 6. If it does not hold, stop and revise decisions 2 and 6 before any other task
+- [x] 1.2 Tear the trial stack down; verify `docker ps -a` and `docker network ls` show nothing of it
 
 ## 2. ADR first
 
