@@ -80,9 +80,9 @@ names, the stamp, the SBOM and the signature of the existing rebuild path.
   of them under its original path, or the upgrade fails on the missing one.
 - rpm-based and distroless images are out of reach of this step (`rewritePackageSources` knows
   apt and apk only). They fail loudly; the copy path remains.
-- The rebuilt output is still pushed to the destination without a verdict on it (ADR 0051's
-  limit). Turning the repair on for policies that serve production belongs with two-phase
-  placement, tracked in `TODOS.md`.
+- By default the rebuilt output is pushed to the destination without a verdict on it (ADR 0051's
+  limit). For policies that serve production, run the repair with a staging registry, so the
+  repaired image is judged before `knock promote` places it (ADR 0055).
 - `ImageInfo` gains `user` (default empty) and the regctl adapter reads it from the config it
   already fetches. No new port, adapter, external system or C4 actor: the C4 model is unchanged.
 - The `MirrorPolicy` JSON Schema gains a `oneOf` branch; the transform predicate `/v1` is
