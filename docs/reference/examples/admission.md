@@ -1,7 +1,7 @@
 ---
 title: "Admission gate (Kyverno)"
 description: "Consumer-side Kyverno gate: admit only images with a fresh knock-signed scan attestation."
-sidebar_position: 7
+sidebar_position: 8
 ---
 
 The consumer side of the [scan attestation](../../explanation/attestations.md): a Kyverno `ClusterPolicy` that admits a Pod only if every image carries a knock-signed scan attestation (`https://knock.dev/predicate/scan/v1`) whose `attested_at` is within a configured max-age. This is the freshness half of the [knock / Dependency-Track boundary](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0032-attach-is-scan-provenance-not-a-store.md) — the gate is **purely temporal** (age of a timestamp), never vulnerability correlation. The signed predicate exists only when `KNOCK_ATTEST_SIGNER` is set on the `knock attach` run.

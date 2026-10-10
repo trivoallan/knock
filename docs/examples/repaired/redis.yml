@@ -1,0 +1,42 @@
+# Repair (rebuild path) — upgrade OS packages from the internal mirror.
+# Decision: docs/architecture/decisions/0054-upgrade-packages-step.md
+#
+# Same rebuild path as ../hardened, with one more step: after the package sources point at
+# the internal mirror, `upgradePackages` upgrades every installed OS package (apt or apk).
+# That is how a version flagged "critical CVE, fix available" is repaired without waiting
+# for upstream to republish the tag.
+#
+# `epoch` is the trigger, and it is yours: nothing rebuilds until you change it. Changing it
+# changes the transform version, so the next reconcile rebuilds EVERY tag this import
+# selects, in one pass. Keep the selection as narrow as the versions you actually serve.
+# Quote it: an unquoted 2026-10-10 is a YAML date, not a string, and is refused.
+#
+# The order is enforced: `upgradePackages` without `rewritePackageSources` before it is a
+# validation error, so an upgrade can never reach a public repository.
+#
+#   KNOCK_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian", "apk": "https://mirror.corp/alpine"}}'
+#
+# Run it with `knock reconcile docs/examples/repaired`. The rebuilt image is not evaluated
+# by knock: judge it (a scanner, a gate) before you rely on it.
+#
+apiVersion: knock.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: redis-repaired
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/redis
+  imports:
+    - name: v7
+      owners:
+        - group:default/data-platform     # stamped as io.knock.owners
+      tags:
+        includeRegex: "^7\\.2\\."
+      transform:
+        - rewritePackageSources: { mirror: corp }      # name → KNOCK_TRANSFORM_PACKAGE_MIRRORS
+        - upgradePackages: { epoch: "2026-10-10" }     # change it to repair again
+      destinations:
+        - project: repaired
+          repository: redis
