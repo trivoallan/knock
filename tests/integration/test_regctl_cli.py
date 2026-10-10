@@ -466,6 +466,26 @@ def test_inspect_no_config_labels_is_empty(
     assert RegctlAdapter().inspect("x:1").config_labels == {}
 
 
+def test_inspect_reads_config_user(fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "config-user")
+    assert RegctlAdapter().inspect("docker.io/library/redis:7.2.0").user == "1000:1000"
+
+
+def test_inspect_no_config_user_is_empty(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "default")
+    assert RegctlAdapter().inspect("x:1").user == ""
+
+
+def test_inspect_non_string_config_user_is_empty(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A malformed config must not reach the renderer as anything but "no declared user".
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "config-user-malformed")
+    assert RegctlAdapter().inspect("x:1").user == ""
+
+
 # put_artifact — standalone artifact push (distinct from put_referrer: no --subject)
 
 

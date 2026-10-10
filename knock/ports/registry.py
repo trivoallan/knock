@@ -15,6 +15,8 @@ class ImageInfo:
     annotations: dict[str, str]  # OCI annotations (incl. recorded base.digest on mirror)
     # image-config Labels (e.g. upstream org.opencontainers.image.revision)
     config_labels: dict[str, str] = field(default_factory=dict)
+    # image-config User, verbatim and untrusted ("" when the source declares none)
+    user: str = ""
 
 
 @dataclass(frozen=True)

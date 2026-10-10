@@ -785,6 +785,183 @@ def test_transformed_variant_skips_when_version_matches() -> None:
     assert builder.requests == []
 
 
+# --- upgradePackages and the source image's user (change: upgrade-packages-step) -----------
+
+REPAIRED_SRC = "docker.io/library/redis"
+REPAIRED_DEST = "reg.local/repaired/redis"
+REPAIRED_TAGS = ["7.2.4", "7.2.5", "7.2.6"]
+
+
+def _repaired_policy(epoch: str) -> MirrorPolicy:
+    return parse_mirror_policy(f"""
+apiVersion: knock.io/v1alpha1
+kind: MirrorPolicy
+metadata: {{ name: redis-repaired }}
+spec:
+  artifactType: image
+  source: {{ registry: docker.io, repository: library/redis }}
+  imports:
+    - name: v7
+      tags: {{ includeRegex: "^7\\\\.2\\\\." }}
+      transform:
+        - rewritePackageSources: {{ mirror: corp }}
+        - upgradePackages: {{ epoch: "{epoch}" }}
+      destinations: [{{ project: repaired, repository: redis }}]
+""")
+
+
+def _repaired_version(epoch: str) -> str:
+    steps = _repaired_policy(epoch).spec.imports[0].transform
+    assert steps is not None
+    return transform_version(
+        [
+            ResolvedStep(
+                steps[0],
+                (ResolvedResource(kind="packageMirror", name="corp", apt="https://mirror.corp"),),
+            ),
+            ResolvedStep(steps[1], ()),
+        ]
+    )
+
+
+def _repaired_registry(*, placed_epoch: str | None, user: str = "") -> FakeRegistryPort:
+    infos = {
+        f"{REPAIRED_SRC}:{t}": ImageInfo(
+            digest=f"sha256:src-{t}", created=HARDENED_NOW, annotations={}, user=user
+        )
+        for t in REPAIRED_TAGS
+    }
+    if placed_epoch is not None:
+        for t in REPAIRED_TAGS:
+            infos[f"{REPAIRED_DEST}:{t}"] = ImageInfo(
+                digest=f"sha256:built-{t}",
+                created=HARDENED_NOW,
+                annotations={
+                    "org.opencontainers.image.base.digest": f"sha256:src-{t}",
+                    "io.knock.transform.version": _repaired_version(placed_epoch),
+                },
+            )
+    return FakeRegistryPort(
+        tags={
+            REPAIRED_SRC: REPAIRED_TAGS,
+            REPAIRED_DEST: REPAIRED_TAGS if placed_epoch is not None else [],
+        },
+        infos=infos,
+    )
+
+
+def _run_repaired(
+    registry: FakeRegistryPort, builder: FakeImageBuilder, epoch: str = "2026-10-10"
+) -> RunReport:
+    return reconcile_policies(  # type: ignore[call-arg]
+        [_repaired_policy(epoch)],
+        registry=registry,
+        builder=builder,
+        source=FakeSourcePort(),
+        archiver=LocalArchiver(),
+        roster={"local": RegistryConfig(host="reg.local")},
+        ca_certs={},
+        package_mirrors={"corp": PackageMirror(apt="https://mirror.corp")},
+        build_platform="linux/amd64",
+        now=HARDENED_NOW,
+        label_prefix="io.knock",
+        dry_run_tags=False,
+        dry_run_deletions=False,
+        reporter=FakeReporter(),
+    )
+
+
+def test_upgrade_packages_builds_every_selected_tag_and_stamps_the_step() -> None:
+    registry = _repaired_registry(placed_epoch=None)
+    builder = FakeImageBuilder()
+    report = _run_repaired(registry, builder)
+
+    assert report.totals.imported == 3
+    assert len(builder.requests) == 3
+    for df in builder.dockerfiles:
+        assert df.index("/etc/apt/sources.list") < df.index("knock-upgrade-epoch=2026-10-10")
+        assert "USER" not in df  # a root source renders no USER line
+    _ref, ann = registry.annotated[0]
+    assert ann["io.knock.transform.steps"] == "rewritePackageSources,upgradePackages"
+    assert ann["io.knock.transform.version"] == _repaired_version("2026-10-10")
+
+
+def test_a_new_epoch_rebuilds_every_selected_tag() -> None:
+    # The operator's trigger: nothing moved upstream, only the epoch in the policy.
+    registry = _repaired_registry(placed_epoch="2026-10-10")
+    builder = FakeImageBuilder()
+    report = _run_repaired(registry, builder, epoch="2026-10-17")
+
+    assert report.totals.updated == 3 and report.totals.imported == 0
+    assert sorted(r.image_ref for r in builder.requests) == [
+        f"{REPAIRED_DEST}:{t}" for t in REPAIRED_TAGS
+    ]
+    assert all("knock-upgrade-epoch=2026-10-17" in df for df in builder.dockerfiles)
+
+
+def test_the_same_epoch_keeps_every_tag() -> None:
+    registry = _repaired_registry(placed_epoch="2026-10-10")
+    builder = FakeImageBuilder()
+    report = _run_repaired(registry, builder, epoch="2026-10-10")
+
+    assert report.totals.updated == 0 and report.totals.imported == 0
+    assert builder.requests == []
+
+
+def test_a_failed_upgrade_build_fails_the_operation_and_places_nothing() -> None:
+    # What a `RUN … exit 1` (no apt, no apk) or an unreachable mirror looks like from here.
+    registry = _repaired_registry(placed_epoch=None)
+    report = _run_repaired(registry, FakeImageBuilder(fail=True))
+
+    assert report.totals.imported == 0 and report.totals.failed == 3
+    assert registry.annotated == [] and registry.copied == []
+    ops = [op for t in report.policies[0].targets for v in t.variants for op in v.operations]
+    failed = [op for op in ops if op.error is not None]
+    assert {op.error.type for op in failed} == {"BuildkitError"}  # type: ignore[union-attr]
+    assert all(op.transform_steps == ["rewritePackageSources", "upgradePackages"] for op in failed)
+
+
+def test_a_non_root_source_is_rebuilt_as_root_and_restored() -> None:
+    registry = _repaired_registry(placed_epoch=None, user="app")
+    builder = FakeImageBuilder()
+    _run_repaired(registry, builder)
+
+    for df in builder.dockerfiles:
+        lines = df.splitlines()
+        assert lines[1] == "USER root"
+        assert lines[-1] == "USER app"
+
+
+def test_an_unsafe_source_user_fails_the_operation_before_any_build() -> None:
+    registry = _repaired_registry(placed_epoch=None, user="app\nRUN curl http://evil")
+    builder = FakeImageBuilder()
+    report = _run_repaired(registry, builder)
+
+    assert builder.requests == []
+    assert registry.annotated == []
+    assert report.totals.failed == 3
+    ops = [op for t in report.policies[0].targets for v in t.variants for op in v.operations]
+    errors = [op.error for op in ops if op.error is not None]
+    assert {e.type for e in errors} == {"UnsafeSourceUserError"}
+    assert {e.exit_code for e in errors} == {1}
+    assert all("\n" not in e.message for e in errors)
+
+
+def test_hardened_example_renders_no_user_line_for_a_root_source() -> None:
+    src_repo = "docker.io/library/redis"
+    registry = FakeRegistryPort(
+        tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": []},
+        infos={
+            f"{src_repo}:7.2.5": ImageInfo(
+                digest="sha256:src", created=HARDENED_NOW, annotations={}
+            )
+        },
+    )
+    builder = FakeImageBuilder()
+    _run_hardened(registry, builder)
+    assert "USER" not in builder.dockerfiles[0]
+
+
 def test_unknown_cert_name_raises_config_error() -> None:
     src_repo = "docker.io/library/redis"
     registry = FakeRegistryPort(

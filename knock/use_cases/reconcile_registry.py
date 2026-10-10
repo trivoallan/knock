@@ -85,7 +85,9 @@ def to_source_artifact(info: ImageInfo, *, now: datetime) -> SourceArtifact:
     # Unknown created time → use `now` (conservative: treated as just-pushed, so the
     # 7-day stability window skips an update rather than churning on unknown freshness).
     revision = info.annotations.get(_REVISION_KEY) or info.config_labels.get(_REVISION_KEY)
-    return SourceArtifact(digest=info.digest, pushed_at=info.created or now, revision=revision)
+    return SourceArtifact(
+        digest=info.digest, pushed_at=info.created or now, revision=revision, user=info.user
+    )
 
 
 def to_mirror_artifact(
@@ -165,15 +167,18 @@ def _build_variant(
     dest_ref: str,
     resolved: _ResolvedTransform,
     platform: str,
+    source_user: str = "",
     work_dir: Path | None = None,
     provenance: bool = False,
     tls_verify: bool = True,
 ) -> None:
+    # Render before touching the filesystem: an unsafe source user is refused here, with
+    # nothing written and nothing built.
+    rendered = render(resolved.resolved_steps, source_ref=source_ref, source_user=source_user)
     if work_dir is not None:
         work_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="knock-build-", dir=work_dir) as tmp:
         ctx = Path(tmp)
-        rendered = render(resolved.resolved_steps, source_ref=source_ref)
         for cf in rendered.context_files:
             (ctx / cf.path).write_text(cf.content)
         df_path = ctx / "Dockerfile"
@@ -480,6 +485,7 @@ def _apply_plan(
                         dest_ref=dest_ref,
                         resolved=plan.transforms[w.vplan.name],
                         platform=build_platform,
+                        source_user=source[w.src_tag].user,
                         work_dir=work_dir,
                         provenance=attestor is not None,
                         tls_verify=plan.config.tls_verify,

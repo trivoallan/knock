@@ -83,10 +83,16 @@ class RegctlAdapter:
         config_labels = (
             {str(k): str(v) for k, v in raw_labels.items()} if isinstance(raw_labels, dict) else {}
         )
+        raw_user = cfg.get("User") if isinstance(cfg, dict) else None
+        user = raw_user if isinstance(raw_user, str) else ""
         created_raw = config.get("created")
         created = self._parse_time(created_raw) if isinstance(created_raw, str) else None
         return ImageInfo(
-            digest=digest, created=created, annotations=annotations, config_labels=config_labels
+            digest=digest,
+            created=created,
+            annotations=annotations,
+            config_labels=config_labels,
+            user=user,
         )
 
     def get_annotations(self, image_ref: str) -> tuple[str, dict[str, str]]:
