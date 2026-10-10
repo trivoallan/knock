@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.13.0](https://github.com/trivoallan/knock/compare/v0.12.0...v0.13.0) (2026-10-10)
+
+
+### Features
+
+* **cli:** stage rebuilt images and promote them after a verdict ([#310](https://github.com/trivoallan/knock/issues/310)) ([ce2278b](https://github.com/trivoallan/knock/commit/ce2278b05ab1f77d956cd3a9a0e50503e5f7b74d))
+* **docs:** opt the website into Docusaurus v4 behaviours ([#297](https://github.com/trivoallan/knock/issues/297)) ([b59dddd](https://github.com/trivoallan/knock/commit/b59ddddcfc045821364e9b78a9ef6f3ad3d4c7de))
+* **domain:** the plan says whether an operation is rebuilt ([#311](https://github.com/trivoallan/knock/issues/311)) ([817ef52](https://github.com/trivoallan/knock/commit/817ef523276bfa17749d646b1d162b5a78378fe0))
+* **domain:** upgradePackages, a transform step that repairs OS packages ([#308](https://github.com/trivoallan/knock/issues/308)) ([6b5521b](https://github.com/trivoallan/knock/commit/6b5521b977079089d8a8302024fe9cc42e33f8bd))
+* sign a git-placed artifact at admission (spec.admit on a git source) ([#292](https://github.com/trivoallan/knock/issues/292)) ([2f8e7d8](https://github.com/trivoallan/knock/commit/2f8e7d8014f2f4123a47f28adf98f1e50f1364d6))
+
+
+### Documentation
+
+* archive cosign-honours-tls-verify, sync registry-tls, and clear the spec TBDs ([#296](https://github.com/trivoallan/knock/issues/296)) ([e1519b4](https://github.com/trivoallan/knock/commit/e1519b4fb576e7f99adac95483855213ace9809f))
+
 ## [0.12.0](https://github.com/trivoallan/knock/compare/v0.11.0...v0.12.0) (2026-09-19)
 
 
