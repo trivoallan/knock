@@ -74,6 +74,15 @@ class PolicyValidationError(DomainError):
     """`MirrorPolicy` YAML invalid (schema, unknown field, inconsistent spec)."""
 
 
+class UnsafeSourceUserError(DomainError):
+    """A source image declares a `User` that cannot be rendered safely into a Dockerfile.
+
+    The value comes from an upstream image, which knock does not trust, and `USER` has no
+    quoting: anything outside a plain `name` or `uid[:gid]` is refused, never sanitised, so
+    the rebuilt image can never run as a user its source did not declare.
+    """
+
+
 class ScanReportError(DomainError):
     """Scan report is unparseable, has an unexpected schema, or its subject digest mismatches."""
 

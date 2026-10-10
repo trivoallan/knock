@@ -51,3 +51,33 @@ def test_version_changes_with_params() -> None:
 
 def test_version_changes_with_step_order() -> None:
     assert transform_version(_steps()) != transform_version(list(reversed(_steps())))
+
+
+def test_version_of_hardened_example_is_frozen() -> None:
+    # Frozen on main before upgrade-packages-step: the renderer may change, the version may not.
+    from tests.unit.domain.transforms.test_render import HARDENED_STEPS
+
+    assert (
+        transform_version(HARDENED_STEPS)
+        == "sha256:972aa31c2ed39c22cf3187a8eec7b681a9b930f41a514012886e76c2e45ecac1"
+    )
+
+
+def _with_upgrade(epoch: str) -> list[ResolvedStep]:
+    return [
+        *_steps(),
+        ResolvedStep(TransformStep(name="upgradePackages", params={"epoch": epoch}), ()),
+    ]
+
+
+def test_version_changes_with_the_upgrade_epoch() -> None:
+    # The epoch is the human trigger: a new one must plan a rebuild.
+    assert transform_version(_with_upgrade("2026-10-10")) != transform_version(
+        _with_upgrade("2026-10-11")
+    )
+
+
+def test_version_is_stable_for_the_same_epoch() -> None:
+    assert transform_version(_with_upgrade("2026-10-10")) == transform_version(
+        _with_upgrade("2026-10-10")
+    )

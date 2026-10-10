@@ -1,18 +1,23 @@
 import pytest
 
 from knock.domain.transforms.registry import BUILTIN_STEPS, DEFAULT_REGISTRY
-from knock.domain.transforms.steps import InjectCA, RewritePackageSources, SetTimezone
+from knock.domain.transforms.steps import (
+    InjectCA,
+    RewritePackageSources,
+    SetTimezone,
+    UpgradePackages,
+)
 from knock.errors import PolicyValidationError
 
 
-def test_builtin_steps_are_the_three_primitives() -> None:
+def test_builtin_steps_are_the_four_primitives() -> None:
     types = {type(s) for s in BUILTIN_STEPS}
-    assert types == {InjectCA, RewritePackageSources, SetTimezone}
+    assert types == {InjectCA, RewritePackageSources, SetTimezone, UpgradePackages}
 
 
 def test_names_lists_all_builtins() -> None:
     assert DEFAULT_REGISTRY.names() == frozenset(
-        {"injectCA", "rewritePackageSources", "setTimezone"}
+        {"injectCA", "rewritePackageSources", "setTimezone", "upgradePackages"}
     )
 
 
