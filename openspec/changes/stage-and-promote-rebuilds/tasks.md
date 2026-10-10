@@ -45,8 +45,8 @@
 
 ## 8. Real run
 
-- [ ] 8.1 On a local stack (destination registry, staging registry, rootless BuildKit, runtime image from this branch): plan, apply with staging, check the destination is empty and the staged image carries stamp, SBOM and attestations, remove one of two entries from the file, promote; verify the kept tag is in the destination with the staged digest and its referrers, the removed one is absent, the alias points to the kept tag, and a second `--plan-out` plans the removed import again
-- [ ] 8.2 Same stack: delete a staged image before promotion; verify that entry fails, the others are promoted and the exit code is non-zero. Then tear the stack down and verify nothing of it remains
+- [x] 8.1 On a local stack (destination registry, staging registry, rootless BuildKit, runtime image from this branch): plan, apply with staging, check the destination is empty and the staged image carries stamp, SBOM and attestations, remove one of two entries from the file, promote; verify the kept tag is in the destination with the staged digest and its referrers, the removed one is absent, the alias points to the kept tag, and a second `--plan-out` plans the removed import again
+- [x] 8.2 Same stack: delete a staged image before promotion; verify that entry fails, the others are promoted and the exit code is non-zero. Then tear the stack down and verify nothing of it remains
 
 ## 9. Docs and close
 

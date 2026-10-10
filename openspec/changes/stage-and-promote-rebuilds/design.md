@@ -94,8 +94,15 @@ The file is edited outside knock. Promotion therefore re-derives what it can:
 - the staged image's stamp (`get_annotations`) must name the entry's policy, import, variant and
   source digest, else the entry fails: `promote` places only what knock stamped for that entry;
 - after the copy, the destination digest must equal `stagedDigest`, and its SBOM referrers and,
-  when a signer is configured, its signed attestation (`AttestorPort.verify`) must be found there,
-  else the entry fails and the tag is not written.
+  when a signer is configured, its signed attestation (`AttestorPort.has_attestation`) must be
+  found there, else the entry fails and the tag is not written.
+
+`has_attestation` is a new port method. The real run of task 8.1 showed `AttestorPort.verify`
+cannot serve here: it decodes scan predicates (`summary`, `attested_at`) and drops any other, so
+it returned nothing for the transform attestation and promotion refused every entry. The check
+failed closed, which is the behaviour wanted, and a fake that returned generic predicates had hidden
+it from the unit tests. `has_attestation` asks cosign the same question and reads nothing from the
+predicate.
 
 A copy that exits 0 does not prove the evidence arrived: registries and tools differ in how they
 store and discover referrers. Hence the order in decision 6: copy by digest, verify, then tag.

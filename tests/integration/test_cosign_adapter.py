@@ -212,3 +212,24 @@ def test_verify_with_kms_passes_the_reference_unchanged(fake_bin_path, tmp_path,
     CosignAdapter(AttestSettings(signer="kms", key_ref=ref)).verify(SUBJECT, "https://k/p")
     (verify,) = log.read_text().splitlines()
     assert _key_after(verify) == ref
+
+
+def test_has_attestation_is_true_when_cosign_verifies_an_attestation(fake_bin_path, monkeypatch):
+    monkeypatch.setenv("FAKE_COSIGN_VERIFY_SCENARIO", "verified")
+    assert _adapter().has_attestation(SUBJECT, "https://knock.dev/predicate/transform/v1") is True
+
+
+def test_has_attestation_is_false_when_nothing_verifies(fake_bin_path, monkeypatch):
+    for scenario in ("none", "verifyfail"):
+        monkeypatch.setenv("FAKE_COSIGN_VERIFY_SCENARIO", scenario)
+        assert (
+            _adapter().has_attestation(SUBJECT, "https://knock.dev/predicate/transform/v1") is False
+        )
+
+
+def test_has_attestation_does_not_read_the_predicate(fake_bin_path, monkeypatch):
+    # A transform predicate has no `summary`: `verify` drops it, `has_attestation` must not.
+    monkeypatch.setenv("FAKE_COSIGN_PRED", '{"transformed": true}')
+    adapter = _adapter()
+    assert adapter.verify(SUBJECT, "https://knock.dev/predicate/transform/v1") == []
+    assert adapter.has_attestation(SUBJECT, "https://knock.dev/predicate/transform/v1") is True

@@ -39,6 +39,12 @@ class AttestorPort(Protocol):
         """
         ...
 
+    def has_attestation(self, subject_ref: str, predicate_type: str) -> bool:
+        """Whether a signature-verified attestation of `predicate_type` is attached to the
+        subject. Unlike `verify`, it reads nothing from the predicate, so it holds for any
+        predicate type (`verify` decodes scan predicates only)."""
+        ...
+
     def sign(self, subject_ref: str) -> None:
         """Sign the image `subject_ref` itself (not a predicate) — the act of admission."""
         ...

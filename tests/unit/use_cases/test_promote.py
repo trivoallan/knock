@@ -12,7 +12,6 @@ from knock.domain.gate import StagedEntry, StagedRebuilds
 from knock.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
 from knock.domain.sbom import media_type_for
 from knock.errors import ConfigError
-from knock.ports.attestor import VerifiedPredicate
 from knock.ports.registry import ImageInfo, Referrer
 from knock.use_cases.promote import promote_staged
 from knock.use_cases.report import Operation, RunReport, report_exit_code
@@ -126,11 +125,7 @@ def _registry(
 
 
 def _attestor(**over: object) -> FakeAttestor:
-    kwargs: dict[str, object] = dict(
-        predicates=[VerifiedPredicate(summary={}, attested_at=NOW.isoformat())]
-    )
-    kwargs.update(over)
-    return FakeAttestor(**kwargs)  # type: ignore[arg-type]
+    return FakeAttestor(**over)  # type: ignore[arg-type]
 
 
 def _promote(
@@ -179,7 +174,9 @@ def test_an_entry_is_copied_by_digest_verified_then_tagged_then_aliased() -> Non
 
     assert registry.copied == [BY_DIGEST, TAG_WRITE, ALIAS_WRITE]
     assert registry.copied_with_referrers == [BY_DIGEST]  # only the first carries evidence
-    assert attestor.verified == [(f"{DEST}@{D37}", "https://knock.dev/predicate/transform/v1")]
+    assert attestor.attested_checks == [
+        (f"{DEST}@{D37}", "https://knock.dev/predicate/transform/v1")
+    ]
     assert [op.kind for op in _ops(report)] == ["imported", "aliased"]
     assert _ops(report)[0].out_digest == D37
     assert report.status == "ok" and report_exit_code(report) == 0
@@ -309,7 +306,7 @@ def test_refuses_when_the_copy_lost_the_referrers() -> None:
 
 
 def test_refuses_when_the_attestation_does_not_verify_at_the_destination() -> None:
-    error = _refused(_registry(), _entry(), attestor=_attestor(predicates=[]))
+    error = _refused(_registry(), _entry(), attestor=_attestor(attestation_verifies=False))
     assert "attestation" in error
 
 

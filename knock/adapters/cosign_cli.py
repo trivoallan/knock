@@ -181,9 +181,11 @@ class CosignAdapter:
             cfg.verify_oidc_issuer,
         ]
 
-    def verify(self, subject_ref: str, predicate_type: str) -> list[VerifiedPredicate]:
+    def _verify_attestation(
+        self, subject_ref: str, predicate_type: str
+    ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory(prefix="knock-verify-") as tmp:
-            r = self._run(
+            return self._run(
                 [
                     "verify-attestation",
                     "--type",
@@ -193,9 +195,18 @@ class CosignAdapter:
                     subject_ref,
                 ]
             )
+
+    def verify(self, subject_ref: str, predicate_type: str) -> list[VerifiedPredicate]:
+        r = self._verify_attestation(subject_ref, predicate_type)
         if r.returncode != 0:
             return []  # cosign ran, nothing verifiable -> fail-closed at the gate
         return _parse_verified_predicates(r.stdout)
+
+    def has_attestation(self, subject_ref: str, predicate_type: str) -> bool:
+        # cosign prints one DSSE envelope per verified attestation. `verify` cannot answer
+        # this for a transform predicate: it decodes scan predicates and drops the rest.
+        r = self._verify_attestation(subject_ref, predicate_type)
+        return r.returncode == 0 and any(_is_envelope(ln) for ln in r.stdout.splitlines())
 
     def verify_signature(self, subject_ref: str) -> bool:
         with tempfile.TemporaryDirectory(prefix="knock-verify-") as tmp:
@@ -229,6 +240,13 @@ def _has_image_signature_claim(stdout: str) -> bool:
         ):
             return True
     return False
+
+
+def _is_envelope(line: str) -> bool:
+    try:
+        return "payload" in json.loads(line)
+    except (TypeError, ValueError):
+        return False
 
 
 def _parse_verified_predicates(stdout: str) -> list[VerifiedPredicate]:

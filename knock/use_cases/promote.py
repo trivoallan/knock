@@ -201,7 +201,7 @@ def promote_staged(
                     raise _refuse(entry, f"the SBOM ({', '.join(missing)}) did not arrive")
                 if attestor is not None and (
                     COSIGN_ATTESTATION_ARTIFACT_TYPE not in present
-                    or not attestor.verify(dest_by_digest, PREDICATE_TYPE)
+                    or not attestor.has_attestation(dest_by_digest, PREDICATE_TYPE)
                 ):
                     raise _refuse(entry, "the signed attestation did not arrive or does not verify")
                 registry.copy(dest_by_digest, dest_tag)

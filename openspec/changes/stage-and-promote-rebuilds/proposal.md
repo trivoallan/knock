@@ -50,7 +50,8 @@ approved placements are signed" already covers it.
   The generated CLI reference changes.
 - **Domain**: a `StagedRebuilds` document with a published JSON Schema, next to `ReconcilePlan`.
 - **Ports / adapters**: `RegistryPort.copy` gains a way to carry referrers; the regctl adapter and
-  its fake-bin follow. `Counts` gains a `staged` count.
+  its fake-bin follow. `AttestorPort` gains `has_attestation`, a verification that does not read
+  the predicate. `Counts` gains a `staged` count.
 - **Use cases**: the registry reconcile path routes building operations to the staging registry;
   a new promotion use case.
 - **Docs**: ADR 0055, the gate example gains the two-phase walkthrough, `TODOS.md` loses its
