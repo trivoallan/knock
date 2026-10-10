@@ -111,6 +111,25 @@ def test_copy_invokes_image_copy(
     assert "image copy docker.io/redis:7.2.0 harbor.corp/lib/redis:7.2.0" in log.read_text()
 
 
+def test_copy_with_referrers_adds_the_flag(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # A plain copy brings the manifest alone; promotion needs the evidence to follow.
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().copy("stage/lib/redis@sha256:a", "corp/lib/redis@sha256:a", referrers=True)
+    assert "image copy --referrers stage/lib/redis@sha256:a corp/lib/redis@sha256:a" in (
+        log.read_text()
+    )
+
+
+def test_copy_without_referrers_keeps_its_argv(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    log = _log(tmp_path, monkeypatch)
+    RegctlAdapter().copy("a/b:1", "c/d:1")
+    assert "--referrers" not in log.read_text()
+
+
 def test_annotate_emits_one_flag_per_annotation(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

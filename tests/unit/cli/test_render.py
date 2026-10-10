@@ -207,3 +207,21 @@ def test_render_text_counts_pin_mismatch_without_failing() -> None:
     assert "pin_mismatch=1" in lines[0]  # policy line
     assert "pin_mismatch=1" in lines[-1]  # run recap
     assert report_exit_code(report) == 0
+
+
+def test_render_text_shows_staged_only_when_something_was_staged() -> None:
+    plain = io.StringIO()
+    render_report(_report(), fmt="text", verbose=False, stream=plain)
+    assert "staged=" not in plain.getvalue()  # ungated output is unchanged
+
+    report = _report()
+    staged = report.model_copy(
+        update={
+            "totals": Counts(staged=2),
+            "policies": [report.policies[0].model_copy(update={"totals": Counts(staged=2)})],
+        }
+    )
+    buf = io.StringIO()
+    render_report(staged, fmt="text", verbose=False, stream=buf)
+    policy_line, run_line = buf.getvalue().splitlines()
+    assert " staged=2 " in policy_line and " staged=2 " in run_line

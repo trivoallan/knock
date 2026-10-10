@@ -11,15 +11,15 @@
 
 ## 3. Domain: the staged rebuilds document
 
-- [ ] 3.1 Failing tests then, in the existing `knock/domain/gate.py`: `StagedEntry` (with its `aliases` list) and `StagedRebuilds` (frozen, camelCase, `extra="forbid"`), `staged_rebuilds_json_schema()`; verify round-trip, unknown-field rejection and schema tests pass
-- [ ] 3.2 Failing tests then, in the same module, a pure function that re-roots a destination repository under the staging host, and one that says whether an operation stages (it builds) or not (copy path); verify with table tests including two destinations of one policy
-- [ ] 3.3 Add `StagedDigestMismatchError` under `AdapterError` in `knock/errors.py`; verify `exit_code_for` returns 2 for it and the error-hierarchy test lists it
+- [x] 3.1 Failing tests then, in the existing `knock/domain/gate.py`: `StagedEntry` (with its `aliases` list) and `StagedRebuilds` (frozen, camelCase, `extra="forbid"`), `staged_rebuilds_json_schema()`; verify round-trip, unknown-field rejection and schema tests pass
+- [x] 3.2 Failing tests then, in the same module, a pure function that re-roots a destination repository under the staging host, and one that says whether an operation stages (it builds) or not (copy path); verify with table tests including two destinations of one policy
+- [x] 3.3 Add `StagedDigestMismatchError` under `AdapterError` in `knock/errors.py`; verify `exit_code_for` returns 2 for it and the error-hierarchy test lists it
 
 ## 4. Ports and adapters: copy with referrers
 
-- [ ] 4.1 `RegistryPort.copy(src, dst, *, referrers=False)`; update `FakeRegistryPort` to journal the flag and to carry seeded referrers when it is set; verify existing use-case tests still pass unchanged
-- [ ] 4.2 `RegctlAdapter.copy` adds the flags recorded in 1.1 when `referrers=True`; extend the `regctl` fake-bin and the integration test to assert the exact argv in both cases
-- [ ] 4.3 `Counts.staged` and the `staged` operation kind in the reporter port, `StructlogReporter` and the CLI summary renderer; verify the rendered summary line shows `staged=N` and existing summary tests are updated
+- [x] 4.1 `RegistryPort.copy(src, dst, *, referrers=False)`; update `FakeRegistryPort` to journal the flag and to carry seeded referrers when it is set; verify existing use-case tests still pass unchanged
+- [x] 4.2 `RegctlAdapter.copy` adds the flags recorded in 1.1 when `referrers=True`; extend the `regctl` fake-bin and the integration test to assert the exact argv in both cases
+- [x] 4.3 `Counts.staged` and the `staged` operation kind in the reporter port, `StructlogReporter` and the CLI summary renderer; verify the rendered summary line shows `staged=N` and existing summary tests are updated
 
 - [x] 4.4 Failing integration tests then the fix of design decision 9 in `CosignAdapter`: private key file (a `public-key` call, then `--key` on the derived file), public key file (used as is, no derivation), derivation failure (`CosignError`), KMS unchanged; extend the `cosign` fake-bin with `public-key`; verify the tests pass and the existing verify tests still do
 

@@ -194,3 +194,11 @@ def test_failed_policies_is_derived_not_settable() -> None:
     report = RunReport(mode="apply", status="ok", totals=Counts(), policies=[])
     assert report.failed_policies == 0
     assert "failed_policies" in run_report_json_schema()["properties"]
+
+
+def test_counts_of_and_merge_count_staged_operations() -> None:
+    from knock.use_cases.report import counts_of, merge_counts
+
+    ops = [Operation(kind="staged", out_tag="7.2.5", applied=True)]
+    assert counts_of(ops).staged == 1
+    assert merge_counts([counts_of(ops), counts_of(ops)]).staged == 2

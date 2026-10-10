@@ -91,6 +91,13 @@ class UnknownFormatError(DomainError):
     """The scan report format could not be detected and no valid --format was supplied."""
 
 
+class PromotionRefusedError(DomainError):
+    """A staged entry promote cannot trust: unknown policy, undeclared destination or alias,
+    a staged reference outside the staging registry, a stamp that names another entry, or
+    evidence that did not reach the destination. The staged rebuilds file is edited outside
+    knock, so it says WHETHER to place, never where or what."""
+
+
 class SourcePathError(DomainError):
     """A policy names a subdirectory that does not exist in the fetched tree.
 
@@ -165,6 +172,11 @@ class SourceRevisionMismatchError(AdapterError):
     tip), not because the operator's policy is wrong; exit 1 here would tell an operator
     to fix input that is perfectly valid.
     """
+
+
+class StagedDigestMismatchError(AdapterError):
+    """A staged reference no longer resolves to the digest that was evaluated, or the
+    destination did not receive that digest. Promotion places the judged bytes or nothing."""
 
 
 class QueueError(AdapterError):

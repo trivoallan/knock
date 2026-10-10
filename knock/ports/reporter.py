@@ -22,6 +22,7 @@ OperationKind = Literal[
     "attested",
     "sbom",
     "withheld",  # refused by the gate (--apply-plan): not applied, destination untouched
+    "staged",  # rebuilt into the staging registry (--stage-to): destination untouched
     "pin_mismatch",
 ]
 
@@ -37,6 +38,7 @@ class Counts:
     attested: int = 0
     sbom: int = 0
     withheld: int = 0
+    staged: int = 0  # rebuilds held in staging, awaiting `knock promote`
     failed: int = 0
     pin_mismatch: int = 0  # pinned tags withheld: upstream no longer serves the pinned digest
 
