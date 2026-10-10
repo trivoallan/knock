@@ -134,3 +134,18 @@ def test_unsafe_source_user_is_a_domain_error() -> None:
     # Exit 1: the input (an upstream image's declared user) is refused, nothing was attempted.
     assert issubclass(UnsafeSourceUserError, DomainError)
     assert exit_code_for(UnsafeSourceUserError("x")) == 1
+
+
+def test_staged_digest_mismatch_is_adapter_error_exit_2() -> None:
+    from knock.errors import StagedDigestMismatchError
+
+    assert issubclass(StagedDigestMismatchError, AdapterError)
+    assert exit_code_for(StagedDigestMismatchError("digest moved")) == 2
+
+
+def test_promotion_refused_is_domain_error_exit_1() -> None:
+    # The file named something promote must not place: the input is wrong, not the environment.
+    from knock.errors import PromotionRefusedError
+
+    assert issubclass(PromotionRefusedError, DomainError)
+    assert exit_code_for(PromotionRefusedError("undeclared destination")) == 1

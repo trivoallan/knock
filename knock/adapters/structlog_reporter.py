@@ -81,6 +81,7 @@ class StructlogReporter:
             attested=totals.attested,
             sbom=totals.sbom,
             withheld=totals.withheld,
+            staged=totals.staged,
             pin_mismatch=totals.pin_mismatch,
             failed=totals.failed,
         )
@@ -99,6 +100,7 @@ class StructlogReporter:
             attested=report.totals.attested,
             sbom=report.totals.sbom,
             withheld=report.totals.withheld,
+            staged=report.totals.staged,
             pin_mismatch=report.totals.pin_mismatch,
             failed=report.totals.failed,
         )

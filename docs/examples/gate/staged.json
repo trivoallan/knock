@@ -1,0 +1,22 @@
+{
+  "apiVersion": "knock.io/v1alpha1",
+  "kind": "StagedRebuilds",
+  "entries": [
+    {
+      "policy": "redis-gated",
+      "import": "v7",
+      "variant": "default",
+      "kind": "import",
+      "destination": "harbor.example/hub/redis",
+      "tag": "7.2.5",
+      "source": "docker.io/library/redis",
+      "sourceTag": "7.2.5",
+      "sourceDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "staged": "staging.example/hub/redis",
+      "stagedDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "aliases": [
+        "7.2"
+      ]
+    }
+  ]
+}

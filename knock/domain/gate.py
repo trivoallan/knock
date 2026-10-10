@@ -7,6 +7,12 @@ digests in between and removes the refused entries: absence is refusal.
 
 An approval is bound to the source DIGEST, never the tag: if upstream re-pushed the tag after
 the plan was written, the live operation no longer matches and is withheld (fails closed).
+
+The same seam is played a second time for rebuilt images. With a staging registry,
+`reconcile --apply-plan` pushes what it BUILDS there instead of to the destination and writes
+a `StagedRebuilds` document; the orchestrator evaluates the staged digests and removes the
+refused entries; `promote` places the rest. A copied image is not staged: it is byte-identical
+to the source the first seam judged.
 """
 
 from __future__ import annotations
@@ -14,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from pydantic import ConfigDict, Field
+from pydantic import AliasChoices, ConfigDict, Field
 
 from knock.domain.mirror_policy import _CamelModel
 
@@ -64,3 +70,54 @@ class Gate:
             self.planned.append(op)
             return True
         return op.key() in self.approved
+
+
+class StagedEntry(_CamelModel):
+    """One rebuilt image held in the staging registry, and where it is meant to go."""
+
+    model_config = ConfigDict(frozen=True)
+
+    policy: str
+    # `import` is a Python keyword: the field is `import_name`, the document key `import`.
+    import_name: str = Field(
+        validation_alias=AliasChoices("import", "import_name"), serialization_alias="import"
+    )
+    variant: str
+    kind: PlanKind
+    destination: str  # destination repository, e.g. harbor.corp/hub/redis
+    tag: str  # destination tag (variant suffix included)
+    source: str
+    source_tag: str
+    source_digest: str
+    staged: str  # staged repository: the destination, re-rooted under the staging registry
+    staged_digest: str  # what the evaluator judges: {staged}@{stagedDigest}
+    # Aliases reconcile resolved onto this tag. Recorded here so promote replays reconcile's
+    # rule instead of computing a second one from whatever the destination holds.
+    aliases: tuple[str, ...] = ()
+
+
+class StagedRebuilds(_CamelModel):
+    api_version: Literal["knock.io/v1alpha1"] = "knock.io/v1alpha1"
+    kind: Literal["StagedRebuilds"] = "StagedRebuilds"
+    entries: list[StagedEntry] = Field(default_factory=list)
+
+
+def staged_rebuilds_json_schema() -> dict[str, Any]:
+    return StagedRebuilds.model_json_schema(by_alias=True)
+
+
+def staged_repository(destination: str, *, destination_host: str, staging_host: str) -> str:
+    """`destination`, re-rooted under the staging registry: same path, other host.
+
+    Keeping the path means two destinations of one policy never collide in staging, and
+    that promote can re-derive the staged location instead of trusting a file for it.
+    """
+    prefix = destination_host + "/"
+    if not destination.startswith(prefix):
+        raise ValueError(f"{destination!r} is not under {destination_host!r}")
+    return f"{staging_host}/{destination[len(prefix) :]}"
+
+
+def stages(*, transformed: bool) -> bool:
+    """Whether an operation is held in staging: only one that builds an image."""
+    return transformed

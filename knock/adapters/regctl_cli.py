@@ -102,8 +102,11 @@ class RegctlAdapter:
         annotations = {str(k): str(v) for k, v in raw.items()} if isinstance(raw, dict) else {}
         return digest, annotations
 
-    def copy(self, src_ref: str, dst_ref: str) -> None:
-        self._run(["image", "copy", src_ref, dst_ref])
+    def copy(self, src_ref: str, dst_ref: str, *, referrers: bool = False) -> None:
+        # Verified against two registries: without the flag the manifest arrives alone;
+        # with it the SBOM and sigstore bundles follow, fallback tag included.
+        flags = ["--referrers"] if referrers else []
+        self._run(["image", "copy", *flags, src_ref, dst_ref])
 
     def annotate(
         self, image_ref: str, annotations: dict[str, str], *, publish_as: str | None = None

@@ -1,0 +1,106 @@
+{
+  "$defs": {
+    "StagedEntry": {
+      "additionalProperties": false,
+      "description": "One rebuilt image held in the staging registry, and where it is meant to go.",
+      "properties": {
+        "policy": {
+          "title": "Policy",
+          "type": "string"
+        },
+        "import": {
+          "title": "Import",
+          "type": "string"
+        },
+        "variant": {
+          "title": "Variant",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "import",
+            "update",
+            "rebuild"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "destination": {
+          "title": "Destination",
+          "type": "string"
+        },
+        "tag": {
+          "title": "Tag",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "sourceTag": {
+          "title": "Sourcetag",
+          "type": "string"
+        },
+        "sourceDigest": {
+          "title": "Sourcedigest",
+          "type": "string"
+        },
+        "staged": {
+          "title": "Staged",
+          "type": "string"
+        },
+        "stagedDigest": {
+          "title": "Stageddigest",
+          "type": "string"
+        },
+        "aliases": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy",
+        "import",
+        "variant",
+        "kind",
+        "destination",
+        "tag",
+        "source",
+        "sourceTag",
+        "sourceDigest",
+        "staged",
+        "stagedDigest"
+      ],
+      "title": "StagedEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "const": "knock.io/v1alpha1",
+      "default": "knock.io/v1alpha1",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "StagedRebuilds",
+      "default": "StagedRebuilds",
+      "title": "Kind",
+      "type": "string"
+    },
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/StagedEntry"
+      },
+      "title": "Entries",
+      "type": "array"
+    }
+  },
+  "title": "StagedRebuilds (the rebuilt images held in staging)",
+  "type": "object"
+}

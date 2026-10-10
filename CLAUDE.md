@@ -10,7 +10,7 @@ knock and `regis` (which carries the removed EOL feature) are sibling tools shar
 
 Current maturity: released 0.9.3, plus git sources and the `skill` class merged on `main` since. The use-case layer (`knock/use_cases/` — `loader`, the `reconcile_policies` orchestrator, which hands each policy to a `RegistryPlanner` or a `GitPlanner`, `intake`, `report`, and the `audit` coverage walk), **both** image paths (copy and rebuild / derive-and-stamp), the convergent git path (ADRs 0048, 0049), the pluggable transform engine (`knock/domain/transforms/`), and the frozen OCI-standard + `io.knock.*` provenance stamp (`knock/domain/stamp.py`, ADR 0020) are all built. `knock attach` ingests upstream scan reports as signed OCI referrers and, with `--fail-on <severity>`, doubles as a CI gate: it exits 1 when the scan has any finding at or above the threshold (`critical > high > medium > low > unknown`), else 0 — observational by default. Every refusal knock can issue today lands on a digest already placed; the roadmap's current heading is **admission** — refusing before placing, and signing a write-once record of the terms a digest got in on.
 
-CLI verbs today: `reconcile · purge · attach · audit · gc · verify · scan · version`. Two deserve
+CLI verbs today: `reconcile · promote · purge · attach · audit · gc · verify · scan · version`. Two deserve
 naming here: **`knock verify <ref> --require scan-pass --max-severity --max-age` is the *decision*
 verb** — read-only, it evaluates the facts `attach`/`reconcile` already placed on a digest (signed
 scan attestation, stamp, SBOM referrer) and returns one exit-0/1 verdict, which is what makes knock

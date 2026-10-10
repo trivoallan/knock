@@ -41,7 +41,11 @@ class RegistryPort(Protocol):
         """
         ...
 
-    def copy(self, src_ref: str, dst_ref: str) -> None: ...
+    def copy(self, src_ref: str, dst_ref: str, *, referrers: bool = False) -> None:
+        """Copy an image. `referrers=True` also carries what refers to it (SBOM,
+        attestations, signature): a plain copy brings the manifest and nothing else."""
+        ...
+
     def annotate(
         self, image_ref: str, annotations: dict[str, str], *, publish_as: str | None = None
     ) -> str:

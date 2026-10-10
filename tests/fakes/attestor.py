@@ -13,7 +13,10 @@ class FakeAttestor:
         fail: bool = False,
         predicates: list[VerifiedPredicate] | None = None,
         image_signed: bool = False,
+        attestation_verifies: bool = True,
     ) -> None:
+        self.attested_checks: list[tuple[str, str]] = []
+        self._attestation_verifies = attestation_verifies
         self.attested: list[tuple[str, dict[str, Any]]] = []
         self.verified: list[tuple[str, str]] = []
         self.signed: list[str] = []
@@ -36,6 +39,12 @@ class FakeAttestor:
             raise CosignError("fake attestor configured to fail")
         self.verified.append((subject_ref, predicate_type))
         return list(self._predicates)
+
+    def has_attestation(self, subject_ref: str, predicate_type: str) -> bool:
+        if self._fail:
+            raise CosignError("fake attestor configured to fail")
+        self.attested_checks.append((subject_ref, predicate_type))
+        return self._attestation_verifies
 
     def sign(self, subject_ref: str) -> None:
         if self._fail:

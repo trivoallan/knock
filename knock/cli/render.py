@@ -24,7 +24,9 @@ def _op_line(op: Operation) -> str:
     return f"        {op.kind:<9}{op.out_tag}{src}{planned}\n"
 
 
-def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO) -> None:
+def render_report(
+    report: RunReport, *, fmt: str, verbose: bool, stream: TextIO, verb: str = "reconcile"
+) -> None:
     if fmt == "json":
         stream.write(report.model_dump_json() + "\n")
         return
@@ -45,6 +47,7 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
                 f"marked={t.marked} attested={t.attested} sbom={t.sbom}"
                 # only under the gate (--apply-plan): ungated output is unchanged
                 + (f" withheld={t.withheld}" if t.withheld else "")
+                + (f" staged={t.staged}" if t.staged else "")
                 + (f" pin_mismatch={t.pin_mismatch}" if t.pin_mismatch else "")
                 + f" failed={t.failed}\n"
             )
@@ -59,11 +62,12 @@ def render_report(report: RunReport, *, fmt: str, verbose: bool, stream: TextIO)
 
     t = report.totals
     stream.write(
-        f"reconcile [{report.mode}] status={report.status}  "
+        f"{verb} [{report.mode}] status={report.status}  "
         f"imported={t.imported} updated={t.updated} deleted={t.deleted} "
         f"aliased={t.aliased} skipped={t.skipped} marked={t.marked} "
         f"attested={t.attested} sbom={t.sbom}"
         + (f" withheld={t.withheld}" if t.withheld else "")
+        + (f" staged={t.staged}" if t.staged else "")
         + (f" pin_mismatch={t.pin_mismatch}" if t.pin_mismatch else "")
         + f" failed={t.failed} "
         f"failed_policies={report.failed_policies}\n"

@@ -11,11 +11,12 @@ from pydantic import ValidationError
 
 from knock.cli._di import build_container
 from knock.cli.render import render_report
-from knock.domain.gate import Gate, ReconcilePlan
+from knock.domain.gate import Gate, ReconcilePlan, StagedRebuilds
 from knock.errors import ConfigError
 from knock.logging import configure
 from knock.use_cases.loader import load_policy_dir
 from knock.use_cases.reconcile import reconcile_policies
+from knock.use_cases.reconcile_registry import Staging
 from knock.use_cases.report import report_exit_code
 
 
@@ -71,6 +72,23 @@ def reconcile(
             "(a filtered ReconcilePlan) still names it; report the others as withheld.",
         ),
     ] = None,
+    stage_to: Annotated[
+        str | None,
+        typer.Option(
+            "--stage-to",
+            help="With --apply-plan: push every rebuilt image to this registry (a name from "
+            "KNOCK_REGISTRIES) instead of its destination, for an external evaluator to judge "
+            "before `knock promote`. Copies are placed as usual.",
+        ),
+    ] = None,
+    staged_out: Annotated[
+        Path | None,
+        typer.Option(
+            "--staged-out",
+            help="With --stage-to: write the rebuilt images held in staging to FILE "
+            "(a StagedRebuilds), the input of `knock promote`.",
+        ),
+    ] = None,
 ) -> None:
     """Reconcile all MirrorPolicy files under DIRECTORY against their destinations."""
     container = build_container()
@@ -88,6 +106,15 @@ def reconcile(
         except (OSError, ValidationError) as exc:
             raise ConfigError(f"--apply-plan {apply_plan}: {exc}") from exc
     dry_run = dry_run or plan_out is not None  # writing the plan places nothing
+
+    staging: Staging | None = None
+    if stage_to is not None or staged_out is not None:
+        # Staging is the second seam of the gate: it holds what the first seam approved.
+        if stage_to is None or staged_out is None or apply_plan is None:
+            raise ConfigError("--stage-to and --staged-out go together, and with --apply-plan")
+        if stage_to not in container.settings.registries:
+            raise ConfigError(f"--stage-to {stage_to!r} is not a registry of KNOCK_REGISTRIES")
+        staging = Staging(config=container.settings.registries[stage_to])
 
     policies = load_policy_dir(directory)
     report = reconcile_policies(
@@ -118,7 +145,13 @@ def reconcile(
         sbom_generator=container.sbom_generator,
         sbom_formats=container.settings.sbom_formats,
         gate=gate,
+        staging=staging,
     )
+    if staging is not None and staged_out is not None:
+        # Workers append in completion order: sort, so the file is stable across runs.
+        entries = sorted(staging.entries, key=lambda e: (e.policy, e.destination, e.tag))
+        doc = StagedRebuilds(entries=entries)
+        staged_out.write_text(doc.model_dump_json(by_alias=True, indent=2) + "\n")
     if plan_out is not None:
         assert gate is not None
         plan = ReconcilePlan(operations=gate.planned)

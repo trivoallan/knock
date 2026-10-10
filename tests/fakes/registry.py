@@ -22,6 +22,7 @@ class FakeRegistryPort:
         annotations: dict[str, dict[str, str]] | None = None,
         fail_get: set[str] | None = None,
         digests: dict[str, str] | None = None,
+        lose_referrers: bool = False,
     ) -> None:
         self._tags = tags or {}
         self._infos = infos or {}
@@ -43,6 +44,11 @@ class FakeRegistryPort:
         # outcome.
         self.got_annotations: list[str] = []
         self.copied: list[tuple[str, str]] = []
+        # Copies asked to carry referrers. Such a copy also moves the seeded ImageInfo and
+        # referrers to the destination ref, so a use case can verify what arrived;
+        # `lose_referrers` models a copy that exits 0 and leaves the evidence behind.
+        self.copied_with_referrers: list[tuple[str, str]] = []
+        self._lose_referrers = lose_referrers
         self.annotated: list[tuple[str, dict[str, str]]] = []
         self.deleted: list[str] = []
         self.logins: list[tuple[str, str, bool]] = []
@@ -81,12 +87,18 @@ class FakeRegistryPort:
         )
         return digest, dict(self._annotations.get(image_ref, {}))
 
-    def copy(self, src_ref: str, dst_ref: str) -> None:
+    def copy(self, src_ref: str, dst_ref: str, *, referrers: bool = False) -> None:
         if self._copy_barrier is not None:
             self._copy_barrier.wait()  # type: ignore[attr-defined]
         if dst_ref in self._fail_copy:
             raise RegctlError(f"fake copy failure for {dst_ref}")
         self.copied.append((src_ref, dst_ref))
+        if referrers:
+            self.copied_with_referrers.append((src_ref, dst_ref))
+            if src_ref in self._infos:
+                self._infos[dst_ref] = self._infos[src_ref]
+            if not self._lose_referrers:
+                self._referrers[dst_ref] = list(self._referrers.get(src_ref, []))
 
     def annotate(
         self, image_ref: str, annotations: dict[str, str], *, publish_as: str | None = None

@@ -15,6 +15,7 @@ from pydantic_settings import SettingsError
 from knock.cli.attach import attach as attach_cmd
 from knock.cli.audit import audit as audit_cmd
 from knock.cli.gc import gc as gc_cmd
+from knock.cli.promote import promote as promote_cmd
 from knock.cli.purge import purge as purge_cmd
 from knock.cli.reconcile import reconcile as reconcile_cmd
 from knock.cli.scan import scan_app
@@ -25,6 +26,7 @@ app = typer.Typer(name="knock", no_args_is_help=True, add_completion=False)
 
 
 app.command(name="reconcile")(reconcile_cmd)
+app.command(name="promote")(promote_cmd)
 app.command(name="purge")(purge_cmd)
 app.command(name="attach")(attach_cmd)
 app.command(name="audit")(audit_cmd)

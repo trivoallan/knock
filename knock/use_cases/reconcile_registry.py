@@ -30,7 +30,14 @@ from knock.domain.attestation import COSIGN_ATTESTATION_ARTIFACT_TYPE, build_tra
 from knock.domain.collision import AliasTarget
 from knock.domain.deletion_mode import DeletionMode, resolve_deletion_mode
 from knock.domain.expand import ExpandedImport, VariantPlan, expand_import
-from knock.domain.gate import Gate, PlannedOperation
+from knock.domain.gate import (
+    Gate,
+    PlanKind,
+    PlannedOperation,
+    StagedEntry,
+    staged_repository,
+    stages,
+)
 from knock.domain.lifecycle import (
     PENDING_DELETION_ARTIFACT_TYPE,
     build_pending_deletion_annotations,
@@ -274,6 +281,19 @@ class _AliasWork:
     target: str
 
 
+@dataclass
+class Staging:
+    """The staging registry of a run (`--stage-to`), and what the run held there.
+
+    An operation that BUILDS an image pushes, stamps and attests it under `config`
+    instead of its destination, and leaves an entry here. `entries` is appended from
+    worker threads; callers sort before writing it out.
+    """
+
+    config: RegistryConfig
+    entries: list[StagedEntry] = field(default_factory=list)
+
+
 @dataclass(frozen=True)
 class _DeleteWork:
     out_tag: str
@@ -301,6 +321,7 @@ def _apply_plan(
     sbom_formats: list[str],
     retention_global: Archive | None = None,
     gate: Gate | None = None,
+    staging: Staging | None = None,
 ) -> TargetReport:
     registry_source = _require_registry_source(plan.policy)
     src_repo = f"{registry_source.registry}/{registry_source.repository}"
@@ -403,16 +424,25 @@ def _apply_plan(
             error,
         )
 
-    def _attach_sbom(out_digest: str, out_tag: str, formats: list[str]) -> None:
+    def _attach_sbom(
+        out_digest: str,
+        out_tag: str,
+        formats: list[str],
+        *,
+        repo: str = plan.dest_repo,
+        cfg: RegistryConfig = plan.config,
+    ) -> None:
+        # `repo`/`cfg` say where the image IS (the staging registry for a held rebuild);
+        # the subject NAME below stays the destination's, where the image is meant to live.
         assert sbom_generator is not None  # callers guard: formats non-empty => generator wired
-        placed = f"{plan.dest_repo}@{out_digest}"
+        placed = f"{repo}@{out_digest}"
         for d in sbom_generator.generate(
             placed,
             formats,
-            tls_verify=plan.config.tls_verify,
-            username=plan.config.username,
-            password=(plan.config.password.get_secret_value() if plan.config.password else None),
-            ca_cert=plan.config.ca_cert,
+            tls_verify=cfg.tls_verify,
+            username=cfg.username,
+            password=(cfg.password.get_secret_value() if cfg.password else None),
+            ca_cert=cfg.ca_cert,
         ):
             registry.put_referrer(
                 placed,
@@ -447,9 +477,10 @@ def _apply_plan(
         out_tag: str,
         source_digest: str,
         sign: bool,
+        repo: str = plan.dest_repo,
     ) -> None:
         assert attestor is not None  # callers guard on attestor before calling
-        subject = f"{plan.dest_repo}@{out_digest}"
+        subject = f"{repo}@{out_digest}"
         attestor.attest(
             subject,
             build_transform_statement(
@@ -472,11 +503,39 @@ def _apply_plan(
         if sign and plan.policy.spec.admit:
             attestor.sign(subject)
 
+    dest_repo = plan.dest_repo
+    stage_repo = (
+        staged_repository(
+            dest_repo, destination_host=plan.config.host, staging_host=staging.config.host
+        )
+        if staging is not None
+        else dest_repo
+    )
+    rebuilds = {(vr.variant, t) for vr in result.variants for t in vr.to_rebuild}
+    # alias names reconcile resolved onto each (variant, tag): recorded on a staged entry
+    aliases_onto: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for vr in result.variants:
+        for alias_name, target in vr.aliases.items():
+            aliases_onto[(vr.variant, target)].append(alias_name)
+
+    def _held(w: _ImportWork) -> bool:
+        return staging is not None and stages(transformed=bool(w.vplan.transform))
+
+    def _plan_kind(w: _ImportWork) -> PlanKind:
+        if w.kind == "imported":
+            return "import"
+        return "rebuild" if (w.variant, w.out_tag) in rebuilds else "update"
+
     def _do_import(w: _ImportWork) -> Operation:
         steps = [s.name for s in w.vplan.transform] or None  # applied steps; None on a copy
+        # A held rebuild goes through the very same steps, in the staging registry: what
+        # an evaluator judges there is, byte for byte, what promote would place.
+        held = _held(w)
+        repo, cfg = (stage_repo, staging.config) if held and staging else (dest_repo, plan.config)
+        kind: OperationKind = "staged" if held else w.kind
         try:
             out_digest: str | None = None
-            dest_ref = f"{plan.dest_repo}:{w.out_tag}"
+            dest_ref = f"{repo}:{w.out_tag}"
             if not dry_run_tags:
                 if w.vplan.transform:
                     _build_variant(
@@ -488,7 +547,7 @@ def _apply_plan(
                         source_user=source[w.src_tag].user,
                         work_dir=work_dir,
                         provenance=attestor is not None,
-                        tls_verify=plan.config.tls_verify,
+                        tls_verify=cfg.tls_verify,
                     )
                     # buildkit's output digest is not known until the tag is resolved, so
                     # the rebuild path stamps in place.
@@ -530,7 +589,7 @@ def _apply_plan(
                 # the op (no silently-uncovered image), like signing. Empty formats =>
                 # skip (lib/test affordance; KNOCK_SBOM_FORMATS guarantees >=1 in prod).
                 if sbom_formats and out_digest is not None:
-                    _attach_sbom(out_digest, w.out_tag, sbom_formats)
+                    _attach_sbom(out_digest, w.out_tag, sbom_formats, repo=repo, cfg=cfg)
                 # Sign knock's predicate over the stamped output digest — rebuild AND copy
                 # (the label is the product: every placed image is signed). Inside the try =>
                 # a signing failure fails the operation rather than leaving a silent gap.
@@ -541,11 +600,32 @@ def _apply_plan(
                         vplan=w.vplan,
                         out_tag=w.out_tag,
                         source_digest=source[w.src_tag].digest,
-                        # under the gate, only approved operations reach this point
-                        sign=True,
+                        # under the gate, only approved operations reach this point; a held
+                        # image is not admitted yet: promote signs it, in the destination
+                        sign=not held,
+                        repo=repo,
+                    )
+                if held and staging is not None and out_digest is not None:
+                    # Last, once the image is stamped and attested: an entry promises an
+                    # image that is complete in staging.
+                    staging.entries.append(
+                        StagedEntry(
+                            policy=policy_name,
+                            import_name=plan.expanded.name,
+                            variant=w.variant,
+                            kind=_plan_kind(w),
+                            destination=dest_repo,
+                            tag=w.out_tag,
+                            source=src_repo,
+                            source_tag=w.src_tag,
+                            source_digest=source[w.src_tag].digest,
+                            staged=stage_repo,
+                            staged_digest=out_digest,
+                            aliases=tuple(sorted(aliases_onto[(w.variant, w.out_tag)])),
+                        )
                     )
             op = Operation(
-                kind=w.kind,
+                kind=kind,
                 out_tag=w.out_tag,
                 src_tag=w.src_tag,
                 digest=source[w.src_tag].digest,
@@ -560,7 +640,7 @@ def _apply_plan(
                 type=type(exc).__name__, message=str(exc), exit_code=exit_code_for(exc)
             )
             op = Operation(
-                kind=w.kind,
+                kind=kind,
                 out_tag=w.out_tag,
                 src_tag=w.src_tag,
                 digest=source[w.src_tag].digest,
@@ -779,18 +859,11 @@ def _apply_plan(
             )
     withheld_ops: list[tuple[str, Operation]] = []
     if gate is not None:
-        rebuilds = {(vr.variant, t) for vr in result.variants for t in vr.to_rebuild}
         admitted: list[_ImportWork] = []
         for w in import_items:
             planned = PlannedOperation(
                 policy=policy_name,
-                kind=(
-                    "import"
-                    if w.kind == "imported"
-                    else "rebuild"
-                    if (w.variant, w.out_tag) in rebuilds
-                    else "update"
-                ),
+                kind=_plan_kind(w),
                 destination=plan.dest_repo,
                 tag=w.out_tag,
                 source=src_repo,
@@ -811,7 +884,9 @@ def _apply_plan(
             withheld_ops.append((w.variant, op))
         import_items = admitted
     # A withheld import does not exist in the destination: an alias must not move onto it.
-    withheld_imports = {op.out_tag for _v, op in withheld_ops} - set(mirror)
+    # Neither does a held one, until promote places it and replays the alias.
+    held_tags = {w.out_tag for w in import_items if _held(w)}
+    withheld_imports = ({op.out_tag for _v, op in withheld_ops} | held_tags) - set(mirror)
     import_ops = _run_stage(import_items, _do_import, executor=executor)
     # Barrier. Backfill stage: sign skipped-but-unsigned mirror tags (already up-to-date).
     sign_ops = _run_stage(sign_items, _do_sign, executor=executor)
@@ -963,6 +1038,7 @@ class RegistryPlanner:
     sbom_formats: list[str] = field(default_factory=list)
     retention_global: Archive | None = None
     gate: Gate | None = None  # None ⇒ ungated reconcile (see knock.domain.gate)
+    staging: Staging | None = None  # None ⇒ rebuilds go straight to their destination
     # A field rather than a local because `plan` and `apply` must share ONE session
     # set: `plan` logs into the source registries, `apply` into the destinations, and
     # a second set would re-login hosts already configured. Public so a driver can
@@ -1014,6 +1090,12 @@ class RegistryPlanner:
                 for dest in resolved.destinations or []:
                     _name, cfg = resolve_registry(dest.registry, self.roster)
                     dest_repo = f"{cfg.host}/{dest.project}/{dest.repository}"
+                    if self.staging is not None and self.staging.config.host == cfg.host:
+                        # Holding an image where consumers pull is not holding it.
+                        raise ConfigError(
+                            f"the staging registry {cfg.host!r} is also a destination of "
+                            f"policy {policy.metadata.name!r}"
+                        )
                     policy_plans.append(
                         _Plan(
                             policy=policy,
@@ -1054,6 +1136,8 @@ class RegistryPlanner:
                 for plan in policy_plans:
                     cfg = plan.config
                     ensure_registry_session(self.registry, cfg, self.logged_in)
+                    if self.staging is not None:
+                        ensure_registry_session(self.registry, self.staging.config, self.logged_in)
                     targets.append(
                         _apply_plan(
                             plan,
@@ -1075,6 +1159,7 @@ class RegistryPlanner:
                             sbom_formats=self.sbom_formats,
                             retention_global=self.retention_global,
                             gate=self.gate,
+                            staging=self.staging,
                         )
                     )
                 all_ops = [op for t in targets for v in t.variants for op in v.operations] + [

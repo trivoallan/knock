@@ -145,11 +145,35 @@ class CosignAdapter:
         if r.returncode != 0:
             raise CosignError(f"cosign sign failed: {r.stderr.strip()}")
 
-    def _verify_args(self) -> list[str]:
+    def _verify_key(self, tmp: str) -> str:
+        """The key cosign verifies with: the reference itself, except for a private key FILE.
+
+        cosign refuses a private key for verification, so its public half is derived into
+        the call's temporary directory. A KMS URI, a public key file, or a path knock cannot
+        read is passed through for cosign to judge.
+        """
+        cfg = self._config
+        if cfg.signer != "key":
+            return cfg.key_ref
+        try:
+            first_line = Path(cfg.key_ref).read_text().lstrip().partition("\n")[0]
+        except (OSError, UnicodeDecodeError):
+            return cfg.key_ref
+        if "PRIVATE KEY" not in first_line:
+            return cfg.key_ref
+        r = self._run(["public-key", "--key", cfg.key_ref])
+        if r.returncode != 0 or not r.stdout.strip():
+            # A broken key is a fault, not an absence of attestations.
+            raise CosignError(f"cosign could not derive the public key: {r.stderr.strip()}")
+        pub = Path(tmp) / "verify.pub"
+        pub.write_text(r.stdout)
+        return str(pub)
+
+    def _verify_args(self, tmp: str) -> list[str]:
         cfg = self._config
         if cfg.signer in ("kms", "key"):
             # Key/KMS signatures carry no Rekor entry -> skip the tlog check (kargo §9.1 #1).
-            return ["--key", cfg.key_ref, "--insecure-ignore-tlog=true"]
+            return ["--key", self._verify_key(tmp), "--insecure-ignore-tlog=true"]
         return [
             "--certificate-identity-regexp",
             cfg.verify_identity,
@@ -157,25 +181,43 @@ class CosignAdapter:
             cfg.verify_oidc_issuer,
         ]
 
+    def _verify_attestation(
+        self, subject_ref: str, predicate_type: str
+    ) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory(prefix="knock-verify-") as tmp:
+            return self._run(
+                [
+                    "verify-attestation",
+                    "--type",
+                    predicate_type,
+                    *self._verify_args(tmp),
+                    *self._registry_args(subject_ref),
+                    subject_ref,
+                ]
+            )
+
     def verify(self, subject_ref: str, predicate_type: str) -> list[VerifiedPredicate]:
-        r = self._run(
-            [
-                "verify-attestation",
-                "--type",
-                predicate_type,
-                *self._verify_args(),
-                *self._registry_args(subject_ref),
-                subject_ref,
-            ]
-        )
+        r = self._verify_attestation(subject_ref, predicate_type)
         if r.returncode != 0:
             return []  # cosign ran, nothing verifiable -> fail-closed at the gate
         return _parse_verified_predicates(r.stdout)
 
+    def has_attestation(self, subject_ref: str, predicate_type: str) -> bool:
+        # cosign prints one DSSE envelope per verified attestation. `verify` cannot answer
+        # this for a transform predicate: it decodes scan predicates and drops the rest.
+        r = self._verify_attestation(subject_ref, predicate_type)
+        return r.returncode == 0 and any(_is_envelope(ln) for ln in r.stdout.splitlines())
+
     def verify_signature(self, subject_ref: str) -> bool:
-        r = self._run(
-            ["verify", *self._verify_args(), *self._registry_args(subject_ref), subject_ref]
-        )
+        with tempfile.TemporaryDirectory(prefix="knock-verify-") as tmp:
+            r = self._run(
+                [
+                    "verify",
+                    *self._verify_args(tmp),
+                    *self._registry_args(subject_ref),
+                    subject_ref,
+                ]
+            )
         return r.returncode == 0 and _has_image_signature_claim(r.stdout)
 
 
@@ -198,6 +240,13 @@ def _has_image_signature_claim(stdout: str) -> bool:
         ):
             return True
     return False
+
+
+def _is_envelope(line: str) -> bool:
+    try:
+        return "payload" in json.loads(line)
+    except (TypeError, ValueError):
+        return False
 
 
 def _parse_verified_predicates(stdout: str) -> list[VerifiedPredicate]:
