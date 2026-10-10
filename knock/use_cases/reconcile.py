@@ -37,7 +37,7 @@ from knock.ports.sbom import SbomGeneratorPort
 from knock.ports.source import SourcePort
 from knock.use_cases.policy_planner import PolicyPlanner
 from knock.use_cases.reconcile_git import GitPlanner
-from knock.use_cases.reconcile_registry import RegistryPlanner
+from knock.use_cases.reconcile_registry import RegistryPlanner, Staging
 from knock.use_cases.report import (
     PolicyReport,
     RunMode,
@@ -85,6 +85,7 @@ def reconcile_policies(
     sbom_formats: list[str] | None = None,
     retention_global: Archive | None = None,
     gate: Gate | None = None,
+    staging: Staging | None = None,
 ) -> RunReport:
     mode: RunMode = "dry-run" if (dry_run_tags or dry_run_deletions) else "apply"
     sbom_formats = sbom_formats or []
@@ -127,6 +128,7 @@ def reconcile_policies(
             sbom_formats=sbom_formats,
             retention_global=retention_global,
             gate=gate,
+            staging=staging,
         ),
         GitPlanner(
             registry=registry,

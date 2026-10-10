@@ -25,10 +25,10 @@
 
 ## 5. Use case: staging during apply
 
-- [ ] 5.1 Failing use-case tests for spec requirement "Building operations are staged instead of placed" (import with transforms staged, rebuild of a placed tag leaves it in service, copy-path import placed directly, `admit: true` staged image attested and not signed, dry-run tags stage nothing), then route building operations to the staging reference in `reconcile_registry.py`; verify the tests pass
-- [ ] 5.2 Failing test then reuse of the withheld-import alias rule for staged tags (spec requirement "An alias never moves onto a staged tag"); verify the test passes
-- [ ] 5.3 Failing tests then collection of staged entries and their return to the caller, including "one build failure, one entry", "attestation fails after the push, no entry", "nothing to stage", and the aliases recorded on the entry of the tag they designate; verify the tests pass
-- [ ] 5.4 Failing test for "An unpromoted operation is planned again" (a second `--plan-out` after an unpromoted staged import plans it again); verify it passes without further code, or fix what prevents it
+- [x] 5.1 Failing use-case tests for spec requirement "Building operations are staged instead of placed" (import with transforms staged, rebuild of a placed tag leaves it in service, copy-path import placed directly, `admit: true` staged image attested and not signed, dry-run tags stage nothing), then route building operations to the staging reference in `reconcile_registry.py`; verify the tests pass
+- [x] 5.2 Failing test then reuse of the withheld-import alias rule for staged tags (spec requirement "An alias never moves onto a staged tag"); verify the test passes
+- [x] 5.3 Failing tests then collection of staged entries and their return to the caller, including "one build failure, one entry", "attestation fails after the push, no entry", "nothing to stage", and the aliases recorded on the entry of the tag they designate; verify the tests pass
+- [x] 5.4 Failing test for "An unpromoted operation is planned again" (a second `--plan-out` after an unpromoted staged import plans it again); verify it passes without further code, or fix what prevents it
 
 ## 6. Use case: promotion
 

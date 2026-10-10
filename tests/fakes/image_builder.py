@@ -5,14 +5,15 @@ from knock.ports.image_builder import BuildRequest
 
 
 class FakeImageBuilder:
-    def __init__(self, *, fail: bool = False) -> None:
+    def __init__(self, *, fail: bool = False, fail_refs: set[str] | None = None) -> None:
+        self._fail_refs = fail_refs or set()
         self.requests: list[BuildRequest] = []
         self.dockerfiles: list[str] = []
         self.contexts: list[dict[str, str]] = []
         self._fail = fail
 
     def build_and_push(self, request: BuildRequest) -> None:
-        if self._fail:
+        if self._fail or request.image_ref in self._fail_refs:
             raise BuildkitError("fake builder configured to fail")
         self.requests.append(request)
         self.dockerfiles.append(request.dockerfile_path.read_text())

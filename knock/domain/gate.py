@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from pydantic import ConfigDict, Field
+from pydantic import AliasChoices, ConfigDict, Field
 
 from knock.domain.mirror_policy import _CamelModel
 
@@ -78,7 +78,10 @@ class StagedEntry(_CamelModel):
     model_config = ConfigDict(frozen=True)
 
     policy: str
-    import_name: str = Field(alias="import")
+    # `import` is a Python keyword: the field is `import_name`, the document key `import`.
+    import_name: str = Field(
+        validation_alias=AliasChoices("import", "import_name"), serialization_alias="import"
+    )
     variant: str
     kind: PlanKind
     destination: str  # destination repository, e.g. harbor.corp/hub/redis
