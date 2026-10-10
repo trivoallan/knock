@@ -1,0 +1,16 @@
+# Dependabot opens security fixes only; Renovate owns every version update (renovate.json).
+#
+# Renovate cannot repair a transitive dependency on an alert, and the alerts of this repository
+# are almost all transitive packages of the docs site. Dependabot security updates therefore stay
+# on, and this file only groups them: one pull request for /website instead of one per package.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0 # no version updates from Dependabot; security updates ignore this limit
+    groups:
+      website-security:
+        applies-to: security-updates
+        patterns: ["*"]
