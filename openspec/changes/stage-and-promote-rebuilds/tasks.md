@@ -39,9 +39,9 @@
 
 ## 7. CLI
 
-- [ ] 7.1 `--stage-to` and `--staged-out` on `reconcile`, with the refusals of spec requirement "Staging options are refused when incomplete" mapped to `ConfigError`; write the file after the run; verify with CLI tests for each refused combination (exit 3) and for a written file
-- [ ] 7.2 `knock promote <dir> --staged <file>` wired through `cli/_di.py`, invalid file mapped to exit 3, empty file exits 0; decide `--dry-run-tags` by following `reconcile`; verify with CLI tests
-- [ ] 7.3 Run `make reference`; verify the CLI reference lists the new options and verb, `docs/reference/schemas/staged-rebuilds.*` exists, and the published-schema test passes
+- [x] 7.1 `--stage-to` and `--staged-out` on `reconcile`, with the refusals of spec requirement "Staging options are refused when incomplete" mapped to `ConfigError`; write the file after the run; verify with CLI tests for each refused combination (exit 3) and for a written file
+- [x] 7.2 `knock promote <dir> --staged <file>` wired through `cli/_di.py`, invalid file mapped to exit 3, empty file exits 0; decide `--dry-run-tags` by following `reconcile`; verify with CLI tests
+- [x] 7.3 Run `make reference`; verify the CLI reference lists the new options and verb, `docs/reference/schemas/staged-rebuilds.*` exists, and the published-schema test passes
 
 ## 8. Real run
 

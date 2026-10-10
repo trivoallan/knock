@@ -17,6 +17,7 @@ $ knock [OPTIONS] COMMAND [ARGS]...
 **Commands**:
 
 * `reconcile`: Reconcile all MirrorPolicy files under...
+* `promote`: Promote staged rebuilds to their...
 * `purge`: Reap pending-deletion marks: purge tags...
 * `attach`: Ingest a scan report produced upstream and...
 * `audit`: Walk the registry and report images that...
@@ -49,6 +50,31 @@ $ knock reconcile [OPTIONS] {directory}
 * `--report-json`: Emit the reconcile report as JSON to stdout (for piping to `knock scan enqueue`).
 * `--plan-out <path>`: Gate, step 1: place nothing, write every import/update/rebuild the run would perform to FILE (a ReconcilePlan) for an external evaluator.
 * `--apply-plan <path>`: Gate, step 2: reconcile, but apply an import/update/rebuild only if FILE (a filtered ReconcilePlan) still names it; report the others as withheld.
+* `--stage-to <str>`: With --apply-plan: push every rebuilt image to this registry (a name from KNOCK_REGISTRIES) instead of its destination, for an external evaluator to judge before `knock promote`. Copies are placed as usual.
+* `--staged-out <path>`: With --stage-to: write the rebuilt images held in staging to FILE (a StagedRebuilds), the input of `knock promote`.
+* `--help`: Show this message and exit.
+
+## `knock promote`
+
+Promote staged rebuilds to their destinations: copy by digest with their evidence,
+verify it arrived, then write the tag and the aliases.
+
+**Usage**:
+
+```console
+$ knock promote [OPTIONS] {directory}
+```
+
+**Arguments**:
+
+* `directory`: Directory of MirrorPolicy files (recursive).  [required]
+
+**Options**:
+
+* `--staged <path>`: A filtered StagedRebuilds file (written by `reconcile --staged-out`): place each entry it still names, and nothing else.  [required]
+* `-v, --verbose`: Unfold per-operation detail in text output.
+* `-j, --concurrency <int range>`: Max parallel entries (overrides KNOCK_MAX_CONCURRENCY; 1 = sequential).  [x>=1]
+* `--report-json`: Emit the report as JSON to stdout.
 * `--help`: Show this message and exit.
 
 ## `knock purge`

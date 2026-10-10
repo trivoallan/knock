@@ -311,3 +311,95 @@ def test_invalid_plan_file_is_refused_before_placing(
 
     assert isinstance(result.exception, ConfigError)  # exit 3 through knock.cli.main
     assert not log.exists() or _copies(log) == []
+
+
+# --- staging: --stage-to / --staged-out ---
+
+STAGE_ENV = (
+    '{"only": {"host": "harbor.corp", "username": "r", "password": "x"},'
+    ' "stage": {"host": "stage.local"}}'
+)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--stage-to", "stage"],  # no file
+        ["--staged-out", "s.json"],  # no registry
+        ["--stage-to", "stage", "--staged-out", "s.json"],  # no approved plan
+        ["--stage-to", "stage", "--staged-out", "s.json", "--plan-out", "p.json"],
+    ],
+)
+def test_incomplete_staging_options_are_refused(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path, args: list[str]
+) -> None:
+    monkeypatch.setenv("KNOCK_REGISTRIES", STAGE_ENV)
+    log = tmp_path / "regctl.log"
+    monkeypatch.setenv("FAKE_REGCTL_LOG", str(log))
+    (tmp_path / "redis.yml").write_text(
+        POLICY.replace("destinations: [{", "destinations: [{ registry: only,")
+    )
+    result = CliRunner().invoke(app, ["reconcile", str(tmp_path), *args])
+    assert isinstance(result.exception, ConfigError)  # exit 3 through knock.cli.main
+    assert not log.exists()  # refused before any registry call
+
+
+def test_an_unknown_staging_registry_is_refused(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    monkeypatch.setenv("KNOCK_REGISTRIES", STAGE_ENV)
+    plan = tmp_path / "plan.json"
+    plan.write_text(
+        '{"apiVersion": "knock.io/v1alpha1", "kind": "ReconcilePlan", "operations": []}'
+    )
+    result = CliRunner().invoke(
+        app,
+        [
+            "reconcile",
+            str(tmp_path),
+            "--apply-plan",
+            str(plan),
+            "--stage-to",
+            "nope",
+            "--staged-out",
+            str(tmp_path / "s.json"),
+        ],
+    )
+    assert isinstance(result.exception, ConfigError)
+    assert "nope" in str(result.exception)
+
+
+def test_a_staged_run_writes_the_file_even_when_nothing_is_staged(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    import json
+
+    monkeypatch.setenv("KNOCK_REGISTRIES", STAGE_ENV)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "tags-redis")
+    policies = tmp_path / "policies"
+    policies.mkdir()
+    # a copy-path policy: its imports are placed directly, nothing is held
+    (policies / "redis.yml").write_text(
+        POLICY.replace("destinations: [{", "destinations: [{ registry: only,")
+    )
+    plan, staged = tmp_path / "plan.json", tmp_path / "staged.json"
+    assert (
+        CliRunner().invoke(app, ["reconcile", str(policies), "--plan-out", str(plan)]).exit_code
+        == 0
+    )
+    result = CliRunner().invoke(
+        app,
+        [
+            "reconcile",
+            str(policies),
+            "--apply-plan",
+            str(plan),
+            "--stage-to",
+            "stage",
+            "--staged-out",
+            str(staged),
+        ],
+    )
+    assert result.exit_code == 0, result.stdout
+    doc = json.loads(staged.read_text())
+    assert doc == {"apiVersion": "knock.io/v1alpha1", "kind": "StagedRebuilds", "entries": []}

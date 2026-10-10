@@ -195,5 +195,6 @@ own evaluation. Rollback: drop the two options and the step; the next pass place
 
 ## Open Questions
 
-- Whether `promote` should also accept `--dry-run-tags`. It does not change the design; decide when
-  wiring the CLI by following what `reconcile` exposes.
+None left. `promote` takes no dry-run flag: it places named digests and plans nothing, so a dry
+run would only re-read the file. `reconcile --dry-run` with `--stage-to` stages nothing and writes
+an empty file.

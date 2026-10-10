@@ -210,10 +210,10 @@ knock/
 │                syft_cli, command_usage, redis_streams, structlog_reporter, system_clock,
 │                marketplace_json, zip_writer, tree_walker, local_archiver, git_cli
 ├── use_cases/   orchestration — loader, reconcile, policy_planner, reconcile_registry,
-│                reconcile_git, purge, attach, audit, gc, verify, scan_worker,
+│                reconcile_git, promote, purge, attach, audit, gc, verify, scan_worker,
 │                registry_session, report, intake
-└── cli/         Typer entry points — reconcile, purge, attach, audit, gc, verify, scan,
-                 version
+└── cli/         Typer entry points — reconcile, promote, purge, attach, audit, gc, verify,
+                 scan, version
 ```
 
 **Golden rules**
