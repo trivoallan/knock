@@ -58,6 +58,23 @@ def test_schema_is_derived_from_the_model() -> None:
     op = schema["$defs"]["PlannedOperation"]
     assert set(op["properties"]["kind"]["enum"]) == {"import", "update", "rebuild"}
     assert "sourceDigest" in op["required"]
+    assert op["properties"]["transformed"]["type"] == "boolean"
+    assert "transformed" not in op["required"]  # a plan written before the field still loads
+
+
+def test_a_plan_entry_says_whether_knock_rebuilds_it() -> None:
+    assert _op().transformed is False
+    built = _op().model_copy(update={"transformed": True})
+    doc = ReconcilePlan(operations=[built]).model_dump(mode="json", by_alias=True)
+    assert doc["operations"][0]["transformed"] is True
+    assert ReconcilePlan.model_validate(doc).operations == [built]
+
+
+def test_an_approval_is_not_bound_to_the_transformed_fact() -> None:
+    built = _op().model_copy(update={"transformed": True})
+    assert built.key() == _op().key()
+    # an orchestrator may hand back a plan it stripped of the field: the digest is what binds
+    assert Gate.from_plan(ReconcilePlan(operations=[_op()])).admits(built)
 
 
 # --- the second seam: staged rebuilds ---

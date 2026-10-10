@@ -35,6 +35,11 @@
         "sourceDigest": {
           "title": "Sourcedigest",
           "type": "string"
+        },
+        "transformed": {
+          "default": false,
+          "title": "Transformed",
+          "type": "boolean"
         }
       },
       "required": [
