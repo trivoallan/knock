@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/trivoallan/knock/compare/v0.14.0...v0.15.0) (2026-10-16)
+
+
+### Features
+
+* **domain:** rebuild every platform a policy declares under one OCI index ([#319](https://github.com/trivoallan/knock/issues/319)) ([b28046b](https://github.com/trivoallan/knock/commit/b28046b8fb5ca007ff954ce39d649b0a784bb3ab))
+
 ## [0.14.0](https://github.com/trivoallan/knock/compare/v0.13.0...v0.14.0) (2026-10-16)
 
 
