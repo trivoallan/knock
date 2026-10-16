@@ -23,6 +23,11 @@ with nothing repaired.
 
 ## Decision
 
+> [!NOTE]
+> Narrowed on 2026-10-16 by the revision of [ADR 54](0054-upgrade-packages-step.md): only an
+> operation the plan orders remediated is staged; a transform-only rebuild is placed directly,
+> as a copy is. The mechanics below are unchanged.
+
 - **A staging registry.** `reconcile --apply-plan FILE --stage-to NAME --staged-out FILE` pushes
   every operation that **builds** an image to the registry `NAME` of the roster instead of its
   destination, at the destination's path re-rooted under the staging host. The image is stamped,
