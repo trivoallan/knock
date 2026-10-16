@@ -311,3 +311,22 @@ def test_a_copy_only_import_is_built_on_order_and_carries_the_epoch() -> None:
     assert all(a["io.knock.remediation.epoch"] == "e1" for a in stamps)
     assert all("io.knock.transform.version" not in a for a in stamps)
     assert dockerfile is not None
+
+
+def test_applied_operations_link_source_to_written_digest_and_name_reasons() -> None:
+    from knock.use_cases.report import applied_operations
+
+    policy, registry = _policy(), _registry()
+    staged = _run(policy, registry, gate=_approved(policy, registry), staging=_staging())
+    doc = applied_operations(staged)
+    assert {(o.tag, o.kind, o.source_digest) for o in doc.operations} == {
+        ("1.36.0", "staged", "sha256:s36"),
+        ("1.37.0", "staged", "sha256:s37"),
+    }
+    out = {op.out_tag: op.out_digest for op in _ops(staged)}
+    assert {o.tag: o.written_digest for o in doc.operations} == out
+
+    withheld = _run(policy, _registry(), gate=_approved(policy, registry))
+    assert {
+        (o.kind, o.written_digest, o.reason) for o in applied_operations(withheld).operations
+    } == {("withheld", None, "remediation-unstaged")}

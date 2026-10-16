@@ -135,6 +135,35 @@ class StagedRebuilds(_CamelModel):
     entries: list[StagedEntry] = Field(default_factory=list)
 
 
+class AppliedOperation(_CamelModel):
+    """One operation `--apply-plan` applied, held in staging, or withheld."""
+
+    model_config = ConfigDict(frozen=True)
+
+    policy: str
+    destination: str  # destination repository, e.g. harbor.corp/hub/redis
+    tag: str
+    kind: str  # the run report's operation kind: imported / updated / staged / withheld
+    source_digest: str
+    # what knock wrote, at the destination or in staging; absent when withheld or failed
+    written_digest: str | None = None
+    # why an approved operation was withheld anyway (`remediation-undeclared`, ...)
+    reason: str | None = None
+
+
+class AppliedOperations(_CamelModel):
+    """What `--apply-plan` did with each operation: the source → written digest link an
+    orchestrator journals, and the reasons it withheld what it could not honour."""
+
+    api_version: Literal["knock.io/v1alpha1"] = "knock.io/v1alpha1"
+    kind: Literal["AppliedOperations"] = "AppliedOperations"
+    operations: list[AppliedOperation] = Field(default_factory=list)
+
+
+def applied_operations_json_schema() -> dict[str, Any]:
+    return AppliedOperations.model_json_schema(by_alias=True)
+
+
 def staged_rebuilds_json_schema() -> dict[str, Any]:
     return StagedRebuilds.model_json_schema(by_alias=True)
 

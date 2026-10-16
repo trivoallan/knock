@@ -17,7 +17,7 @@ from knock.logging import configure
 from knock.use_cases.loader import load_policy_dir
 from knock.use_cases.reconcile import reconcile_policies
 from knock.use_cases.reconcile_registry import Staging
-from knock.use_cases.report import report_exit_code
+from knock.use_cases.report import applied_operations, report_exit_code
 
 
 def reconcile(
@@ -76,17 +76,27 @@ def reconcile(
         str | None,
         typer.Option(
             "--stage-to",
-            help="With --apply-plan: push every rebuilt image to this registry (a name from "
-            "KNOCK_REGISTRIES) instead of its destination, for an external evaluator to judge "
-            "before `knock promote`. Copies are placed as usual.",
+            help="With --apply-plan: push every image the plan orders remediated to this "
+            "registry (a name from KNOCK_REGISTRIES) instead of its destination, for an external "
+            "evaluator to judge before `knock promote`. Copies and transform-only rebuilds are "
+            "placed as usual; without it, an ordered operation is withheld.",
         ),
     ] = None,
     staged_out: Annotated[
         Path | None,
         typer.Option(
             "--staged-out",
-            help="With --stage-to: write the rebuilt images held in staging to FILE "
+            help="With --stage-to: write the remediated images held in staging to FILE "
             "(a StagedRebuilds), the input of `knock promote`.",
+        ),
+    ] = None,
+    applied_out: Annotated[
+        Path | None,
+        typer.Option(
+            "--applied-out",
+            help="With --apply-plan: write what the run did with each operation to FILE (an "
+            "AppliedOperations): source digest → digest written, and why an approved "
+            "operation was withheld.",
         ),
     ] = None,
 ) -> None:
@@ -106,6 +116,8 @@ def reconcile(
         except (OSError, ValidationError) as exc:
             raise ConfigError(f"--apply-plan {apply_plan}: {exc}") from exc
     dry_run = dry_run or plan_out is not None  # writing the plan places nothing
+    if applied_out is not None and apply_plan is None:
+        raise ConfigError("--applied-out goes with --apply-plan")
 
     staging: Staging | None = None
     if stage_to is not None or staged_out is not None:
@@ -152,6 +164,10 @@ def reconcile(
         entries = sorted(staging.entries, key=lambda e: (e.policy, e.destination, e.tag))
         doc = StagedRebuilds(entries=entries)
         staged_out.write_text(doc.model_dump_json(by_alias=True, indent=2) + "\n")
+    if applied_out is not None:
+        applied_out.write_text(
+            applied_operations(report).model_dump_json(by_alias=True, indent=2) + "\n"
+        )
     if plan_out is not None:
         assert gate is not None
         plan = ReconcilePlan(operations=gate.planned)

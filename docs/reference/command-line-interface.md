@@ -46,8 +46,9 @@ $ knock reconcile [OPTIONS] {directory}
 * `--report-json`: Emit the reconcile report as JSON to stdout (for piping to `knock scan enqueue`).
 * `--plan-out <path>`: Gate, step 1: place nothing, write every import/update/rebuild the run would perform to FILE (a ReconcilePlan) for an external evaluator.
 * `--apply-plan <path>`: Gate, step 2: reconcile, but apply an import/update/rebuild only if FILE (a filtered ReconcilePlan) still names it; report the others as withheld.
-* `--stage-to <str>`: With --apply-plan: push every rebuilt image to this registry (a name from KNOCK_REGISTRIES) instead of its destination, for an external evaluator to judge before `knock promote`. Copies are placed as usual.
-* `--staged-out <path>`: With --stage-to: write the rebuilt images held in staging to FILE (a StagedRebuilds), the input of `knock promote`.
+* `--stage-to <str>`: With --apply-plan: push every image the plan orders remediated to this registry (a name from KNOCK_REGISTRIES) instead of its destination, for an external evaluator to judge before `knock promote`. Copies and transform-only rebuilds are placed as usual; without it, an ordered operation is withheld.
+* `--staged-out <path>`: With --stage-to: write the remediated images held in staging to FILE (a StagedRebuilds), the input of `knock promote`.
+* `--applied-out <path>`: With --apply-plan: write what the run did with each operation to FILE (an AppliedOperations): source digest → digest written, and why an approved operation was withheld.
 * `--help`: Show this message and exit.
 
 ## `knock promote`

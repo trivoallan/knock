@@ -1,0 +1,88 @@
+{
+  "$defs": {
+    "AppliedOperation": {
+      "additionalProperties": false,
+      "description": "One operation `--apply-plan` applied, held in staging, or withheld.",
+      "properties": {
+        "policy": {
+          "title": "Policy",
+          "type": "string"
+        },
+        "destination": {
+          "title": "Destination",
+          "type": "string"
+        },
+        "tag": {
+          "title": "Tag",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "sourceDigest": {
+          "title": "Sourcedigest",
+          "type": "string"
+        },
+        "writtenDigest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Writtendigest"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "policy",
+        "destination",
+        "tag",
+        "kind",
+        "sourceDigest"
+      ],
+      "title": "AppliedOperation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "What `--apply-plan` did with each operation: the source \u2192 written digest link an\norchestrator journals, and the reasons it withheld what it could not honour.",
+  "properties": {
+    "apiVersion": {
+      "const": "knock.io/v1alpha1",
+      "default": "knock.io/v1alpha1",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "AppliedOperations",
+      "default": "AppliedOperations",
+      "title": "Kind",
+      "type": "string"
+    },
+    "operations": {
+      "items": {
+        "$ref": "#/$defs/AppliedOperation"
+      },
+      "title": "Operations",
+      "type": "array"
+    }
+  },
+  "title": "AppliedOperations (what --apply-plan did with each operation)",
+  "type": "object"
+}
