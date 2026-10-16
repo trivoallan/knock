@@ -24,6 +24,11 @@ regctl manifest get registry.example.com/demo/busybox@sha256:<sbom-referrer-dige
 The referrer's annotations record the producing tool and version (`io.knock.sbom.tool` /
 `io.knock.sbom.tool.version`), the format, and the subject digest.
 
+A rebuild that carries several platforms has one SBOM per format **and platform**, all attached to
+the index digest; `io.knock.sbom.platform` names the platform each one describes. With an empty
+`KNOCK_LABEL_PREFIX` no annotation is written, and knock then checks SBOM coverage by format
+only.
+
 ## Emit CycloneDX as well as (or instead of) SPDX
 
 SBOM generation is always-on; `KNOCK_SBOM_FORMATS` chooses the format(s) — a global, non-empty

@@ -78,6 +78,41 @@ knock reconcile docs/examples/attested
 > [!NOTE]
 > `cosign` must be on `PATH`. Off by default: with no `KNOCK_ATTEST_SIGNER`, the rebuild is stamped but unsigned.
 
+## 6. Rebuild for several platforms
+
+A rebuild builds `KNOCK_BUILD_PLATFORM` (default `linux/amd64`) unless the policy lists
+`platforms`. List them to get one OCI index carrying every platform, in the order given —
+[`hardened/python-multiarch.yml`](../examples/hardened/python-multiarch.yml):
+
+```yaml
+  imports:
+    - name: alpine
+      platforms: [linux/amd64, linux/arm64]
+      transform:
+        - rewritePackageSources: { mirror: corp }
+        - upgradePackages: { epoch: "2026-10-16" }
+```
+
+The BuildKit host must run the foreign platforms. Register QEMU emulators once per host before
+`buildkitd` builds:
+
+```bash
+docker run --privileged --rm tonistiigi/binfmt --install arm64
+```
+
+On GitHub Actions, add `docker/setup-qemu-action` before starting `buildkitd`. Emulated builds
+are several times slower; native arm64 BuildKit workers avoid that cost.
+
+What to expect:
+
+- A source tag that lacks a listed platform is refused before any build, with the missing
+  platforms named (exit 1); knock never places a smaller index than the policy asked for.
+- Adding a platform to a policy rebuilds its placed tags on the next run; upgrading knock alone
+  rebuilds nothing.
+- The stamp, the transform attestation and the signature are on the index digest; one SBOM per
+  format and platform hangs off the index, annotated `io.knock.sbom.platform`.
+- A missing emulator fails that tag with a `BuildkitError` (`exec format error`, exit 2).
+
 To verify the result and the attached SBOM, see
 [Inspect an image's SBOM](inspect-sbom.md). For every signer knob, see the
 [configuration reference](../reference/configuration.md).

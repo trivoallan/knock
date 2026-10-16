@@ -77,6 +77,10 @@ deploy/
 
 - `docker`, `kind`, `kubectl` on PATH.
 - The knock image must bundle `regctl` + `buildctl` (the runtime `Dockerfile` does).
+- To rebuild a policy that lists foreign `platforms` (e.g. `linux/arm64` on amd64 nodes), each
+  node running `buildkitd` needs binfmt emulators: run
+  `docker run --privileged --rm tonistiigi/binfmt --install arm64` once per kind node, or use
+  native arm64 workers. See [Rebuild for several platforms](rebuild-and-harden.md#6-rebuild-for-several-platforms).
 
 ## The reference — `make demo` (Argo App-of-Apps)
 
