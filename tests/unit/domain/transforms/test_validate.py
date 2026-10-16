@@ -56,55 +56,54 @@ def test_rejects_set_timezone_missing_zone() -> None:
 
 
 _REWRITE = ("rewritePackageSources", {"mirror": "corp"})
-_UPGRADE = ("upgradePackages", {"epoch": "2026-10-10"})
+_UPGRADE = ("upgradePackages", {})
 
 
-def test_accepts_upgrade_after_rewrite() -> None:
-    validate_transform_steps([_step(*_REWRITE), _step(*_UPGRADE)])
+def _remediate(*steps: TransformStep, after: tuple[TransformStep, ...] = ()) -> None:
+    validate_transform_steps(list(steps), role="remediate", preceding=after)
 
 
-def test_accepts_upgrade_after_rewrite_with_steps_between() -> None:
-    validate_transform_steps(
-        [_step(*_REWRITE), _step("setTimezone", {"zone": "UTC"}), _step(*_UPGRADE)]
-    )
+def test_accepts_upgrade_after_rewrite_in_the_remediation() -> None:
+    _remediate(_step(*_REWRITE), _step(*_UPGRADE))
+
+
+def test_accepts_upgrade_when_the_transform_rewrites_the_sources() -> None:
+    _remediate(_step(*_UPGRADE), after=(_step(*_REWRITE), _step("setTimezone", {"zone": "UTC"})))
 
 
 def test_rejects_upgrade_before_rewrite() -> None:
     # Upgrading first would fetch from the image's public repositories, not the mirror.
     with pytest.raises(PolicyValidationError) as e:
-        validate_transform_steps([_step(*_UPGRADE), _step(*_REWRITE)])
+        _remediate(_step(*_UPGRADE), _step(*_REWRITE))
     assert "upgradePackages" in str(e.value) and "rewritePackageSources" in str(e.value)
 
 
 def test_rejects_upgrade_without_rewrite() -> None:
     with pytest.raises(PolicyValidationError) as e:
-        validate_transform_steps([_step("injectCA", {"certs": ["corp"]}), _step(*_UPGRADE)])
+        _remediate(_step(*_UPGRADE), after=(_step("injectCA", {"certs": ["corp"]}),))
     assert "upgradePackages" in str(e.value) and "rewritePackageSources" in str(e.value)
 
 
 def test_rejects_a_second_upgrade_placed_before_the_rewrite() -> None:
     with pytest.raises(PolicyValidationError, match="rewritePackageSources"):
-        validate_transform_steps([_step(*_UPGRADE), _step(*_REWRITE), _step(*_UPGRADE)])
+        _remediate(_step(*_UPGRADE), _step(*_REWRITE), _step(*_UPGRADE))
 
 
-@pytest.mark.parametrize(
-    "params",
-    [
-        {},  # epoch is required
-        {"epoch": ""},
-        {"epoch": '"; rm -rf /'},
-        {"epoch": "2026 10 10"},
-        {"epoch": "2026-10-10\n"},  # a trailing newline would end the RUN instruction
-        {"epoch": "x" * 65},
-        {"epoch": 20261010},  # not a string
-        {"epoch": "2026-10-10", "extra": True},
-    ],
-)
-def test_rejects_upgrade_epoch_outside_the_pattern(params: dict[str, Any]) -> None:
+def test_upgrade_under_transform_points_to_remediate() -> None:
+    with pytest.raises(PolicyValidationError, match="remediate:"):
+        validate_transform_steps([_step(*_REWRITE), _step(*_UPGRADE)])
+
+
+def test_rejects_a_transform_step_under_remediate() -> None:
+    with pytest.raises(PolicyValidationError, match="not allowed under `remediate:`"):
+        _remediate(_step("setTimezone", {"zone": "UTC"}))
+
+
+def test_rejects_the_former_epoch_and_names_the_order() -> None:
+    with pytest.raises(PolicyValidationError, match="remediation order"):
+        _remediate(_step(*_REWRITE), _step("upgradePackages", {"epoch": "2026-10-10"}))
+
+
+def test_rejects_any_other_upgrade_param() -> None:
     with pytest.raises(PolicyValidationError, match="upgradePackages"):
-        validate_transform_steps([_step(*_REWRITE), _step("upgradePackages", params)])
-
-
-def test_accepts_epoch_at_the_pattern_bounds() -> None:
-    for epoch in ("1", "x" * 64, "2026-10-10", "v1.2_rc-3"):
-        validate_transform_steps([_step(*_REWRITE), _step("upgradePackages", {"epoch": epoch})])
+        _remediate(_step(*_REWRITE), _step("upgradePackages", {"force": True}))

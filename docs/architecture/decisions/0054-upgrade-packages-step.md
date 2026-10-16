@@ -1,4 +1,4 @@
-# 54. `upgradePackages`, the repair step
+# 54. `upgradePackages`, the repair step, applied on order
 
 Date: 2026-10-10
 
@@ -25,18 +25,38 @@ names, the stamp, the SBOM and the signature of the existing rebuild path.
 
 ## Decision
 
-- **A fourth step, `upgradePackages { epoch }`.** One `RUN` upgrades every installed OS package:
+> [!NOTE]
+> Revised on 2026-10-16 (change `remediate-on-order`): the step moves from `transform:` to a
+> second list, `remediate:`, applied only to an operation the reconcile plan orders remediated,
+> and its `epoch` comes with that order instead of the policy. The bullets below say what holds
+> now; the first version made a human move `epoch` in the policy and rebuilt every selected tag.
+
+- **A remediation step, `upgradePackages`.** One `RUN` upgrades every installed OS package:
   apt (non-interactive, phased updates included) or apk. On an image with neither, the `RUN`
   exits non-zero with a message naming the step, so the signed lineage never claims an upgrade
   that did not happen.
-- **`epoch` is the trigger, and a human moves it.** It is a step parameter, so it takes part in
-  the transform version: a new epoch plans a rebuild of every tag the import selects, with no
-  stability window. It is also written into the `RUN`, so the layer cache cannot serve a previous
-  upgrade. `epoch` is 1 to 64 characters of `[A-Za-z0-9._-]`; anything else is refused at
-  validation, because it is interpolated into a shell command.
+- **Two lists, and an order is the trigger.** `transform:` (`injectCA`, `rewritePackageSources`,
+  `setTimezone`) is applied to every rebuild; `remediate:` (`upgradePackages`,
+  `rewritePackageSources`) only to a plan operation carrying `remediate: {epoch}`, which the
+  orchestrator adds after judging the source digest (ADR 0051: knock still does not know who
+  judges). The step takes no parameter in the policy; the order's epoch is written into the
+  `RUN`, so the layer cache cannot serve a previous upgrade. An epoch outside
+  `[A-Za-z0-9._-]{1,64}` makes `--apply-plan` refuse the plan file, because it is interpolated
+  into a shell command.
+- **A copy-only import can be remediated.** With no `transform:`, an ordered operation is built
+  from `remediate:` alone; `remediate:` may re-point the package sources itself for that reason.
+- **Only a remediation is staged, and it must be.** Under `--stage-to`, an ordered operation is
+  held for its own verdict and a transform-only rebuild is placed directly (it is not judged
+  again). Without `--stage-to`, an ordered operation is withheld (`remediation-unstaged`); an
+  order on an import that declares no `remediate:` is withheld too (`remediation-undeclared`).
+- **The remediation does not move the transform version.** The stamp writes
+  `io.knock.remediation.steps|epoch` and the predicate an optional `remediation {steps, epoch}`
+  beside `steps[]`, so the next pass keeps a remediated image. A rebuild planned onto a remediated
+  tag is flagged `remediated: true` in the plan, for the orchestrator to renew the order.
 - **The mirror is not optional.** Validation refuses `upgradePackages` unless
-  `rewritePackageSources` comes earlier in the same list. The rule lives in the single validation
-  entry (`validate_transform_steps`); `Registry` stays a name-to-compiler map.
+  `rewritePackageSources` comes earlier, in the resolved transform or the same remediation list.
+  The rule lives in the single validation entry (`validate_transform_steps`); `Registry` stays a
+  name-to-compiler map.
 - **No `# syntax=` directive.** It would make the BuildKit daemon pull the Dockerfile frontend
   from a public registry during a rebuild. The daemon's built-in frontend handles the cache mount.
 - **The rebuild path keeps the source's user.** Transform steps write to system paths. When the
@@ -52,11 +72,9 @@ names, the stamp, the SBOM and the signature of the existing rebuild path.
 
 ## Consequences
 
-- A policy can now declare the repair. It happens when an operator changes `epoch`, never on its
-  own.
-- **A new epoch costs one rebuild per selected tag, in one pass.** No budget bounds it; the
-  import's selection is the lever. Revisit a per-pass budget if a pass exceeds the orchestrator's
-  time budget, or if an import selects more than about fifty tags.
+- A policy declares the repair; it happens on a digest an evaluator refused on a repairable rule,
+  once per order, never on its own and never on a whole selection.
+- **One rebuild per ordered digest.** The cost follows the refusals, not the selection.
 - `apt-get upgrade` installs no new dependency: a fix that needs `dist-upgrade` stays unapplied
   and is visible only to whatever evaluates the rebuilt image.
 - **Only OS packages are repaired.** What an image carries outside its package manager stays as
@@ -80,29 +98,32 @@ names, the stamp, the SBOM and the signature of the existing rebuild path.
   of them under its original path, or the upgrade fails on the missing one.
 - rpm-based and distroless images are out of reach of this step (`rewritePackageSources` knows
   apt and apk only). They fail loudly; the copy path remains.
-- By default the rebuilt output is pushed to the destination without a verdict on it (ADR 0051's
-  limit). For policies that serve production, run the repair with a staging registry, so the
-  repaired image is judged before `knock promote` places it (ADR 0055).
+- A remediated image is always judged before it is placed: it is held in staging (ADR 0055) and
+  `knock promote` places it after a verdict. `--applied-out` reports what each operation became.
 - `ImageInfo` gains `user` (default empty) and the regctl adapter reads it from the config it
   already fetches. No new port, adapter, external system or C4 actor: the C4 model is unchanged.
-- The `MirrorPolicy` JSON Schema gains a `oneOf` branch; the transform predicate `/v1` is
-  unchanged (the step and its `epoch` appear in `steps[].params`).
+- The `MirrorPolicy` JSON Schema describes both lists; the transform predicate `/v1` gains the
+  optional `remediation` field and stays byte-identical for an image no order touched.
+- **Breaking for policies.** A knock with this revision refuses `upgradePackages` under
+  `transform:` or with an `epoch`; an older knock refuses `remediate:`. Each consumer moves its
+  knock pin and its policies in the same change.
 
 ## Operating it
 
-- **A pass takes too long after an epoch change.** The wave is one build per selected tag. Narrow
-  `includeRegex` (or pin fewer tags), then run again; tags already rebuilt at the new epoch are
-  kept.
+- **An ordered operation is withheld.** Read its reason in `--applied-out`:
+  `remediation-unstaged` means the run had no `--stage-to`; `remediation-undeclared` means the
+  import declares no `remediate:`.
 - **`upgradePackages: no apt-get or apk in image` on every pass.** The import selects an image the
   step cannot upgrade. Remove the step from that import, or give those tags their own import on
   the copy path.
 - **`UnsafeSourceUserError`.** The upstream image declares a `User` knock will not render. Do not
   work around it in the policy: route the image through the copy path and treat the declared
   value as a finding about the source.
-- **Rolling back.** Removing the step from a policy changes the transform version, so the next
-  pass rebuilds the selected tags without the upgrade (one wave). A knock older than this change
-  refuses a policy that names the step (`unknown transform step`, exit 1, nothing placed):
-  remove the step before downgrading.
+- **Rolling back.** Removing `remediate:` from a policy changes nothing already placed: a
+  remediated image stays until its source or its transform moves. A knock older than this revision
+  refuses `remediate:` (exit 1, nothing placed): put the policies back in the former shape in the
+  same change as the downgrade.
 
-Full change: [openspec/changes/upgrade-packages-step](../../../openspec/changes/upgrade-packages-step/proposal.md)
+Full change: [openspec/changes/upgrade-packages-step](../../../openspec/changes/upgrade-packages-step/proposal.md),
+revised by [openspec/changes/remediate-on-order](../../../openspec/changes/remediate-on-order/proposal.md)
 ([design](../../../openspec/changes/upgrade-packages-step/design.md)).

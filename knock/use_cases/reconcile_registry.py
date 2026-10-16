@@ -34,6 +34,7 @@ from knock.domain.gate import (
     Gate,
     PlanKind,
     PlannedOperation,
+    RemediationOrder,
     StagedEntry,
     staged_repository,
     stages,
@@ -172,6 +173,36 @@ def _resolve_transform(
     return _ResolvedTransform(resolved_steps=resolved_steps, version=version)
 
 
+def _resolve_remediation(
+    steps: list[TransformStep],
+    ca_certs: dict[str, CACertSource],
+    package_mirrors: dict[str, PackageMirror],
+) -> list[ResolvedStep]:
+    """Resolve the remediation's resources now; its epoch only exists once an order arrives."""
+    resolved: list[ResolvedStep] = []
+    for step in steps:
+        compiler = DEFAULT_REGISTRY.get(step.name)
+        params = compiler.policy_model().model_validate(step.params)
+        resources = tuple(
+            _resolve_ref(ref, ca_certs, package_mirrors) for ref in compiler.resource_refs(params)
+        )
+        resolved.append(ResolvedStep(step=step, resources=resources))
+    return resolved
+
+
+def _with_epoch(steps: list[ResolvedStep], epoch: str) -> list[ResolvedStep]:
+    """The remediation steps as rendered under an order: `upgradePackages` carries its epoch."""
+    return [
+        ResolvedStep(
+            step=TransformStep(name=rs.step.name, params={**rs.step.params, "epoch": epoch}),
+            resources=rs.resources,
+        )
+        if rs.step.name == "upgradePackages"
+        else rs
+        for rs in steps
+    ]
+
+
 def _build_variant(
     *,
     builder: ImageBuilderPort,
@@ -214,6 +245,9 @@ class _Plan:
     dest_repo: str
     config: RegistryConfig
     transforms: dict[str, _ResolvedTransform]  # variant name → resolved transform
+    # variant name → resolved remediation steps, applied only to an operation the plan orders
+    # remediated; `upgradePackages` gets the order's epoch at build time
+    remediations: dict[str, list[ResolvedStep]] = field(default_factory=dict)
 
 
 def _require_registry_source(policy: MirrorPolicy) -> RegistrySource:
@@ -345,6 +379,9 @@ def _apply_plan(
         t + v.suffix for v in plan.expanded.variants if v.name in variant_platforms for t in v.tags
     }
     tv_key = f"{label_prefix}.transform.version" if label_prefix else None
+    remediation_key = f"{label_prefix}.remediation.epoch" if label_prefix else None
+    # destination tags whose placed image carries a remediation (built, even on a copy-only import)
+    remediated_tags: set[str] = set()
     transform_versions: dict[str, str | None] = {
         name: rt.version for name, rt in plan.transforms.items()
     }
@@ -363,6 +400,8 @@ def _apply_plan(
         if is_referrers_fallback_tag(out_tag):
             continue
         info = registry.inspect(f"{plan.dest_repo}:{out_tag}")
+        if remediation_key is not None and remediation_key in info.annotations:
+            remediated_tags.add(out_tag)
         refs = registry.list_referrers(f"{plan.dest_repo}:{out_tag}") if need_probe else []
         attested = attestor is None or any(
             r.artifact_type == COSIGN_ATTESTATION_ARTIFACT_TYPE for r in refs
@@ -371,7 +410,7 @@ def _apply_plan(
         absent = missing_sboms(
             ((r.artifact_type, r.annotations) for r in refs),
             sbom_formats,
-            info.platforms if out_tag in rebuilt_tags else (),
+            info.platforms if out_tag in rebuilt_tags or out_tag in remediated_tags else (),
             prefix=label_prefix,
         )
         ma = to_mirror_artifact(
@@ -504,6 +543,7 @@ def _apply_plan(
         source_digest: str,
         sign: bool,
         repo: str = plan.dest_repo,
+        order: RemediationOrder | None = None,
     ) -> None:
         assert attestor is not None  # callers guard on attestor before calling
         subject = f"{repo}@{out_digest}"
@@ -521,7 +561,12 @@ def _apply_plan(
                 created=now.isoformat(),
                 transform_version=transform_versions.get(vplan.name) or "",
                 steps=[(s.name, s.params) for s in vplan.transform],
-                transformed=bool(vplan.transform),
+                transformed=bool(vplan.transform) or order is not None,
+                remediation=(
+                    ([(s.name, s.params) for s in vplan.remediate], order.epoch)
+                    if order is not None
+                    else None
+                ),
             ),
         )
         # Admission is the last act: the image is signed only once its attestations are
@@ -544,8 +589,11 @@ def _apply_plan(
         for alias_name, target in vr.aliases.items():
             aliases_onto[(vr.variant, target)].append(alias_name)
 
+    # (variant, out_tag) → the remediation the approved plan orders for that import
+    orders: dict[tuple[str, str], RemediationOrder] = {}
+
     def _held(w: _ImportWork) -> bool:
-        return staging is not None and stages(transformed=bool(w.vplan.transform))
+        return staging is not None and stages(remediated=(w.variant, w.out_tag) in orders)
 
     def _plan_kind(w: _ImportWork) -> PlanKind:
         if w.kind == "imported":
@@ -553,7 +601,13 @@ def _apply_plan(
         return "rebuild" if (w.variant, w.out_tag) in rebuilds else "update"
 
     def _do_import(w: _ImportWork) -> Operation:
-        steps = [s.name for s in w.vplan.transform] or None  # applied steps; None on a copy
+        order = orders.get((w.variant, w.out_tag))
+        remediation = (
+            _with_epoch(plan.remediations[w.vplan.name], order.epoch) if order is not None else []
+        )
+        steps = (
+            [s.name for s in w.vplan.transform] + [rs.step.name for rs in remediation]
+        ) or None  # applied steps; None on a copy
         # A held rebuild goes through the very same steps, in the staging registry: what
         # an evaluator judges there is, byte for byte, what promote would place.
         held = _held(w)
@@ -563,13 +617,22 @@ def _apply_plan(
             out_digest: str | None = None
             dest_ref = f"{repo}:{w.out_tag}"
             if not dry_run_tags:
-                if w.vplan.transform:
+                if w.vplan.transform or remediation:
+                    transform = plan.transforms.get(w.vplan.name)
                     _build_variant(
                         builder=builder,
                         source_ref=f"{src_repo}@{source[w.src_tag].digest}",
                         dest_ref=dest_ref,
-                        resolved=plan.transforms[w.vplan.name],
-                        platforms=variant_platforms[w.vplan.name],
+                        # the remediation renders after the transform; the version stays the
+                        # transform's, so the next pass does not undo the repair
+                        resolved=_ResolvedTransform(
+                            resolved_steps=(transform.resolved_steps if transform else [])
+                            + remediation,
+                            version=transform.version if transform else "",
+                        ),
+                        platforms=variant_platforms.get(
+                            w.vplan.name, tuple(plan.expanded.platforms or [build_platform])
+                        ),
                         source_user=source[w.src_tag].user,
                         work_dir=work_dir,
                         provenance=attestor is not None,
@@ -605,8 +668,10 @@ def _apply_plan(
                         policy=plan.policy.metadata.name,
                         import_name=plan.expanded.name,
                         variant=w.variant,
-                        transform_steps=steps,
+                        transform_steps=[s.name for s in w.vplan.transform] or None,
                         transform_version_value=transform_versions.get(w.vplan.name),
+                        remediation_steps=[rs.step.name for rs in remediation] or None,
+                        remediation_epoch=order.epoch if order is not None else None,
                     ),
                     publish_as=publish_as,
                 )
@@ -615,7 +680,8 @@ def _apply_plan(
                 # the op (no silently-uncovered image), like signing. Empty formats =>
                 # skip (lib/test affordance; KNOCK_SBOM_FORMATS guarantees >=1 in prod).
                 if sbom_formats and out_digest is not None:
-                    owed = variant_platforms.get(w.vplan.name, (None,))
+                    built = tuple(plan.expanded.platforms or [build_platform])
+                    owed = variant_platforms.get(w.vplan.name, built if remediation else (None,))
                     wanted = [(f, p) for p in owed for f in sbom_formats]
                     _attach_sbom(out_digest, w.out_tag, wanted, repo=repo, cfg=cfg)
                 # Sign knock's predicate over the stamped output digest — rebuild AND copy
@@ -632,6 +698,7 @@ def _apply_plan(
                         # image is not admitted yet: promote signs it, in the destination
                         sign=not held,
                         repo=repo,
+                        order=order,
                     )
                 if held and staging is not None and out_digest is not None:
                     # Last, once the image is stamped and attested: an entry promises an
@@ -650,6 +717,7 @@ def _apply_plan(
                             staged=stage_repo,
                             staged_digest=out_digest,
                             aliases=tuple(sorted(aliases_onto[(w.variant, w.out_tag)])),
+                            epoch=order.epoch if order is not None else None,
                         )
                     )
             op = Operation(
@@ -897,17 +965,32 @@ def _apply_plan(
                 source=src_repo,
                 source_tag=w.src_tag,
                 source_digest=source[w.src_tag].digest,
-                transformed=stages(transformed=bool(w.vplan.transform)),
+                transformed=bool(w.vplan.transform),
+                remediated=w.out_tag in remediated_tags,
             )
+            withheld_reason: str | None = None
             if gate.admits(planned):
-                admitted.append(w)
-                continue
+                order = gate.order(planned)
+                if order is None:
+                    admitted.append(w)
+                    continue
+                # An order knock cannot honour is withheld, never applied another way: no
+                # remediation declared, or nowhere to hold the repaired image for its verdict.
+                if not w.vplan.remediate:
+                    withheld_reason = "remediation-undeclared"
+                elif staging is None:
+                    withheld_reason = "remediation-unstaged"
+                else:
+                    orders[(w.variant, w.out_tag)] = order
+                    admitted.append(w)
+                    continue
             op = Operation(
                 kind="withheld",
                 out_tag=w.out_tag,
                 src_tag=w.src_tag,
                 digest=source[w.src_tag].digest,
                 applied=False,
+                reason=withheld_reason,
             )
             emit_applied(op, w.variant)
             withheld_ops.append((w.variant, op))
@@ -1130,10 +1213,16 @@ class RegistryPlanner:
                 expanded = expand_import(resolved, src_tags)
                 for v in expanded.variants:
                     validate_transform_steps(v.transform)
+                    validate_transform_steps(v.remediate, role="remediate", preceding=v.transform)
                 transforms = {
                     v.name: _resolve_transform(v.transform, self.ca_certs, self.package_mirrors)
                     for v in expanded.variants
                     if v.transform
+                }
+                remediations = {
+                    v.name: _resolve_remediation(v.remediate, self.ca_certs, self.package_mirrors)
+                    for v in expanded.variants
+                    if v.remediate
                 }
                 for dest in resolved.destinations or []:
                     _name, cfg = resolve_registry(dest.registry, self.roster)
@@ -1151,6 +1240,7 @@ class RegistryPlanner:
                             dest_repo=dest_repo,
                             config=cfg,
                             transforms=transforms,
+                            remediations=remediations,
                         )
                     )
                     for variant in expanded.variants:

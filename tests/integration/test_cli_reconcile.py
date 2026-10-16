@@ -403,3 +403,40 @@ def test_a_staged_run_writes_the_file_even_when_nothing_is_staged(
     assert result.exit_code == 0, result.stdout
     doc = json.loads(staged.read_text())
     assert doc == {"apiVersion": "knock.io/v1alpha1", "kind": "StagedRebuilds", "entries": []}
+
+
+def test_applied_out_lists_what_the_run_placed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    import json
+
+    monkeypatch.setenv("KNOCK_REGISTRIES", STAGE_ENV)
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", "tags-redis")
+    policies = tmp_path / "policies"
+    policies.mkdir()
+    (policies / "redis.yml").write_text(
+        POLICY.replace("destinations: [{", "destinations: [{ registry: only,")
+    )
+    plan, applied = tmp_path / "plan.json", tmp_path / "applied.json"
+    assert (
+        CliRunner().invoke(app, ["reconcile", str(policies), "--plan-out", str(plan)]).exit_code
+        == 0
+    )
+    result = CliRunner().invoke(
+        app, ["reconcile", str(policies), "--apply-plan", str(plan), "--applied-out", str(applied)]
+    )
+    assert result.exit_code == 0, result.stdout
+    doc = json.loads(applied.read_text())
+    assert doc["kind"] == "AppliedOperations"
+    assert doc["operations"] and all(o["kind"] == "imported" for o in doc["operations"])
+    assert all(o["sourceDigest"] for o in doc["operations"])
+
+
+def test_applied_out_needs_apply_plan(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, fake_bin_path: Path
+) -> None:
+    _env(monkeypatch)
+    result = CliRunner().invoke(
+        app, ["reconcile", str(tmp_path), "--applied-out", str(tmp_path / "a.json")]
+    )
+    assert isinstance(result.exception, ConfigError)  # exit 3 through knock.cli.main

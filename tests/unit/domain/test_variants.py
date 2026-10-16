@@ -21,7 +21,9 @@ def test_no_variants_yields_implicit_default() -> None:
         {"name": "v", "tags": {}, "transform": [{"setTimezone": {}}]},
     )
     [variant] = expand_variants(resolved)
-    assert variant == ResolvedVariant(name="default", suffix="", transform=resolved.transform)
+    assert variant == ResolvedVariant(
+        name="default", suffix="", transform=resolved.transform, remediate=resolved.remediate
+    )
 
 
 def test_no_variants_no_transform_yields_empty_transform() -> None:
@@ -48,3 +50,23 @@ def test_explicit_variants_with_and_without_transform_override() -> None:
     assert [s.name for s in standard.transform] == ["injectCA"]  # inherited
     assert fips.suffix == "-fips"
     assert [s.name for s in fips.transform] == ["enableFips"]  # overridden
+
+
+def test_variant_inherits_remediate_unless_it_declares_its_own() -> None:
+    spec = Spec.model_validate(
+        {
+            "artifactType": "image",
+            "source": {"registry": "docker.io", "repository": "library/redis"},
+            "imports": [
+                {
+                    "name": "v",
+                    "tags": {},
+                    "remediate": [{"upgradePackages": {}}],
+                    "variants": [{"name": "a"}, {"name": "b", "remediate": []}],
+                }
+            ],
+        }
+    )
+    a, b = expand_variants(resolve_imports(spec)[0])
+    assert [s.name for s in a.remediate] == ["upgradePackages"]
+    assert b.remediate == []

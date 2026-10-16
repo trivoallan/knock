@@ -90,7 +90,8 @@ A rebuild builds `KNOCK_BUILD_PLATFORM` (default `linux/amd64`) unless the polic
       platforms: [linux/amd64, linux/arm64]
       transform:
         - rewritePackageSources: { mirror: corp }
-        - upgradePackages: { epoch: "2026-10-16" }
+      remediate:
+        - upgradePackages: {}
 ```
 
 The BuildKit host must run the foreign platforms. Register QEMU emulators once per host before

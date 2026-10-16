@@ -12,6 +12,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, computed_field
 
+from knock.domain.gate import AppliedOperation, AppliedOperations
 from knock.ports.reporter import Counts, ErrorInfo, OperationKind
 
 PolicyStatus = Literal["ok", "partial", "failed"]
@@ -31,6 +32,9 @@ class Operation(BaseModel):
     transform_steps: list[str] | None = None  # applied step names (rebuild); None on a copy
     out_digest: str | None = None  # produced (post-annotate) digest; None unless applied
     pinned_digest: str | None = None  # the pin, set on a pin_mismatch (`digest` = observed)
+    # why an approved operation was withheld anyway: `remediation-undeclared` (the plan orders
+    # a remediation the import does not declare) or `remediation-unstaged` (no `--stage-to`)
+    reason: str | None = None
 
 
 class VariantReport(BaseModel):
@@ -157,3 +161,28 @@ def run_report_json_schema() -> dict[str, Any]:
     carries, and a strict consumer would reject valid output.
     """
     return RunReport.model_json_schema(mode="serialization")
+
+
+_PLACING_KINDS = frozenset({"imported", "updated", "staged", "withheld"})
+
+
+def applied_operations(report: RunReport) -> AppliedOperations:
+    """The `--applied-out` document: every placing operation of the run, and why it was
+    withheld when it was. Sorted, so the file is stable across runs."""
+    ops = [
+        AppliedOperation(
+            policy=p.name,
+            destination=t.dest_repo,
+            tag=op.out_tag,
+            kind=op.kind,
+            source_digest=op.digest or "",
+            written_digest=op.out_digest if op.applied else None,
+            reason=op.reason,
+        )
+        for p in report.policies
+        for t in p.targets
+        for v in t.variants
+        for op in v.operations
+        if op.kind in _PLACING_KINDS
+    ]
+    return AppliedOperations(operations=sorted(ops, key=lambda o: (o.policy, o.destination, o.tag)))

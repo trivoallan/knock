@@ -16,14 +16,45 @@ from knock.domain.transforms.base import ContextFile, ResolvedStep
 from knock.domain.transforms.registry import DEFAULT_REGISTRY
 from knock.errors import PolicyValidationError, UnsafeSourceUserError
 
+# Which steps each policy list accepts. `transform` is applied to every rebuild; `remediate`
+# only to an operation the plan orders remediated (it may re-point sources on a copy-only import).
+STEPS_BY_ROLE: dict[str, frozenset[str]] = {
+    "transform": frozenset({"injectCA", "rewritePackageSources", "setTimezone"}),
+    "remediate": frozenset({"upgradePackages", "rewritePackageSources"}),
+}
 
-def validate_transform_steps(steps: Sequence[TransformStep]) -> None:
-    """Reject any step outside the registry vocabulary, with malformed params, or out of order."""
-    seen: set[str] = set()
+
+def validate_transform_steps(
+    steps: Sequence[TransformStep],
+    *,
+    role: str = "transform",
+    preceding: Sequence[TransformStep] = (),
+) -> None:
+    """Reject a step outside the vocabulary or its list, with malformed params, or out of order.
+
+    `preceding` is what runs before this list in the same build: the resolved transform, for a
+    remediation list.
+    """
+    allowed = STEPS_BY_ROLE[role]
+    seen: set[str] = {s.name for s in preceding}
     for step in steps:
         compiler = DEFAULT_REGISTRY.get(step.name)  # PolicyValidationError if unknown
+        if step.name not in allowed:
+            if step.name == "upgradePackages":
+                raise PolicyValidationError(
+                    "step 'upgradePackages' is a remediation: declare it under `remediate:`, "
+                    "applied only to an operation the reconcile plan orders remediated"
+                )
+            raise PolicyValidationError(
+                f"step {step.name!r} is not allowed under `{role}:`; allowed: {sorted(allowed)}"
+            )
+        if step.name == "upgradePackages" and "epoch" in step.params:
+            raise PolicyValidationError(
+                "step 'upgradePackages' takes no `epoch`: the epoch now comes from the "
+                "remediation order in the reconcile plan (`remediate: {epoch}`)"
+            )
         try:
-            compiler.params_model.model_validate(step.params)
+            compiler.policy_model().model_validate(step.params)
         except ValidationError as e:
             raise PolicyValidationError(
                 f"invalid params for transform step {step.name!r}: {e}"
@@ -32,8 +63,8 @@ def validate_transform_steps(steps: Sequence[TransformStep]) -> None:
         # from the image's public repositories instead of the mirror.
         if step.name == "upgradePackages" and "rewritePackageSources" not in seen:
             raise PolicyValidationError(
-                "transform step 'upgradePackages' requires 'rewritePackageSources' earlier "
-                "in the same transform list"
+                "step 'upgradePackages' requires 'rewritePackageSources' in the resolved "
+                "transform or earlier in the same remediation list"
             )
         seen.add(step.name)
 

@@ -1,4 +1,4 @@
-"""Rebuilt images are held in a staging registry instead of being placed (--stage-to)."""
+"""Remediated images are held in a staging registry instead of being placed (--stage-to)."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from knock.adapters.local_archiver import LocalArchiver
-from knock.config import RegistryConfig
-from knock.domain.gate import Gate, ReconcilePlan
+from knock.config import PackageMirror, RegistryConfig
+from knock.domain.gate import Gate, ReconcilePlan, RemediationOrder
 from knock.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
 from knock.errors import ConfigError
 from knock.ports.registry import ImageInfo
@@ -45,13 +45,15 @@ spec:
     - name: stable
       tags: { includeRegex: "^1\\\\.3[67]\\\\.0$", aliases: ["1"] }
       {transform}
+      {remediate}
       destinations: [{ registry: local, project: demo, repository: busybox }]
 """
 TRANSFORM = "transform: [ { setTimezone: { zone: UTC } } ]"
+REMEDIATE = "remediate: [ { rewritePackageSources: { mirror: corp } }, { upgradePackages: {} } ]"
 
 
 def _policy(*, admit: bool = False, transform: bool = True) -> MirrorPolicy:
-    text = POLICY.replace("{admit}", str(admit).lower())
+    text = POLICY.replace("{admit}", str(admit).lower()).replace("{remediate}", REMEDIATE)
     return parse_mirror_policy(text.replace("{transform}", TRANSFORM if transform else ""))
 
 
@@ -77,7 +79,7 @@ def _run(policy: MirrorPolicy, registry: FakeRegistryPort, **over: object) -> Ru
         archiver=LocalArchiver(),
         roster=ROSTER,
         ca_certs={},
-        package_mirrors={},
+        package_mirrors={"corp": PackageMirror(apt="https://mirror.corp/debian")},
         build_platform="linux/amd64",
         now=NOW,
         label_prefix="io.knock",
@@ -89,11 +91,14 @@ def _run(policy: MirrorPolicy, registry: FakeRegistryPort, **over: object) -> Ru
     return reconcile_policies([policy], **kwargs)  # type: ignore[arg-type]
 
 
-def _approved(policy: MirrorPolicy, registry: FakeRegistryPort) -> Gate:
-    """Plan, approve everything: the gate a staged run goes through."""
+def _approved(policy: MirrorPolicy, registry: FakeRegistryPort, *, order: bool = True) -> Gate:
+    """Plan, approve everything and, by default, order every operation remediated."""
     recording = Gate()
     _run(policy, registry, gate=recording, dry_run_tags=True, dry_run_deletions=True)
-    return Gate.from_plan(ReconcilePlan(operations=recording.planned))
+    ops = recording.planned
+    if order:
+        ops = [op.model_copy(update={"remediate": RemediationOrder(epoch="e1")}) for op in ops]
+    return Gate.from_plan(ReconcilePlan(operations=ops))
 
 
 def _staging() -> Staging:
@@ -104,7 +109,7 @@ def _ops(report: RunReport) -> list[Operation]:
     return [op for v in report.policies[0].targets[0].variants for op in v.operations]
 
 
-def test_an_import_with_transforms_is_staged_and_the_destination_untouched() -> None:
+def test_a_remediated_import_is_staged_and_the_destination_untouched() -> None:
     policy, registry, builder, staging = _policy(), _registry(), FakeImageBuilder(), _staging()
     report = _run(
         policy, registry, builder=builder, gate=_approved(policy, registry), staging=staging
@@ -161,9 +166,9 @@ def test_a_rebuild_of_a_placed_tag_leaves_it_in_service() -> None:
     assert kinds == {"1.36.0": "import", "1.37.0": "rebuild"}
 
 
-def test_a_copy_path_import_is_placed_directly() -> None:
+def test_a_copy_without_order_is_placed_directly() -> None:
     policy, registry, staging = _policy(transform=False), _registry(), _staging()
-    report = _run(policy, registry, gate=_approved(policy, registry), staging=staging)
+    report = _run(policy, registry, gate=_approved(policy, registry, order=False), staging=staging)
     assert report.totals.imported == 2 and report.totals.staged == 0
     assert staging.entries == []
     assert (f"{SRC}@sha256:s37", f"{DEST}:1.37.0") in registry.copied
@@ -181,10 +186,17 @@ def test_a_staged_image_is_attested_and_not_signed() -> None:
         dry_run_tags=True,
         dry_run_deletions=True,
     )
-    gate = Gate.from_plan(ReconcilePlan(operations=recording.planned))
+    ordered = [
+        op.model_copy(update={"remediate": RemediationOrder(epoch="e1")})
+        for op in recording.planned
+    ]
+    gate = Gate.from_plan(ReconcilePlan(operations=ordered))
     _run(policy, registry, gate=gate, attestor=attestor, staging=_staging())
 
     assert attestor.attested and all(s.startswith(f"{STAGED}@") for s, _ in attestor.attested)
+    predicate = attestor.attested[0][1]["predicate"]
+    assert predicate["remediation"]["epoch"] == "e1"
+    assert [s["name"] for s in predicate["steps"]] == ["setTimezone"]
     # admission is promote's last act, on the destination
     assert attestor.signed == []
 
@@ -253,3 +265,68 @@ def test_staging_in_a_destination_registry_is_refused_before_anything_is_built()
     with pytest.raises(ConfigError, match="staging registry"):
         _run(policy, registry, builder=builder, staging=Staging(config=ROSTER["local"]))
     assert builder.requests == []
+
+
+def test_a_transform_only_rebuild_is_placed_directly_under_staging() -> None:
+    policy, registry, builder, staging = _policy(), _registry(), FakeImageBuilder(), _staging()
+    report = _run(
+        policy,
+        registry,
+        builder=builder,
+        gate=_approved(policy, registry, order=False),
+        staging=staging,
+    )
+    assert [r.image_ref for r in builder.requests] == [f"{DEST}:1.36.0", f"{DEST}:1.37.0"]
+    assert staging.entries == [] and report.totals.staged == 0
+
+
+def test_an_order_without_staging_is_withheld_and_never_pushed() -> None:
+    policy, registry, builder = _policy(), _registry(), FakeImageBuilder()
+    report = _run(policy, registry, builder=builder, gate=_approved(policy, registry))
+    assert builder.requests == [] and registry.copied == []
+    assert {(op.kind, op.reason) for op in _ops(report)} == {("withheld", "remediation-unstaged")}
+
+
+def test_an_order_on_an_import_without_remediate_is_withheld() -> None:
+    text = POLICY.replace("{admit}", "false").replace("{transform}", "")
+    text = text.replace("{remediate}", "")
+    policy, registry, staging = parse_mirror_policy(text), _registry(), _staging()
+    report = _run(policy, registry, gate=_approved(policy, registry), staging=staging)
+    assert {(op.kind, op.reason) for op in _ops(report)} == {("withheld", "remediation-undeclared")}
+    assert staging.entries == [] and registry.copied == []
+
+
+def test_a_copy_only_import_is_built_on_order_and_carries_the_epoch() -> None:
+    policy, registry, builder, staging = (
+        _policy(transform=False),
+        _registry(),
+        FakeImageBuilder(),
+        _staging(),
+    )
+    _run(policy, registry, builder=builder, gate=_approved(policy, registry), staging=staging)
+    assert [r.image_ref for r in builder.requests] == [f"{STAGED}:1.36.0", f"{STAGED}:1.37.0"]
+    dockerfile = builder.requests[0].dockerfile_path
+    assert {e.epoch for e in staging.entries} == {"e1"}
+    stamps = [a for ref, a in registry.annotated if ref.startswith(STAGED)]
+    assert all(a["io.knock.remediation.epoch"] == "e1" for a in stamps)
+    assert all("io.knock.transform.version" not in a for a in stamps)
+    assert dockerfile is not None
+
+
+def test_applied_operations_link_source_to_written_digest_and_name_reasons() -> None:
+    from knock.use_cases.report import applied_operations
+
+    policy, registry = _policy(), _registry()
+    staged = _run(policy, registry, gate=_approved(policy, registry), staging=_staging())
+    doc = applied_operations(staged)
+    assert {(o.tag, o.kind, o.source_digest) for o in doc.operations} == {
+        ("1.36.0", "staged", "sha256:s36"),
+        ("1.37.0", "staged", "sha256:s37"),
+    }
+    out = {op.out_tag: op.out_digest for op in _ops(staged)}
+    assert {o.tag: o.written_digest for o in doc.operations} == out
+
+    withheld = _run(policy, _registry(), gate=_approved(policy, registry))
+    assert {
+        (o.kind, o.written_digest, o.reason) for o in applied_operations(withheld).operations
+    } == {("withheld", None, "remediation-unstaged")}

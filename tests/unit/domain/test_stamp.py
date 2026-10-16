@@ -137,3 +137,12 @@ def test_stamp_with_transform_emits_steps_and_version() -> None:
     )
     assert ann["io.knock.transform.steps"] == "injectCA,rewritePackageSources"
     assert ann["io.knock.transform.version"] == "sha256:tv"
+
+
+def test_stamp_records_a_remediation_apart_from_the_transform_version() -> None:
+    ann = build_stamp_annotations(
+        **_base_kwargs(), remediation_steps=["upgradePackages"], remediation_epoch="e1"
+    )
+    assert ann["io.knock.remediation.steps"] == "upgradePackages"
+    assert ann["io.knock.remediation.epoch"] == "e1"
+    assert not any(".transform." in k for k in ann)  # a copy-only import stays drift-free

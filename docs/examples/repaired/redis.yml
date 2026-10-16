@@ -1,23 +1,19 @@
-# Repair (rebuild path) — upgrade OS packages from the internal mirror.
+# Repair (rebuild path) — upgrade OS packages from the internal mirror, on order.
 # Decision: docs/architecture/decisions/0054-upgrade-packages-step.md
 #
-# Same rebuild path as ../hardened, with one more step: after the package sources point at
-# the internal mirror, `upgradePackages` upgrades every installed OS package (apt or apk).
-# That is how a version flagged "critical CVE, fix available" is repaired without waiting
-# for upstream to republish the tag.
+# Two lists. `transform:` is applied to every rebuild. `remediate:` is applied only to an
+# operation the reconcile plan orders remediated: an orchestrator that judged the source
+# digest adds `remediate: {epoch: ...}` to that operation in the plan it hands to
+# `knock reconcile --apply-plan`, together with `--stage-to`, so the repaired image is held
+# and judged again before `knock promote` places it. Without an order, `remediate:` does
+# nothing; without `--stage-to`, an ordered operation is withheld.
 #
-# `epoch` is the trigger, and it is yours: nothing rebuilds until you change it. Changing it
-# changes the transform version, so the next reconcile rebuilds EVERY tag this import
-# selects, in one pass. Keep the selection as narrow as the versions you actually serve.
-# Quote it: an unquoted 2026-10-10 is a YAML date, not a string, and is refused.
-#
-# The order is enforced: `upgradePackages` without `rewritePackageSources` before it is a
-# validation error, so an upgrade can never reach a public repository.
+# Here the import is copy-only (no `transform:`), so the remediation re-points the package
+# sources itself before upgrading. `upgradePackages` without `rewritePackageSources` before
+# it (in the transform or the remediation) is a validation error, so an upgrade can never
+# reach a public repository. The step takes no parameter: the epoch comes with the order.
 #
 #   KNOCK_TRANSFORM_PACKAGE_MIRRORS='{"corp": {"apt": "https://mirror.corp/debian", "apk": "https://mirror.corp/alpine"}}'
-#
-# Run it with `knock reconcile docs/examples/repaired`. The rebuilt image is not evaluated
-# by knock: judge it (a scanner, a gate) before you rely on it.
 #
 apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
@@ -34,9 +30,9 @@ spec:
         - group:default/data-platform     # stamped as io.knock.owners
       tags:
         includeRegex: "^7\\.2\\."
-      transform:
+      remediate:
         - rewritePackageSources: { mirror: corp }      # name → KNOCK_TRANSFORM_PACKAGE_MIRRORS
-        - upgradePackages: { epoch: "2026-10-10" }     # change it to repair again
+        - upgradePackages: {}                          # epoch: from the plan's order
       destinations:
         - project: repaired
           repository: redis

@@ -390,3 +390,12 @@ def test_git_source_accepts_admit() -> None:
 
 def test_git_source_admit_defaults_to_false() -> None:
     assert parse_mirror_policy(GIT_POLICY).spec.admit is False
+
+
+def test_skill_must_not_declare_remediate() -> None:
+    text = GIT_POLICY.replace(
+        "      destinations:\n",
+        "      remediate:\n        - upgradePackages: {}\n      destinations:\n",
+    )
+    with pytest.raises(PolicyValidationError, match="must not declare remediate"):
+        parse_mirror_policy(text)

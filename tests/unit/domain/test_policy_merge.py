@@ -247,3 +247,23 @@ def test_empty_owners_override_clears_defaults() -> None:
     )
     [resolved] = resolve_imports(spec)
     assert resolved.owners == []
+
+
+def test_remediate_is_inherited_and_replaced_like_transform() -> None:
+    spec = _spec(
+        defaults={"remediate": [{"rewritePackageSources": {}}, {"upgradePackages": {}}]},
+        imports=[
+            {"name": "inherits", "tags": {}},
+            {"name": "replaces", "tags": {}, "remediate": [{"upgradePackages": {}}]},
+            {"name": "drops", "tags": {}, "remediate": []},
+        ],
+    )
+    inherits, replaces, drops = resolve_imports(spec)
+    assert [s.name for s in inherits.remediate] == ["rewritePackageSources", "upgradePackages"]
+    assert [s.name for s in replaces.remediate] == ["upgradePackages"]
+    assert drops.remediate == []
+
+
+def test_no_remediate_anywhere_resolves_to_empty() -> None:
+    [resolved] = resolve_imports(_spec(None, [{"name": "v", "tags": {}}]))
+    assert resolved.remediate == []

@@ -60,6 +60,13 @@ class TransformStepCompiler[P: BaseModel](ABC):
 
     name: ClassVar[str]
     params_model: ClassVar[type[BaseModel]]
+    # What a policy may declare, when it differs from what rendering needs (a parameter the
+    # plan supplies, such as `upgradePackages`' epoch). `None` ⇒ `params_model`.
+    policy_params_model: ClassVar[type[BaseModel] | None] = None
+
+    @classmethod
+    def policy_model(cls) -> type[BaseModel]:
+        return cls.policy_params_model or cls.params_model
 
     def resource_refs(self, params: P) -> tuple[ResourceRef, ...]:
         return ()

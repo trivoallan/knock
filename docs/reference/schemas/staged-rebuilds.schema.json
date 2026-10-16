@@ -60,6 +60,18 @@
           },
           "title": "Aliases",
           "type": "array"
+        },
+        "epoch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Epoch"
         }
       },
       "required": [
@@ -101,6 +113,6 @@
       "type": "array"
     }
   },
-  "title": "StagedRebuilds (the rebuilt images held in staging)",
+  "title": "StagedRebuilds (the remediated images held in staging)",
   "type": "object"
 }
