@@ -1,6 +1,6 @@
 [project]
 name = "knock-oci"
-version = "0.13.0"
+version = "0.14.0"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 description = "Stamp external OCI images with portable provenance through a hardening policy"
