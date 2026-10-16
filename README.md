@@ -156,7 +156,7 @@ list is the generated [config reference](docs/reference/configuration.md) (and
 |---|---|---|---|
 | `KNOCK_REGISTRIES` | yes¹ | `{}` | JSON map of logical registry name → `RegistryConfig` (source and destination registries; see below). |
 | `KNOCK_LABEL_PREFIX` | no | `io.knock` | Prefix for knock's own provenance annotations (empty ⇒ no knock labels). |
-| `KNOCK_BUILD_PLATFORM` | no | `linux/amd64` | Platform for the rebuild path (single-platform). |
+| `KNOCK_BUILD_PLATFORM` | no | `linux/amd64` | Platform of a rebuild whose policy declares no `platforms`. |
 | `KNOCK_MAX_CONCURRENCY` | no | `4` | Max parallel tag operations per run (`1` = sequential). Override per run with `--concurrency` / `-j`. |
 | `KNOCK_WORK_DIR` | no | `/tmp/knock-work` | Scratch directory for build contexts. |
 | `KNOCK_TRANSFORM_CA_CERTS` | no | `{}` | JSON map of name → CA source, resolved by the `injectCA` transform. |
@@ -204,9 +204,9 @@ retention, delegated deletion, scan ingestion. Every `reconcile` is **plan-then-
 ```
 knock/
 ├── domain/      pure logic — mirror_policy, selection, aliases, semver, expand, policy_merge,
-│                variants, reconcile, gate, collision, sharding, stamp, attestation, sbom, coverage,
-│                verify, lifecycle, retention, purge, deletion_mode, packaging, scan/, scan_queue,
-│                transforms/
+│                variants, platforms, reconcile, gate, collision, sharding, stamp, attestation, sbom,
+│                coverage, verify, lifecycle, retention, purge, deletion_mode, packaging, scan/,
+│                scan_queue, transforms/
 ├── ports/       typing.Protocol interfaces — registry, image_builder, attestor, sbom, queue,
 │                usage_oracle, reporter, clock, source, archiver
 ├── adapters/    concrete I/O and external formats — regctl_cli, buildkit_cli, cosign_cli,

@@ -48,8 +48,10 @@ class BuildkitAdapter:
             f"--opt=filename={request.dockerfile_path.name}",
             output,
         ]
-        if request.platform:
-            args.append(f"--opt=platform={request.platform}")
+        if request.platforms:
+            # One build, one index: the dockerfile frontend builds each platform and
+            # pushes them under a single manifest list, in this order.
+            args.append(f"--opt=platform={','.join(request.platforms)}")
         if request.provenance:
             # BuildKit emits + attaches its own slsa.dev/provenance/v1 referrer at push;
             # knock only enables it (mode=max captures the full build trace).

@@ -501,3 +501,67 @@ def test_unpinned_tag_keeps_the_stability_window() -> None:
     mirror = {"7.2.5": MirrorArtifact(base_digest=MOVED)}
     result = reconcile_variant(_pinned({}), source, mirror, NOW)
     assert result.to_update == []
+
+
+AMD = ("linux/amd64",)
+BOTH = ("linux/amd64", "linux/arm64")
+
+
+def _psrc(platforms: tuple[str, ...]) -> SourceArtifact:
+    return SourceArtifact(
+        digest="sha256:a", pushed_at=NOW - timedelta(days=30), platforms=platforms
+    )
+
+
+def test_source_lacking_a_platform_is_refused_not_narrowed() -> None:
+    plan = _plan("standard", "", tags=["1.0.0", "2.0.0"], aliases={"1": "1.0.0"})
+    source = {"1.0.0": _psrc(AMD), "2.0.0": _psrc(BOTH)}
+    got = reconcile_variant(plan, source, {}, NOW, GRACE, desired_platforms=BOTH)
+    assert got.platform_unavailable == {"1.0.0": ["linux/arm64"]}
+    assert got.to_import == ["2.0.0"]
+    assert got.aliases == {}  # an alias never moves onto a refused tag
+
+
+def test_arm64_v8_source_carries_arm64() -> None:
+    plan = _plan("standard", "", tags=["1.0.0"], aliases={})
+    source = {"1.0.0": _psrc(("linux/amd64", "linux/arm64/v8"))}
+    got = reconcile_variant(plan, source, {}, NOW, GRACE, desired_platforms=BOTH)
+    assert got.platform_unavailable == {}
+    assert got.to_import == ["1.0.0"]
+
+
+def test_platform_added_to_policy_rebuilds_now() -> None:
+    plan = _plan("standard", "", tags=["1.0.0"], aliases={})
+    source = {"1.0.0": _psrc(BOTH)}
+    mirror = {"1.0.0": MirrorArtifact(base_digest="sha256:a", platforms=AMD)}
+    got = reconcile_variant(plan, source, mirror, NOW, GRACE, desired_platforms=BOTH)
+    assert got.to_update == ["1.0.0"]
+    assert got.to_rebuild == ["1.0.0"]
+
+
+def test_upgrade_with_unchanged_platforms_plans_nothing() -> None:
+    plan = _plan("standard", "", tags=["1.0.0"], aliases={})
+    source = {"1.0.0": _psrc(AMD)}
+    mirror = {"1.0.0": MirrorArtifact(base_digest="sha256:a", platforms=AMD)}
+    got = reconcile_variant(plan, source, mirror, NOW, GRACE, desired_platforms=AMD)
+    assert got.to_update == [] and got.to_import == []
+
+
+def test_unknown_placed_platforms_never_trigger_a_rebuild() -> None:
+    plan = _plan("standard", "", tags=["1.0.0"], aliases={})
+    source = {"1.0.0": _psrc(BOTH)}
+    mirror = {"1.0.0": MirrorArtifact(base_digest="sha256:a")}
+    got = reconcile_variant(plan, source, mirror, NOW, GRACE, desired_platforms=BOTH)
+    assert got.to_update == []
+
+
+def test_reconcile_import_routes_platforms_per_variant() -> None:
+    exp = ExpandedImport(
+        name="i",
+        variants=[_plan("standard", "", tags=["1.0.0"], aliases={})],
+        destinations=[],
+        archive=None,
+        platforms=None,
+    )
+    got = reconcile_import(exp, {"1.0.0": _psrc(AMD)}, {}, NOW, platforms={"standard": BOTH})
+    assert got.variants[0].platform_unavailable == {"1.0.0": ["linux/arm64"]}

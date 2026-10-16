@@ -15,7 +15,7 @@ Each field is set as `KNOCK_<FIELD>` (the property name upper-cased). JSON-typed
 | `KNOCK_WORK_DIR` | string | `/tmp/knock-work` | Scratch directory for build contexts. |
 | `KNOCK_TRANSFORM_CA_CERTS` | JSON object | `{}` | JSON map of name → CA source, resolved by the `injectCA` transform. |
 | `KNOCK_TRANSFORM_PACKAGE_MIRRORS` | JSON object | `{}` | JSON map of name → package mirror, resolved by `rewritePackageSources`. |
-| `KNOCK_BUILD_PLATFORM` | string | `linux/amd64` | Platform for the rebuild path (single-platform). |
+| `KNOCK_BUILD_PLATFORM` | string | `linux/amd64` | Platform of a rebuild whose policy declares no `platforms`. |
 | `KNOCK_SBOM_FORMATS` | JSON list | `["spdx-json"]` | SBOM formats syft emits on every placed image (copy and rebuild), as a JSON list. Allowed: spdx-json, cyclonedx-json. Non-empty — the knob chooses which formats, never whether (always-on coverage). |
 | `KNOCK_MAX_CONCURRENCY` | integer | `4` | Max parallel tag operations per run (`1` = sequential). |
 | `KNOCK_ATTEST_SIGNER` | string | `(empty)` | Signing mode for SLSA attestations on the rebuild path; empty ⇒ off. |

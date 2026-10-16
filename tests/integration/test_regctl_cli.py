@@ -76,6 +76,22 @@ def test_inspect_plain_manifest_omits_platform_flag(
     assert "--platform" not in config_line
 
 
+@pytest.mark.parametrize(
+    ("scenario", "platforms"),
+    [
+        ("index-multi", ("linux/amd64", "linux/arm64/v8")),
+        ("index-amd64", ("linux/amd64",)),
+        ("default", ("linux/amd64",)),  # a plain manifest: its config says
+        ("config-labels", ()),  # a config without os: unknown
+    ],
+)
+def test_inspect_reads_the_runnable_platforms(
+    fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch, scenario: str, platforms: tuple[str, ...]
+) -> None:
+    monkeypatch.setenv("FAKE_REGCTL_SCENARIO", scenario)
+    assert RegctlAdapter().inspect("registry/base/python:3.13").platforms == platforms
+
+
 def test_read_failure_raises_regctl_error(
     fake_bin_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

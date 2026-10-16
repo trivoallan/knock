@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from typing import Literal
 
 from knock.domain.expand import ExpandedImport, VariantPlan
+from knock.domain.platforms import missing, same_set
 from knock.domain.retention import ResolvedRetention, select_retention_excess
 
 DEFAULT_GRACE = timedelta(days=7)
@@ -26,6 +27,7 @@ class SourceArtifact:
     pushed_at: datetime
     revision: str | None = None  # upstream-declared org.opencontainers.image.revision, if any
     user: str = ""  # image-config User as the source declares it; untrusted, validated at render
+    platforms: tuple[str, ...] = ()  # runnable os/arch[/variant] it carries; () when unknown
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,7 @@ class MirrorArtifact:
     imported_at: datetime | None = None  # parsed org.opencontainers.image.created (stamp time)
     attested: bool = True  # does this mirror digest already carry a signed knock attestation?
     sbom_covered: bool = True  # does it already carry every required SBOM referrer?
+    platforms: tuple[str, ...] = ()  # runnable platforms of the placed image; () when unknown
 
 
 def _classify(
@@ -44,16 +47,25 @@ def _classify(
     grace: timedelta,
     *,
     desired_transform_version: str | None = None,
+    desired_platforms: tuple[str, ...] | None = None,
 ) -> Literal["import", "update", "keep"]:
     if mirror is None:
         return "import"
     transform_unchanged = mirror.transform_version == desired_transform_version
     source_unchanged = mirror.base_digest == source.digest
-    if not transform_unchanged:
+    if not transform_unchanged or _platform_drift(mirror, desired_platforms):
         return "update"  # operator changed the hardening → rebuild now, no grace
     if not source_unchanged and now - source.pushed_at >= grace:
         return "update"  # source moved and settled
     return "keep"  # keep the current mirror digest; coverage backfills are derived by the caller
+
+
+def _platform_drift(mirror: MirrorArtifact, desired: tuple[str, ...] | None) -> bool:
+    # Unknown placed platforms never trigger a rebuild on their own: an upgrade must not
+    # rebuild every image whose manifest does not state them.
+    return (
+        desired is not None and bool(mirror.platforms) and not same_set(mirror.platforms, desired)
+    )
 
 
 @dataclass(frozen=True)
@@ -69,6 +81,8 @@ class VariantReconcile:
     to_rebuild: list[str] = field(default_factory=list)
     # pinned tags whose upstream digest is not the pin: withheld this run, placed state untouched
     pin_mismatch: list[str] = field(default_factory=list)
+    # tags whose source lacks a requested platform → the missing platforms; never built
+    platform_unavailable: dict[str, list[str]] = field(default_factory=dict)
 
 
 def reconcile_variant(
@@ -79,8 +93,12 @@ def reconcile_variant(
     grace: timedelta = DEFAULT_GRACE,
     *,
     desired_transform_version: str | None = None,
+    desired_platforms: tuple[str, ...] | None = None,
 ) -> VariantReconcile:
     """Reconcile one variant against a destination's mirror state.
+
+    ``desired_platforms`` is set for a rebuilt variant only: the platforms its index must
+    carry. A source lacking one is refused (``platform_unavailable``), never narrowed.
 
     Pre-condition: every tag in ``plan.tags`` must be a key in ``source`` (the
     caller — expand_import selection + the source-state fetch — must be
@@ -92,6 +110,7 @@ def reconcile_variant(
     to_sbom: list[str] = []
     to_rebuild: list[str] = []
     pin_mismatch: list[str] = []
+    platform_unavailable: dict[str, list[str]] = {}
     for src_tag in plan.tags:
         out_tag = src_tag + plan.suffix
         try:
@@ -105,6 +124,13 @@ def reconcile_variant(
         if pin is not None and src.digest != pin:
             pin_mismatch.append(out_tag)  # never place (nor sign) a digest the pin did not name
             continue
+        # Unreadable source platforms are no ground for refusal: the build is the check.
+        lacking = (
+            missing(src.platforms, desired_platforms) if desired_platforms and src.platforms else []
+        )
+        if lacking:
+            platform_unavailable[out_tag] = lacking
+            continue
         mir = mirror.get(out_tag)
         decision = _classify(
             src,
@@ -113,13 +139,16 @@ def reconcile_variant(
             # a pin is the judgement the stability window stands in for
             timedelta(0) if pin is not None else grace,
             desired_transform_version=desired_transform_version,
+            desired_platforms=desired_platforms,
         )
         if decision == "import":
             to_import.append(out_tag)
         elif decision == "update":
             to_update.append(out_tag)
             assert mir is not None  # _classify returns "update" only when the mirror is present
-            if mir.transform_version != desired_transform_version:
+            if mir.transform_version != desired_transform_version or _platform_drift(
+                mir, desired_platforms
+            ):
                 to_rebuild.append(out_tag)
         else:  # "keep" — backfill coverage on the kept digest, signature and SBOM independently
             assert mir is not None  # _classify returns "keep" only when the mirror is present
@@ -132,6 +161,7 @@ def reconcile_variant(
         alias + plan.suffix: target + plan.suffix
         for alias, target in plan.aliases.items()
         if target + plan.suffix not in pin_mismatch
+        and target + plan.suffix not in platform_unavailable
     }
     return VariantReconcile(
         variant=plan.name,
@@ -142,6 +172,7 @@ def reconcile_variant(
         to_sbom=to_sbom,
         to_rebuild=to_rebuild,
         pin_mismatch=pin_mismatch,
+        platform_unavailable=platform_unavailable,
     )
 
 
@@ -166,6 +197,7 @@ def reconcile_import(
     marked_retention: set[str] | None = None,
     retention: ResolvedRetention | None = None,
     transform_versions: dict[str, str | None] | None = None,
+    platforms: dict[str, tuple[str, ...]] | None = None,
 ) -> ImportReconcile:
     """Reconcile all variants of an expanded import; delegates to reconcile_variant.
 
@@ -180,8 +212,17 @@ def reconcile_import(
     marked_selection = marked_selection or set()
     marked_retention = marked_retention or set()
     tv = transform_versions or {}
+    pf = platforms or {}
     variants = [
-        reconcile_variant(v, source, mirror, now, grace, desired_transform_version=tv.get(v.name))
+        reconcile_variant(
+            v,
+            source,
+            mirror,
+            now,
+            grace,
+            desired_transform_version=tv.get(v.name),
+            desired_platforms=pf.get(v.name),
+        )
         for v in expanded.variants
     ]
 

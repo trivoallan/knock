@@ -278,7 +278,7 @@
     },
     "build_platform": {
       "default": "linux/amd64",
-      "description": "Platform for the rebuild path (single-platform).",
+      "description": "Platform of a rebuild whose policy declares no `platforms`.",
       "title": "Build Platform",
       "type": "string"
     },

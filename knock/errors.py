@@ -91,6 +91,10 @@ class UnknownFormatError(DomainError):
     """The scan report format could not be detected and no valid --format was supplied."""
 
 
+class PlatformUnavailableError(DomainError):
+    """The source of a multi-platform rebuild lacks a platform the policy asks for."""
+
+
 class PromotionRefusedError(DomainError):
     """A staged entry promote cannot trust: unknown policy, undeclared destination or alias,
     a staged reference outside the staging registry, a stamp that names another entry, or

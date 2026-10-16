@@ -15,6 +15,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationErr
 from pydantic.alias_generators import to_camel
 
 from knock.domain.deletion_mode import DeletionMode
+from knock.domain.platforms import PLATFORM_PATTERN
 from knock.errors import PolicyValidationError
 
 
@@ -239,6 +240,22 @@ def _validate_owner(value: str) -> str:
 Owner = Annotated[str, AfterValidator(_validate_owner)]
 
 
+def _unique_platforms(value: list[str] | None) -> list[str] | None:
+    if value is not None and len(set(value)) != len(value):
+        raise ValueError(f"platforms names a platform twice: {value}")
+    return value
+
+
+Platform = Annotated[str, Field(pattern=PLATFORM_PATTERN)]
+Platforms = Annotated[list[Platform] | None, AfterValidator(_unique_platforms)]
+_PLATFORMS_DOC = (
+    "OCI platforms (`os/arch[/variant]`, no duplicates). On an import with `transform` "
+    "steps, the rebuild builds every listed platform into one OCI index, in this order; "
+    "absent, it builds the single `KNOCK_BUILD_PLATFORM`. A source tag that lacks a listed "
+    "platform is refused, never narrowed."
+)
+
+
 class Defaults(_CamelModel):
     destinations: list[Destination] | None = Field(
         default=None, description="Default destinations for every import."
@@ -252,8 +269,8 @@ class Defaults(_CamelModel):
     tags: TagSelection | None = Field(
         default=None, description="Default tag-selection rules for every import."
     )
-    platforms: list[str] | None = Field(
-        default=None, description="Default platforms for every import."
+    platforms: Platforms = Field(
+        default=None, description="Default platforms for every import. " + _PLATFORMS_DOC
     )
     owners: list[Owner] | None = Field(
         default=None, description="Default owners (Backstage entity refs) for every import."
@@ -280,7 +297,9 @@ class ImportProfile(_CamelModel):
     archive: Archive | None = Field(
         default=None, description="Retention policy (overrides defaults)."
     )
-    platforms: list[str] | None = Field(default=None, description="Platforms (overrides defaults).")
+    platforms: Platforms = Field(
+        default=None, description="Platforms (overrides defaults). " + _PLATFORMS_DOC
+    )
     variants: list[Variant] | None = Field(
         default=None, description="Variants to fan this import into."
     )

@@ -273,6 +273,8 @@ The pure planning pipeline, all in `domain/`:
 - `aliases.py` — resolve moving-tag aliases from templates (`{major}` / `{minor}` / `{patch}`,
   named captures, literal `latest`), each pointing at the highest matching tag.
 - `policy_merge.py` — merge `defaults` into each import → `ResolvedImport`.
+- `platforms.py` — OCI platform strings: validation pattern, `arm64` ≡ `arm64/v8`, which
+  requested platforms a source lacks, set comparison for platform drift.
 - `variants.py` — expand variants into `(name, suffix, transform)` triples (an implicit `default`
   if none are declared).
 - `expand.py` — combine selection + aliases + variants into an `ExpandedImport` (the suffix is
@@ -391,8 +393,8 @@ Six commands (`knock …`):
   scan ingestion, the coverage-gap audit, and scan-referrer GC); concurrent + horizontally-shardable
   reconcile; a `regctl` + `buildctl` + `cosign` + `syft` runtime image; and a kind-based
   [reference deployment](README.md) that doubles as the production blueprint.
-- **Deferred** — multi-platform rebuild (the copy path is multi-arch, the rebuild path is
-  single-platform); the declaration-scaffolding verbs (`product_init` / `product_delete`).
+- **Deferred** — honouring `platforms` on the copy path (it copies the whole index; the rebuild
+  path builds every listed platform, ADR 0057); the declaration-scaffolding verbs (`product_init` / `product_delete`).
   (`archive_restore` was **rejected**, not deferred — soft-delete already gives reversible removal;
   ADR 0017.)
 - **Out of scope** — runtime presence / fleet inventory (the org's observability stack assembles

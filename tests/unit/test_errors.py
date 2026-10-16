@@ -11,6 +11,7 @@ from knock.errors import (
     DomainError,
     InternalError,
     KnockError,
+    PlatformUnavailableError,
     PolicyValidationError,
     QueueError,
     QueueUnavailableError,
@@ -35,6 +36,7 @@ def test_hierarchy() -> None:
     "exc,expected_code",
     [
         (DomainError("x"), 1),
+        (PlatformUnavailableError("x"), 1),
         (AdapterError("x"), 2),
         (RegctlError("x"), 2),
         (BuildkitError("x"), 2),

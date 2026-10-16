@@ -59,6 +59,9 @@ case "$cmd" in
             # may be absent. The unknown/unknown attestation entry comes first to prove
             # inspect skips it and pins the concrete linux/amd64.
             printf '{"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[{"platform":{"os":"unknown","architecture":"unknown"}},{"platform":{"os":"linux","architecture":"amd64"}}]}\n'
+        elif [ "$scenario" = "index-multi" ]; then
+            # A two-platform buildkit rebuild: image entries with an attestation between.
+            printf '{"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[{"platform":{"os":"linux","architecture":"amd64"}},{"platform":{"os":"unknown","architecture":"unknown"}},{"platform":{"os":"linux","architecture":"arm64","variant":"v8"}}]}\n'
         elif [ "$scenario" = "coverage-covered" ]; then
             printf '{"annotations":{"io.knock.policy":"redis"}}\n'
         elif [ "$scenario" = "coverage-signed" ]; then

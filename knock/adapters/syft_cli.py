@@ -94,6 +94,7 @@ class SyftAdapter:
         username: str | None = None,
         password: str | None = None,
         ca_cert: str | None = None,
+        platform: str | None = None,
     ) -> list[SbomDocument]:
         # Validate formats up front (raises UnknownFormatError before any subprocess).
         media_types = {fmt: media_type_for(fmt) for fmt in formats}
@@ -113,6 +114,8 @@ class SyftAdapter:
             )
             outputs: list[tuple[str, Path]] = []
             args = ["scan", f"registry:{image_ref}", "-c", str(cfg)]
+            if platform:
+                args += ["--platform", platform]
             for fmt in formats:
                 path = Path(tmp) / f"sbom-{fmt}.json"
                 args += ["-o", f"{fmt}={path}"]

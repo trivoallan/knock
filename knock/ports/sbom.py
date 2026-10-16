@@ -29,9 +29,11 @@ class SbomGeneratorPort(Protocol):
         username: str | None = None,
         password: str | None = None,
         ca_cert: str | None = None,
+        platform: str | None = None,
     ) -> list[SbomDocument]:
         """Scan `image_ref` (a digest-pinned ref) and return one document per format.
 
         One scan, N outputs. Auth/TLS describe the registry `image_ref` lives in.
+        `platform` picks which image of an index is scanned (default: the tool's choice).
         """
         ...

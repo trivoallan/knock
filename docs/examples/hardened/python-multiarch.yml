@@ -1,0 +1,32 @@
+# Multi-platform hardening (rebuild path) — ADR 0057.
+#
+# A transformed import builds every platform listed in `platforms` in one BuildKit build and
+# places one OCI index (here linux/amd64 then linux/arm64, in that order). Every piece of
+# evidence binds to the index digest; syft writes one SBOM per format and platform. A source
+# tag that lacks a listed platform is refused, never narrowed.
+#
+# The BuildKit host must run foreign platforms: register binfmt emulators first
+# (`docker run --privileged --rm tonistiigi/binfmt --install arm64`, or
+# `docker/setup-qemu-action` on GitHub Actions). See docs/how-to/rebuild-and-harden.md.
+#
+apiVersion: knock.io/v1alpha1
+kind: MirrorPolicy
+metadata:
+  name: python-multiarch
+spec:
+  artifactType: image
+  source:
+    registry: docker.io
+    repository: library/python
+  imports:
+    - name: alpine
+      tags:
+        names: ["3.13-alpine"]
+        semverOnly: false
+      platforms: [linux/amd64, linux/arm64]
+      transform:
+        - rewritePackageSources: { mirror: corp }  # name → KNOCK_TRANSFORM_PACKAGE_MIRRORS
+        - upgradePackages: { epoch: "2026-10-16" }     # change it to repair again
+      destinations:
+        - project: hardened
+          repository: python

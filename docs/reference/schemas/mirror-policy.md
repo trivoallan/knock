@@ -1133,7 +1133,7 @@ Must be one of:
 | **Additional properties** | Any type allowed |
 | **Default**               | `null`           |
 
-**Description:** Default platforms for every import.
+**Description:** Default platforms for every import. OCI platforms (`os/arch[/variant]`, no duplicates). On an import with `transform` steps, the rebuild builds every listed platform into one OCI index, in this order; absent, it builds the single `KNOCK_BUILD_PLATFORM`. A source tag that lacks a listed platform is refused, never narrowed.
 
 | Any of(Option)                                       |
 | ---------------------------------------------------- |
@@ -1165,6 +1165,10 @@ Must be one of:
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
+
+| Restrictions                      |                                                                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[a-z0-9_]+/[a-z0-9_]+(/[a-z0-9_]+)?$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9_%5D%2B%2F%5Ba-z0-9_%5D%2B%28%2F%5Ba-z0-9_%5D%2B%29%3F%24) |
 
 ###### <a name="spec_defaults_anyOf_i0_platforms_anyOf_i1"></a>4.5.1.5.2. Property `item 1`
 
@@ -1486,7 +1490,7 @@ Must be one of:
 | **Additional properties** | Any type allowed |
 | **Default**               | `null`           |
 
-**Description:** Platforms (overrides defaults).
+**Description:** Platforms (overrides defaults). OCI platforms (`os/arch[/variant]`, no duplicates). On an import with `transform` steps, the rebuild builds every listed platform into one OCI index, in this order; absent, it builds the single `KNOCK_BUILD_PLATFORM`. A source tag that lacks a listed platform is refused, never narrowed.
 
 | Any of(Option)                                   |
 | ------------------------------------------------ |
@@ -1518,6 +1522,10 @@ Must be one of:
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
+
+| Restrictions                      |                                                                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[a-z0-9_]+/[a-z0-9_]+(/[a-z0-9_]+)?$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9_%5D%2B%2F%5Ba-z0-9_%5D%2B%28%2F%5Ba-z0-9_%5D%2B%29%3F%24) |
 
 ###### <a name="spec_imports_items_platforms_anyOf_i1"></a>4.6.1.6.2. Property `item 1`
 
