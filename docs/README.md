@@ -1,5 +1,10 @@
 # Why knock?
 
+> **Documentation map** — [Tutorials](tutorials/README.md) (start with [Getting started](tutorials/getting-started.md))
+> · [How-to guides](how-to/README.md) · [Reference](reference/README.md) · [Explanation](explanation/README.md)
+> · [Architecture](architecture/README.md) ([design](architecture/design.md), [decisions](architecture/decisions/))
+> · [Roadmap](roadmap.md)
+
 ## 2 a.m. A critical CVE drops.
 
 There is only one question that matters in the next hour:

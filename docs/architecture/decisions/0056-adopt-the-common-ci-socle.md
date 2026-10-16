@@ -52,8 +52,9 @@ that GitHub already renders.
 - `make image` now builds `knock:ci` for CI; the target that builds `knock:dev` and loads it into
   kind is `make kind-image`.
 - Every push to `main` publishes a signed `main` image, which ADR 18 left out of scope.
-- The `RELEASE_PLEASE_TOKEN` secret, the Pages site and the Settings app become unused and are
-  removed after the switch.
+- The `RELEASE_PLEASE_TOKEN` secret, the Pages site, the Settings app and the hosted Mend Renovate
+  app become unused and are removed after the switch; the hosted Renovate app must go, or it and the
+  self-hosted Renovate open duplicate pull requests.
 - The architecture narrative of ADR 37 stays where it is (`docs/explanation/architecture.md`); it is
   now read on GitHub, where Mermaid diagrams render natively.
 - The runnable example files are linked from the catalog pages under `docs/reference/examples/`
