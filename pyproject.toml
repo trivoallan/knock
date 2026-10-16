@@ -1,6 +1,8 @@
 [project]
 name = "knock-oci"
 version = "0.13.0"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 description = "Stamp external OCI images with portable provenance through a hardening policy"
 requires-python = ">=3.13"
 dependencies = [
@@ -34,7 +36,7 @@ docs = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
