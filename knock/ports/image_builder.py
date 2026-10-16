@@ -13,7 +13,8 @@ class BuildRequest:
     context_dir: Path
     image_ref: str
     build_args: dict[str, str] = field(default_factory=dict)
-    platform: str | None = None
+    # every platform to build into one index (empty: the builder's own platform)
+    platforms: tuple[str, ...] = ()
     provenance: bool = False  # enable BuildKit's native SLSA provenance attestation
     tls_verify: bool = True  # False => push over plain HTTP (registry.insecure=true)
 

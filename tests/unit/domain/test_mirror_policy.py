@@ -404,3 +404,31 @@ def test_owner_with_a_trailing_newline_rejected() -> None:
             "  source: {registry: docker.io, repository: library/redis}\n"
             '  imports: [{name: v, tags: {}, owners: ["payments\\n"]}]\n'
         )
+
+
+def _policy_with_platforms(platforms: str) -> str:
+    return (
+        "apiVersion: knock.io/v1alpha1\nkind: MirrorPolicy\nmetadata: {name: x}\n"
+        "spec: {artifactType: image, source: {registry: d, repository: r}, "
+        f"imports: [{{name: v, tags: {{}}, platforms: {platforms}}}]}}\n"
+    )
+
+
+def test_parse_rejects_malformed_platform() -> None:
+    with pytest.raises(PolicyValidationError, match="platforms"):
+        parse_mirror_policy(_policy_with_platforms("[amd64]"))
+
+
+def test_parse_rejects_duplicate_platform() -> None:
+    with pytest.raises(PolicyValidationError, match="twice"):
+        parse_mirror_policy(_policy_with_platforms("[linux/arm64, linux/arm64]"))
+
+
+def test_parse_accepts_platform_with_variant() -> None:
+    policy = parse_mirror_policy(_policy_with_platforms("[linux/amd64, linux/arm/v7]"))
+    assert policy.spec.imports[0].platforms == ["linux/amd64", "linux/arm/v7"]
+
+
+def test_defaults_reject_duplicate_platform() -> None:
+    with pytest.raises(ValidationError):
+        Defaults.model_validate({"platforms": ["linux/amd64", "linux/amd64"]})

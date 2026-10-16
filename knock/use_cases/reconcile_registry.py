@@ -51,13 +51,13 @@ from knock.domain.reconcile import (
     reconcile_import,
 )
 from knock.domain.retention import resolve_archive
-from knock.domain.sbom import build_sbom_annotations, build_sbom_statement, media_type_for
+from knock.domain.sbom import build_sbom_annotations, build_sbom_statement, missing_sboms
 from knock.domain.scan.refs import is_referrers_fallback_tag
 from knock.domain.stamp import build_stamp_annotations
 from knock.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
 from knock.domain.transforms.registry import DEFAULT_REGISTRY
 from knock.domain.transforms.render import render, transform_version, validate_transform_steps
-from knock.errors import ConfigError, InternalError, exit_code_for
+from knock.errors import ConfigError, InternalError, PlatformUnavailableError, exit_code_for
 from knock.ports.attestor import AttestorPort
 from knock.ports.image_builder import BuildRequest, ImageBuilderPort
 from knock.ports.registry import ImageInfo, Referrer, RegistryPort
@@ -93,7 +93,11 @@ def to_source_artifact(info: ImageInfo, *, now: datetime) -> SourceArtifact:
     # 7-day stability window skips an update rather than churning on unknown freshness).
     revision = info.annotations.get(_REVISION_KEY) or info.config_labels.get(_REVISION_KEY)
     return SourceArtifact(
-        digest=info.digest, pushed_at=info.created or now, revision=revision, user=info.user
+        digest=info.digest,
+        pushed_at=info.created or now,
+        revision=revision,
+        user=info.user,
+        platforms=info.platforms,
     )
 
 
@@ -114,6 +118,7 @@ def to_mirror_artifact(
         imported_at=_parse_created(info.annotations.get(CREATED_KEY)),
         attested=attested,
         sbom_covered=sbom_covered,
+        platforms=info.platforms,
     )
 
 
@@ -173,7 +178,7 @@ def _build_variant(
     source_ref: str,
     dest_ref: str,
     resolved: _ResolvedTransform,
-    platform: str,
+    platforms: tuple[str, ...],
     source_user: str = "",
     work_dir: Path | None = None,
     provenance: bool = False,
@@ -195,7 +200,7 @@ def _build_variant(
                 dockerfile_path=df_path,
                 context_dir=ctx,
                 image_ref=dest_ref,
-                platform=platform,
+                platforms=platforms,
                 provenance=provenance,
                 tls_verify=tls_verify,
             )
@@ -271,7 +276,7 @@ class _SbomWork:
     vplan: VariantPlan
     out_tag: str
     src_tag: str
-    formats: list[str]
+    wanted: list[tuple[str, str | None]]  # (format, platform) SBOMs still owed
 
 
 @dataclass(frozen=True)
@@ -329,13 +334,24 @@ def _apply_plan(
     source: dict[str, SourceArtifact] = {
         tag: to_source_artifact(registry.inspect(f"{src_repo}:{tag}"), now=now) for tag in selected
     }
+    # A rebuilt variant's index must carry these platforms, in this order; a copied one
+    # is not checked (absent from the map).
+    variant_platforms: dict[str, tuple[str, ...]] = {
+        v.name: tuple(plan.expanded.platforms or [build_platform])
+        for v in plan.expanded.variants
+        if v.transform
+    }
+    rebuilt_tags = {
+        t + v.suffix for v in plan.expanded.variants if v.name in variant_platforms for t in v.tags
+    }
     tv_key = f"{label_prefix}.transform.version" if label_prefix else None
     transform_versions: dict[str, str | None] = {
         name: rt.version for name, rt in plan.transforms.items()
     }
     mirror: dict[str, MirrorArtifact] = {}
     mirror_digests: dict[str, str] = {}
-    missing_sbom: dict[str, list[str]] = {}  # out_tag → configured formats whose referrer is absent
+    # out_tag → (format, platform) SBOMs whose referrer is absent
+    missing_sbom: dict[str, list[tuple[str, str | None]]] = {}
     # One unfiltered referrer probe per existing tag yields every artifactType present, feeding
     # BOTH coverage signals (signature + SBOM). Skipped when neither signing nor SBOM is
     # configured — nothing would route to a backfill stage (one fewer registry read per tag).
@@ -347,13 +363,17 @@ def _apply_plan(
         if is_referrers_fallback_tag(out_tag):
             continue
         info = registry.inspect(f"{plan.dest_repo}:{out_tag}")
-        present = (
-            {r.artifact_type for r in registry.list_referrers(f"{plan.dest_repo}:{out_tag}")}
-            if need_probe
-            else set()
+        refs = registry.list_referrers(f"{plan.dest_repo}:{out_tag}") if need_probe else []
+        attested = attestor is None or any(
+            r.artifact_type == COSIGN_ATTESTATION_ARTIFACT_TYPE for r in refs
         )
-        attested = attestor is None or COSIGN_ATTESTATION_ARTIFACT_TYPE in present
-        absent = [fmt for fmt in sbom_formats if media_type_for(fmt) not in present]
+        # A rebuild owes one SBOM per platform of its index; a copy, one per format.
+        absent = missing_sboms(
+            ((r.artifact_type, r.annotations) for r in refs),
+            sbom_formats,
+            info.platforms if out_tag in rebuilt_tags else (),
+            prefix=label_prefix,
+        )
         ma = to_mirror_artifact(
             info, transform_version_key=tv_key, attested=attested, sbom_covered=not absent
         )
@@ -385,6 +405,7 @@ def _apply_plan(
         mirror,
         now,
         transform_versions=transform_versions,
+        platforms=variant_platforms,
         marked_selection=marked_selection,
         marked_retention=marked_retention,
         retention=effective_retention,
@@ -427,7 +448,7 @@ def _apply_plan(
     def _attach_sbom(
         out_digest: str,
         out_tag: str,
-        formats: list[str],
+        wanted: list[tuple[str, str | None]],
         *,
         repo: str = plan.dest_repo,
         cfg: RegistryConfig = plan.config,
@@ -436,38 +457,43 @@ def _apply_plan(
         # the subject NAME below stays the destination's, where the image is meant to live.
         assert sbom_generator is not None  # callers guard: formats non-empty => generator wired
         placed = f"{repo}@{out_digest}"
-        for d in sbom_generator.generate(
-            placed,
-            formats,
-            tls_verify=cfg.tls_verify,
-            username=cfg.username,
-            password=(cfg.password.get_secret_value() if cfg.password else None),
-            ca_cert=cfg.ca_cert,
-        ):
-            registry.put_referrer(
+        # One scan per platform (syft picks that image of the index), N formats each.
+        for platform in dict.fromkeys(p for _f, p in wanted):
+            formats = [f for f, p in wanted if p == platform]
+            for d in sbom_generator.generate(
                 placed,
-                d.media_type,  # artifactType == media type (discoverable)
-                build_sbom_annotations(
-                    prefix=label_prefix,
-                    subject_digest=out_digest,
-                    fmt=d.format,
-                    tool="syft",
-                    tool_version=d.tool_version,
-                    timestamp=now,
-                ),
-                blob=d.content,
-                media_type=d.media_type,
-            )
-            if attestor is not None:
-                attestor.attest(
+                formats,
+                tls_verify=cfg.tls_verify,
+                username=cfg.username,
+                password=(cfg.password.get_secret_value() if cfg.password else None),
+                ca_cert=cfg.ca_cert,
+                platform=platform,
+            ):
+                registry.put_referrer(
                     placed,
-                    build_sbom_statement(
-                        subject_name=f"{plan.dest_repo}:{out_tag}",
+                    d.media_type,  # artifactType == media type (discoverable)
+                    build_sbom_annotations(
+                        prefix=label_prefix,
                         subject_digest=out_digest,
                         fmt=d.format,
-                        content=d.content,
+                        tool="syft",
+                        tool_version=d.tool_version,
+                        timestamp=now,
+                        platform=platform,
                     ),
+                    blob=d.content,
+                    media_type=d.media_type,
                 )
+                if attestor is not None:
+                    attestor.attest(
+                        placed,
+                        build_sbom_statement(
+                            subject_name=f"{plan.dest_repo}:{out_tag}",
+                            subject_digest=out_digest,
+                            fmt=d.format,
+                            content=d.content,
+                        ),
+                    )
 
     def _attest(
         out_digest: str,
@@ -543,7 +569,7 @@ def _apply_plan(
                         source_ref=f"{src_repo}@{source[w.src_tag].digest}",
                         dest_ref=dest_ref,
                         resolved=plan.transforms[w.vplan.name],
-                        platform=build_platform,
+                        platforms=variant_platforms[w.vplan.name],
                         source_user=source[w.src_tag].user,
                         work_dir=work_dir,
                         provenance=attestor is not None,
@@ -589,7 +615,9 @@ def _apply_plan(
                 # the op (no silently-uncovered image), like signing. Empty formats =>
                 # skip (lib/test affordance; KNOCK_SBOM_FORMATS guarantees >=1 in prod).
                 if sbom_formats and out_digest is not None:
-                    _attach_sbom(out_digest, w.out_tag, sbom_formats, repo=repo, cfg=cfg)
+                    owed = variant_platforms.get(w.vplan.name, (None,))
+                    wanted = [(f, p) for p in owed for f in sbom_formats]
+                    _attach_sbom(out_digest, w.out_tag, wanted, repo=repo, cfg=cfg)
                 # Sign knock's predicate over the stamped output digest — rebuild AND copy
                 # (the label is the product: every placed image is signed). Inside the try =>
                 # a signing failure fails the operation rather than leaving a silent gap.
@@ -699,7 +727,7 @@ def _apply_plan(
             out_digest: str | None = None
             if not dry_run_tags:
                 out_digest = mirror_digests[w.out_tag]  # the live digest — no rebuild
-                _attach_sbom(out_digest, w.out_tag, w.formats)
+                _attach_sbom(out_digest, w.out_tag, w.wanted)
             op = Operation(
                 kind="sbom",
                 out_tag=w.out_tag,
@@ -854,7 +882,7 @@ def _apply_plan(
                     src_tag=out_to_src[out_tag],
                     # to_sbom ⟺ missing_sbom (same probe loop) — index, don't .get(): a
                     # missing key is an invariant violation, not "re-attach every format".
-                    formats=missing_sbom[out_tag],
+                    wanted=missing_sbom[out_tag],
                 )
             )
     withheld_ops: list[tuple[str, Operation]] = []
@@ -962,7 +990,26 @@ def _apply_plan(
         withheld = set(vr.pin_mismatch)
         for tag in vplan.tags:
             out_tag = tag + vplan.suffix
-            if out_tag in withheld:
+            if out_tag in vr.platform_unavailable:
+                lacking = ", ".join(vr.platform_unavailable[out_tag])
+                err = PlatformUnavailableError(
+                    f"{src_repo}:{tag} does not carry {lacking}, which the policy asks to "
+                    "rebuild; nothing is built for this tag"
+                )
+                einfo = ErrorInfo(
+                    type=type(err).__name__, message=str(err), exit_code=exit_code_for(err)
+                )
+                fop = Operation(
+                    kind="updated" if out_tag in mirror else "imported",
+                    out_tag=out_tag,
+                    src_tag=tag,
+                    digest=source[tag].digest,
+                    applied=False,
+                    error=einfo,
+                )
+                ops.append(fop)
+                emit_failed(fop, vr.variant, einfo)
+            elif out_tag in withheld:
                 pop = Operation(
                     kind="pin_mismatch",
                     out_tag=out_tag,

@@ -9,8 +9,9 @@ FAKE_SYFT_VERSION = "9.9.9-fake"
 
 class FakeSbomGenerator:
     def __init__(self, *, fail: bool = False) -> None:
-        # journal: (image_ref, formats, tls_verify) per call
+        # journal: (image_ref, formats, tls_verify) per call, and the platform asked
         self.calls: list[tuple[str, tuple[str, ...], bool]] = []
+        self.platforms: list[str | None] = []
         self._fail = fail
 
     def generate(
@@ -22,10 +23,12 @@ class FakeSbomGenerator:
         username: str | None = None,
         password: str | None = None,
         ca_cert: str | None = None,
+        platform: str | None = None,
     ) -> list[SbomDocument]:
         if self._fail:
             raise SyftError("fake syft configured to fail")
         self.calls.append((image_ref, tuple(formats), tls_verify))
+        self.platforms.append(platform)
         return [
             SbomDocument(
                 format=f,

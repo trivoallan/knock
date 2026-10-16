@@ -106,6 +106,7 @@
           "anyOf": [
             {
               "items": {
+                "pattern": "^[a-z0-9_]+/[a-z0-9_]+(/[a-z0-9_]+)?$",
                 "type": "string"
               },
               "type": "array"
@@ -115,7 +116,7 @@
             }
           ],
           "default": null,
-          "description": "Default platforms for every import.",
+          "description": "Default platforms for every import. OCI platforms (`os/arch[/variant]`, no duplicates). On an import with `transform` steps, the rebuild builds every listed platform into one OCI index, in this order; absent, it builds the single `KNOCK_BUILD_PLATFORM`. A source tag that lacks a listed platform is refused, never narrowed.",
           "title": "Platforms"
         },
         "owners": {
@@ -287,6 +288,7 @@
           "anyOf": [
             {
               "items": {
+                "pattern": "^[a-z0-9_]+/[a-z0-9_]+(/[a-z0-9_]+)?$",
                 "type": "string"
               },
               "type": "array"
@@ -296,7 +298,7 @@
             }
           ],
           "default": null,
-          "description": "Platforms (overrides defaults).",
+          "description": "Platforms (overrides defaults). OCI platforms (`os/arch[/variant]`, no duplicates). On an import with `transform` steps, the rebuild builds every listed platform into one OCI index, in this order; absent, it builds the single `KNOCK_BUILD_PLATFORM`. A source tag that lacks a listed platform is refused, never narrowed.",
           "title": "Platforms"
         },
         "variants": {

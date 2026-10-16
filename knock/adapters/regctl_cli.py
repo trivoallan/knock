@@ -72,9 +72,9 @@ class RegctlAdapter:
         # the image lacks that arch (a single-platform rebuild read on a different-arch
         # node). Pin a platform the index actually carries.
         config_args = ["image", "config", image_ref, "--format", "{{json .}}"]
-        platform = self._first_platform(manifest)
-        if platform:
-            config_args += ["--platform", platform]
+        index_platforms = self._index_platforms(manifest)
+        if index_platforms:
+            config_args += ["--platform", index_platforms[0]]
         config = self._json(config_args)
         raw_annotations = manifest.get("annotations")
         annotations = dict(raw_annotations) if isinstance(raw_annotations, dict) else {}
@@ -87,7 +87,9 @@ class RegctlAdapter:
         user = raw_user if isinstance(raw_user, str) else ""
         created_raw = config.get("created")
         created = self._parse_time(created_raw) if isinstance(created_raw, str) else None
+        own = self._platform_of(config)
         return ImageInfo(
+            platforms=tuple(index_platforms) or ((own,) if own else ()),
             digest=digest,
             created=created,
             annotations=annotations,
@@ -126,24 +128,27 @@ class RegctlAdapter:
         self._run(["tag", "rm", image_ref])
 
     @staticmethod
-    def _first_platform(manifest: dict[str, object]) -> str | None:
-        """First concrete os/arch in an index manifest; None for a plain manifest.
+    def _platform_of(plat: object) -> str | None:
+        """`os/arch[/variant]` of a platform object (index entry or image config)."""
+        if not isinstance(plat, dict):
+            return None
+        os_, arch = plat.get("os"), plat.get("architecture")
+        if not os_ or not arch or "unknown" in (os_, arch):
+            return None
+        variant = plat.get("variant")
+        return f"{os_}/{arch}/{variant}" if variant else f"{os_}/{arch}"
+
+    @classmethod
+    def _index_platforms(cls, manifest: dict[str, object]) -> list[str]:
+        """Concrete platforms of an index, in index order; [] for a plain manifest.
 
         Skips the unknown/unknown attestation entries buildkit interleaves.
         """
         entries = manifest.get("manifests")
         if not isinstance(entries, list):
-            return None
-        for entry in entries:
-            plat = entry.get("platform") if isinstance(entry, dict) else None
-            if not isinstance(plat, dict):
-                continue
-            os_, arch = plat.get("os"), plat.get("architecture")
-            if not os_ or not arch or "unknown" in (os_, arch):
-                continue
-            variant = plat.get("variant")
-            return f"{os_}/{arch}/{variant}" if variant else f"{os_}/{arch}"
-        return None
+            return []
+        found = (cls._platform_of(e.get("platform")) for e in entries if isinstance(e, dict))
+        return [p for p in found if p]
 
     def _parse_time(self, value: str) -> datetime | None:
         try:

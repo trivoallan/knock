@@ -31,6 +31,18 @@ def test_generate_emits_one_output_per_format(
     assert f"registry:{DIGEST_REF}" in text
 
 
+def test_generate_scans_the_requested_platform_of_an_index(
+    fake_bin_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    log = tmp_path / "syft.log"
+    monkeypatch.setenv("FAKE_SYFT_LOG", str(log))
+    SyftAdapter().generate(DIGEST_REF, ["spdx-json"], platform="linux/arm64")
+    SyftAdapter().generate(DIGEST_REF, ["spdx-json"])
+    scan_lines = [ln for ln in log.read_text().splitlines() if ln.startswith("scan")]
+    assert "--platform linux/arm64" in scan_lines[0]
+    assert "--platform" not in scan_lines[1]
+
+
 def test_generate_captures_tool_version(
     fake_bin_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

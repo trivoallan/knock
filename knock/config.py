@@ -242,7 +242,8 @@ class Settings(BaseSettings):
         description="JSON map of name → package mirror, resolved by `rewritePackageSources`.",
     )
     build_platform: str = Field(
-        default="linux/amd64", description="Platform for the rebuild path (single-platform)."
+        default="linux/amd64",
+        description="Platform of a rebuild whose policy declares no `platforms`.",
     )
     sbom_formats: list[str] = Field(
         default_factory=lambda: ["spdx-json"],

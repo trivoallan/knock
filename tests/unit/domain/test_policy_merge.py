@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import pytest
-
 from knock.domain.mirror_policy import Spec
 from knock.domain.policy_merge import ResolvedImport, resolve_imports
-from knock.errors import PolicyValidationError
 
 
 def _spec(defaults: dict | None, imports: list[dict]) -> Spec:
@@ -107,13 +104,13 @@ def test_empty_tags_inherits_defaults_tags_wholesale() -> None:
     assert resolved.tags.exclude_regex == ["-rc"]
 
 
-def test_transform_plus_multi_platform_raises() -> None:
+def test_transform_with_several_platforms_loads() -> None:
     spec = _spec(
         defaults={"platforms": ["linux/amd64", "linux/arm64"]},
         imports=[{"name": "v", "tags": {}, "transform": [{"injectCA": {}}]}],
     )
-    with pytest.raises(PolicyValidationError, match="multi-platform"):
-        resolve_imports(spec)
+    [resolved] = resolve_imports(spec)
+    assert resolved.platforms == ["linux/amd64", "linux/arm64"]
 
 
 def test_transform_plus_single_platform_ok() -> None:

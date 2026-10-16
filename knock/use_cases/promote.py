@@ -23,7 +23,7 @@ from knock.domain.expand import expand_import
 from knock.domain.gate import StagedEntry, StagedRebuilds, staged_repository
 from knock.domain.mirror_policy import MirrorPolicy, RegistrySource
 from knock.domain.policy_merge import resolve_imports
-from knock.domain.sbom import media_type_for
+from knock.domain.sbom import missing_sboms
 from knock.errors import (
     ConfigError,
     PromotionRefusedError,
@@ -195,10 +195,18 @@ def promote_staged(
                     raise StagedDigestMismatchError(
                         f"{dest_by_digest} did not receive the evaluated digest"
                     )
-                present = {r.artifact_type for r in registry.list_referrers(dest_by_digest)}
-                missing = [f for f in sbom_formats if media_type_for(f) not in present]
+                refs = registry.list_referrers(dest_by_digest)
+                present = {r.artifact_type for r in refs}
+                # A staged entry is a rebuild: it owes one SBOM per platform of its index.
+                missing = missing_sboms(
+                    ((r.artifact_type, r.annotations) for r in refs),
+                    sbom_formats,
+                    held.platforms,
+                    prefix=label_prefix,
+                )
                 if missing:
-                    raise _refuse(entry, f"the SBOM ({', '.join(missing)}) did not arrive")
+                    named = ", ".join(f"{f} for {p}" if p else f for f, p in missing)
+                    raise _refuse(entry, f"the SBOM ({named}) did not arrive")
                 if attestor is not None and (
                     COSIGN_ATTESTATION_ARTIFACT_TYPE not in present
                     or not attestor.has_attestation(dest_by_digest, PREDICATE_TYPE)

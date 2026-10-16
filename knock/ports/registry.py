@@ -17,6 +17,8 @@ class ImageInfo:
     config_labels: dict[str, str] = field(default_factory=dict)
     # image-config User, verbatim and untrusted ("" when the source declares none)
     user: str = ""
+    # runnable platforms (os/arch[/variant]): the index's image entries, else the config's
+    platforms: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -83,9 +83,18 @@ def _stamp(tag: str, **over: str) -> dict[str, str]:
     return stamp
 
 
-def _evidence(tag: str) -> list[Referrer]:
+def _evidence(tag: str, sbom_platforms: tuple[str, ...] = ()) -> list[Referrer]:
+    sboms = [
+        Referrer(
+            digest=f"sha256:sbom-{p}",
+            artifact_type=SPDX,
+            annotations={"io.knock.sbom.platform": p},
+            subject_tag=tag,
+        )
+        for p in sbom_platforms
+    ] or [Referrer(digest="sha256:sbom", artifact_type=SPDX, annotations={}, subject_tag=tag)]
     return [
-        Referrer(digest="sha256:sbom", artifact_type=SPDX, annotations={}, subject_tag=tag),
+        *sboms,
         Referrer(
             digest="sha256:att",
             artifact_type=COSIGN_ATTESTATION_ARTIFACT_TYPE,
@@ -100,6 +109,8 @@ def _registry(
     placed: dict[str, str] | None = None,
     stamps: dict[str, dict[str, str]] | None = None,
     staged_digests: dict[str, str] | None = None,
+    platforms: tuple[str, ...] = (),
+    sbom_platforms: tuple[str, ...] = (),
     **fake: object,
 ) -> FakeRegistryPort:
     """The staging registry holds `tags`, stamped and with their evidence; `placed` maps a
@@ -110,10 +121,10 @@ def _registry(
     for tag in tags:
         stamp = (stamps or {}).get(tag, _stamp(tag))
         digest = (staged_digests or {}).get(tag, _digest(tag))
-        info = ImageInfo(digest=digest, created=NOW, annotations=stamp)
+        info = ImageInfo(digest=digest, created=NOW, annotations=stamp, platforms=platforms)
         infos[f"{STAGED}:{tag}"] = info
         infos[f"{STAGED}@{digest}"] = info
-        referrers[f"{STAGED}@{digest}"] = _evidence(tag)
+        referrers[f"{STAGED}@{digest}"] = _evidence(tag, sbom_platforms)
     for tag, digest in (placed or {}).items():
         infos[f"{DEST}:{tag}"] = ImageInfo(digest=digest, created=NOW, annotations={})
     return FakeRegistryPort(
@@ -303,6 +314,19 @@ def test_refuses_when_the_copy_lost_the_referrers() -> None:
     registry = _registry(lose_referrers=True)
     error = _refused(registry, _entry())
     assert "did not arrive" in error and BY_DIGEST in registry.copied
+
+
+def test_refuses_a_two_platform_rebuild_missing_its_arm64_sbom() -> None:
+    registry = _registry(platforms=("linux/amd64", "linux/arm64"), sbom_platforms=("linux/amd64",))
+    error = _refused(registry, _entry())
+    assert "spdx-json for linux/arm64" in error and TAG_WRITE not in registry.copied
+
+
+def test_promotes_a_two_platform_rebuild_with_every_sbom() -> None:
+    both = ("linux/amd64", "linux/arm64")
+    registry = _registry(platforms=both, sbom_platforms=both)
+    _promote(registry, _entry())
+    assert TAG_WRITE in registry.copied
 
 
 def test_refuses_when_the_attestation_does_not_verify_at_the_destination() -> None:

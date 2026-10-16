@@ -680,7 +680,7 @@ def test_transformed_variant_builds_then_stamps_lineage() -> None:
     assert len(builder.requests) == 1
     req = builder.requests[0]
     assert req.image_ref == "reg.local/hardened/redis:7.2.5"
-    assert req.platform == "linux/amd64"
+    assert req.platforms == ("linux/amd64",)
     df = builder.dockerfiles[0]
     assert "update-ca-certificates" in df and "/etc/apt/sources.list" in df
     assert builder.contexts[0]["corp.crt"] == "PEMDATA"
