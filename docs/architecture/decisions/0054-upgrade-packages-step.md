@@ -108,6 +108,15 @@ names, the stamp, the SBOM and the signature of the existing rebuild path.
   `transform:` or with an `epoch`; an older knock refuses `remediate:`. Each consumer moves its
   knock pin and its policies in the same change.
 
+- **Verified on order, copy-only, on 2026-10-17** (knock 0.16.0, BuildKit and a `registry:2` in
+  uske's kind bench): two imports with no `transform:` and
+  `remediate: [rewritePackageSources, upgradePackages]`, `alpine:3.18.0` and `debian:12.0`, were
+  planned as copies (`transformed: false`); with `remediate: {epoch}` added to the plan, both were
+  built, held in staging, and stamped `io.knock.remediation.steps|epoch` with no
+  `io.knock.transform.version`. On the same bench, uske 0.7.0 ordered the repair of two sources
+  with a transform: the Alpine one came out sound and was promoted, the Debian `redis:7.2.0` one
+  was refused and its source closed.
+
 ## Operating it
 
 - **An ordered operation is withheld.** Read its reason in `--applied-out`:
