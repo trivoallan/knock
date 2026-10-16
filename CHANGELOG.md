@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.16.0](https://github.com/trivoallan/knock/compare/v0.15.0...v0.16.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **domain:** apply the remediation a plan orders, apart from the transform ([#322](https://github.com/trivoallan/knock/issues/322))
+
+### Features
+
+* **domain:** apply the remediation a plan orders, apart from the transform ([#322](https://github.com/trivoallan/knock/issues/322)) ([5d2639d](https://github.com/trivoallan/knock/commit/5d2639ded6143c1477af3ff4dbb3ea4eb1ba6ef2))
+
 ## [0.15.0](https://github.com/trivoallan/knock/compare/v0.14.0...v0.15.0) (2026-10-16)
 
 
