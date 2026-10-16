@@ -1,8 +1,4 @@
----
-title: "GC superseded scan referrers"
-description: "Reap stale scan referrers with knock gc, keeping the newest per (tool, format)."
-sidebar_position: 8
----
+# GC superseded scan referrers
 
 `knock attach` writes one scan-result referrer per scan. Over time, repeat scans of the same image
 pile up superseded referrers. `knock gc` walks the registry roster, keeps the newest per

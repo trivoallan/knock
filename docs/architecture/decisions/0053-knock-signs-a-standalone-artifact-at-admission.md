@@ -66,5 +66,5 @@ impossibility.
 - No new port, adapter, external system or C4 actor: `GitPlanner` gains an edge to the attestor the
   driver already holds.
 
-Full change: [openspec/changes/sign-git-artifact-at-admission](../../../openspec/changes/sign-git-artifact-at-admission/proposal.md)
-([design](../../../openspec/changes/sign-git-artifact-at-admission/design.md)).
+Full change: [openspec/changes/sign-git-artifact-at-admission](../../../openspec/changes/archive/2026-09-20-sign-git-artifact-at-admission/proposal.md)
+([design](../../../openspec/changes/archive/2026-09-20-sign-git-artifact-at-admission/design.md)).

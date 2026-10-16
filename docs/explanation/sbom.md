@@ -1,8 +1,4 @@
----
-title: "Package-level SBOM"
-description: "The inventory knock attaches to every placed image (copy and rebuild) so a CVE becomes one query, and why presence precedes signing."
-sidebar_position: 4
----
+# Package-level SBOM
 
 knock's provenance stamp carries **lineage** — `base.digest`, the transform steps, the owners.
 Lineage answers *"which images derive from base X"*. But almost every real CVE is a **contents**
@@ -55,5 +51,5 @@ a raw binary.
 knock produces the queryable inventory; it never runs the query. CVE matching (`version → CVE-xxxx`)
 and fleet-wide blast-radius live downstream in the org's observability stack — knock's standing
 non-goal. For the mechanism rationale, see
-[Architecture & design](https://github.com/trivoallan/knock/blob/main/docs/architecture/design.md)
-and [ADR 0034](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0034-unify-sbom-on-syft.md).
+[Architecture & design](../architecture/design.md)
+and [ADR 0034](../architecture/decisions/0034-unify-sbom-on-syft.md).

@@ -16,7 +16,6 @@ Run via `make reference` (uses the `docs` dependency group).
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -34,28 +33,19 @@ from knock.use_cases.audit import coverage_report_json_schema
 OUT = Path(__file__).resolve().parent.parent / "docs" / "reference"
 SCHEMAS_OUT = OUT / "schemas"
 
-# slug -> (schema builder, page title, sidebar position).
-SCHEMAS: dict[str, tuple[Any, str, int]] = {
-    "mirror-policy": (mirror_policy_json_schema, "MirrorPolicy", 1),
-    "scan-predicate": (scan_predicate_json_schema, "Scan attestation predicate (/scan/v1)", 2),
-    "reconcile-plan": (reconcile_plan_json_schema, "ReconcilePlan (the gate's plan file)", 3),
+# slug -> (schema builder, page title).
+# json-schema-for-humans marks each heading with an HTML anchor (`## <a name="x"></a>Title`)
+# and links its TOC to `#x`; GitHub keeps those anchors, so the pages are written as rendered.
+SCHEMAS: dict[str, tuple[Any, str]] = {
+    "mirror-policy": (mirror_policy_json_schema, "MirrorPolicy"),
+    "scan-predicate": (scan_predicate_json_schema, "Scan attestation predicate (/scan/v1)"),
+    "reconcile-plan": (reconcile_plan_json_schema, "ReconcilePlan (the gate's plan file)"),
     "staged-rebuilds": (
         staged_rebuilds_json_schema,
         "StagedRebuilds (the rebuilt images held in staging)",
-        4,
     ),
-    "coverage-report": (coverage_report_json_schema, "CoverageReport (knock audit JSON output)", 5),
+    "coverage-report": (coverage_report_json_schema, "CoverageReport (knock audit JSON output)"),
 }
-
-# json-schema-for-humans marks headings with HTML anchors (`## <a name="x"></a>Title`)
-# and links its TOC to `#x`. Docusaurus derives heading ids from the *text* instead, so
-# those `#x` links break. Rewrite each into a Docusaurus explicit heading id
-# (`## Title {#x}`) so the in-page TOC and cross-references resolve.
-_HEADING_ANCHOR = re.compile(r'^(#{1,6}) <a name="([^"]+)"></a>(.*)$', re.MULTILINE)
-
-
-def _docusaurus_heading_ids(md: str) -> str:
-    return _HEADING_ANCHOR.sub(r"\1 \3 {#\2}", md)
 
 
 def _write_schemas() -> None:
@@ -80,17 +70,13 @@ def _write_schemas() -> None:
     )
 
     SCHEMAS_OUT.mkdir(parents=True, exist_ok=True)
-    for slug, (schema_fn, title, position) in SCHEMAS.items():
+    for slug, (schema_fn, title) in SCHEMAS.items():
         schema = schema_fn()
         schema["title"] = title
         json_path = SCHEMAS_OUT / f"{slug}.schema.json"
         json_path.write_text(json.dumps(schema, indent=2) + "\n")
         md_path = SCHEMAS_OUT / f"{slug}.md"
         generate_from_filename(json_path, str(md_path), config=config)
-        body = _docusaurus_heading_ids(md_path.read_text())
-        # json-schema-for-humans has no front-matter hook, so prepend the Docusaurus
-        # sidebar position after rendering (front matter is honored in CommonMark too).
-        md_path.write_text(f"---\nsidebar_position: {position}\n---\n\n{body}")
         print(f"wrote schemas/{slug}.schema.json + schemas/{slug}.md")
 
 
@@ -181,11 +167,11 @@ def _write_config_table(out_dir: Path) -> None:
         "Each field is set as `KNOCK_<FIELD>` (the property name upper-cased). "
         "JSON-typed fields (`registries`, `transform_ca_certs`, `transform_package_mirrors`, "
         "`retention`) take a JSON value whose shape is documented in the "
-        "[schemas](schemas/) section. The machine-readable contract is "
+        "[schemas](schemas/README.md) section. The machine-readable contract is "
         "[`config.schema.json`](config.schema.json)."
     )
 
-    content = f"---\nsidebar_position: 2\n---\n\n# Configuration\n\n{intro}\n\n{table}\n"
+    content = f"# Configuration\n\n{intro}\n\n{table}\n"
     (out_dir / "configuration.md").write_text(content)
     print("wrote configuration.md")
 
@@ -195,14 +181,12 @@ def _write_cli() -> None:
 
     Typer's own Markdown generator keeps the page a pure function of the CLI
     definition (commands, args, options, help strings), so the CI drift check
-    covers it like the schema pages. Sidebar position 3 = after schemas and config.
+    covers it like the schema pages.
     """
     command = typer.main.get_command(cli_app)
     ctx = typer.Context(command, info_name="knock")
     body = get_docs_for_click(obj=command, ctx=ctx, name="knock", title="Command Line Interface")
-    (OUT / "command-line-interface.md").write_text(
-        f"---\nsidebar_position: 3\n---\n\n{body.strip()}\n"
-    )
+    (OUT / "command-line-interface.md").write_text(f"{body.strip()}\n")
     print("wrote command-line-interface.md")
 
 

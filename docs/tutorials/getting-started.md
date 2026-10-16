@@ -2,7 +2,7 @@
 
 Run `knock reconcile` end-to-end against a **local registry** in about ten minutes — from
 nothing to a stamped image you can inspect. This is the **copy path** (mirror + stamp; the
-BuildKit hardening/rebuild path is shown in the [examples](/examples)).
+BuildKit hardening/rebuild path is shown in the [examples](../reference/examples/README.md)).
 
 What you'll see: knock selects tags from a public source, copies them into your local
 registry, sets the derived moving-tag **aliases** (`1.37`, `latest`, …), and writes a
@@ -15,9 +15,10 @@ idempotent — unchanged tags are skipped via the recorded `base.digest`.
 - **[regctl](https://github.com/regclient/regclient/blob/main/docs/install.md)** on your `PATH` — knock shells out to it for all registry operations.
 - **Docker** (or Podman) — to run a throwaway local registry.
 
-:::warning Docker Hub rate limits
-Pulls from `docker.io` are rate-limited when anonymous. If a reconcile fails with `429 / toomanyrequests`, authenticate: in the kind demo run `DOCKER_USER=<user> DOCKER_PASS=<token> make docker-auth` to seed the optional `knock-docker-config` secret with an inline-auth Docker config — both the copy (regctl) and rebuild (buildctl) paths then pull authenticated.
-:::
+> [!WARNING]
+> **Docker Hub rate limits**
+>
+> Pulls from `docker.io` are rate-limited when anonymous. If a reconcile fails with `429 / toomanyrequests`, authenticate: in the kind demo run `DOCKER_USER=<user> DOCKER_PASS=<token> make docker-auth` to seed the optional `knock-docker-config` secret with an inline-auth Docker config — both the copy (regctl) and rebuild (buildctl) paths then pull authenticated.
 
 ## 1. Start a local destination registry
 
@@ -123,7 +124,7 @@ docker rm -f knock-demo-registry
 
 ---
 
-**Next:** the [example policies](/examples) catalog — semver selection, the
+**Next:** the [example policies](../reference/examples/README.md) catalog — semver selection, the
 [rebuild/hardening path](../how-to/rebuild-and-harden.md), retention, delegated deletion, `knock purge`, scan ingestion, and the
 coverage audit, each a runnable `MirrorPolicy` demonstrating one capability. For every field and
 every `KNOCK_*` variable, see the generated [policy](../reference/schemas/mirror-policy.md) and

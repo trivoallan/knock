@@ -1,9 +1,3 @@
----
-title: "Verify a published stamp"
-description: "Read the provenance stamp, fetch the package SBOM, and verify the signature on an image you did not build — with stock tools, no account and no cluster."
-sidebar_position: 2
----
-
 # Verify a published stamp
 
 knock's stamp is meant to be read by people who did not build the image and have no reason to trust
@@ -49,15 +43,15 @@ Both SPDX and CycloneDX are attached as OCI referrers on the same digest — the
 turns *"which images ship the vulnerable package?"* into one query at CVE time. See
 [Inspect an image's SBOM](inspect-sbom.md) to pull the document itself.
 
-:::note GHCR serves no referrers API
-
-GHCR does not implement the referrers API, so these are stored under the OCI specification's
-**fallback tag schema**: each referrer gets a `sha256-<digest>` tag on the subject repository.
-`regctl` resolves that transparently, which is why the command above works — but a raw `curl` against
-`/v2/.../referrers/` finds nothing, and you will see `sha256-…` tags beside the real ones in a tag
-listing. That is the fallback doing its job, not damage.
-
-:::
+> [!NOTE]
+> **GHCR serves no referrers API**
+>
+> GHCR does not implement the referrers API, so these are stored under the OCI specification's
+> **fallback tag schema**: each referrer gets a `sha256-<digest>` tag on the subject repository.
+> `regctl` resolves that transparently, which is why the command above works — but a raw `curl` against
+> `/v2/.../referrers/` finds nothing, and you will see `sha256-…` tags beside the real ones in a tag
+> listing. That is the fallback doing its job, not damage.
+>
 
 ## Verify the signature
 

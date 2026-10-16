@@ -1,14 +1,7 @@
----
-title: "Drop knock into an existing Jenkins/skopeo/Harbor intake"
-description: "Replace a skopeo→Harbor tag-only mirror with knock: same per-image policy, digest-pinned provenance, a declared owner label, and a signed SBOM inventory — so incident-time blast radius is one query."
-sidebar_position: 11
----
-
 # Drop knock into an existing Jenkins/skopeo/Harbor intake
 
-:::note
-This page is the decision view: the two queries and the honest pitch. The step-by-step `make demo-mongobleed` walkthrough is in the [**Run it**](#run-it) section below.
-:::
+> [!NOTE]
+> This page is the decision view: the two queries and the honest pitch. The step-by-step `make demo-mongobleed` walkthrough is in the [**Run it**](#run-it) section below.
 
 This is for a platform team that already mirrors external images (skopeo → Harbor) from a per-image YAML, adds OCI labels, and queries them in PowerBI/Datadog. knock replaces the intake step: same per-image policy, but every placed image now carries **digest-pinned** provenance, a first-class **owner** label, and a package **SBOM** — so the incident-time question becomes one query.
 

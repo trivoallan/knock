@@ -1,14 +1,9 @@
----
-title: "Glossary"
-description: "knock's domain vocabulary — the stamp, provenance, SBOM, transform, and lifecycle terms, each linked to its full treatment."
-sidebar_position: 5
----
+# Glossary
 
 knock's vocabulary is precise: words like *stamp*, *front door*, and *blast-radius* carry specific technical meanings within the tool. This page defines each term as knock uses it.
 
-:::note
-**knock** was formerly named **houba** (ADR 0045). The rename is a hard pre-1.0 cutover: env prefix `HOUBA_*` → `KNOCK_*` and label prefix `io.houba` → `io.knock`. Images placed before the cutover keep their `io.houba.*` stamp; images placed after carry `io.knock.*`.
-:::
+> [!NOTE]
+> **knock** was formerly named **houba** (ADR 0045). The rename is a hard pre-1.0 cutover: env prefix `HOUBA_*` → `KNOCK_*` and label prefix `io.houba` → `io.knock`. Images placed before the cutover keep their `io.houba.*` stamp; images placed after carry `io.knock.*`.
 
 ### alias
 

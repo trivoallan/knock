@@ -1,8 +1,4 @@
----
-title: "Operate the scan pipeline"
-description: "Run, monitor, and triage the incremental Redis-Streams scan pipeline: first green scan, daily signals, and runbooks for a stuck queue, a growing dead-letter stream, and a coverage gap."
-sidebar_position: 12
----
+# Operate the scan pipeline
 
 The scan pipeline is **incremental and reconcile-fed**: `knock reconcile` places a digest into the
 destination registry, then the **enqueuer** `XADD`s it to the Redis Stream `knock:scan:work` and
@@ -46,11 +42,12 @@ The signal you have succeeded: a non-empty `knock:scan:confirmed` and a `SCAN` c
 `knock:scan:confirmed` is your **pipeline latency baseline** — record it, since the KEDA idle
 threshold below is a multiple of it.
 
-:::tip No entries in confirmed?
-Run `kubectl logs -n knock -l job-name=scan-worker-<hash>` to see whether `knock attach` exited 0.
-The most common causes at first run are a missing `KNOCK_ATTEST_SIGNER` (attach needs the signer
-env var to sign) and a registry auth mismatch.
-:::
+> [!TIP]
+> **No entries in confirmed?**
+>
+> Run `kubectl logs -n knock -l job-name=scan-worker-<hash>` to see whether `knock attach` exited 0.
+> The most common causes at first run are a missing `KNOCK_ATTEST_SIGNER` (attach needs the signer
+> env var to sign) and a registry auth mismatch.
 
 ## Daily signals
 
@@ -199,14 +196,15 @@ kubectl exec deploy/scan-queue-redis -n knock -- redis-cli XLEN knock:scan:dead
 # should be falling after replays and drops
 ```
 
-:::note Raw escape hatch
-If `scan-dlq.py` is unavailable (e.g. the knock pod is crash-looping), read the dead stream
-directly with `redis-cli`:
-```bash
-kubectl exec deploy/scan-queue-redis -n knock -- \
-  redis-cli XRANGE knock:scan:dead - + COUNT 20
-```
-:::
+> [!NOTE]
+> **Raw escape hatch**
+>
+> If `scan-dlq.py` is unavailable (e.g. the knock pod is crash-looping), read the dead stream
+> directly with `redis-cli`:
+> ```bash
+> kubectl exec deploy/scan-queue-redis -n knock -- \
+>   redis-cli XRANGE knock:scan:dead - + COUNT 20
+> ```
 
 ## Runbook — coverage gap above threshold
 
@@ -252,11 +250,12 @@ kubectl logs -n knock -l job-name=coverage-check --tail=100
 # coverage_gap should be lower
 ```
 
-:::warning Gap semantics
-The coverage report **over-reports rather than under-reports**: a digest counts as uncovered until
-a fresh signed scan referrer lands on it. A non-zero gap is always a real to-do — it never masks
-a missed image. Act on every non-zero gap; do not wait to see whether it resolves on its own.
-:::
+> [!WARNING]
+> **Gap semantics**
+>
+> The coverage report **over-reports rather than under-reports**: a digest counts as uncovered until
+> a fresh signed scan referrer lands on it. A non-zero gap is always a real to-do — it never masks
+> a missed image. Act on every non-zero gap; do not wait to see whether it resolves on its own.
 
 ## `scan-dlq` reference
 
@@ -280,10 +279,11 @@ escape hatch.
 
 ## Sizing note
 
-:::warning Set REAP_MIN_IDLE_MS carefully
-Set `REAP_MIN_IDLE_MS` to at least **2 × the p99.9 scan duration**, measured on your largest real
-image. XAUTOCLAIM reclaims a message purely on idle time — a long-but-alive scan that exceeds the
-window will be claimed by a second worker while the first is still running, creating a
-double-execution. Alert if any individual scan exceeds `REAP_MIN_IDLE_MS / 2` so you can tune
-the threshold before it causes a double-claim.
-:::
+> [!WARNING]
+> **Set REAP_MIN_IDLE_MS carefully**
+>
+> Set `REAP_MIN_IDLE_MS` to at least **2 × the p99.9 scan duration**, measured on your largest real
+> image. XAUTOCLAIM reclaims a message purely on idle time — a long-but-alive scan that exceeds the
+> window will be claimed by a second worker while the first is still running, creating a
+> double-execution. Alert if any individual scan exceeds `REAP_MIN_IDLE_MS / 2` so you can tune
+> the threshold before it causes a double-claim.

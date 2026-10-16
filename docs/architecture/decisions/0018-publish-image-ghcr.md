@@ -4,7 +4,8 @@ Date: 2026-06-15
 
 ## Status
 
-Accepted
+Accepted; **workflow and token superseded in part by [ADR 0056](0056-adopt-the-common-ci-socle.md)**
+— the image is now published by the shared `release.yml`, with a GitHub App token.
 
 Builds on [5. Registry TLS & runtime image](0005-registry-tls-and-runtime-image.md) and
 [6. SLSA / in-toto attestation](0006-slsa-attestation.md).

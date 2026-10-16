@@ -16,7 +16,7 @@ from scripts.gen_reference import SCHEMAS, SCHEMAS_OUT
 
 @pytest.mark.parametrize("slug", sorted(SCHEMAS))
 def test_committed_schema_matches_the_model(slug: str) -> None:
-    schema_fn, title, _position = SCHEMAS[slug]
+    schema_fn, title = SCHEMAS[slug]
     expected: dict[str, Any] = {**schema_fn(), "title": title}
     committed = json.loads((SCHEMAS_OUT / f"{slug}.schema.json").read_text())
     assert committed == expected, f"{slug}.schema.json is stale — run 'make reference'"

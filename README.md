@@ -29,10 +29,10 @@ Dependency-Track…) run the query.
 knock is **not** an image mirror. `skopeo sync` and Harbor replication copy images byte-for-byte.
 knock *stamps* every image with portable provenance — and *hardens* the ones you choose to rebuild.
 
-**New here?** Read [Why knock](docs/index.md) for the case, then [Getting started](docs/tutorials/getting-started.md)
+**New here?** Read [Why knock](docs/README.md) for the case, then [Getting started](docs/tutorials/getting-started.md)
 to mirror your first image and inspect its stamp in ten minutes.
 
-📖 **Full documentation:** <https://trivoallan.github.io/knock/>
+📖 **Full documentation:** [`docs/`](docs/README.md) — tutorials, how-to guides, reference and explanation.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org)
@@ -146,8 +146,8 @@ When running from source you need `regctl` on `PATH` (plus `buildctl` if you use
 
 `knock` reads its configuration from environment variables (12-factor). All variables are
 namespaced `KNOCK_*`. The table below covers the common ones; the exhaustive, always-current
-list is the generated [config reference](docs/reference/config.md) (and
-[policy reference](docs/reference/mirror-policy.md) for `MirrorPolicy` fields).
+list is the generated [config reference](docs/reference/configuration.md) (and
+[policy reference](docs/reference/schemas/mirror-policy.md) for `MirrorPolicy` fields).
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
@@ -187,7 +187,7 @@ list is the generated [config reference](docs/reference/config.md) (and
 
 [**Getting started**](docs/tutorials/getting-started.md) runs `knock reconcile` end-to-end against a local
 registry in about ten minutes — from an empty registry to an inspectable provenance stamp. From
-there, [`docs/examples/`](docs/examples/README.md) is a catalog of runnable `MirrorPolicy` files,
+there, [`docs/examples/`](docs/reference/examples/README.md) is a catalog of runnable `MirrorPolicy` files,
 one per capability: select redis by semver, rebuild Debian into per-region timezone variants,
 retention, delegated deletion, scan ingestion. Every `reconcile` is **plan-then-apply** — pass
 `--dry-run` to see the plan first.

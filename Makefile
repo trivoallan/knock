@@ -38,7 +38,7 @@ LOCAL_REG ?= localhost:5000
 # KNOCK_REGISTRIES roster for host-side access (port-forward to the local Zot).
 LOCAL_KNOCK_REGISTRIES ?= {"local":{"host":"$(LOCAL_REG)","tls_verify":false}}
 
-.PHONY: help reference docs-serve cluster image up-local up-brownfield local local-run \
+.PHONY: help reference cluster kind-image up-local up-brownfield local local-run \
         argocd demo demo-run openbao-seed seed-incident incident-deploy \
         blast-radius dt-bootstrap publish-sbom dt-vulns dt-ui registry-ui argocd-ui docker-auth logs down \
         demo-mongobleed
@@ -50,22 +50,19 @@ help: ## List targets
 reference: ## Regenerate docs/reference/ (policy + config + CLI) from the schemas and Typer app
 	uv run --group docs python scripts/gen_reference.py
 
-docs-serve: ## Serve the Docusaurus docs site locally (hot reload)
-	cd website && npm install && npm start
-
 cluster: ## Create the kind cluster if absent
 	@kind get clusters 2>/dev/null | grep -qx $(CLUSTER) || kind create cluster --name $(CLUSTER)
 
-image: ## Build the knock runtime image and load it into kind
+kind-image: ## Build the knock runtime image and load it into kind
 	docker build -t $(IMAGE) .
 	kind load docker-image $(IMAGE) --name $(CLUSTER)
 
 # ---- LOCAL (inner-loop escape hatch: copy + rebuild, no Argo) -------------
-up-local: cluster image ## Bring up the local stack (buildkitd + throwaway registry)
+up-local: cluster kind-image ## Bring up the local stack (buildkitd + throwaway registry)
 	$(KUSTOMIZE) deploy/overlays/local | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
 
-up-brownfield: cluster image ## Bring up the lean brownfield stack (registry + buildkitd; no scan-pipeline/DT — KEDA-free, so it deploys on a bare cluster / in CI)
+up-brownfield: cluster kind-image ## Bring up the lean brownfield stack (registry + buildkitd; no scan-pipeline/DT — KEDA-free, so it deploys on a bare cluster / in CI)
 	$(KUSTOMIZE) deploy/overlays/local-brownfield | $(KUBECTL) apply -f -
 	$(KUBECTL) -n $(NS) rollout status deploy/registry --timeout=180s
 	$(KUBECTL) -n $(NS) rollout status deploy/buildkitd --timeout=180s
@@ -103,7 +100,7 @@ argocd-ui: ## Open the ArgoCD UI (port-forward svc/argocd-server; prints admin c
 	  echo ">> ArgoCD UI at https://localhost:8083  (login admin / $$PW — self-signed cert, accept the warning). Ctrl-C to stop."
 	$(KUBECTL) -n argocd port-forward svc/argocd-server 8083:443
 
-demo: cluster image argocd ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
+demo: cluster kind-image argocd ## The single Argo reference on kind, end-to-end (operators + ESO->OpenBao + reference policy + registry + reconcile + report)
 	ARGOCD_REPO_URL=$(ARGOCD_REPO_URL) ARGOCD_REPO_REF=$(ARGOCD_REPO_REF) \
 	  envsubst < deploy/argocd/root.yaml | $(KUBECTL) apply -f -
 	@echo ">> App-of-Apps applied. ArgoCD is syncing 4 children: ESO+OpenBao (wave 0) then knock+buildkitd (wave 1)."
@@ -263,3 +260,39 @@ demo-mongobleed: up-brownfield seed-incident ## Brownfield demo end-to-end: mong
 	  echo ">> Act 2 — the front door blocks a vulnerable image at intake"; \
 	  REG=$(LOCAL_REG) KNOCK_REGISTRIES='$(LOCAL_KNOCK_REGISTRIES)' KNOCK='uv run knock' \
 	    scripts/demo-gate.sh
+
+# ---- Contrat commun à regis, knock et uske : la CI n'appelle que ces cibles ----
+.PHONY: ci-tools lint test security image smoke settings
+
+CI_IMAGE ?= knock:ci
+
+ci-tools: ## Installe redis-server, que les tests d'intégration lancent eux-mêmes
+	sudo apt-get update -q && sudo apt-get install -y --no-install-recommends redis-server
+
+lint: ## ruff, mypy strict, référence à jour
+	uv run ruff check .
+	uv run ruff format --check .
+	uv run mypy knock
+	$(MAKE) reference
+	test -z "$$(git status --porcelain -- docs/reference)" || { git status --short -- docs/reference; echo "docs/reference est périmé : lancer 'make reference' et commiter."; exit 1; }
+
+test: ## Tests et couverture de branches (90 %)
+	uv run python -m pytest
+
+security: ## pip-audit, bloquant à partir de HIGH (commande identique dans les trois dépôts)
+	@d="$$(mktemp -d)" && trap 'rm -rf "$$d"' EXIT && \
+	uv export -q --frozen --no-dev --no-emit-project --no-hashes -o "$$d/req.txt" && \
+	{ uvx pip-audit==2.10.1 -r "$$d/req.txt" --no-deps --disable-pip --progress-spinner off --format=json --output "$$d/audit.json" || true; } && \
+	test -s "$$d/audit.json" && \
+	python3 .github/pip-audit-gate.py "$$d/audit.json" --min-severity HIGH
+
+image: ## Construit l'image et la teste
+	docker build -t $(CI_IMAGE) .
+	$(MAKE) smoke CI_IMAGE=$(CI_IMAGE)
+
+smoke: ## Vérifie qu'une image démarre : make smoke CI_IMAGE=<ref>
+	docker run --rm $(CI_IMAGE) version
+	docker run --rm --entrypoint sh $(CI_IMAGE) -c 'command -v buildctl'
+
+settings: ## Applique .github/settings.json au dépôt
+	.github/apply-settings.sh

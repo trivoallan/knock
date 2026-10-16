@@ -1,8 +1,3 @@
----
-sidebar_label: Why knock?
-sidebar_position: 0
----
-
 # Why knock?
 
 ## 2 a.m. A critical CVE drops.
@@ -121,5 +116,5 @@ outlives the tool that wrote it.
 ---
 
 *Convinced, or want to see it run? → [Getting started](tutorials/getting-started.md)
-· [Example policies](/examples) · [Reference](reference/schemas/mirror-policy.md)
-· [The provenance contract](https://github.com/trivoallan/knock/blob/main/docs/architecture/design.md)*
+· [Example policies](reference/examples/README.md) · [Reference](reference/schemas/mirror-policy.md)
+· [The provenance contract](architecture/design.md)*

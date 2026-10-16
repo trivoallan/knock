@@ -1,9 +1,3 @@
----
-title: "SARIF ingestion profile"
-description: "The SARIF 2.1.0 contract any analyzer writes against so knock classifies its results correctly — vulnerability findings into vuln.*, governance verdicts into policy.*, keyed on result.kind."
-sidebar_position: 4
----
-
 # SARIF ingestion profile
 
 The contract **any analyzer writes against** so knock ingests its report correctly. knock accepts
@@ -44,15 +38,16 @@ The value is carried **verbatim** as the `scan.ruleset.hash` fact — knock does
 or validate it, and treats it as an opaque equality token. Only the first fingerprint found across
 all runs is recorded.
 
-:::warning Emit it at run level
-Attaching the fingerprint **only** to a pass receipt loses it on exactly the runs where it matters
-most: a report with breaches carries no receipt, so the failing verdict becomes the one that does
-not say which rules produced it. Emit `ruleset_hash` in `runs[].properties` on **every** run.
-:::
+> [!WARNING]
+> **Emit it at run level**
+>
+> Attaching the fingerprint **only** to a pass receipt loses it on exactly the runs where it matters
+> most: a report with breaches carries no receipt, so the failing verdict becomes the one that does
+> not say which rules produced it. Emit `ruleset_hash` in `runs[].properties` on **every** run.
 
 When no producer declares a fingerprint, **the fact is omitted entirely** — knock never derives a
 stand-in from the tool version, the report digest, or the rule list. This is the rule ADR
-[0020](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0020-revision-semantics.md)
+[0020](../architecture/decisions/0020-revision-semantics.md)
 set for `org.opencontainers.image.revision`: propagate what the source declares, or say nothing.
 A consumer must treat an absent `scan.ruleset.hash` as *unknown*, never as *unchanged*.
 
@@ -98,11 +93,10 @@ Severity fallback from `level` when no `security-severity` is present:
 | `note` / `none`   | low     |
 | (other / absent)  | unknown |
 
-:::note
-`security-severity` is a string-encoded numeric CVSS score carried in `properties` (the GitHub
-convention). Emit it on every scored result — knock's buckets are CVSS bands, finer than SARIF's
-coarse `level`.
-:::
+> [!NOTE]
+> `security-severity` is a string-encoded numeric CVSS score carried in `properties` (the GitHub
+> convention). Emit it on every scored result — knock's buckets are CVSS bands, finer than SARIF's
+> coarse `level`.
 
 ## Published facts
 
@@ -180,6 +174,6 @@ depends on a pinned advisory database or an ignore-file, not on the tool version
 
 - [Attach a scan result](../how-to/attach-scan.md) — the task this profile feeds.
 - [scan-predicate schema](schemas/scan-predicate.md) — the signed `scan/v1` attestation.
-- ADR [0039 — SARIF `kind` discriminates a policy verdict from a vulnerability finding](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0039-sarif-kind-discriminates-policy-from-vuln.md),
-  which supersedes ADR [0027](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0027-sarif-finding-type.md).
-- ADR [0047 — A signed scan verdict records the ruleset it was reached under](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0047-scan-ruleset-fingerprint.md).
+- ADR [0039 — SARIF `kind` discriminates a policy verdict from a vulnerability finding](../architecture/decisions/0039-sarif-kind-discriminates-policy-from-vuln.md),
+  which supersedes ADR [0027](../architecture/decisions/0027-sarif-finding-type.md).
+- ADR [0047 — A signed scan verdict records the ruleset it was reached under](../architecture/decisions/0047-scan-ruleset-fingerprint.md).

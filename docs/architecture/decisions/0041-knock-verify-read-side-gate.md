@@ -67,5 +67,5 @@ failure; 3 = config error. Gate-1 is always a clean verdict, never an unexpected
 - `CosignAdapter` gains a `verify` method alongside `attest`; `AttestorPort` is updated to match.
   No new port, adapter, external system, or C4 actor.
 
-Full design spec:
-[2026-06-24-knock-verify-design.md](../../superpowers/specs/2026-06-24-knock-verify-design.md)
+Full design spec: `2026-06-24-knock-verify-design.md`, never committed to this repository; this ADR
+and the [verify how-to](../../how-to/verify-gate.md) are the record.
