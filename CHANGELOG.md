@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/trivoallan/knock/compare/v0.13.0...v0.14.0) (2026-10-16)
+
+
+### Features
+
+* **ci:** adopter le socle commun et lire la documentation sur GitHub ([#316](https://github.com/trivoallan/knock/issues/316)) ([b475be2](https://github.com/trivoallan/knock/commit/b475be2270dac0beb9a103c422287d7cc512c5c3))
+
 ## [0.13.0](https://github.com/trivoallan/knock/compare/v0.12.0...v0.13.0) (2026-10-10)
 
 
