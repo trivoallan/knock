@@ -272,6 +272,8 @@ ci-tools: ## Installe redis-server, que les tests d'intégration lancent eux-mê
 lint: ## ruff, mypy strict, référence à jour
 	uv run ruff check .
 	uv run ruff format --check .
+	# La base Python vient de la porte (trivoallan/base-images), épinglée par digest.
+	@bad="$$(grep -nE '^FROM[[:space:]]+[^[:space:]]*python[:@]' Dockerfile | grep -vE 'ghcr\.io/[^/]+/base/python:[^@[:space:]]+@sha256:[0-9a-f]{64}' || true)"; test -z "$$bad" || { printf 'Dockerfile:%s\n' "$$bad" >&2; echo "base Python hors de la porte : FROM ghcr.io/<owner>/base/python:<tag>@sha256:<digest>" >&2; exit 1; }
 	uv run mypy knock
 	$(MAKE) reference
 	test -z "$$(git status --porcelain -- docs/reference)" || { git status --short -- docs/reference; echo "docs/reference est périmé : lancer 'make reference' et commiter."; exit 1; }

@@ -1,6 +1,6 @@
 # Phase B+ — runtime image: Python CLI + buildctl (rebuild) + regctl (registry ops).
 
-FROM python:3.13-alpine AS build
+FROM ghcr.io/trivoallan/base/python:3.14-alpine@sha256:34840e128644c59505f7844378e596571e10583eea5c9378a31f33f42102a01b AS build
 
 WORKDIR /src
 COPY pyproject.toml uv.lock ./
@@ -8,7 +8,7 @@ COPY knock ./knock
 
 RUN pip install --no-cache-dir uv && uv build
 
-FROM python:3.13-alpine AS runtime
+FROM ghcr.io/trivoallan/base/python:3.14-alpine@sha256:34840e128644c59505f7844378e596571e10583eea5c9378a31f33f42102a01b AS runtime
 
 # buildctl comes from the official upstream image (static Go binary).
 COPY --from=moby/buildkit:v0.33.0 /usr/bin/buildctl /usr/bin/buildctl
