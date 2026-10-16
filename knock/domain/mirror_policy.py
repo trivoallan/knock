@@ -182,8 +182,8 @@ class TransformStep(_CamelModel):
     """
 
     name: str = Field(
-        description="Transform step name, e.g. `injectCA` / `rewritePackageSources` / "
-        "`setTimezone` / `upgradePackages`.",
+        description="Step name: `injectCA` / `rewritePackageSources` / `setTimezone` under "
+        "`transform`; `upgradePackages` / `rewritePackageSources` under `remediate`.",
     )
     params: dict[str, Any] = Field(
         default_factory=dict, description="Step parameters (shape depends on the step)."
@@ -218,6 +218,10 @@ class Variant(_CamelModel):
     suffix: str = Field(default="", description="Tag suffix appended for this variant, e.g. `-eu`.")
     transform: list[TransformStep] | None = Field(
         default=None, description="Per-variant transform; `null` ⇒ inherit the resolved transform."
+    )
+    remediate: list[TransformStep] | None = Field(
+        default=None,
+        description="Per-variant remediation; `null` ⇒ inherit the resolved remediation.",
     )
 
 
@@ -256,12 +260,22 @@ _PLATFORMS_DOC = (
 )
 
 
+_REMEDIATE_DOC = (
+    "Applied only to an operation the reconcile plan orders remediated (`remediate: {epoch}`), "
+    "after the transform steps; `transform` steps are applied to every rebuild. Accepts "
+    "`upgradePackages` and `rewritePackageSources`."
+)
+
+
 class Defaults(_CamelModel):
     destinations: list[Destination] | None = Field(
         default=None, description="Default destinations for every import."
     )
     transform: list[TransformStep] | None = Field(
         default=None, description="Default transform steps for every import."
+    )
+    remediate: list[TransformStep] | None = Field(
+        default=None, description="Default remediation steps for every import. " + _REMEDIATE_DOC
     )
     archive: Archive | None = Field(
         default=None, description="Default retention policy for every import."
@@ -293,6 +307,9 @@ class ImportProfile(_CamelModel):
     )
     transform: list[TransformStep] | None = Field(
         default=None, description="Transform steps (overrides defaults)."
+    )
+    remediate: list[TransformStep] | None = Field(
+        default=None, description="Remediation steps (overrides defaults). " + _REMEDIATE_DOC
     )
     archive: Archive | None = Field(
         default=None, description="Retention policy (overrides defaults)."
@@ -372,13 +389,15 @@ class Spec(_CamelModel):
         if self.artifact_type not in _NON_REBUILDABLE:
             return self
         kind = self.artifact_type.value
-        if self.defaults is not None and self.defaults.transform:
-            raise PolicyValidationError(f"artifactType '{kind}' must not declare transform steps")
-        for imp in self.imports:
-            if imp.transform:
-                raise PolicyValidationError(
-                    f"artifactType '{kind}' must not declare transform steps (import '{imp.name}')"
-                )
+        for field in ("transform", "remediate"):
+            if self.defaults is not None and getattr(self.defaults, field):
+                raise PolicyValidationError(f"artifactType '{kind}' must not declare {field} steps")
+            for imp in self.imports:
+                if getattr(imp, field):
+                    raise PolicyValidationError(
+                        f"artifactType '{kind}' must not declare {field} steps "
+                        f"(import '{imp.name}')"
+                    )
         return self
 
     @model_validator(mode="after")

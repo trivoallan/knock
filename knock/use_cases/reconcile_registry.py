@@ -1130,6 +1130,7 @@ class RegistryPlanner:
                 expanded = expand_import(resolved, src_tags)
                 for v in expanded.variants:
                     validate_transform_steps(v.transform)
+                    validate_transform_steps(v.remediate, role="remediate", preceding=v.transform)
                 transforms = {
                     v.name: _resolve_transform(v.transform, self.ca_certs, self.package_mirrors)
                     for v in expanded.variants

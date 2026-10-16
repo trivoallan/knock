@@ -27,12 +27,10 @@ def test_mirror_policy_schema_embeds_the_oneof_and_serializes() -> None:
     assert schema["$defs"]["TransformStep"]["oneOf"]
 
 
-def test_upgrade_packages_branch_publishes_the_epoch_pattern() -> None:
-    # Editors and CI validate policies against the published schema: the trust-boundary
-    # pattern on `epoch` must be in it, not only in the Python model.
+def test_upgrade_packages_branch_takes_no_params() -> None:
+    # A policy declares the step bare: its epoch comes with the plan's remediation order.
     schema = transform_steps_schema()
     upgrade = next(b for b in schema["oneOf"] if "upgradePackages" in b["properties"])
     params = upgrade["properties"]["upgradePackages"]
-    assert params["required"] == ["epoch"]
-    assert params["properties"]["epoch"]["pattern"] == "^[A-Za-z0-9._-]{1,64}$"
+    assert params.get("properties", {}) == {}
     assert params["additionalProperties"] is False

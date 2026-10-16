@@ -108,8 +108,8 @@ class SetTimezone(TransformStepCompiler[_SetTimezoneParams]):
 
 
 # `epoch` is interpolated into a RUN instruction, so it is a trust boundary: nothing outside
-# this alphabet is ever rendered.
-_EPOCH_PATTERN = r"^[A-Za-z0-9._-]{1,64}$"
+# this alphabet is ever rendered. The plan's remediation order is validated against it too.
+EPOCH_PATTERN = r"^[A-Za-z0-9._-]{1,64}$"
 
 _DOCKER_CLEAN = "/etc/apt/apt.conf.d/docker-clean"
 _DOCKER_CLEAN_ASIDE = "/tmp/knock-docker-clean"  # noqa: S108 — a path inside the build, not ours
@@ -118,20 +118,27 @@ _KEEP_CACHE = "/etc/apt/apt.conf.d/knock-keep-cache"
 
 class _UpgradePackagesParams(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    epoch: str = Field(pattern=_EPOCH_PATTERN)
+    epoch: str = Field(pattern=EPOCH_PATTERN)
+
+
+class _UpgradePackagesPolicyParams(BaseModel):
+    """A policy declares the step bare: the epoch comes with the plan's remediation order."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class UpgradePackages(TransformStepCompiler[_UpgradePackagesParams]):
     """Upgrade every installed OS package from the repositories the image points at.
 
-    The policy must run `rewritePackageSources` first (enforced at validation), so those
-    repositories are the internal mirror. `epoch` is the operator's trigger: it takes part in
-    the transform version, and it is written into the RUN text so the layer cache cannot serve
-    a previous upgrade.
+    A remediation step: applied only to an operation the plan orders remediated. The policy
+    must run `rewritePackageSources` first (enforced at validation), so those repositories are
+    the internal mirror. `epoch` comes with the order and is written into the RUN text, so the
+    layer cache cannot serve a previous upgrade.
     """
 
     name = "upgradePackages"
     params_model = _UpgradePackagesParams
+    policy_params_model = _UpgradePackagesPolicyParams
 
     def fragment(
         self, params: _UpgradePackagesParams, resources: tuple[ResolvedResource, ...]

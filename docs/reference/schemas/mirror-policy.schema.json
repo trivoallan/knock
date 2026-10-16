@@ -78,6 +78,22 @@
           "description": "Default transform steps for every import.",
           "title": "Transform"
         },
+        "remediate": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/TransformStep"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default remediation steps for every import. Applied only to an operation the reconcile plan orders remediated (`remediate: {epoch}`), after the transform steps; `transform` steps are applied to every rebuild. Accepts `upgradePackages` and `rewritePackageSources`.",
+          "title": "Remediate"
+        },
         "archive": {
           "anyOf": [
             {
@@ -271,6 +287,22 @@
           "default": null,
           "description": "Transform steps (overrides defaults).",
           "title": "Transform"
+        },
+        "remediate": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/TransformStep"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Remediation steps (overrides defaults). Applied only to an operation the reconcile plan orders remediated (`remediate: {epoch}`), after the transform steps; `transform` steps are applied to every rebuild. Accepts `upgradePackages` and `rewritePackageSources`.",
+          "title": "Remediate"
         },
         "archive": {
           "anyOf": [
@@ -607,17 +639,9 @@
           "properties": {
             "upgradePackages": {
               "additionalProperties": false,
-              "properties": {
-                "epoch": {
-                  "pattern": "^[A-Za-z0-9._-]{1,64}$",
-                  "title": "Epoch",
-                  "type": "string"
-                }
-              },
-              "required": [
-                "epoch"
-              ],
-              "title": "_UpgradePackagesParams",
+              "description": "A policy declares the step bare: the epoch comes with the plan's remediation order.",
+              "properties": {},
+              "title": "_UpgradePackagesPolicyParams",
               "type": "object"
             }
           },
@@ -656,6 +680,22 @@
           "default": null,
           "description": "Per-variant transform; `null` \u21d2 inherit the resolved transform.",
           "title": "Transform"
+        },
+        "remediate": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/TransformStep"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Per-variant remediation; `null` \u21d2 inherit the resolved remediation.",
+          "title": "Remediate"
         }
       },
       "required": [

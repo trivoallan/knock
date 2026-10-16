@@ -24,6 +24,8 @@ class VariantPlan:
     tags: list[str]  # selected concrete source tags (un-suffixed)
     aliases: dict[str, str]  # alias name → concrete target tag (un-suffixed)
     pins: dict[str, str] = field(default_factory=dict)  # source tag → expected source digest
+    # applied only to an operation the plan orders remediated, after `transform`
+    remediate: list[TransformStep] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -48,6 +50,7 @@ def expand_import(resolved: ResolvedImport, source_tags: list[str]) -> ExpandedI
             tags=tags,
             aliases=aliases,
             pins=resolved.tags.pins,
+            remediate=v.remediate,
         )
         for v in expand_variants(resolved)
     ]

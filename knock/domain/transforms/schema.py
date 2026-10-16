@@ -14,7 +14,7 @@ def transform_steps_schema() -> dict[str, Any]:
             {
                 "type": "object",
                 "additionalProperties": False,
-                "properties": {step.name: step.params_model.model_json_schema()},
+                "properties": {step.name: step.policy_model().model_json_schema()},
                 "required": [step.name],
             }
             for step in BUILTIN_STEPS

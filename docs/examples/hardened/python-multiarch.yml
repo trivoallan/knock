@@ -26,7 +26,8 @@ spec:
       platforms: [linux/amd64, linux/arm64]
       transform:
         - rewritePackageSources: { mirror: corp }  # name → KNOCK_TRANSFORM_PACKAGE_MIRRORS
-        - upgradePackages: { epoch: "2026-10-16" }     # change it to repair again
+      remediate:
+        - upgradePackages: {}                      # applied only on the plan's order
       destinations:
         - project: hardened
           repository: python

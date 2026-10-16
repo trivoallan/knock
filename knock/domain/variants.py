@@ -1,4 +1,4 @@
-"""Expand an import's variants into concrete (name, suffix, transform) triples.
+"""Expand an import's variants into concrete (name, suffix, transform, remediate) tuples.
 
 Absent variants => a single implicit `default` variant (no suffix) using the
 resolved transform. An explicit variant inherits the resolved transform unless it
@@ -18,16 +18,25 @@ class ResolvedVariant:
     name: str
     suffix: str
     transform: list[TransformStep]
+    remediate: list[TransformStep]
 
 
 def expand_variants(resolved: ResolvedImport) -> list[ResolvedVariant]:
     if resolved.variants is None:
-        return [ResolvedVariant(name="default", suffix="", transform=resolved.transform)]
+        return [
+            ResolvedVariant(
+                name="default",
+                suffix="",
+                transform=resolved.transform,
+                remediate=resolved.remediate,
+            )
+        ]
     return [
         ResolvedVariant(
             name=v.name,
             suffix=v.suffix,
             transform=v.transform if v.transform is not None else resolved.transform,
+            remediate=v.remediate if v.remediate is not None else resolved.remediate,
         )
         for v in resolved.variants
     ]

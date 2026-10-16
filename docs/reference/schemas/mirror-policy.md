@@ -48,43 +48,46 @@
                 - [4.5.1.2.1.1.3.1.1. Property `zone`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i2_setTimezone_zone)
             - [4.5.1.2.1.1.4. Property `item 3`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3)
               - [4.5.1.2.1.1.4.1. Property `upgradePackages`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages)
-                - [4.5.1.2.1.1.4.1.1. Property `epoch`](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages_epoch)
         - [4.5.1.2.2. Property `item 1`](#spec_defaults_anyOf_i0_transform_anyOf_i1)
-      - [4.5.1.3. Property `archive`](#spec_defaults_anyOf_i0_archive)
-        - [4.5.1.3.1. Property `Archive`](#spec_defaults_anyOf_i0_archive_anyOf_i0)
-          - [4.5.1.3.1.1. Property `keep`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep)
-            - [4.5.1.3.1.1.1. Property `item 0`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i0)
-            - [4.5.1.3.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i1)
-          - [4.5.1.3.1.2. Property `olderThanDays`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays)
-            - [4.5.1.3.1.2.1. Property `item 0`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i0)
-            - [4.5.1.3.1.2.2. Property `item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i1)
-        - [4.5.1.3.2. Property `item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i1)
-      - [4.5.1.4. Property `tags`](#spec_defaults_anyOf_i0_tags)
-        - [4.5.1.4.1. Property `TagSelection`](#spec_defaults_anyOf_i0_tags_anyOf_i0)
-          - [4.5.1.4.1.1. Property `includeRegex`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex)
-            - [4.5.1.4.1.1.1. Property `item 0`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i0)
-            - [4.5.1.4.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i1)
-          - [4.5.1.4.1.2. Property `excludeRegex`](#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex)
-            - [4.5.1.4.1.2.1. excludeRegex items](#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex_items)
-          - [4.5.1.4.1.3. Property `semverOnly`](#spec_defaults_anyOf_i0_tags_anyOf_i0_semverOnly)
-          - [4.5.1.4.1.4. Property `names`](#spec_defaults_anyOf_i0_tags_anyOf_i0_names)
-            - [4.5.1.4.1.4.1. names items](#spec_defaults_anyOf_i0_tags_anyOf_i0_names_items)
-          - [4.5.1.4.1.5. Property `aliases`](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases)
-            - [4.5.1.4.1.5.1. aliases items](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items)
-          - [4.5.1.4.1.6. Property `pins`](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins)
-            - [4.5.1.4.1.6.1. Property `additionalProperties`](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins_additionalProperties)
-        - [4.5.1.4.2. Property `item 1`](#spec_defaults_anyOf_i0_tags_anyOf_i1)
-      - [4.5.1.5. Property `platforms`](#spec_defaults_anyOf_i0_platforms)
-        - [4.5.1.5.1. Property `item 0`](#spec_defaults_anyOf_i0_platforms_anyOf_i0)
-          - [4.5.1.5.1.1. item 0 items](#spec_defaults_anyOf_i0_platforms_anyOf_i0_items)
-        - [4.5.1.5.2. Property `item 1`](#spec_defaults_anyOf_i0_platforms_anyOf_i1)
-      - [4.5.1.6. Property `owners`](#spec_defaults_anyOf_i0_owners)
-        - [4.5.1.6.1. Property `item 0`](#spec_defaults_anyOf_i0_owners_anyOf_i0)
-          - [4.5.1.6.1.1. item 0 items](#spec_defaults_anyOf_i0_owners_anyOf_i0_items)
-        - [4.5.1.6.2. Property `item 1`](#spec_defaults_anyOf_i0_owners_anyOf_i1)
-      - [4.5.1.7. Property `vendor`](#spec_defaults_anyOf_i0_vendor)
-        - [4.5.1.7.1. Property `item 0`](#spec_defaults_anyOf_i0_vendor_anyOf_i0)
-        - [4.5.1.7.2. Property `item 1`](#spec_defaults_anyOf_i0_vendor_anyOf_i1)
+      - [4.5.1.3. Property `remediate`](#spec_defaults_anyOf_i0_remediate)
+        - [4.5.1.3.1. Property `item 0`](#spec_defaults_anyOf_i0_remediate_anyOf_i0)
+          - [4.5.1.3.1.1. TransformStep](#spec_defaults_anyOf_i0_remediate_anyOf_i0_items)
+        - [4.5.1.3.2. Property `item 1`](#spec_defaults_anyOf_i0_remediate_anyOf_i1)
+      - [4.5.1.4. Property `archive`](#spec_defaults_anyOf_i0_archive)
+        - [4.5.1.4.1. Property `Archive`](#spec_defaults_anyOf_i0_archive_anyOf_i0)
+          - [4.5.1.4.1.1. Property `keep`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep)
+            - [4.5.1.4.1.1.1. Property `item 0`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i0)
+            - [4.5.1.4.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i1)
+          - [4.5.1.4.1.2. Property `olderThanDays`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays)
+            - [4.5.1.4.1.2.1. Property `item 0`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i0)
+            - [4.5.1.4.1.2.2. Property `item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i1)
+        - [4.5.1.4.2. Property `item 1`](#spec_defaults_anyOf_i0_archive_anyOf_i1)
+      - [4.5.1.5. Property `tags`](#spec_defaults_anyOf_i0_tags)
+        - [4.5.1.5.1. Property `TagSelection`](#spec_defaults_anyOf_i0_tags_anyOf_i0)
+          - [4.5.1.5.1.1. Property `includeRegex`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex)
+            - [4.5.1.5.1.1.1. Property `item 0`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i0)
+            - [4.5.1.5.1.1.2. Property `item 1`](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i1)
+          - [4.5.1.5.1.2. Property `excludeRegex`](#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex)
+            - [4.5.1.5.1.2.1. excludeRegex items](#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex_items)
+          - [4.5.1.5.1.3. Property `semverOnly`](#spec_defaults_anyOf_i0_tags_anyOf_i0_semverOnly)
+          - [4.5.1.5.1.4. Property `names`](#spec_defaults_anyOf_i0_tags_anyOf_i0_names)
+            - [4.5.1.5.1.4.1. names items](#spec_defaults_anyOf_i0_tags_anyOf_i0_names_items)
+          - [4.5.1.5.1.5. Property `aliases`](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases)
+            - [4.5.1.5.1.5.1. aliases items](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items)
+          - [4.5.1.5.1.6. Property `pins`](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins)
+            - [4.5.1.5.1.6.1. Property `additionalProperties`](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins_additionalProperties)
+        - [4.5.1.5.2. Property `item 1`](#spec_defaults_anyOf_i0_tags_anyOf_i1)
+      - [4.5.1.6. Property `platforms`](#spec_defaults_anyOf_i0_platforms)
+        - [4.5.1.6.1. Property `item 0`](#spec_defaults_anyOf_i0_platforms_anyOf_i0)
+          - [4.5.1.6.1.1. item 0 items](#spec_defaults_anyOf_i0_platforms_anyOf_i0_items)
+        - [4.5.1.6.2. Property `item 1`](#spec_defaults_anyOf_i0_platforms_anyOf_i1)
+      - [4.5.1.7. Property `owners`](#spec_defaults_anyOf_i0_owners)
+        - [4.5.1.7.1. Property `item 0`](#spec_defaults_anyOf_i0_owners_anyOf_i0)
+          - [4.5.1.7.1.1. item 0 items](#spec_defaults_anyOf_i0_owners_anyOf_i0_items)
+        - [4.5.1.7.2. Property `item 1`](#spec_defaults_anyOf_i0_owners_anyOf_i1)
+      - [4.5.1.8. Property `vendor`](#spec_defaults_anyOf_i0_vendor)
+        - [4.5.1.8.1. Property `item 0`](#spec_defaults_anyOf_i0_vendor_anyOf_i0)
+        - [4.5.1.8.2. Property `item 1`](#spec_defaults_anyOf_i0_vendor_anyOf_i1)
     - [4.5.2. Property `item 1`](#spec_defaults_anyOf_i1)
   - [4.6. Property `imports`](#spec_imports)
     - [4.6.1. ImportProfile](#spec_imports_items)
@@ -98,30 +101,38 @@
         - [4.6.1.4.1. Property `item 0`](#spec_imports_items_transform_anyOf_i0)
           - [4.6.1.4.1.1. TransformStep](#spec_imports_items_transform_anyOf_i0_items)
         - [4.6.1.4.2. Property `item 1`](#spec_imports_items_transform_anyOf_i1)
-      - [4.6.1.5. Property `archive`](#spec_imports_items_archive)
-        - [4.6.1.5.1. Property `Archive`](#spec_imports_items_archive_anyOf_i0)
-        - [4.6.1.5.2. Property `item 1`](#spec_imports_items_archive_anyOf_i1)
-      - [4.6.1.6. Property `platforms`](#spec_imports_items_platforms)
-        - [4.6.1.6.1. Property `item 0`](#spec_imports_items_platforms_anyOf_i0)
-          - [4.6.1.6.1.1. item 0 items](#spec_imports_items_platforms_anyOf_i0_items)
-        - [4.6.1.6.2. Property `item 1`](#spec_imports_items_platforms_anyOf_i1)
-      - [4.6.1.7. Property `variants`](#spec_imports_items_variants)
-        - [4.6.1.7.1. Property `item 0`](#spec_imports_items_variants_anyOf_i0)
-          - [4.6.1.7.1.1. Variant](#spec_imports_items_variants_anyOf_i0_items)
-            - [4.6.1.7.1.1.1. Property `name`](#spec_imports_items_variants_anyOf_i0_items_name)
-            - [4.6.1.7.1.1.2. Property `suffix`](#spec_imports_items_variants_anyOf_i0_items_suffix)
-            - [4.6.1.7.1.1.3. Property `transform`](#spec_imports_items_variants_anyOf_i0_items_transform)
-              - [4.6.1.7.1.1.3.1. Property `item 0`](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0)
-                - [4.6.1.7.1.1.3.1.1. TransformStep](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0_items)
-              - [4.6.1.7.1.1.3.2. Property `item 1`](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i1)
-        - [4.6.1.7.2. Property `item 1`](#spec_imports_items_variants_anyOf_i1)
-      - [4.6.1.8. Property `owners`](#spec_imports_items_owners)
-        - [4.6.1.8.1. Property `item 0`](#spec_imports_items_owners_anyOf_i0)
-          - [4.6.1.8.1.1. item 0 items](#spec_imports_items_owners_anyOf_i0_items)
-        - [4.6.1.8.2. Property `item 1`](#spec_imports_items_owners_anyOf_i1)
-      - [4.6.1.9. Property `vendor`](#spec_imports_items_vendor)
-        - [4.6.1.9.1. Property `item 0`](#spec_imports_items_vendor_anyOf_i0)
-        - [4.6.1.9.2. Property `item 1`](#spec_imports_items_vendor_anyOf_i1)
+      - [4.6.1.5. Property `remediate`](#spec_imports_items_remediate)
+        - [4.6.1.5.1. Property `item 0`](#spec_imports_items_remediate_anyOf_i0)
+          - [4.6.1.5.1.1. TransformStep](#spec_imports_items_remediate_anyOf_i0_items)
+        - [4.6.1.5.2. Property `item 1`](#spec_imports_items_remediate_anyOf_i1)
+      - [4.6.1.6. Property `archive`](#spec_imports_items_archive)
+        - [4.6.1.6.1. Property `Archive`](#spec_imports_items_archive_anyOf_i0)
+        - [4.6.1.6.2. Property `item 1`](#spec_imports_items_archive_anyOf_i1)
+      - [4.6.1.7. Property `platforms`](#spec_imports_items_platforms)
+        - [4.6.1.7.1. Property `item 0`](#spec_imports_items_platforms_anyOf_i0)
+          - [4.6.1.7.1.1. item 0 items](#spec_imports_items_platforms_anyOf_i0_items)
+        - [4.6.1.7.2. Property `item 1`](#spec_imports_items_platforms_anyOf_i1)
+      - [4.6.1.8. Property `variants`](#spec_imports_items_variants)
+        - [4.6.1.8.1. Property `item 0`](#spec_imports_items_variants_anyOf_i0)
+          - [4.6.1.8.1.1. Variant](#spec_imports_items_variants_anyOf_i0_items)
+            - [4.6.1.8.1.1.1. Property `name`](#spec_imports_items_variants_anyOf_i0_items_name)
+            - [4.6.1.8.1.1.2. Property `suffix`](#spec_imports_items_variants_anyOf_i0_items_suffix)
+            - [4.6.1.8.1.1.3. Property `transform`](#spec_imports_items_variants_anyOf_i0_items_transform)
+              - [4.6.1.8.1.1.3.1. Property `item 0`](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0)
+                - [4.6.1.8.1.1.3.1.1. TransformStep](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0_items)
+              - [4.6.1.8.1.1.3.2. Property `item 1`](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i1)
+            - [4.6.1.8.1.1.4. Property `remediate`](#spec_imports_items_variants_anyOf_i0_items_remediate)
+              - [4.6.1.8.1.1.4.1. Property `item 0`](#spec_imports_items_variants_anyOf_i0_items_remediate_anyOf_i0)
+                - [4.6.1.8.1.1.4.1.1. TransformStep](#spec_imports_items_variants_anyOf_i0_items_remediate_anyOf_i0_items)
+              - [4.6.1.8.1.1.4.2. Property `item 1`](#spec_imports_items_variants_anyOf_i0_items_remediate_anyOf_i1)
+        - [4.6.1.8.2. Property `item 1`](#spec_imports_items_variants_anyOf_i1)
+      - [4.6.1.9. Property `owners`](#spec_imports_items_owners)
+        - [4.6.1.9.1. Property `item 0`](#spec_imports_items_owners_anyOf_i0)
+          - [4.6.1.9.1.1. item 0 items](#spec_imports_items_owners_anyOf_i0_items)
+        - [4.6.1.9.2. Property `item 1`](#spec_imports_items_owners_anyOf_i1)
+      - [4.6.1.10. Property `vendor`](#spec_imports_items_vendor)
+        - [4.6.1.10.1. Property `item 0`](#spec_imports_items_vendor_anyOf_i0)
+        - [4.6.1.10.2. Property `item 1`](#spec_imports_items_vendor_anyOf_i1)
 
 **Title:** MirrorPolicy
 
@@ -463,6 +474,7 @@ Must be one of:
 | ------------------------------------------------------- | ------- | ----------- | ---------- | ---------- | --------------------------------------------- |
 | - [destinations](#spec_defaults_anyOf_i0_destinations ) | No      | Combination | No         | -          | Destinations                                  |
 | - [transform](#spec_defaults_anyOf_i0_transform )       | No      | Combination | No         | -          | Transform                                     |
+| - [remediate](#spec_defaults_anyOf_i0_remediate )       | No      | Combination | No         | -          | Remediate                                     |
 | - [archive](#spec_defaults_anyOf_i0_archive )           | No      | Combination | No         | -          | Default retention policy for every import.    |
 | - [tags](#spec_defaults_anyOf_i0_tags )                 | No      | Combination | No         | -          | Default tag-selection rules for every import. |
 | - [platforms](#spec_defaults_anyOf_i0_platforms )       | No      | Combination | No         | -          | Platforms                                     |
@@ -777,36 +789,21 @@ Must be one of:
 | **Required**              | No          |
 | **Additional properties** | Not allowed |
 
-| Property                                                                                        | Pattern | Type   | Deprecated | Definition | Title/Description      |
-| ----------------------------------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ---------------------- |
-| + [upgradePackages](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages ) | No      | object | No         | -          | _UpgradePackagesParams |
+| Property                                                                                        | Pattern | Type   | Deprecated | Definition | Title/Description            |
+| ----------------------------------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ---------------------------- |
+| + [upgradePackages](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages ) | No      | object | No         | -          | _UpgradePackagesPolicyParams |
 
 ###### <a name="spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages"></a>4.5.1.2.1.1.4.1. Property `upgradePackages`
 
-**Title:** _UpgradePackagesParams
+**Title:** _UpgradePackagesPolicyParams
 
-|                           |             |
-| ------------------------- | ----------- |
-| **Type**                  | `object`    |
-| **Required**              | Yes         |
-| **Additional properties** | Not allowed |
+|                           |                  |
+| ------------------------- | ---------------- |
+| **Type**                  | `object`         |
+| **Required**              | Yes              |
+| **Additional properties** | Any type allowed |
 
-| Property                                                                                    | Pattern | Type   | Deprecated | Definition | Title/Description |
-| ------------------------------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ----------------- |
-| + [epoch](#spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages_epoch ) | No      | string | No         | -          | Epoch             |
-
-###### <a name="spec_defaults_anyOf_i0_transform_anyOf_i0_items_oneOf_i3_upgradePackages_epoch"></a>4.5.1.2.1.1.4.1.1. Property `epoch`
-
-**Title:** Epoch
-
-|              |          |
-| ------------ | -------- |
-| **Type**     | `string` |
-| **Required** | Yes      |
-
-| Restrictions                      |                                                                                                       |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^[A-Za-z0-9._-]{1,64}$``` [Test](https://regex101.com/?regex=%5E%5BA-Za-z0-9._-%5D%7B1%2C64%7D%24) |
+**Description:** A policy declares the step bare: the epoch comes with the plan's remediation order.
 
 ###### <a name="spec_defaults_anyOf_i0_transform_anyOf_i1"></a>4.5.1.2.2. Property `item 1`
 
@@ -815,7 +812,60 @@ Must be one of:
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### <a name="spec_defaults_anyOf_i0_archive"></a>4.5.1.3. Property `archive`
+##### <a name="spec_defaults_anyOf_i0_remediate"></a>4.5.1.3. Property `remediate`
+
+**Title:** Remediate
+
+|                           |                  |
+| ------------------------- | ---------------- |
+| **Type**                  | `combining`      |
+| **Required**              | No               |
+| **Additional properties** | Any type allowed |
+| **Default**               | `null`           |
+
+**Description:** Default remediation steps for every import. Applied only to an operation the reconcile plan orders remediated (`remediate: {epoch}`), after the transform steps; `transform` steps are applied to every rebuild. Accepts `upgradePackages` and `rewritePackageSources`.
+
+| Any of(Option)                                       |
+| ---------------------------------------------------- |
+| [item 0](#spec_defaults_anyOf_i0_remediate_anyOf_i0) |
+| [item 1](#spec_defaults_anyOf_i0_remediate_anyOf_i1) |
+
+###### <a name="spec_defaults_anyOf_i0_remediate_anyOf_i0"></a>4.5.1.3.1. Property `item 0`
+
+|              |         |
+| ------------ | ------- |
+| **Type**     | `array` |
+| **Required** | No      |
+
+|                      | Array restrictions |
+| -------------------- | ------------------ |
+| **Min items**        | N/A                |
+| **Max items**        | N/A                |
+| **Items unicity**    | False              |
+| **Additional items** | False              |
+| **Tuple validation** | See below          |
+
+| Each item of this array must be                                   | Description |
+| ----------------------------------------------------------------- | ----------- |
+| [TransformStep](#spec_defaults_anyOf_i0_remediate_anyOf_i0_items) | -           |
+
+###### <a name="spec_defaults_anyOf_i0_remediate_anyOf_i0_items"></a>4.5.1.3.1.1. TransformStep
+
+|                           |                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Type**                  | `combining`                                                                                         |
+| **Required**              | No                                                                                                  |
+| **Additional properties** | Any type allowed                                                                                    |
+| **Same definition as**    | [spec_defaults_anyOf_i0_transform_anyOf_i0_items](#spec_defaults_anyOf_i0_transform_anyOf_i0_items) |
+
+###### <a name="spec_defaults_anyOf_i0_remediate_anyOf_i1"></a>4.5.1.3.2. Property `item 1`
+
+|              |        |
+| ------------ | ------ |
+| **Type**     | `null` |
+| **Required** | No     |
+
+##### <a name="spec_defaults_anyOf_i0_archive"></a>4.5.1.4. Property `archive`
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -831,7 +881,7 @@ Must be one of:
 | [Archive](#spec_defaults_anyOf_i0_archive_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_archive_anyOf_i1)  |
 
-###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0"></a>4.5.1.3.1. Property `Archive`
+###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0"></a>4.5.1.4.1. Property `Archive`
 
 **Title:** Archive
 
@@ -847,7 +897,7 @@ Must be one of:
 | - [keep](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep )                   | No      | Combination | No         | -          | Keep              |
 | - [olderThanDays](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays ) | No      | Combination | No         | -          | Olderthandays     |
 
-###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_keep"></a>4.5.1.3.1.1. Property `keep`
+###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_keep"></a>4.5.1.4.1.1. Property `keep`
 
 **Title:** Keep
 
@@ -865,21 +915,21 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i1) |
 
-###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i0"></a>4.5.1.3.1.1.1. Property `item 0`
+###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i0"></a>4.5.1.4.1.1.1. Property `item 0`
 
 |              |           |
 | ------------ | --------- |
 | **Type**     | `integer` |
 | **Required** | No        |
 
-###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i1"></a>4.5.1.3.1.1.2. Property `item 1`
+###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_keep_anyOf_i1"></a>4.5.1.4.1.1.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays"></a>4.5.1.3.1.2. Property `olderThanDays`
+###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays"></a>4.5.1.4.1.2. Property `olderThanDays`
 
 **Title:** Olderthandays
 
@@ -897,28 +947,28 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i1) |
 
-###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i0"></a>4.5.1.3.1.2.1. Property `item 0`
+###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i0"></a>4.5.1.4.1.2.1. Property `item 0`
 
 |              |           |
 | ------------ | --------- |
 | **Type**     | `integer` |
 | **Required** | No        |
 
-###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i1"></a>4.5.1.3.1.2.2. Property `item 1`
+###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i0_olderThanDays_anyOf_i1"></a>4.5.1.4.1.2.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i1"></a>4.5.1.3.2. Property `item 1`
+###### <a name="spec_defaults_anyOf_i0_archive_anyOf_i1"></a>4.5.1.4.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### <a name="spec_defaults_anyOf_i0_tags"></a>4.5.1.4. Property `tags`
+##### <a name="spec_defaults_anyOf_i0_tags"></a>4.5.1.5. Property `tags`
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -934,7 +984,7 @@ Must be one of:
 | [TagSelection](#spec_defaults_anyOf_i0_tags_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_tags_anyOf_i1)       |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0"></a>4.5.1.4.1. Property `TagSelection`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0"></a>4.5.1.5.1. Property `TagSelection`
 
 **Title:** TagSelection
 
@@ -954,7 +1004,7 @@ Must be one of:
 | - [aliases](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases )           | No      | array of string | No         | -          | Aliases           |
 | - [pins](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins )                 | No      | object          | No         | -          | Pins              |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex"></a>4.5.1.4.1.1. Property `includeRegex`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex"></a>4.5.1.5.1.1. Property `includeRegex`
 
 **Title:** Includeregex
 
@@ -972,21 +1022,21 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i1) |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i0"></a>4.5.1.4.1.1.1. Property `item 0`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i0"></a>4.5.1.5.1.1.1. Property `item 0`
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i1"></a>4.5.1.4.1.1.2. Property `item 1`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_includeRegex_anyOf_i1"></a>4.5.1.5.1.1.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex"></a>4.5.1.4.1.2. Property `excludeRegex`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex"></a>4.5.1.5.1.2. Property `excludeRegex`
 
 **Title:** Excluderegex
 
@@ -1009,14 +1059,14 @@ Must be one of:
 | ------------------------------------------------------------------------------ | ----------- |
 | [excludeRegex items](#spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex_items) | -           |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex_items"></a>4.5.1.4.1.2.1. excludeRegex items
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_excludeRegex_items"></a>4.5.1.5.1.2.1. excludeRegex items
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_semverOnly"></a>4.5.1.4.1.3. Property `semverOnly`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_semverOnly"></a>4.5.1.5.1.3. Property `semverOnly`
 
 **Title:** Semveronly
 
@@ -1028,7 +1078,7 @@ Must be one of:
 
 **Description:** Keep only tags parseable as semver (drops `latest`, date tags, …).
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_names"></a>4.5.1.4.1.4. Property `names`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_names"></a>4.5.1.5.1.4. Property `names`
 
 **Title:** Names
 
@@ -1051,14 +1101,14 @@ Must be one of:
 | ---------------------------------------------------------------- | ----------- |
 | [names items](#spec_defaults_anyOf_i0_tags_anyOf_i0_names_items) | -           |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_names_items"></a>4.5.1.4.1.4.1. names items
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_names_items"></a>4.5.1.5.1.4.1. names items
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_aliases"></a>4.5.1.4.1.5. Property `aliases`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_aliases"></a>4.5.1.5.1.5. Property `aliases`
 
 **Title:** Aliases
 
@@ -1081,14 +1131,14 @@ Must be one of:
 | -------------------------------------------------------------------- | ----------- |
 | [aliases items](#spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items) | -           |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items"></a>4.5.1.4.1.5.1. aliases items
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_aliases_items"></a>4.5.1.5.1.5.1. aliases items
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_pins"></a>4.5.1.4.1.6. Property `pins`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_pins"></a>4.5.1.5.1.6. Property `pins`
 
 **Title:** Pins
 
@@ -1104,7 +1154,7 @@ Must be one of:
 | ---------------------------------------------------------------------- | ------- | ------ | ---------- | ---------- | ----------------- |
 | - [](#spec_defaults_anyOf_i0_tags_anyOf_i0_pins_additionalProperties ) | No      | string | No         | -          | -                 |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_pins_additionalProperties"></a>4.5.1.4.1.6.1. Property `additionalProperties`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i0_pins_additionalProperties"></a>4.5.1.5.1.6.1. Property `additionalProperties`
 
 |              |          |
 | ------------ | -------- |
@@ -1115,14 +1165,14 @@ Must be one of:
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Must match regular expression** | ```^(sha256:[0-9a-f]{64}\|sha512:[0-9a-f]{128})$``` [Test](https://regex101.com/?regex=%5E%28sha256%3A%5B0-9a-f%5D%7B64%7D%7Csha512%3A%5B0-9a-f%5D%7B128%7D%29%24) |
 
-###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i1"></a>4.5.1.4.2. Property `item 1`
+###### <a name="spec_defaults_anyOf_i0_tags_anyOf_i1"></a>4.5.1.5.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### <a name="spec_defaults_anyOf_i0_platforms"></a>4.5.1.5. Property `platforms`
+##### <a name="spec_defaults_anyOf_i0_platforms"></a>4.5.1.6. Property `platforms`
 
 **Title:** Platforms
 
@@ -1140,7 +1190,7 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_platforms_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_platforms_anyOf_i1) |
 
-###### <a name="spec_defaults_anyOf_i0_platforms_anyOf_i0"></a>4.5.1.5.1. Property `item 0`
+###### <a name="spec_defaults_anyOf_i0_platforms_anyOf_i0"></a>4.5.1.6.1. Property `item 0`
 
 |              |                   |
 | ------------ | ----------------- |
@@ -1159,7 +1209,7 @@ Must be one of:
 | ---------------------------------------------------------------- | ----------- |
 | [item 0 items](#spec_defaults_anyOf_i0_platforms_anyOf_i0_items) | -           |
 
-###### <a name="spec_defaults_anyOf_i0_platforms_anyOf_i0_items"></a>4.5.1.5.1.1. item 0 items
+###### <a name="spec_defaults_anyOf_i0_platforms_anyOf_i0_items"></a>4.5.1.6.1.1. item 0 items
 
 |              |          |
 | ------------ | -------- |
@@ -1170,14 +1220,14 @@ Must be one of:
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Must match regular expression** | ```^[a-z0-9_]+/[a-z0-9_]+(/[a-z0-9_]+)?$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9_%5D%2B%2F%5Ba-z0-9_%5D%2B%28%2F%5Ba-z0-9_%5D%2B%29%3F%24) |
 
-###### <a name="spec_defaults_anyOf_i0_platforms_anyOf_i1"></a>4.5.1.5.2. Property `item 1`
+###### <a name="spec_defaults_anyOf_i0_platforms_anyOf_i1"></a>4.5.1.6.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### <a name="spec_defaults_anyOf_i0_owners"></a>4.5.1.6. Property `owners`
+##### <a name="spec_defaults_anyOf_i0_owners"></a>4.5.1.7. Property `owners`
 
 **Title:** Owners
 
@@ -1195,7 +1245,7 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_owners_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_owners_anyOf_i1) |
 
-###### <a name="spec_defaults_anyOf_i0_owners_anyOf_i0"></a>4.5.1.6.1. Property `item 0`
+###### <a name="spec_defaults_anyOf_i0_owners_anyOf_i0"></a>4.5.1.7.1. Property `item 0`
 
 |              |                   |
 | ------------ | ----------------- |
@@ -1214,21 +1264,21 @@ Must be one of:
 | ------------------------------------------------------------- | ----------- |
 | [item 0 items](#spec_defaults_anyOf_i0_owners_anyOf_i0_items) | -           |
 
-###### <a name="spec_defaults_anyOf_i0_owners_anyOf_i0_items"></a>4.5.1.6.1.1. item 0 items
+###### <a name="spec_defaults_anyOf_i0_owners_anyOf_i0_items"></a>4.5.1.7.1.1. item 0 items
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### <a name="spec_defaults_anyOf_i0_owners_anyOf_i1"></a>4.5.1.6.2. Property `item 1`
+###### <a name="spec_defaults_anyOf_i0_owners_anyOf_i1"></a>4.5.1.7.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### <a name="spec_defaults_anyOf_i0_vendor"></a>4.5.1.7. Property `vendor`
+##### <a name="spec_defaults_anyOf_i0_vendor"></a>4.5.1.8. Property `vendor`
 
 **Title:** Vendor
 
@@ -1246,14 +1296,14 @@ Must be one of:
 | [item 0](#spec_defaults_anyOf_i0_vendor_anyOf_i0) |
 | [item 1](#spec_defaults_anyOf_i0_vendor_anyOf_i1) |
 
-###### <a name="spec_defaults_anyOf_i0_vendor_anyOf_i0"></a>4.5.1.7.1. Property `item 0`
+###### <a name="spec_defaults_anyOf_i0_vendor_anyOf_i0"></a>4.5.1.8.1. Property `item 0`
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### <a name="spec_defaults_anyOf_i0_vendor_anyOf_i1"></a>4.5.1.7.2. Property `item 1`
+###### <a name="spec_defaults_anyOf_i0_vendor_anyOf_i1"></a>4.5.1.8.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
@@ -1307,6 +1357,7 @@ Must be one of:
 | + [tags](#spec_imports_items_tags )                 | No      | object      | No         | Same as [TagSelection](#spec_defaults_anyOf_i0_tags_anyOf_i0 ) | TagSelection                           |
 | - [destinations](#spec_imports_items_destinations ) | No      | Combination | No         | -                                                              | Destinations                           |
 | - [transform](#spec_imports_items_transform )       | No      | Combination | No         | -                                                              | Transform                              |
+| - [remediate](#spec_imports_items_remediate )       | No      | Combination | No         | -                                                              | Remediate                              |
 | - [archive](#spec_imports_items_archive )           | No      | Combination | No         | -                                                              | Retention policy (overrides defaults). |
 | - [platforms](#spec_imports_items_platforms )       | No      | Combination | No         | -                                                              | Platforms                              |
 | - [variants](#spec_imports_items_variants )         | No      | Combination | No         | -                                                              | Variants                               |
@@ -1445,7 +1496,60 @@ Must be one of:
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### <a name="spec_imports_items_archive"></a>4.6.1.5. Property `archive`
+##### <a name="spec_imports_items_remediate"></a>4.6.1.5. Property `remediate`
+
+**Title:** Remediate
+
+|                           |                  |
+| ------------------------- | ---------------- |
+| **Type**                  | `combining`      |
+| **Required**              | No               |
+| **Additional properties** | Any type allowed |
+| **Default**               | `null`           |
+
+**Description:** Remediation steps (overrides defaults). Applied only to an operation the reconcile plan orders remediated (`remediate: {epoch}`), after the transform steps; `transform` steps are applied to every rebuild. Accepts `upgradePackages` and `rewritePackageSources`.
+
+| Any of(Option)                                   |
+| ------------------------------------------------ |
+| [item 0](#spec_imports_items_remediate_anyOf_i0) |
+| [item 1](#spec_imports_items_remediate_anyOf_i1) |
+
+###### <a name="spec_imports_items_remediate_anyOf_i0"></a>4.6.1.5.1. Property `item 0`
+
+|              |         |
+| ------------ | ------- |
+| **Type**     | `array` |
+| **Required** | No      |
+
+|                      | Array restrictions |
+| -------------------- | ------------------ |
+| **Min items**        | N/A                |
+| **Max items**        | N/A                |
+| **Items unicity**    | False              |
+| **Additional items** | False              |
+| **Tuple validation** | See below          |
+
+| Each item of this array must be                               | Description |
+| ------------------------------------------------------------- | ----------- |
+| [TransformStep](#spec_imports_items_remediate_anyOf_i0_items) | -           |
+
+###### <a name="spec_imports_items_remediate_anyOf_i0_items"></a>4.6.1.5.1.1. TransformStep
+
+|                           |                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Type**                  | `combining`                                                                                         |
+| **Required**              | No                                                                                                  |
+| **Additional properties** | Any type allowed                                                                                    |
+| **Same definition as**    | [spec_defaults_anyOf_i0_transform_anyOf_i0_items](#spec_defaults_anyOf_i0_transform_anyOf_i0_items) |
+
+###### <a name="spec_imports_items_remediate_anyOf_i1"></a>4.6.1.5.2. Property `item 1`
+
+|              |        |
+| ------------ | ------ |
+| **Type**     | `null` |
+| **Required** | No     |
+
+##### <a name="spec_imports_items_archive"></a>4.6.1.6. Property `archive`
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -1461,7 +1565,7 @@ Must be one of:
 | [Archive](#spec_imports_items_archive_anyOf_i0) |
 | [item 1](#spec_imports_items_archive_anyOf_i1)  |
 
-###### <a name="spec_imports_items_archive_anyOf_i0"></a>4.6.1.5.1. Property `Archive`
+###### <a name="spec_imports_items_archive_anyOf_i0"></a>4.6.1.6.1. Property `Archive`
 
 **Title:** Archive
 
@@ -1472,14 +1576,14 @@ Must be one of:
 | **Additional properties** | Not allowed                                         |
 | **Same definition as**    | [Archive](#spec_defaults_anyOf_i0_archive_anyOf_i0) |
 
-###### <a name="spec_imports_items_archive_anyOf_i1"></a>4.6.1.5.2. Property `item 1`
+###### <a name="spec_imports_items_archive_anyOf_i1"></a>4.6.1.6.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### <a name="spec_imports_items_platforms"></a>4.6.1.6. Property `platforms`
+##### <a name="spec_imports_items_platforms"></a>4.6.1.7. Property `platforms`
 
 **Title:** Platforms
 
@@ -1497,7 +1601,7 @@ Must be one of:
 | [item 0](#spec_imports_items_platforms_anyOf_i0) |
 | [item 1](#spec_imports_items_platforms_anyOf_i1) |
 
-###### <a name="spec_imports_items_platforms_anyOf_i0"></a>4.6.1.6.1. Property `item 0`
+###### <a name="spec_imports_items_platforms_anyOf_i0"></a>4.6.1.7.1. Property `item 0`
 
 |              |                   |
 | ------------ | ----------------- |
@@ -1516,7 +1620,7 @@ Must be one of:
 | ------------------------------------------------------------ | ----------- |
 | [item 0 items](#spec_imports_items_platforms_anyOf_i0_items) | -           |
 
-###### <a name="spec_imports_items_platforms_anyOf_i0_items"></a>4.6.1.6.1.1. item 0 items
+###### <a name="spec_imports_items_platforms_anyOf_i0_items"></a>4.6.1.7.1.1. item 0 items
 
 |              |          |
 | ------------ | -------- |
@@ -1527,14 +1631,14 @@ Must be one of:
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Must match regular expression** | ```^[a-z0-9_]+/[a-z0-9_]+(/[a-z0-9_]+)?$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9_%5D%2B%2F%5Ba-z0-9_%5D%2B%28%2F%5Ba-z0-9_%5D%2B%29%3F%24) |
 
-###### <a name="spec_imports_items_platforms_anyOf_i1"></a>4.6.1.6.2. Property `item 1`
+###### <a name="spec_imports_items_platforms_anyOf_i1"></a>4.6.1.7.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### <a name="spec_imports_items_variants"></a>4.6.1.7. Property `variants`
+##### <a name="spec_imports_items_variants"></a>4.6.1.8. Property `variants`
 
 **Title:** Variants
 
@@ -1552,7 +1656,7 @@ Must be one of:
 | [item 0](#spec_imports_items_variants_anyOf_i0) |
 | [item 1](#spec_imports_items_variants_anyOf_i1) |
 
-###### <a name="spec_imports_items_variants_anyOf_i0"></a>4.6.1.7.1. Property `item 0`
+###### <a name="spec_imports_items_variants_anyOf_i0"></a>4.6.1.8.1. Property `item 0`
 
 |              |         |
 | ------------ | ------- |
@@ -1571,7 +1675,7 @@ Must be one of:
 | ------------------------------------------------------ | ----------- |
 | [Variant](#spec_imports_items_variants_anyOf_i0_items) | -           |
 
-###### <a name="spec_imports_items_variants_anyOf_i0_items"></a>4.6.1.7.1.1. Variant
+###### <a name="spec_imports_items_variants_anyOf_i0_items"></a>4.6.1.8.1.1. Variant
 
 **Title:** Variant
 
@@ -1587,8 +1691,9 @@ Must be one of:
 | + [name](#spec_imports_items_variants_anyOf_i0_items_name )           | No      | string      | No         | -          | Name              |
 | - [suffix](#spec_imports_items_variants_anyOf_i0_items_suffix )       | No      | string      | No         | -          | Suffix            |
 | - [transform](#spec_imports_items_variants_anyOf_i0_items_transform ) | No      | Combination | No         | -          | Transform         |
+| - [remediate](#spec_imports_items_variants_anyOf_i0_items_remediate ) | No      | Combination | No         | -          | Remediate         |
 
-###### <a name="spec_imports_items_variants_anyOf_i0_items_name"></a>4.6.1.7.1.1.1. Property `name`
+###### <a name="spec_imports_items_variants_anyOf_i0_items_name"></a>4.6.1.8.1.1.1. Property `name`
 
 **Title:** Name
 
@@ -1599,7 +1704,7 @@ Must be one of:
 
 **Description:** Variant name.
 
-###### <a name="spec_imports_items_variants_anyOf_i0_items_suffix"></a>4.6.1.7.1.1.2. Property `suffix`
+###### <a name="spec_imports_items_variants_anyOf_i0_items_suffix"></a>4.6.1.8.1.1.2. Property `suffix`
 
 **Title:** Suffix
 
@@ -1611,7 +1716,7 @@ Must be one of:
 
 **Description:** Tag suffix appended for this variant, e.g. `-eu`.
 
-###### <a name="spec_imports_items_variants_anyOf_i0_items_transform"></a>4.6.1.7.1.1.3. Property `transform`
+###### <a name="spec_imports_items_variants_anyOf_i0_items_transform"></a>4.6.1.8.1.1.3. Property `transform`
 
 **Title:** Transform
 
@@ -1629,7 +1734,7 @@ Must be one of:
 | [item 0](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0) |
 | [item 1](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i1) |
 
-###### <a name="spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0"></a>4.6.1.7.1.1.3.1. Property `item 0`
+###### <a name="spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0"></a>4.6.1.8.1.1.3.1. Property `item 0`
 
 |              |         |
 | ------------ | ------- |
@@ -1648,7 +1753,7 @@ Must be one of:
 | ------------------------------------------------------------------------------------- | ----------- |
 | [TransformStep](#spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0_items) | -           |
 
-###### <a name="spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0_items"></a>4.6.1.7.1.1.3.1.1. TransformStep
+###### <a name="spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i0_items"></a>4.6.1.8.1.1.3.1.1. TransformStep
 
 |                           |                                                                                                     |
 | ------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -1657,21 +1762,74 @@ Must be one of:
 | **Additional properties** | Any type allowed                                                                                    |
 | **Same definition as**    | [spec_defaults_anyOf_i0_transform_anyOf_i0_items](#spec_defaults_anyOf_i0_transform_anyOf_i0_items) |
 
-###### <a name="spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i1"></a>4.6.1.7.1.1.3.2. Property `item 1`
+###### <a name="spec_imports_items_variants_anyOf_i0_items_transform_anyOf_i1"></a>4.6.1.8.1.1.3.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-###### <a name="spec_imports_items_variants_anyOf_i1"></a>4.6.1.7.2. Property `item 1`
+###### <a name="spec_imports_items_variants_anyOf_i0_items_remediate"></a>4.6.1.8.1.1.4. Property `remediate`
+
+**Title:** Remediate
+
+|                           |                  |
+| ------------------------- | ---------------- |
+| **Type**                  | `combining`      |
+| **Required**              | No               |
+| **Additional properties** | Any type allowed |
+| **Default**               | `null`           |
+
+**Description:** Per-variant remediation; `null` ⇒ inherit the resolved remediation.
+
+| Any of(Option)                                                           |
+| ------------------------------------------------------------------------ |
+| [item 0](#spec_imports_items_variants_anyOf_i0_items_remediate_anyOf_i0) |
+| [item 1](#spec_imports_items_variants_anyOf_i0_items_remediate_anyOf_i1) |
+
+###### <a name="spec_imports_items_variants_anyOf_i0_items_remediate_anyOf_i0"></a>4.6.1.8.1.1.4.1. Property `item 0`
+
+|              |         |
+| ------------ | ------- |
+| **Type**     | `array` |
+| **Required** | No      |
+
+|                      | Array restrictions |
+| -------------------- | ------------------ |
+| **Min items**        | N/A                |
+| **Max items**        | N/A                |
+| **Items unicity**    | False              |
+| **Additional items** | False              |
+| **Tuple validation** | See below          |
+
+| Each item of this array must be                                                       | Description |
+| ------------------------------------------------------------------------------------- | ----------- |
+| [TransformStep](#spec_imports_items_variants_anyOf_i0_items_remediate_anyOf_i0_items) | -           |
+
+###### <a name="spec_imports_items_variants_anyOf_i0_items_remediate_anyOf_i0_items"></a>4.6.1.8.1.1.4.1.1. TransformStep
+
+|                           |                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Type**                  | `combining`                                                                                         |
+| **Required**              | No                                                                                                  |
+| **Additional properties** | Any type allowed                                                                                    |
+| **Same definition as**    | [spec_defaults_anyOf_i0_transform_anyOf_i0_items](#spec_defaults_anyOf_i0_transform_anyOf_i0_items) |
+
+###### <a name="spec_imports_items_variants_anyOf_i0_items_remediate_anyOf_i1"></a>4.6.1.8.1.1.4.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### <a name="spec_imports_items_owners"></a>4.6.1.8. Property `owners`
+###### <a name="spec_imports_items_variants_anyOf_i1"></a>4.6.1.8.2. Property `item 1`
+
+|              |        |
+| ------------ | ------ |
+| **Type**     | `null` |
+| **Required** | No     |
+
+##### <a name="spec_imports_items_owners"></a>4.6.1.9. Property `owners`
 
 **Title:** Owners
 
@@ -1689,7 +1847,7 @@ Must be one of:
 | [item 0](#spec_imports_items_owners_anyOf_i0) |
 | [item 1](#spec_imports_items_owners_anyOf_i1) |
 
-###### <a name="spec_imports_items_owners_anyOf_i0"></a>4.6.1.8.1. Property `item 0`
+###### <a name="spec_imports_items_owners_anyOf_i0"></a>4.6.1.9.1. Property `item 0`
 
 |              |                   |
 | ------------ | ----------------- |
@@ -1708,21 +1866,21 @@ Must be one of:
 | --------------------------------------------------------- | ----------- |
 | [item 0 items](#spec_imports_items_owners_anyOf_i0_items) | -           |
 
-###### <a name="spec_imports_items_owners_anyOf_i0_items"></a>4.6.1.8.1.1. item 0 items
+###### <a name="spec_imports_items_owners_anyOf_i0_items"></a>4.6.1.9.1.1. item 0 items
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### <a name="spec_imports_items_owners_anyOf_i1"></a>4.6.1.8.2. Property `item 1`
+###### <a name="spec_imports_items_owners_anyOf_i1"></a>4.6.1.9.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-##### <a name="spec_imports_items_vendor"></a>4.6.1.9. Property `vendor`
+##### <a name="spec_imports_items_vendor"></a>4.6.1.10. Property `vendor`
 
 **Title:** Vendor
 
@@ -1740,14 +1898,14 @@ Must be one of:
 | [item 0](#spec_imports_items_vendor_anyOf_i0) |
 | [item 1](#spec_imports_items_vendor_anyOf_i1) |
 
-###### <a name="spec_imports_items_vendor_anyOf_i0"></a>4.6.1.9.1. Property `item 0`
+###### <a name="spec_imports_items_vendor_anyOf_i0"></a>4.6.1.10.1. Property `item 0`
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-###### <a name="spec_imports_items_vendor_anyOf_i1"></a>4.6.1.9.2. Property `item 1`
+###### <a name="spec_imports_items_vendor_anyOf_i1"></a>4.6.1.10.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |

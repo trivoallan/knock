@@ -1,7 +1,7 @@
 """Resolve `defaults` into each `import` (spec §3.4, rule B).
 
 Maps (`tags`, `archive`) shallow-merge key-by-key, one level; lists (`transform`,
-`destinations`, `platforms`) replace wholesale. Merge is decided on *field presence
+`remediate`, `destinations`, `platforms`) replace wholesale. Merge is decided on *field presence
 in the raw input*, so a field the import omitted is taken from defaults — Pydantic
 default values do not count as "present".
 """
@@ -26,6 +26,7 @@ class ResolvedImport:
     tags: TagSelection
     destinations: list[Destination] | None
     transform: list[TransformStep]
+    remediate: list[TransformStep]
     archive: Archive | None
     platforms: list[str] | None
     variants: list[Variant] | None
@@ -61,6 +62,9 @@ def resolve_imports(spec: Spec) -> list[ResolvedImport]:
         transform = (
             imp.transform if imp.transform is not None else ((d.transform if d else None) or [])
         )
+        remediate = (
+            imp.remediate if imp.remediate is not None else ((d.remediate if d else None) or [])
+        )
         archive: Archive | None
         if imp.archive is not None:
             archive = (
@@ -79,6 +83,7 @@ def resolve_imports(spec: Spec) -> list[ResolvedImport]:
                 tags=tags,
                 destinations=destinations,
                 transform=transform,
+                remediate=remediate,
                 archive=archive,
                 platforms=platforms,
                 variants=imp.variants,
