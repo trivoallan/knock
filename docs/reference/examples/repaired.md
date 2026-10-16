@@ -1,13 +1,8 @@
----
-title: "Repair rebuild"
-description: "Rebuild path that upgrades OS packages from the internal mirror, on an operator-chosen epoch."
-sidebar_position: 5
----
+# Repair rebuild
 
 The [hardened rebuild](hardened.md) with one more step: once `rewritePackageSources` has pointed the image at the internal mirror, `upgradePackages` upgrades every installed OS package (apt on Debian and Ubuntu, apk on Alpine). It is how a version flagged with a fixable CVE gets repaired without waiting for upstream to republish the tag.
 
-```yaml title="docs/examples/repaired/redis.yml" file=../../examples/repaired/redis.yml
-```
+[`docs/examples/repaired/redis.yml`](../../examples/repaired/redis.yml)
 
 Run it: `uv run knock reconcile docs/examples/repaired` — needs `buildctl` on `PATH`, a BuildKit daemon, and `KNOCK_TRANSFORM_PACKAGE_MIRRORS` set.
 
@@ -21,4 +16,4 @@ What to know before you use it:
 - **Only OS packages are repaired.** The application binary, statically linked helpers and bundled language modules are not touched: on `redis:7.2.0`, every fixable finding on Debian packages goes away, while those on the `redis` binary and on the Go modules of the bundled `gosu` remain. Only a newer upstream image removes them.
 - **knock does not judge the result.** By default the rebuilt image is pushed to the destination as any rebuild is. To have it judged first, hold it in a staging registry and place it with `knock promote` ([gate example](gate.md)). `apt-get upgrade` does not install new dependencies, so a fix that needs one stays unapplied and your scanner will still report it.
 
-Decision record: [ADR 0054 — `upgradePackages`, the repair step](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0054-upgrade-packages-step.md).
+Decision record: [ADR 0054 — `upgradePackages`, the repair step](../../architecture/decisions/0054-upgrade-packages-step.md).

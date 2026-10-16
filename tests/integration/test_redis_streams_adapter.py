@@ -1,6 +1,7 @@
 """Integration tests for RedisStreamsAdapter (QueuePort over Redis Streams).
 
-Uses a real Redis 8 instance (REDIS_TEST_ADDR=host:port or a local redis-server).
+Uses a real Redis instance (REDIS_TEST_ADDR=host:port or a local redis-server): 7.x in CI, from
+the runner's apt; also passes against Redis 8.
 All scenarios mirror the original test_scan_streams.py coverage plus new invariant
 and RESP3 shape assertions.
 """

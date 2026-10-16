@@ -1,8 +1,4 @@
----
-title: "Architecture at a glance"
-description: "The hexagon, the two placement paths, and why the stamp + SBOM is the product — a narrative overview of how knock is built."
-sidebar_position: 1
----
+# Architecture at a glance
 
 knock is the single front door for external images: it places them (copy or rebuild-and-harden), stamps portable provenance, and attaches a package-level SBOM. This page tells the story of how it's built; for the full rationale and the C4 model, see the deep-dive links at the foot.
 
@@ -92,7 +88,7 @@ spec:
           repository: redis
 ```
 
-For the full schema see the [MirrorPolicy reference](../reference/schemas/mirror-policy.md); for runnable examples, the [example policy catalog](/examples).
+For the full schema see the [MirrorPolicy reference](../reference/schemas/mirror-policy.md); for runnable examples, the [example policy catalog](../reference/examples/README.md).
 
 ```mermaid
 flowchart TD
@@ -118,7 +114,7 @@ third path: the repository is fetched at an immutable commit, the tree is packag
 byte-reproducible zip and placed as a stamped OCI artifact. It converges on the same `reconcile`
 run — one immutable `sha-<revision>` tag per placed revision plus a moving alias for the ref name —
 and it is how the `skill` artifact class is placed. See the
-[agent-skill example](/examples) and [ADR 0049](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0049-reconciling-git-sources.md).
+[agent-skill example](../examples/skills/README.md) and [ADR 0049](../architecture/decisions/0049-reconciling-git-sources.md).
 
 ## Why the label is the product
 
@@ -140,8 +136,8 @@ flowchart LR
 
 ## Go deeper
 
-- [Architecture & design](https://github.com/trivoallan/knock/blob/main/docs/architecture/design.md) — full rationale, design decisions, and trade-offs
-- [The full C4 model (Structurizr views)](https://github.com/trivoallan/knock/tree/main/docs/architecture) — System Landscape, Context, Container, Hexagon, Component, and Deployment views
-- [Decision records](https://github.com/trivoallan/knock/tree/main/docs/architecture/decisions) — ADRs linked to specs
+- [Architecture & design](../architecture/design.md) — full rationale, design decisions, and trade-offs
+- [The full C4 model (Structurizr views)](../architecture/) — System Landscape, Context, Container, Hexagon, Component, and Deployment views
+- [Decision records](../architecture/decisions/) — ADRs linked to specs
 
 For in-depth coverage of specific subsystems, see [transforms and signed attestations](attestations.md), [SBOM generation and attachment](sbom.md), and [deletion and retention policy](deletion-and-retention.md).

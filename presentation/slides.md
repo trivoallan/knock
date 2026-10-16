@@ -130,5 +130,5 @@ The stamp carries lineage + owners; the SBOM carries the package inventory. knoc
 ## Try it
 
 - `knock reconcile <policy>` — place + stamp + SBOM
-- Docs: https://trivoallan.github.io/knock/
+- Docs: https://github.com/trivoallan/knock/tree/main/docs
 - Architecture deep-dive: `docs/architecture/design.md`

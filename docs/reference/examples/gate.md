@@ -1,8 +1,4 @@
----
-title: "Gate between plan and apply"
-description: "Every import, update and rebuild goes through an external verdict before knock applies it."
-sidebar_position: 9
----
+# Gate between plan and apply
 
 knock places nothing an evaluator has not seen. `reconcile --plan-out` writes a
 [`ReconcilePlan`](../schemas/reconcile-plan.md): one entry per import, update or rebuild the run
@@ -14,11 +10,9 @@ Each entry also says whether applying it **builds** an image (`transformed: true
 resolves a transform onto it) or copies the source. An orchestrator reads it to know which
 operations a staging registry will hold; it is not part of what binds an approval.
 
-```yaml title="docs/examples/gate/redis.yml" file=../../examples/gate/redis.yml
-```
+[`docs/examples/gate/redis.yml`](../../examples/gate/redis.yml)
 
-```json title="docs/examples/gate/plan.json" file=../../examples/gate/plan.json
-```
+[`docs/examples/gate/plan.json`](../../examples/gate/plan.json)
 
 What `--apply-plan` guarantees:
 
@@ -28,7 +22,7 @@ What `--apply-plan` guarantees:
   keeps the old digest in service, and a floating alias never moves onto a refused import;
 - with `admit: true`, only approved placements are signed.
 
-See the [design](https://github.com/trivoallan/knock/blob/main/openspec/changes/archive/2026-09-19-gate-between-plan-and-apply/design.md).
+See the [design](../../../openspec/changes/archive/2026-09-19-gate-between-plan-and-apply/design.md).
 
 ## Judging what a rebuild produced
 
@@ -47,8 +41,7 @@ knock promote policies/ --staged staged.json
 `staging` is a name from `KNOCK_REGISTRIES`. The run writes a
 [`StagedRebuilds`](../schemas/staged-rebuilds.md) file: one entry per held image.
 
-```json title="docs/examples/gate/staged.json" file=../../examples/gate/staged.json
-```
+[`docs/examples/gate/staged.json`](../../examples/gate/staged.json)
 
 What the two commands guarantee:
 
@@ -68,4 +61,4 @@ What the two commands guarantee:
 **The staging registry must not be one consumers pull from.** knock refuses one that is also a
 destination of the policy, and cannot know more. A registry that lives for the run is the simplest
 form; it must hold every layer of the images rebuilt in one pass, base layers included. knock never
-deletes from it. See [ADR 0055](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0055-stage-and-promote-rebuilds.md).
+deletes from it. See [ADR 0055](../../architecture/decisions/0055-stage-and-promote-rebuilds.md).

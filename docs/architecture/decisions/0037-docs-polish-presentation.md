@@ -4,7 +4,8 @@ Date: 2026-06-18
 
 ## Status
 
-Accepted
+Accepted; **the published docs site is superseded by [ADR 0056](0056-adopt-the-common-ci-socle.md)**
+— the docs are read on GitHub; the architecture narrative and the deck stay.
 
 ## Context
 

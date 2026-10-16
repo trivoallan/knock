@@ -1,7 +1,3 @@
----
-sidebar_position: 5
----
-
 # CoverageReport (knock audit JSON output)
 
 - [1. Property `apiVersion`](#apiVersion)
@@ -63,7 +59,7 @@ fields are added; removing, renaming, retyping or changing the meaning of a fiel
 | + [counts](#counts )         | No      | object          | No         | In #/$defs/CoverageCounts | CoverageCounts    |
 | + [outcomes](#outcomes )     | No      | array           | No         | -                         | Outcomes          |
 
-## 1. Property `apiVersion` {#apiVersion}
+## <a name="apiVersion"></a>1. Property `apiVersion`
 
 **Title:** Apiversion
 
@@ -75,7 +71,7 @@ fields are added; removing, renaming, retyping or changing the meaning of a fiel
 
 Specific value: `"knock.io/v1alpha1"`
 
-## 2. Property `kind` {#kind}
+## <a name="kind"></a>2. Property `kind`
 
 **Title:** Kind
 
@@ -87,7 +83,7 @@ Specific value: `"knock.io/v1alpha1"`
 
 Specific value: `"CoverageReport"`
 
-## 3. Property `registries` {#registries}
+## <a name="registries"></a>3. Property `registries`
 
 **Title:** Registries
 
@@ -108,14 +104,14 @@ Specific value: `"CoverageReport"`
 | ------------------------------------- | ----------- |
 | [registries items](#registries_items) | -           |
 
-### 3.1. registries items {#registries_items}
+### <a name="registries_items"></a>3.1. registries items
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-## 4. Property `counts` {#counts}
+## <a name="counts"></a>4. Property `counts`
 
 **Title:** CoverageCounts
 
@@ -137,7 +133,7 @@ Specific value: `"CoverageReport"`
 | - [without_sbom](#counts_without_sbom ) | No      | integer | No         | -          | Without Sbom      |
 | - [errored](#counts_errored )           | No      | integer | No         | -          | Errored           |
 
-### 4.1. Property `scanned` {#counts_scanned}
+### <a name="counts_scanned"></a>4.1. Property `scanned`
 
 **Title:** Scanned
 
@@ -147,7 +143,7 @@ Specific value: `"CoverageReport"`
 | **Required** | No        |
 | **Default**  | `0`       |
 
-### 4.2. Property `covered` {#counts_covered}
+### <a name="counts_covered"></a>4.2. Property `covered`
 
 **Title:** Covered
 
@@ -157,7 +153,7 @@ Specific value: `"CoverageReport"`
 | **Required** | No        |
 | **Default**  | `0`       |
 
-### 4.3. Property `uncovered` {#counts_uncovered}
+### <a name="counts_uncovered"></a>4.3. Property `uncovered`
 
 **Title:** Uncovered
 
@@ -167,7 +163,7 @@ Specific value: `"CoverageReport"`
 | **Required** | No        |
 | **Default**  | `0`       |
 
-### 4.4. Property `signed` {#counts_signed}
+### <a name="counts_signed"></a>4.4. Property `signed`
 
 **Title:** Signed
 
@@ -177,7 +173,7 @@ Specific value: `"CoverageReport"`
 | **Required** | No        |
 | **Default**  | `0`       |
 
-### 4.5. Property `unsigned` {#counts_unsigned}
+### <a name="counts_unsigned"></a>4.5. Property `unsigned`
 
 **Title:** Unsigned
 
@@ -187,7 +183,7 @@ Specific value: `"CoverageReport"`
 | **Required** | No        |
 | **Default**  | `0`       |
 
-### 4.6. Property `with_sbom` {#counts_with_sbom}
+### <a name="counts_with_sbom"></a>4.6. Property `with_sbom`
 
 **Title:** With Sbom
 
@@ -197,7 +193,7 @@ Specific value: `"CoverageReport"`
 | **Required** | No        |
 | **Default**  | `0`       |
 
-### 4.7. Property `without_sbom` {#counts_without_sbom}
+### <a name="counts_without_sbom"></a>4.7. Property `without_sbom`
 
 **Title:** Without Sbom
 
@@ -207,7 +203,7 @@ Specific value: `"CoverageReport"`
 | **Required** | No        |
 | **Default**  | `0`       |
 
-### 4.8. Property `errored` {#counts_errored}
+### <a name="counts_errored"></a>4.8. Property `errored`
 
 **Title:** Errored
 
@@ -217,7 +213,7 @@ Specific value: `"CoverageReport"`
 | **Required** | No        |
 | **Default**  | `0`       |
 
-## 5. Property `outcomes` {#outcomes}
+## <a name="outcomes"></a>5. Property `outcomes`
 
 **Title:** Outcomes
 
@@ -238,7 +234,7 @@ Specific value: `"CoverageReport"`
 | ---------------------------------- | ----------- |
 | [CoverageOutcome](#outcomes_items) | -           |
 
-### 5.1. CoverageOutcome {#outcomes_items}
+### <a name="outcomes_items"></a>5.1. CoverageOutcome
 
 **Title:** CoverageOutcome
 
@@ -260,7 +256,7 @@ Specific value: `"CoverageReport"`
 | - [policy](#outcomes_items_policy )             | No      | Combination | No         | -          | Policy                                                      |
 | - [error](#outcomes_items_error )               | No      | Combination | No         | -          | Set when reading this image failed; the probes did not run. |
 
-#### 5.1.1. Property `image_ref` {#outcomes_items_image_ref}
+#### <a name="outcomes_items_image_ref"></a>5.1.1. Property `image_ref`
 
 **Title:** Image Ref
 
@@ -271,7 +267,7 @@ Specific value: `"CoverageReport"`
 
 **Description:** The image walked, as `<registry>/<repository>:<tag>`.
 
-#### 5.1.2. Property `digest` {#outcomes_items_digest}
+#### <a name="outcomes_items_digest"></a>5.1.2. Property `digest`
 
 **Title:** Digest
 
@@ -289,21 +285,21 @@ Specific value: `"CoverageReport"`
 | [item 0](#outcomes_items_digest_anyOf_i0) |
 | [item 1](#outcomes_items_digest_anyOf_i1) |
 
-##### 5.1.2.1. Property `item 0` {#outcomes_items_digest_anyOf_i0}
+##### <a name="outcomes_items_digest_anyOf_i0"></a>5.1.2.1. Property `item 0`
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-##### 5.1.2.2. Property `item 1` {#outcomes_items_digest_anyOf_i1}
+##### <a name="outcomes_items_digest_anyOf_i1"></a>5.1.2.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### 5.1.3. Property `covered` {#outcomes_items_covered}
+#### <a name="outcomes_items_covered"></a>5.1.3. Property `covered`
 
 **Title:** Covered
 
@@ -315,7 +311,7 @@ Specific value: `"CoverageReport"`
 
 **Description:** The image carries knock's provenance stamp.
 
-#### 5.1.4. Property `signed` {#outcomes_items_signed}
+#### <a name="outcomes_items_signed"></a>5.1.4. Property `signed`
 
 **Title:** Signed
 
@@ -333,21 +329,21 @@ Specific value: `"CoverageReport"`
 | [item 0](#outcomes_items_signed_anyOf_i0) |
 | [item 1](#outcomes_items_signed_anyOf_i1) |
 
-##### 5.1.4.1. Property `item 0` {#outcomes_items_signed_anyOf_i0}
+##### <a name="outcomes_items_signed_anyOf_i0"></a>5.1.4.1. Property `item 0`
 
 |              |           |
 | ------------ | --------- |
 | **Type**     | `boolean` |
 | **Required** | No        |
 
-##### 5.1.4.2. Property `item 1` {#outcomes_items_signed_anyOf_i1}
+##### <a name="outcomes_items_signed_anyOf_i1"></a>5.1.4.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### 5.1.5. Property `sbom` {#outcomes_items_sbom}
+#### <a name="outcomes_items_sbom"></a>5.1.5. Property `sbom`
 
 **Title:** Sbom
 
@@ -365,21 +361,21 @@ Specific value: `"CoverageReport"`
 | [item 0](#outcomes_items_sbom_anyOf_i0) |
 | [item 1](#outcomes_items_sbom_anyOf_i1) |
 
-##### 5.1.5.1. Property `item 0` {#outcomes_items_sbom_anyOf_i0}
+##### <a name="outcomes_items_sbom_anyOf_i0"></a>5.1.5.1. Property `item 0`
 
 |              |           |
 | ------------ | --------- |
 | **Type**     | `boolean` |
 | **Required** | No        |
 
-##### 5.1.5.2. Property `item 1` {#outcomes_items_sbom_anyOf_i1}
+##### <a name="outcomes_items_sbom_anyOf_i1"></a>5.1.5.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### 5.1.6. Property `sbom_formats` {#outcomes_items_sbom_formats}
+#### <a name="outcomes_items_sbom_formats"></a>5.1.6. Property `sbom_formats`
 
 **Title:** Sbom Formats
 
@@ -397,7 +393,7 @@ Specific value: `"CoverageReport"`
 | [item 0](#outcomes_items_sbom_formats_anyOf_i0) |
 | [item 1](#outcomes_items_sbom_formats_anyOf_i1) |
 
-##### 5.1.6.1. Property `item 0` {#outcomes_items_sbom_formats_anyOf_i0}
+##### <a name="outcomes_items_sbom_formats_anyOf_i0"></a>5.1.6.1. Property `item 0`
 
 |              |                   |
 | ------------ | ----------------- |
@@ -416,21 +412,21 @@ Specific value: `"CoverageReport"`
 | ----------------------------------------------------------- | ----------- |
 | [item 0 items](#outcomes_items_sbom_formats_anyOf_i0_items) | -           |
 
-###### 5.1.6.1.1. item 0 items {#outcomes_items_sbom_formats_anyOf_i0_items}
+###### <a name="outcomes_items_sbom_formats_anyOf_i0_items"></a>5.1.6.1.1. item 0 items
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-##### 5.1.6.2. Property `item 1` {#outcomes_items_sbom_formats_anyOf_i1}
+##### <a name="outcomes_items_sbom_formats_anyOf_i1"></a>5.1.6.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### 5.1.7. Property `policy` {#outcomes_items_policy}
+#### <a name="outcomes_items_policy"></a>5.1.7. Property `policy`
 
 **Title:** Policy
 
@@ -448,21 +444,21 @@ Specific value: `"CoverageReport"`
 | [item 0](#outcomes_items_policy_anyOf_i0) |
 | [item 1](#outcomes_items_policy_anyOf_i1) |
 
-##### 5.1.7.1. Property `item 0` {#outcomes_items_policy_anyOf_i0}
+##### <a name="outcomes_items_policy_anyOf_i0"></a>5.1.7.1. Property `item 0`
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-##### 5.1.7.2. Property `item 1` {#outcomes_items_policy_anyOf_i1}
+##### <a name="outcomes_items_policy_anyOf_i1"></a>5.1.7.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |
 | **Type**     | `null` |
 | **Required** | No     |
 
-#### 5.1.8. Property `error` {#outcomes_items_error}
+#### <a name="outcomes_items_error"></a>5.1.8. Property `error`
 
 |                           |                  |
 | ------------------------- | ---------------- |
@@ -478,7 +474,7 @@ Specific value: `"CoverageReport"`
 | [ErrorInfo](#outcomes_items_error_anyOf_i0) |
 | [item 1](#outcomes_items_error_anyOf_i1)    |
 
-##### 5.1.8.1. Property `ErrorInfo` {#outcomes_items_error_anyOf_i0}
+##### <a name="outcomes_items_error_anyOf_i0"></a>5.1.8.1. Property `ErrorInfo`
 
 **Title:** ErrorInfo
 
@@ -495,7 +491,7 @@ Specific value: `"CoverageReport"`
 | + [message](#outcomes_items_error_anyOf_i0_message )     | No      | string  | No         | -          | Message           |
 | + [exit_code](#outcomes_items_error_anyOf_i0_exit_code ) | No      | integer | No         | -          | Exit Code         |
 
-###### 5.1.8.1.1. Property `type` {#outcomes_items_error_anyOf_i0_type}
+###### <a name="outcomes_items_error_anyOf_i0_type"></a>5.1.8.1.1. Property `type`
 
 **Title:** Type
 
@@ -504,7 +500,7 @@ Specific value: `"CoverageReport"`
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-###### 5.1.8.1.2. Property `message` {#outcomes_items_error_anyOf_i0_message}
+###### <a name="outcomes_items_error_anyOf_i0_message"></a>5.1.8.1.2. Property `message`
 
 **Title:** Message
 
@@ -513,7 +509,7 @@ Specific value: `"CoverageReport"`
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-###### 5.1.8.1.3. Property `exit_code` {#outcomes_items_error_anyOf_i0_exit_code}
+###### <a name="outcomes_items_error_anyOf_i0_exit_code"></a>5.1.8.1.3. Property `exit_code`
 
 **Title:** Exit Code
 
@@ -522,7 +518,7 @@ Specific value: `"CoverageReport"`
 | **Type**     | `integer` |
 | **Required** | Yes       |
 
-##### 5.1.8.2. Property `item 1` {#outcomes_items_error_anyOf_i1}
+##### <a name="outcomes_items_error_anyOf_i1"></a>5.1.8.2. Property `item 1`
 
 |              |        |
 | ------------ | ------ |

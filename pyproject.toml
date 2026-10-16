@@ -53,7 +53,10 @@ target-version = "py313"
 # to a 100-column rule degrades the document to satisfy a tool that was never meant
 # to judge it. Python files are unaffected; this only stops the formatter reaching
 # into prose.
-extend-exclude = ["ci", "*.md"]
+#
+# `.github`: the CI socle's Python (`pip-audit-gate.py`) is copied byte-identical from regis,
+# which lints it under its own rules; socle-drift fails if knock reformats it.
+extend-exclude = ["ci", "*.md", ".github"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "RUF"]
@@ -83,13 +86,12 @@ disallow_untyped_calls = false  # plus laxiste sur les couches I/O
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers --cov --cov-report=term-missing --cov-fail-under=90"
 
 [tool.coverage.run]
-branch = true
 source = ["knock"]
+branch = true
 omit = ["knock/cli/_di.py"]
 
 [tool.coverage.report]
-fail_under = 80
 show_missing = true

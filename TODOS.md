@@ -20,7 +20,7 @@
 
 **Why:** The repair has an example policy and unit tests, and one manual end-to-end run recorded in the change. A demo act replays it on every validation of the demo.
 
-**Context:** Deferred until an image is chosen. The manual run (see `openspec/changes/upgrade-packages-step/tasks.md`, task 6.1) is the seed and shows what to avoid: `redis:7.2.0` keeps fixable findings on its own binary and on bundled Go modules, which the step cannot touch, so it makes a confusing demo; `alpine:3.18.0` and `ubuntu:jammy-20230308` go fully clean on fixable findings. An image on an end-of-life base fails the upgrade. Existing workflow: `.github/workflows/demo-mongobleed.yml` (`workflow_dispatch` only).
+**Context:** Deferred until an image is chosen. The manual run (see `openspec/changes/upgrade-packages-step/tasks.md`, task 6.1) is the seed and shows what to avoid: `redis:7.2.0` keeps fixable findings on its own binary and on bundled Go modules, which the step cannot touch, so it makes a confusing demo; `alpine:3.18.0` and `ubuntu:jammy-20230308` go fully clean on fixable findings. An image on an end-of-life base fails the upgrade. Existing workflow: `.github/workflows/extra-demo-mongobleed.yml` (`workflow_dispatch` only).
 
 **Effort:** M
 **Priority:** P3

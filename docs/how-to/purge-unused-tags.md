@@ -1,11 +1,7 @@
----
-title: "Purge unused tags"
-description: "The reference reaper: how marked tags get usage-gated and hard-deleted with knock purge, and how to wire your own usage oracle."
-sidebar_position: 7
----
+# Purge unused tags
 
 `knock purge` is the shipped reference implementation of the reaper role introduced by
-[delegated tag deletion (ADR 0012)](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0012-delegated-tag-deletion.md).
+[delegated tag deletion (ADR 0012)](../architecture/decisions/0012-delegated-tag-deletion.md).
 It is isolated behind its own `UsageOraclePort` and is fully replaceable — if you already
 have a reaper, `deletionMode: mark` still works; just don't run `knock purge`.
 
@@ -56,7 +52,7 @@ at all, purge refuses to start — exit 3 — rather than run blind.)
 Set `KNOCK_USAGE_ORACLE_CMD` to any executable that speaks the contract: reads a JSON object
 from stdin (`{"digest","image_ref","identity","since"}`) and writes
 `{"last_seen": "<ISO timestamp or null>"}` to stdout. The reference implementation for Datadog
-is at [`oracles/datadog.sh`](https://github.com/trivoallan/knock/blob/main/docs/examples/oracles/datadog.sh) — adapt the Datadog API call to your
+is at [`oracles/datadog.sh`](../examples/oracles/datadog.sh) — adapt the Datadog API call to your
 setup (endpoint, metric/log query, environment tag).
 
 ## Required config

@@ -1,7 +1,3 @@
----
-sidebar_position: 2
----
-
 # Scan attestation predicate (/scan/v1)
 
 - [1. Property `scanner`](#scanner)
@@ -33,7 +29,7 @@ sidebar_position: 2
 | + [attested_at](#attested_at )     | No      | string | No         | -                  | Attested At       |
 | + [builder_id](#builder_id )       | No      | string | No         | -                  | Builder Id        |
 
-## 1. Property `scanner` {#scanner}
+## <a name="scanner"></a>1. Property `scanner`
 
 **Title:** Scanner
 
@@ -51,7 +47,7 @@ sidebar_position: 2
 | + [name](#scanner_name )       | No      | string | No         | -          | Name              |
 | + [version](#scanner_version ) | No      | string | No         | -          | Version           |
 
-### 1.1. Property `name` {#scanner_name}
+### <a name="scanner_name"></a>1.1. Property `name`
 
 **Title:** Name
 
@@ -60,7 +56,7 @@ sidebar_position: 2
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-### 1.2. Property `version` {#scanner_version}
+### <a name="scanner_version"></a>1.2. Property `version`
 
 **Title:** Version
 
@@ -69,7 +65,7 @@ sidebar_position: 2
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-## 2. Property `format` {#format}
+## <a name="format"></a>2. Property `format`
 
 **Title:** Format
 
@@ -78,7 +74,7 @@ sidebar_position: 2
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-## 3. Property `summary` {#summary}
+## <a name="summary"></a>3. Property `summary`
 
 **Title:** Summary
 
@@ -92,14 +88,14 @@ sidebar_position: 2
 | ------------------------------------ | ------- | ------ | ---------- | ---------- | ----------------- |
 | - [](#summary_additionalProperties ) | No      | string | No         | -          | -                 |
 
-### 3.1. Property `additionalProperties` {#summary_additionalProperties}
+### <a name="summary_additionalProperties"></a>3.1. Property `additionalProperties`
 
 |              |          |
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
 
-## 4. Property `report_digest` {#report_digest}
+## <a name="report_digest"></a>4. Property `report_digest`
 
 **Title:** Report Digest
 
@@ -108,7 +104,7 @@ sidebar_position: 2
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-## 5. Property `attested_at` {#attested_at}
+## <a name="attested_at"></a>5. Property `attested_at`
 
 **Title:** Attested At
 
@@ -119,7 +115,7 @@ sidebar_position: 2
 
 **Description:** ISO-8601 timestamp of when knock attached and signed this scan. The freshness clock: an admission controller enforces a max-age policy against it (admit only if now - attested_at <= max-age). This signed field is the only trustworthy freshness source — not the unsigned scan-timestamp annotation (the KNOCK_LABEL_PREFIX-prefixed key, e.g. io.knock.scan.timestamp), which exists only for gc.
 
-## 6. Property `builder_id` {#builder_id}
+## <a name="builder_id"></a>6. Property `builder_id`
 
 **Title:** Builder Id
 

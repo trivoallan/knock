@@ -1,8 +1,4 @@
----
-title: "Rebuild & harden an image"
-description: "Place an image through the rebuild path: inject internal CA certs, rewrite package sources to an internal mirror, stamp the result, and optionally sign it."
-sidebar_position: 1
----
+# Rebuild & harden an image
 
 A policy with **no** `transform` is copied byte-for-byte and stamped (see
 [Getting started](../tutorials/getting-started.md)). Add a `transform` and knock switches to the
@@ -50,9 +46,8 @@ knock reconcile docs/examples/hardened
 #   base.digest=sha256:src…  transform=injectCA,rewritePackageSources
 ```
 
-:::note
-`buildctl` must be on `PATH` (the runtime image bundles it). Without a `transform`, this same command would copy instead of rebuild.
-:::
+> [!NOTE]
+> `buildctl` must be on `PATH` (the runtime image bundles it). Without a `transform`, this same command would copy instead of rebuild.
 
 ## 4. Inspect the stamp
 
@@ -80,9 +75,8 @@ knock reconcile docs/examples/attested
 #   signed: https://slsa.dev/provenance/v1 (buildkit) → sha256:att…
 ```
 
-:::note
-`cosign` must be on `PATH`. Off by default: with no `KNOCK_ATTEST_SIGNER`, the rebuild is stamped but unsigned.
-:::
+> [!NOTE]
+> `cosign` must be on `PATH`. Off by default: with no `KNOCK_ATTEST_SIGNER`, the rebuild is stamped but unsigned.
 
 To verify the result and the attached SBOM, see
 [Inspect an image's SBOM](inspect-sbom.md). For every signer knob, see the

@@ -1,0 +1,55 @@
+name: extra-manifests
+
+# knock-only (not part of the CI socle): renders the reference deployment manifests so a broken
+# kustomization or ArgoCD Application fails the PR. Kept out of the socle's ci.yml, which only
+# calls the shared make targets.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: extra-manifests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  manifests:
+    name: manifests (kustomize render + dry-run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install tools (envsubst + PyYAML)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gettext-base python3-yaml
+
+      - name: Render the ArgoCD kustomize sources
+        run: |
+          set -euo pipefail
+          for src in knock buildkitd registry; do
+            echo "== rendering deploy/argocd/sources/$src =="
+            kubectl kustomize --load-restrictor LoadRestrictionsNone "deploy/argocd/sources/$src" >/dev/null
+          done
+
+      - name: Validate the ArgoCD Application manifests (parse + pinned Helm revision)
+        run: |
+          set -euo pipefail
+          # Helm-source children (eso/openbao) are rendered in-cluster by ArgoCD, not by
+          # kustomize — here we only check the Application manifests parse and carry a
+          # pinned chart targetRevision.
+          for f in deploy/argocd/apps/*.yaml; do
+            echo "== $f =="
+            python3 -c "import yaml; d=yaml.safe_load(open('$f')); assert d['kind']=='Application', '$f not an Application'; s=d['spec']['source']; assert 'chart' not in s or s.get('targetRevision'), '$f Helm chart missing targetRevision'"
+          done
+
+      - name: Verify root.yaml renders
+        run: |
+          set -euo pipefail
+          ARGOCD_REPO_URL=https://github.com/trivoallan/knock ARGOCD_REPO_REF=main \
+            envsubst < deploy/argocd/root.yaml \
+            | python3 -c "import yaml,sys; d=yaml.safe_load(sys.stdin); assert d['spec']['source']['path']=='deploy/argocd/apps', d['spec']['source']['path']"

@@ -1,8 +1,4 @@
----
-title: "Run the reference deployment"
-description: "Run knock as a Kubernetes CronJob — the kind demo and the production blueprint: git-synced policies, rootless buildkitd, a blast-radius consumer, and optional KEDA autoscaling."
-sidebar_position: 10
----
+# Run the reference deployment
 
 The blessed way to run knock: a Kubernetes **CronJob** that `knock reconcile`s a
 git-sync'd policy repo. There are **two** entry points, and they share the same `deploy/base`:
@@ -17,8 +13,8 @@ If your team already runs a skopeo → Harbor intake and wants to drop knock in 
 
 The Argo reference reads its children **from git**, so it reflects what is *pushed*; `make local`
 is what you reach for to iterate on a local branch. Design rationale:
-[the spec](https://github.com/trivoallan/knock/blob/main/docs/superpowers/specs/2026-06-11-reference-deployment-design.md) and the C4
-[Deployment view](https://github.com/trivoallan/knock/blob/main/docs/architecture/workspace.dsl).
+[the spec](../superpowers/specs/2026-06-11-reference-deployment-design.md) and the C4
+[Deployment view](../architecture/workspace.dsl).
 
 Rendered, the reference stack `make demo` brings up on kind (the production blueprint, minus the optional add-ons) looks like this:
 
@@ -132,9 +128,10 @@ by `base.digest` and by `owners`, and to flag any artifact carrying no stamp as 
 **coverage gap** (run `make blast-radius` *before* the first reconcile to see the gap, then again
 after to see it close — coverage gates the value).
 
-:::note Branch ceiling
-ArgoCD reads the child Applications **from git**, so the demo reflects what is *pushed*, not local edits. To demo your branch, push it to your fork and run `ARGOCD_REPO_URL=https://github.com/you/knock ARGOCD_REPO_REF=your-branch make demo`. To iterate on **uncommitted** changes, use `make local` instead.
-:::
+> [!NOTE]
+> **Branch ceiling**
+>
+> ArgoCD reads the child Applications **from git**, so the demo reflects what is *pushed*, not local edits. To demo your branch, push it to your fork and run `ARGOCD_REPO_URL=https://github.com/you/knock ARGOCD_REPO_REF=your-branch make demo`. To iterate on **uncommitted** changes, use `make local` instead.
 
 ## The inner-loop escape hatch — `make local` (`kubectl apply -k`)
 
@@ -149,9 +146,8 @@ demand. It uses **no operators** (no ESO, no OpenBao) and renders your **local, 
 manifests, so it is the fast path for iterating on a branch. It reconciles the same reference
 policy (copy + rebuild) as `make demo`.
 
-:::note
-`make local` renders with `kubectl kustomize --load-restrictor LoadRestrictionsNone` (then `apply -f -`) because the blast-radius `configMapGenerator` references the canonical `scripts/blast-radius.sh`, kept outside `deploy/` so it is also runnable standalone against the examples. `kubectl apply -k` cannot pass the flag, so render-then-apply.
-:::
+> [!NOTE]
+> `make local` renders with `kubectl kustomize --load-restrictor LoadRestrictionsNone` (then `apply -f -`) because the blast-radius `configMapGenerator` references the canonical `scripts/blast-radius.sh`, kept outside `deploy/` so it is also runnable standalone against the examples. `kubectl apply -k` cannot pass the flag, so render-then-apply.
 
 ## Adopting it in real prod
 
@@ -187,7 +183,7 @@ policy (copy + rebuild) as `make demo`.
 
 The operator set above is the **thesis minimum** (ESO + OpenBao + buildkitd). Autoscaling
 `buildkitd` under build load is an **opt-in add-on**, off the default path: layer in the
-[`keda-buildkitd`](https://github.com/trivoallan/knock/tree/main/deploy/components/keda-buildkitd) component (KEDA + a Prometheus
+[`keda-buildkitd`](../../deploy/components/keda-buildkitd/) component (KEDA + a Prometheus
 `ServiceMonitor`). See [buildkitd autoscaling](#buildkitd-autoscaling-optional) below for the
 prerequisites and tunables.
 
@@ -207,11 +203,11 @@ every policy in one pod, exactly as before.
 
 ## buildkitd autoscaling (optional)
 
-The [`keda-buildkitd`](https://github.com/trivoallan/knock/tree/main/deploy/components/keda-buildkitd) component autoscales `buildkitd` from a
+The [`keda-buildkitd`](../../deploy/components/keda-buildkitd/) component autoscales `buildkitd` from a
 **warm floor of 1** to `K` replicas under build load. It is an **opt-in add-on** — layer it into a
 deployment (it is **not** on the default path of either `make demo` or `make local`). Design:
-[ADR 0016](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0016-buildkitd-autoscaling.md) /
-[the autoscaling spec](https://github.com/trivoallan/knock/blob/main/docs/superpowers/specs/2026-06-12-buildkitd-autoscaling-design.md).
+[ADR 0016](../architecture/decisions/0016-buildkitd-autoscaling.md) /
+[the autoscaling spec](../superpowers/specs/2026-06-12-buildkitd-autoscaling-design.md).
 
 **Cluster prerequisites** (documented, not installed by knock — same posture as the External Secrets
 Operator):
@@ -228,7 +224,7 @@ rebuild burst many builds complete → the rate rises → KEDA scales `1→K`; b
 the floor. **No scale-to-zero** (keeps the build cache warm; the Service always has an endpoint, so
 knock's no-retry first connection always lands).
 
-**Tunables** (in [`scaledobject.yaml`](https://github.com/trivoallan/knock/blob/main/deploy/components/keda-buildkitd/scaledobject.yaml)):
+**Tunables** (in [`scaledobject.yaml`](../../deploy/components/keda-buildkitd/scaledobject.yaml)):
 `maxReplicaCount` (`K`, the ceiling), `threshold` (target Solves/sec per replica), and
 `serverAddress` (your Prometheus). Without the component, `buildkitd` stays at a single replica
 (today's behaviour).
@@ -238,15 +234,16 @@ knock's no-retry first connection always lands).
 > registers on completion; autoscaling targets the multi-build bursts, with the warm floor covering the
 > lone-build case.
 
-:::warning Security
-More replicas widen the `buildkitd` surface — see the mTLS note below.
-:::
+> [!WARNING]
+> **Security**
+>
+> More replicas widen the `buildkitd` surface — see the mTLS note below.
 
 ## Security posture (read before prod)
 
 - **buildkitd is rootless** (no privileged container) but needs *unconfined*
   seccomp/AppArmor — that is the rootless trade-off, not a shortcut. Its TCP endpoint is
-  **unauthenticated**: the bundled [`NetworkPolicy`](https://github.com/trivoallan/knock/blob/main/deploy/components/buildkitd/networkpolicy.yaml)
+  **unauthenticated**: the bundled [`NetworkPolicy`](../../deploy/components/buildkitd/networkpolicy.yaml)
   restricts it to the knock pod, but for anything beyond a single-node demo add **mTLS**
   (buildkitd client certs) on top.
 - **knock needs no Kubernetes API access** — its ServiceAccount has token automounting

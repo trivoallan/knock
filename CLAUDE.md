@@ -24,27 +24,31 @@ Everything runs through `uv` (the project manager — non-negotiable, no pip/poe
 
 ```bash
 uv sync                          # install deps into .venv (do NOT rm -rf .venv; recreate via uv sync if needed)
-uv run pytest                    # full suite
-uv run pytest tests/unit/domain/test_selection.py::test_exclude_regex_drops_matches -v   # single test
-uv run pytest tests/integration -v                                                       # integration only
-uv run ruff check .              # lint
-uv run ruff format .             # format (use --check in CI)
-uv run mypy knock                # strict type check
-docker build -t knock:dev .      # runtime image (bundles regctl, buildctl, cosign, syft and git; ~5 min)
+make lint                        # ruff check + format --check, mypy strict, docs/reference up to date
+make test                        # full suite with branch coverage (fails under 90 %)
+make security                    # pip-audit on the runtime deps, blocking from HIGH
+make image                       # build the runtime image (knock:ci) and smoke-test it; ~5 min
 make reference                   # regenerate docs/reference/ (policy + config + CLI) from the schemas and Typer app
+uv run pytest tests/unit/domain/test_selection.py::test_exclude_regex_drops_matches -v --no-cov   # single test
+uv run pytest tests/integration -v --no-cov                                                       # integration only
+uv run ruff format .             # format
 ```
+
+CI's build steps only call these `make` targets (`make ci-tools` first, which installs
+`redis-server` for the scan-pipeline integration tests; locally they spawn `redis-server` from
+`PATH`, use `REDIS_TEST_ADDR=host:port`, or skip). `make kind-image` builds `knock:dev` and loads it
+into the kind demo cluster. Documentation is plain Markdown in `docs/` (entry point
+`docs/README.md`), read on GitHub — there is no docs site.
 
 `docs/reference/` (the `MirrorPolicy` + `KNOCK_*` reference) is **generated** from the Pydantic
-models via `json-schema-for-humans` (the `docs` dep group) and committed; CI fails on drift, so
-after any model change touching user-facing fields, run `make reference` and commit. Field prose
-lives as `Field(description=...)` on the models — the single source of truth for schema *and* docs.
+models via `json-schema-for-humans` (the `docs` dep group) and committed; `make lint` fails on
+drift, so after any model change touching user-facing fields, run `make reference` and commit.
+Field prose lives as `Field(description=...)` on the models — the single source of truth for
+schema *and* docs. The hand-written `README.md` index pages under `docs/reference/` are not
+generated.
 
-Coverage gates (enforced in CI, must stay green): **≥ 80 % global, ≥ 90 % on `knock.domain`**.
-
-```bash
-uv run pytest --cov=knock --cov-report=term-missing --cov-fail-under=80
-uv run pytest tests/unit/domain --cov=knock.domain --cov-fail-under=90
-```
+Coverage gate (enforced in CI by `make test`, must stay green): **≥ 90 % global branch coverage**
+(`--cov-fail-under=90` in `[tool.pytest.ini_options]`). `--no-cov` disables it for a fast loop.
 
 ## Architecture — hexagonal, and the rules are load-bearing
 
@@ -81,10 +85,11 @@ When adding a new external dependency, the pattern is always: **port (Protocol +
 
 **Examples stay in sync with specs.** When a spec designs or changes a user-facing feature, update `docs/examples/` **in the same change** — add or revise an example (a `MirrorPolicy` + the README walkthrough) demonstrating it. If the feature isn't implemented yet, add the example marked as such: it documents the design now and becomes runnable when the feature lands. Examples must never drift from the specs.
 
-**Docs sidebar order.** Within each Diátaxis section the pages are ordered by reading
-principle — foundational / most-common first (e.g. Explanation leads with the architecture
-overview; How-to leads with the core rebuild task) — via per-page `sidebar_position`. When
-inserting a page, renumber the section to keep that order rather than appending at the end.
+**Docs index order.** Each Diátaxis section of `docs/` has a `README.md` that lists its pages
+by reading principle — foundational / most-common first (e.g. Explanation leads with the
+architecture overview). When adding a page, add it to its section's `README.md` at the right
+place rather than appending at the end. Pages are plain GitHub Markdown: no front matter, an
+`# H1` title, GitHub alerts (`> [!NOTE]`) instead of admonitions, relative `.md` links.
 
 **Architecture philosophy.**
 - Prefer declarative specs over imperative code paths — the product policy is the Pydantic `MirrorPolicy` schema; extend that schema before adding ad-hoc Python branching.
@@ -99,6 +104,21 @@ inserting a page, renumber the section to keep that order rather than appending 
 - **Conventional Commits**, and **scopes are mandatory**. Scope is the layer or area touched: `domain`, `ports`, `adapters`, `cli`, `config`, `errors`, `image` (Dockerfile), `ci`, `deps`, `docs`, `tests`. Example: `feat(adapters): RegctlAdapter copy with provenance annotations`.
 - Favor the functional aspect in the subject; technical detail goes in the body.
 - End commit messages with the trailer `Co-Authored-By: Claude <noreply@anthropic.com>`.
+
+## CI/CD
+
+GitHub Actions with the CI socle shared by `regis`, `knock` and `uske` (`ci`, `pr-title`,
+`release`, `renovate`, `settings`, `socle-drift`), copied byte-identical from `regis` and checked
+weekly by `socle-drift`; what is knock-specific lives in the `Makefile`, in `.github/settings.json`
+(`description`, `topics`) and in `.github/images.json`, and knock-only workflows are named
+`extra-*.yml` (`extra-demo-mongobleed.yml`, `extra-manifests.yml`). The required checks are
+`lint`, `test`, `security`, `image` and `pr-title` (the PR title is a Conventional Commit).
+[Release Please](https://github.com/googleapis/release-please) cuts releases; `release.yml`
+publishes the signed multi-arch image to GHCR (`main` on every push to `main`, `X.Y.Z` / `X.Y` /
+`latest` on a release). Repository settings are versioned in `.github/settings.json` and applied by
+`.github/apply-settings.sh` (`make settings`). Renovate is self-hosted (`renovate.yml`, config in
+`.github/renovate.json5`). Workflows that write use the `oci-ci-ttc` GitHub App
+(`CI_APP_CLIENT_ID`, `CI_APP_PRIVATE_KEY`). ADR 0056 records the move.
 
 ## Gotchas
 

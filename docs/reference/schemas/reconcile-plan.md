@@ -1,7 +1,3 @@
----
-sidebar_position: 3
----
-
 # ReconcilePlan (the gate's plan file)
 
 - [1. Property `apiVersion`](#apiVersion)
@@ -31,7 +27,7 @@ sidebar_position: 3
 | - [kind](#kind )             | No      | const | No         | -          | Kind              |
 | - [operations](#operations ) | No      | array | No         | -          | Operations        |
 
-## 1. Property `apiVersion` {#apiVersion}
+## <a name="apiVersion"></a>1. Property `apiVersion`
 
 **Title:** Apiversion
 
@@ -43,7 +39,7 @@ sidebar_position: 3
 
 Specific value: `"knock.io/v1alpha1"`
 
-## 2. Property `kind` {#kind}
+## <a name="kind"></a>2. Property `kind`
 
 **Title:** Kind
 
@@ -55,7 +51,7 @@ Specific value: `"knock.io/v1alpha1"`
 
 Specific value: `"ReconcilePlan"`
 
-## 3. Property `operations` {#operations}
+## <a name="operations"></a>3. Property `operations`
 
 **Title:** Operations
 
@@ -76,7 +72,7 @@ Specific value: `"ReconcilePlan"`
 | ------------------------------------- | ----------- |
 | [PlannedOperation](#operations_items) | -           |
 
-### 3.1. PlannedOperation {#operations_items}
+### <a name="operations_items"></a>3.1. PlannedOperation
 
 **Title:** PlannedOperation
 
@@ -98,7 +94,7 @@ Specific value: `"ReconcilePlan"`
 | + [sourceDigest](#operations_items_sourceDigest ) | No      | string           | No         | -          | Sourcedigest      |
 | - [transformed](#operations_items_transformed )   | No      | boolean          | No         | -          | Transformed       |
 
-#### 3.1.1. Property `policy` {#operations_items_policy}
+#### <a name="operations_items_policy"></a>3.1.1. Property `policy`
 
 **Title:** Policy
 
@@ -107,7 +103,7 @@ Specific value: `"ReconcilePlan"`
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.2. Property `kind` {#operations_items_kind}
+#### <a name="operations_items_kind"></a>3.1.2. Property `kind`
 
 **Title:** Kind
 
@@ -121,7 +117,7 @@ Must be one of:
 * "update"
 * "rebuild"
 
-#### 3.1.3. Property `destination` {#operations_items_destination}
+#### <a name="operations_items_destination"></a>3.1.3. Property `destination`
 
 **Title:** Destination
 
@@ -130,7 +126,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.4. Property `tag` {#operations_items_tag}
+#### <a name="operations_items_tag"></a>3.1.4. Property `tag`
 
 **Title:** Tag
 
@@ -139,7 +135,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.5. Property `source` {#operations_items_source}
+#### <a name="operations_items_source"></a>3.1.5. Property `source`
 
 **Title:** Source
 
@@ -148,7 +144,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.6. Property `sourceTag` {#operations_items_sourceTag}
+#### <a name="operations_items_sourceTag"></a>3.1.6. Property `sourceTag`
 
 **Title:** Sourcetag
 
@@ -157,7 +153,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.7. Property `sourceDigest` {#operations_items_sourceDigest}
+#### <a name="operations_items_sourceDigest"></a>3.1.7. Property `sourceDigest`
 
 **Title:** Sourcedigest
 
@@ -166,7 +162,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.8. Property `transformed` {#operations_items_transformed}
+#### <a name="operations_items_transformed"></a>3.1.8. Property `transformed`
 
 **Title:** Transformed
 

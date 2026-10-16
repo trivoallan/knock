@@ -1,8 +1,4 @@
----
-title: "Features at a glance"
-description: "What knock does, organised by the product loop: place, stamp, inventory, sign, enforce, and reclaim — with links to the how-to and reference pages for each."
-sidebar_position: 2
----
+# Features at a glance
 
 knock is the single front door for external container images: every image that enters the
 organisation passes through it, comes out **placed**, **stamped**, and carrying a
@@ -152,6 +148,6 @@ knock is configured two ways, both declarative and both schema-backed:
 ## Where to go next
 
 - [Getting started](../tutorials/getting-started.md) — install and run the loop end to end.
-- [How-to guides](/how-to) — task-focused walkthroughs for each feature above.
-- [Reference](/reference) — the generated policy schema, `KNOCK_*` config, CLI, and glossary.
+- [How-to guides](../how-to/README.md) — task-focused walkthroughs for each feature above.
+- [Reference](../reference/README.md) — the generated policy schema, `KNOCK_*` config, CLI, and glossary.
 - [Architecture at a glance](architecture.md) — how the features are assembled behind the hexagon.

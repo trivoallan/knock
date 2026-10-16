@@ -1,148 +1,92 @@
-name: CI
+# Fichier du socle : identique dans regis, knock et uske. Ce qui est propre au dépôt est dans le Makefile.
+name: ci
 
 on:
-  push:
-    branches:
-      - main
-      - master
   pull_request:
-    branches:
-      - main
-      - master
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
+env:
+  UV_LOCKED: "1" # uv run échoue si uv.lock ne correspond plus à pyproject.toml
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
-    name: lint (ruff + mypy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: no nanopm data tracked (it lives in the private oci-pm repo)
-        run: "! git ls-files .nanopm CONTEXT.md | grep ."
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
-          version: "0.12.x"
-          enable-cache: true
-
-      - name: Set up Python
-        run: uv python install 3.13
-
-      - name: Sync dependencies
-        run: uv sync --frozen
-
-      - name: ruff check
-        run: uv run ruff check .
-
-      - name: ruff format check
-        run: uv run ruff format --check .
-
-      - name: mypy strict
-        run: uv run mypy knock
-
-      - name: reference docs in sync (regenerate, fail on drift)
+          persist-credentials: false
+      - name: Aucune donnée nanopm suivie
+        run: "! git ls-files .nanopm CONTEXT.md | grep ."
+      - name: Actions épinglées par SHA
         run: |
-          uv run --group docs python scripts/gen_reference.py
-          git diff --exit-code -- docs/reference \
-            || { echo "::error::docs/reference is stale — run 'make reference' and commit."; exit 1; }
+          # grep rend 1 s'il ne trouve rien (normal) et 2 s'il échoue (fichier illisible) : seul 2 fait échouer l'étape.
+          uses="$(grep -nE '^\s*-?\s*uses:\s*[^./[:space:]][^@[:space:]]*@' .github/workflows/*.y*ml || [ $? -eq 1 ])"
+          uses="$(printf '%s\n' "$uses" | grep -v 'uses:[[:space:]]*docker://' || true)" # les docker:// ont leur propre contrôle
+          bad="$(printf '%s\n' "$uses" | grep -vE -e '@[0-9a-f]{40}([[:space:]]|$)' -e '^$' || [ $? -eq 1 ])"
+          if [ -n "$bad" ]; then
+            printf '%s\n' "$bad"
+            echo "::error::Épingler chaque action sur un SHA complet de 40 caractères."
+            exit 1
+          fi
+          docker="$(grep -nE 'uses:\s*docker://' .github/workflows/*.y*ml || [ $? -eq 1 ])"
+          bad="$(printf '%s\n' "$docker" | grep -vE -e '@sha256:' -e '^$' || [ $? -eq 1 ])"
+          if [ -n "$bad" ]; then
+            printf '%s\n' "$bad"
+            echo "::error::Épingler chaque image docker:// sur un digest @sha256:."
+            exit 1
+          fi
+      - name: Self-test des réglages
+        run: .github/apply-settings.sh --self-test
+      - name: Liens Markdown internes
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: >-
+            --offline --no-progress
+            --exclude-path CHANGELOG.md --exclude-path docs/superpowers --exclude-path docs/memory-bank
+            --exclude-path openspec --exclude-path node_modules
+            './**/*.md'
+          fail: true
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+      - run: make ci-tools
+      - run: make lint
 
   test:
-    name: test (pytest + coverage gates)
     runs-on: ubuntu-latest
-    services:
-      redis:
-        image: redis:8
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
-          version: "0.12.x"
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
           enable-cache: true
+      - run: make ci-tools
+      - run: make test
 
-      - name: Set up Python
-        run: uv python install 3.13
-
-      - name: Sync dependencies
-        run: uv sync --frozen
-
-      - name: pytest (global coverage ≥ 80%)
-        env:
-          REDIS_TEST_ADDR: 127.0.0.1:6379
-        run: uv run pytest -v --cov=knock --cov-report=term-missing --cov-fail-under=80
-
-      - name: pytest domain (coverage ≥ 90%)
-        run: uv run pytest tests/unit/domain -v --cov=knock.domain --cov-report=term-missing --cov-fail-under=90
-
-  manifests:
-    name: manifests (kustomize render + dry-run)
+  security:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Install tools (envsubst + PyYAML)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq gettext-base python3-yaml
-
-      - name: Render the ArgoCD kustomize sources
-        run: |
-          set -euo pipefail
-          for src in knock buildkitd registry; do
-            echo "== rendering deploy/argocd/sources/$src =="
-            kubectl kustomize --load-restrictor LoadRestrictionsNone "deploy/argocd/sources/$src" >/dev/null
-          done
-
-      - name: Validate the ArgoCD Application manifests (parse + pinned Helm revision)
-        run: |
-          set -euo pipefail
-          # Helm-source children (eso/openbao) are rendered in-cluster by ArgoCD, not by
-          # kustomize — here we only check the Application manifests parse and carry a
-          # pinned chart targetRevision.
-          for f in deploy/argocd/apps/*.yaml; do
-            echo "== $f =="
-            python3 -c "import yaml; d=yaml.safe_load(open('$f')); assert d['kind']=='Application', '$f not an Application'; s=d['spec']['source']; assert 'chart' not in s or s.get('targetRevision'), '$f Helm chart missing targetRevision'"
-          done
-
-      - name: Verify root.yaml renders
-        run: |
-          set -euo pipefail
-          ARGOCD_REPO_URL=https://github.com/trivoallan/knock ARGOCD_REPO_REF=main \
-            envsubst < deploy/argocd/root.yaml \
-            | python3 -c "import yaml,sys; d=yaml.safe_load(sys.stdin); assert d['spec']['source']['path']=='deploy/argocd/apps', d['spec']['source']['path']"
-
-  docker-build:
-    name: docker build (runtime image)
-    runs-on: ubuntu-latest
-    needs: [lint, test]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-
-      - name: Build runtime image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
-          context: .
-          push: false
-          load: true              # load the built image into the docker daemon so the smoke test can run it
-          tags: knock:ci-${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: true
+      - run: make security
 
-      - name: Smoke test image
-        run: |
-          docker run --rm knock:ci-${{ github.sha }} version
-          docker run --rm --entrypoint sh knock:ci-${{ github.sha }} -c \
-            'command -v buildctl'
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - run: make image

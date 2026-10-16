@@ -62,7 +62,7 @@ no further than a design and an ADR. The rest are *Deferred* below or already ou
 - **Scale.** In-pod concurrency, cross-pod sharding, KEDA-scaled buildkit, and an incremental,
   reconcile-fed scan pipeline driven by `knock scan`, shipped as the optional `knock-oci[scan]` extra
   so that core knock stays redis-free (ADRs 0042, 0043).
-- **Adoption surface.** The rename houba → knock, as a clean break (ADR 0045); a published docs site;
+- **Adoption surface.** The rename houba → knock, as a clean break (ADR 0045); Diátaxis docs read on GitHub (ADR 0056);
   brownfield and greenfield deployment paths (ADR 0044); a
   [migration-from-replication how-to](how-to/migrate-from-replication.md); and a public showcase that
   publishes stamped, SBOM-carrying, keyless-signed images every week

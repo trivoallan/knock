@@ -1,10 +1,6 @@
----
-sidebar_position: 2
----
-
 # Configuration
 
-Each field is set as `KNOCK_<FIELD>` (the property name upper-cased). JSON-typed fields (`registries`, `transform_ca_certs`, `transform_package_mirrors`, `retention`) take a JSON value whose shape is documented in the [schemas](schemas/) section. The machine-readable contract is [`config.schema.json`](config.schema.json).
+Each field is set as `KNOCK_<FIELD>` (the property name upper-cased). JSON-typed fields (`registries`, `transform_ca_certs`, `transform_package_mirrors`, `retention`) take a JSON value whose shape is documented in the [schemas](schemas/README.md) section. The machine-readable contract is [`config.schema.json`](config.schema.json).
 
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |

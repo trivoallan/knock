@@ -1,19 +1,16 @@
----
-title: "Gate a promotion or CI step with knock verify"
-description: "Turn knock's signed scan attestation, provenance stamp, and SBOM referrer into a single exit-0/1 gate with knock verify."
-sidebar_position: 4
----
+# Gate a promotion or CI step with knock verify
 
 `knock verify <ref>` is a **read-only gate**: it reads the facts that `attach` and `reconcile`
 already placed on a digest (signed scan attestation, provenance stamp, SBOM referrer) and
 produces a single pass/fail verdict. Exit 0 = every required fact passes. Exit 1 = at least one
 does not. It never scans, never writes, and never mutates the registry.
 
-:::note The division of labour
-`attach` **writes** scan provenance (signs and publishes the attestation). `verify` **reads** it.
-The gate lives at the point where a promotion or a CI step needs a binary answer; the scan itself
-lives upstream where the scanner runs.
-:::
+> [!NOTE]
+> **The division of labour**
+>
+> `attach` **writes** scan provenance (signs and publishes the attestation). `verify` **reads** it.
+> The gate lives at the point where a promotion or a CI step needs a binary answer; the scan itself
+> lives upstream where the scanner runs.
 
 ## 1. What `verify` checks
 
@@ -29,27 +26,29 @@ lives upstream where the scanner runs.
 Use `--require scan-pass,stamp,sbom,image-signature` to require all four; any comma-separated
 subset is valid.
 
-:::caution An attestation is not an admission
-With cosign v3, an image signature and an attestation are stored as the same referrer type, and a
-bare `cosign verify` **accepts an image that only carries attestations**. Every image knock places
-is attested, so every one of them passes a bare `cosign verify`. `image-signature` checks the
-claim type so that only an admitted image passes (ADR 0050). An enforcer outside knock must make
-the same distinction.
-:::
+> [!CAUTION]
+> **An attestation is not an admission**
+>
+> With cosign v3, an image signature and an attestation are stored as the same referrer type, and a
+> bare `cosign verify` **accepts an image that only carries attestations**. Every image knock places
+> is attested, so every one of them passes a bare `cosign verify`. `image-signature` checks the
+> claim type so that only an admitted image passes (ADR 0050). An enforcer outside knock must make
+> the same distinction.
 
-:::note `image-signature` also applies to a placed skill
-Despite the name, the requirement takes no image-specific input: `verify` pins the ref to its digest
-and asks cosign. A skill placed by an `admit: true` git policy is therefore promotable through the
-same gate (ADR 0053):
-
-```bash
-knock verify registry.example.com/skills/mcp-builder:v1.2.0 --require image-signature
-```
-
-A git-placed artifact carries a signature and nothing else — no in-toto attestation and no SBOM — so
-`--require sbom` and `--require scan-pass` do not apply to it. Those facts are genuinely absent, not
-merely unplaced, and the gate fails closed on them.
-:::
+> [!NOTE]
+> **`image-signature` also applies to a placed skill**
+>
+> Despite the name, the requirement takes no image-specific input: `verify` pins the ref to its digest
+> and asks cosign. A skill placed by an `admit: true` git policy is therefore promotable through the
+> same gate (ADR 0053):
+>
+> ```bash
+> knock verify registry.example.com/skills/mcp-builder:v1.2.0 --require image-signature
+> ```
+>
+> A git-placed artifact carries a signature and nothing else — no in-toto attestation and no SBOM — so
+> `--require sbom` and `--require scan-pass` do not apply to it. Those facts are genuinely absent, not
+> merely unplaced, and the gate fails closed on them.
 
 ## 2. Gate a CI step on a signed scan
 

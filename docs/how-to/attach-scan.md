@@ -1,17 +1,14 @@
----
-title: "Attach a scan result"
-description: "Ingest an upstream SARIF report as a signed OCI referrer with knock attach, using --fail-on as a severity CI gate."
-sidebar_position: 3
----
+# Attach a scan result
 
 knock does not run scanners. A scan is produced **upstream** (your CI, a registry-native
 scanner, or a scan service); knock ingests its report and stamps it as a portable OCI
 **referrer** on the image's digest. This makes "which images carry a critical CVE?" one
 referrers query at incident time.
 
-:::note SBOM vs scan
-Don't confuse this with the **SBOM** knock *generates* on every image it places — copy and rebuild alike: the SBOM is the package **inventory** (what's inside), produced by knock after placement; a scan is a **vulnerability assessment** (what's wrong with those packages), produced by a scanner knock does not run and merely ingests here. Building an inventory is not scanning.
-:::
+> [!NOTE]
+> **SBOM vs scan**
+>
+> Don't confuse this with the **SBOM** knock *generates* on every image it places — copy and rebuild alike: the SBOM is the package **inventory** (what's inside), produced by knock after placement; a scan is a **vulnerability assessment** (what's wrong with those packages), produced by a scanner knock does not run and merely ingests here. Building an inventory is not scanning.
 
 ## 1. Produce a report upstream (example: Trivy emitting SARIF)
 
@@ -30,7 +27,7 @@ knock attach harbor.corp/lib/redis:7.2.0 --report scan.sarif.json
 The referrer manifest carries the summary annotations (`io.knock.scan.*`) and the raw
 SARIF as its blob. Re-running `attach` after a fresh scan adds a new referrer (history).
 
-[`sample.sarif.json`](https://github.com/trivoallan/knock/blob/main/docs/examples/scan/sample.sarif.json) is a runnable example report (1 critical, 1 medium).
+[`sample.sarif.json`](../examples/scan/sample.sarif.json) is a runnable example report (1 critical, 1 medium).
 
 ## 3. Sign it (verifiable scan provenance)
 
@@ -153,7 +150,7 @@ knock attach registry.example.com/lib/redis@sha256:abc… --report findings.sari
 That verdict is now a signed referrer on the digest, read **by digest** by an admission controller
 (Kyverno), Dependency-Track, or an audit — the same join key as the stamp and SBOM. The division of
 labour: **the analyzer decides, knock carries, the admission controller enforces** (signed-scan +
-max-age, [ADR 0032](https://github.com/trivoallan/knock/blob/main/docs/architecture/decisions/0032-attach-is-scan-provenance-not-a-store.md)). Read
+max-age, [ADR 0032](../architecture/decisions/0032-attach-is-scan-provenance-not-a-store.md)). Read
 at the **front door**: a registry that strips OCI referrers on replication (e.g. Harbor) won't carry
 them downstream — follow the digest back to where knock attached them.
 

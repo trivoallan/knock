@@ -405,7 +405,7 @@ workspace "knock" "Single front door / stamper for external container images." {
         #    gc / purge) is absent by design: GHCR does not implement the OCI catalog API.
         showcaseEnv = deploymentEnvironment "Showcase — public proof (GitHub Actions -> GHCR)" {
             deploymentNode "GitHub Actions runner" "ubuntu-latest; weekly showcase run + nightly canary (throwaway namespace, non-blocking)" "GitHub Actions" {
-                shPolicies = infrastructureNode "Pinned policy checkout" "actions/checkout of this repo at KNOCK_VERSION -> docs/examples/reference (busybox copy + debian-tz rebuild). Never copied into the showcase repo: the visitor verifies the exact file on the docs site." "git"
+                shPolicies = infrastructureNode "Pinned policy checkout" "actions/checkout of this repo at KNOCK_VERSION -> docs/examples/reference (busybox copy + debian-tz rebuild). Never copied into the showcase repo: the visitor verifies the exact file on GitHub." "git"
                 deploymentNode "container: knock" "ghcr.io/<owner>/knock:KNOCK_VERSION, pinned in knock.env and bumped by Renovate (the canary builds from main instead)" "Docker" {
                     shKnock = containerInstance knockCli
                 }

@@ -1,8 +1,4 @@
----
-title: "Inspect an image's SBOM"
-description: "Find and fetch the SBOM referrer attached to a placed image, and enable CycloneDX alongside SPDX."
-sidebar_position: 5
----
+# Inspect an image's SBOM
 
 Every image `knock reconcile` places carries a package-level SBOM attached as an OCI referrer (for the
 what and why, see [Package-level SBOM](../explanation/sbom.md)). This guide finds and fetches it, and

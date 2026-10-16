@@ -2,7 +2,7 @@
 
 **The single front door for the external container images your organization runs.**
 
-> **Status — young but functional (`v0.6`).** Delivered: the full hexagon; both the copy and the
+> **Status — young but functional (`v0.13`).** Delivered: the full hexagon; both the copy and the
 > rebuild / derive-and-stamp paths; the pluggable transform engine; the OCI provenance stamp **plus
 > signed SLSA / in-toto attestations** (rebuild *and* ingested scan results); a **package-level SBOM
 > (SPDX and/or CycloneDX) on every placed image** — copy and rebuild alike, signed under knock's
@@ -29,10 +29,10 @@ Dependency-Track…) run the query.
 knock is **not** an image mirror. `skopeo sync` and Harbor replication copy images byte-for-byte.
 knock *stamps* every image with portable provenance — and *hardens* the ones you choose to rebuild.
 
-**New here?** Read [Why knock](docs/index.md) for the case, then [Getting started](docs/tutorials/getting-started.md)
+**New here?** Read [Why knock](docs/README.md) for the case, then [Getting started](docs/tutorials/getting-started.md)
 to mirror your first image and inspect its stamp in ten minutes.
 
-📖 **Full documentation:** <https://trivoallan.github.io/knock/>
+📖 **Full documentation:** [`docs/`](docs/README.md) — tutorials, how-to guides, reference and explanation.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org)
@@ -108,7 +108,7 @@ See [docs/how-to/reference-deployment.md](docs/how-to/reference-deployment.md).
 itself:
 
 ```bash
-docker pull ghcr.io/<your-org>/knock:0.6
+docker pull ghcr.io/<your-org>/knock:<version>   # e.g. 0.13.0
 ```
 
 (The runtime image also bundles `cosign` for the optional signed attestations.)
@@ -118,17 +118,20 @@ carries an SBOM and SLSA provenance attached as buildx attestations. Verify the 
 running:
 
 ```bash
-cosign verify ghcr.io/trivoallan/knock:0.6 \
-  --certificate-identity-regexp 'https://github.com/trivoallan/knock/.*' \
+cosign verify ghcr.io/trivoallan/knock:<version> \
+  --certificate-identity-regexp '^https://github.com/trivoallan/knock/\.github/workflows/release\.yml@refs/heads/main$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
+
+The `main` tag is rebuilt and signed by the same workflow on every push to `main`, so pin a
+version (`X.Y.Z`) or a digest.
 
 The SBOM and provenance are buildx attestations (OCI referrers, not cosign-signed) — inspect them
 with `docker buildx imagetools inspect`:
 
 ```bash
-docker buildx imagetools inspect ghcr.io/trivoallan/knock:0.6 --format '{{ json .SBOM }}'
-docker buildx imagetools inspect ghcr.io/trivoallan/knock:0.6 --format '{{ json .Provenance }}'
+docker buildx imagetools inspect ghcr.io/trivoallan/knock:<version> --format '{{ json .SBOM }}'
+docker buildx imagetools inspect ghcr.io/trivoallan/knock:<version> --format '{{ json .Provenance }}'
 ```
 
 Or from source with [uv](https://github.com/astral-sh/uv):
@@ -146,8 +149,8 @@ When running from source you need `regctl` on `PATH` (plus `buildctl` if you use
 
 `knock` reads its configuration from environment variables (12-factor). All variables are
 namespaced `KNOCK_*`. The table below covers the common ones; the exhaustive, always-current
-list is the generated [config reference](docs/reference/config.md) (and
-[policy reference](docs/reference/mirror-policy.md) for `MirrorPolicy` fields).
+list is the generated [config reference](docs/reference/configuration.md) (and
+[policy reference](docs/reference/schemas/mirror-policy.md) for `MirrorPolicy` fields).
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
@@ -187,7 +190,7 @@ list is the generated [config reference](docs/reference/config.md) (and
 
 [**Getting started**](docs/tutorials/getting-started.md) runs `knock reconcile` end-to-end against a local
 registry in about ten minutes — from an empty registry to an inspectable provenance stamp. From
-there, [`docs/examples/`](docs/examples/README.md) is a catalog of runnable `MirrorPolicy` files,
+there, [`docs/examples/`](docs/reference/examples/README.md) is a catalog of runnable `MirrorPolicy` files,
 one per capability: select redis by semver, rebuild Debian into per-region timezone variants,
 retention, delegated deletion, scan ingestion. Every `reconcile` is **plan-then-apply** — pass
 `--dry-run` to see the plan first.
@@ -233,15 +236,15 @@ The full picture — and the C4 model — is in [`docs/architecture/`](docs/arch
 ## Development
 
 ```bash
-uv sync                                                        # install deps
-uv run pytest                                                  # full suite
-uv run pytest tests/unit/domain --cov=knock.domain --cov-fail-under=90
-uv run ruff check . && uv run ruff format --check .
-uv run mypy knock
-docker build -t knock:dev .                                    # build the runtime image
+uv sync                                          # install deps
+make lint                                        # ruff, mypy strict, docs/reference up to date
+make test                                        # full suite with the coverage gate
+make security                                    # pip-audit, blocking from HIGH
+make image                                       # build the runtime image and smoke-test it
+uv run python -m pytest --no-cov <path>          # a single test file or test, no coverage gate
 ```
 
-Coverage gates enforced in CI: **≥ 80 % global**, **≥ 90 % on `knock.domain`**.
+The CI runs the same `make` targets. Coverage gate: **≥ 90 % global branch coverage**.
 
 ---
 

@@ -1,7 +1,3 @@
----
-sidebar_position: 4
----
-
 # StagedRebuilds (the rebuilt images held in staging)
 
 - [1. Property `apiVersion`](#apiVersion)
@@ -36,7 +32,7 @@ sidebar_position: 4
 | - [kind](#kind )             | No      | const | No         | -          | Kind              |
 | - [entries](#entries )       | No      | array | No         | -          | Entries           |
 
-## 1. Property `apiVersion` {#apiVersion}
+## <a name="apiVersion"></a>1. Property `apiVersion`
 
 **Title:** Apiversion
 
@@ -48,7 +44,7 @@ sidebar_position: 4
 
 Specific value: `"knock.io/v1alpha1"`
 
-## 2. Property `kind` {#kind}
+## <a name="kind"></a>2. Property `kind`
 
 **Title:** Kind
 
@@ -60,7 +56,7 @@ Specific value: `"knock.io/v1alpha1"`
 
 Specific value: `"StagedRebuilds"`
 
-## 3. Property `entries` {#entries}
+## <a name="entries"></a>3. Property `entries`
 
 **Title:** Entries
 
@@ -81,7 +77,7 @@ Specific value: `"StagedRebuilds"`
 | ------------------------------- | ---------------------------------------------------------------------------- |
 | [StagedEntry](#entries_items)   | One rebuilt image held in the staging registry, and where it is meant to go. |
 
-### 3.1. StagedEntry {#entries_items}
+### <a name="entries_items"></a>3.1. StagedEntry
 
 **Title:** StagedEntry
 
@@ -109,7 +105,7 @@ Specific value: `"StagedRebuilds"`
 | + [stagedDigest](#entries_items_stagedDigest ) | No      | string           | No         | -          | Stageddigest      |
 | - [aliases](#entries_items_aliases )           | No      | array of string  | No         | -          | Aliases           |
 
-#### 3.1.1. Property `policy` {#entries_items_policy}
+#### <a name="entries_items_policy"></a>3.1.1. Property `policy`
 
 **Title:** Policy
 
@@ -118,7 +114,7 @@ Specific value: `"StagedRebuilds"`
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.2. Property `import` {#entries_items_import}
+#### <a name="entries_items_import"></a>3.1.2. Property `import`
 
 **Title:** Import
 
@@ -127,7 +123,7 @@ Specific value: `"StagedRebuilds"`
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.3. Property `variant` {#entries_items_variant}
+#### <a name="entries_items_variant"></a>3.1.3. Property `variant`
 
 **Title:** Variant
 
@@ -136,7 +132,7 @@ Specific value: `"StagedRebuilds"`
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.4. Property `kind` {#entries_items_kind}
+#### <a name="entries_items_kind"></a>3.1.4. Property `kind`
 
 **Title:** Kind
 
@@ -150,7 +146,7 @@ Must be one of:
 * "update"
 * "rebuild"
 
-#### 3.1.5. Property `destination` {#entries_items_destination}
+#### <a name="entries_items_destination"></a>3.1.5. Property `destination`
 
 **Title:** Destination
 
@@ -159,7 +155,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.6. Property `tag` {#entries_items_tag}
+#### <a name="entries_items_tag"></a>3.1.6. Property `tag`
 
 **Title:** Tag
 
@@ -168,7 +164,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.7. Property `source` {#entries_items_source}
+#### <a name="entries_items_source"></a>3.1.7. Property `source`
 
 **Title:** Source
 
@@ -177,7 +173,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.8. Property `sourceTag` {#entries_items_sourceTag}
+#### <a name="entries_items_sourceTag"></a>3.1.8. Property `sourceTag`
 
 **Title:** Sourcetag
 
@@ -186,7 +182,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.9. Property `sourceDigest` {#entries_items_sourceDigest}
+#### <a name="entries_items_sourceDigest"></a>3.1.9. Property `sourceDigest`
 
 **Title:** Sourcedigest
 
@@ -195,7 +191,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.10. Property `staged` {#entries_items_staged}
+#### <a name="entries_items_staged"></a>3.1.10. Property `staged`
 
 **Title:** Staged
 
@@ -204,7 +200,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.11. Property `stagedDigest` {#entries_items_stagedDigest}
+#### <a name="entries_items_stagedDigest"></a>3.1.11. Property `stagedDigest`
 
 **Title:** Stageddigest
 
@@ -213,7 +209,7 @@ Must be one of:
 | **Type**     | `string` |
 | **Required** | Yes      |
 
-#### 3.1.12. Property `aliases` {#entries_items_aliases}
+#### <a name="entries_items_aliases"></a>3.1.12. Property `aliases`
 
 **Title:** Aliases
 
@@ -235,7 +231,7 @@ Must be one of:
 | --------------------------------------------- | ----------- |
 | [aliases items](#entries_items_aliases_items) | -           |
 
-##### 3.1.12.1. aliases items {#entries_items_aliases_items}
+##### <a name="entries_items_aliases_items"></a>3.1.12.1. aliases items
 
 |              |          |
 | ------------ | -------- |
