@@ -17,6 +17,9 @@
     - [3.1.11. Property `stagedDigest`](#entries_items_stagedDigest)
     - [3.1.12. Property `aliases`](#entries_items_aliases)
       - [3.1.12.1. aliases items](#entries_items_aliases_items)
+    - [3.1.13. Property `epoch`](#entries_items_epoch)
+      - [3.1.13.1. Property `item 0`](#entries_items_epoch_anyOf_i0)
+      - [3.1.13.2. Property `item 1`](#entries_items_epoch_anyOf_i1)
 
 **Title:** StagedRebuilds (the rebuilt images held in staging)
 
@@ -104,6 +107,7 @@ Specific value: `"StagedRebuilds"`
 | + [staged](#entries_items_staged )             | No      | string           | No         | -          | Staged            |
 | + [stagedDigest](#entries_items_stagedDigest ) | No      | string           | No         | -          | Stageddigest      |
 | - [aliases](#entries_items_aliases )           | No      | array of string  | No         | -          | Aliases           |
+| - [epoch](#entries_items_epoch )               | No      | Combination      | No         | -          | Epoch             |
 
 #### <a name="entries_items_policy"></a>3.1.1. Property `policy`
 
@@ -237,5 +241,35 @@ Must be one of:
 | ------------ | -------- |
 | **Type**     | `string` |
 | **Required** | No       |
+
+#### <a name="entries_items_epoch"></a>3.1.13. Property `epoch`
+
+**Title:** Epoch
+
+|                           |                  |
+| ------------------------- | ---------------- |
+| **Type**                  | `combining`      |
+| **Required**              | No               |
+| **Additional properties** | Any type allowed |
+| **Default**               | `null`           |
+
+| Any of(Option)                          |
+| --------------------------------------- |
+| [item 0](#entries_items_epoch_anyOf_i0) |
+| [item 1](#entries_items_epoch_anyOf_i1) |
+
+##### <a name="entries_items_epoch_anyOf_i0"></a>3.1.13.1. Property `item 0`
+
+|              |          |
+| ------------ | -------- |
+| **Type**     | `string` |
+| **Required** | No       |
+
+##### <a name="entries_items_epoch_anyOf_i1"></a>3.1.13.2. Property `item 1`
+
+|              |        |
+| ------------ | ------ |
+| **Type**     | `null` |
+| **Required** | No     |
 
 ----------------------------------------------------------------------------------------------------------------------------

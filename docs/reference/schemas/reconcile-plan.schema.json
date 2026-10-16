@@ -40,6 +40,22 @@
           "default": false,
           "title": "Transformed",
           "type": "boolean"
+        },
+        "remediate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RemediationOrder"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "remediated": {
+          "default": false,
+          "title": "Remediated",
+          "type": "boolean"
         }
       },
       "required": [
@@ -52,6 +68,21 @@
         "sourceDigest"
       ],
       "title": "PlannedOperation",
+      "type": "object"
+    },
+    "RemediationOrder": {
+      "additionalProperties": false,
+      "properties": {
+        "epoch": {
+          "pattern": "^[A-Za-z0-9._-]{1,64}$",
+          "title": "Epoch",
+          "type": "string"
+        }
+      },
+      "required": [
+        "epoch"
+      ],
+      "title": "RemediationOrder",
       "type": "object"
     }
   },

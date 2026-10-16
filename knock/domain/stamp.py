@@ -132,6 +132,8 @@ def build_stamp_annotations(
     variant: str,
     transform_steps: list[str] | None = None,
     transform_version_value: str | None = None,
+    remediation_steps: list[str] | None = None,
+    remediation_epoch: str | None = None,
 ) -> dict[str, str]:
     source = f"{source_registry}/{source_repository}"
     annotations: dict[str, str] = {
@@ -160,4 +162,9 @@ def build_stamp_annotations(
     if prefix and transform_steps and transform_version_value is not None:
         annotations[f"{prefix}.transform.steps"] = ",".join(transform_steps)
         annotations[f"{prefix}.transform.version"] = transform_version_value
+    # Apart from the transform version on purpose: drift is computed on the transform alone,
+    # so the next pass does not undo a remediation.
+    if prefix and remediation_steps and remediation_epoch is not None:
+        annotations[f"{prefix}.remediation.steps"] = ",".join(remediation_steps)
+        annotations[f"{prefix}.remediation.epoch"] = remediation_epoch
     return annotations

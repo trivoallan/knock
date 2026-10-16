@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from knock.domain.gate import Gate, PlannedOperation, ReconcilePlan, reconcile_plan_json_schema
+from knock.domain.gate import (
+    Gate,
+    PlannedOperation,
+    ReconcilePlan,
+    RemediationOrder,
+    reconcile_plan_json_schema,
+)
 
 
 def _op(**over: str) -> PlannedOperation:
@@ -157,9 +163,36 @@ def test_staged_repository_refuses_a_destination_outside_its_host() -> None:
         staged_repository("other.corp/hub/redis", destination_host="harbor.corp", staging_host="s")
 
 
-def test_only_an_operation_that_builds_is_staged() -> None:
-    assert stages(transformed=True)
-    assert not stages(transformed=False)  # a copy is byte-identical to the judged source
+def test_only_a_remediation_is_staged() -> None:
+    assert stages(remediated=True)
+    # a copy is byte-identical to the judged source; a transform-only rebuild is not judged again
+    assert not stages(remediated=False)
+
+
+def test_a_remediation_order_is_outside_the_key_and_kept_by_the_gate() -> None:
+    ordered = _op().model_copy(update={"remediate": RemediationOrder(epoch="20261016T020000Z")})
+    assert ordered.key() == _op().key()
+    gate = Gate.from_plan(ReconcilePlan(operations=[ordered]))
+    assert gate.admits(_op())
+    assert gate.order(_op()) is not None and gate.order(_op()).epoch == "20261016T020000Z"
+
+
+def test_an_unordered_operation_has_no_order() -> None:
+    gate = Gate.from_plan(ReconcilePlan(operations=[_op()]))
+    assert gate.order(_op()) is None
+
+
+@pytest.mark.parametrize("epoch", ["", "x; rm -rf /", "a b", "e\n", "x" * 65])
+def test_an_unsafe_epoch_refuses_the_plan(epoch: str) -> None:
+    with pytest.raises(ValidationError):
+        ReconcilePlan.model_validate(
+            {"operations": [{**_op().model_dump(by_alias=True), "remediate": {"epoch": epoch}}]}
+        )
+
+
+def test_plan_out_writes_no_order_and_no_remediated_flag_by_default() -> None:
+    dumped = _op().model_dump(by_alias=True)
+    assert dumped["remediate"] is None and dumped["remediated"] is False
 
 
 def test_the_documented_staged_example_is_a_valid_document() -> None:

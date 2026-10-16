@@ -11,8 +11,13 @@ the plan was written, the live operation no longer matches and is withheld (fail
 The same seam is played a second time for rebuilt images. With a staging registry,
 `reconcile --apply-plan` pushes what it BUILDS there instead of to the destination and writes
 a `StagedRebuilds` document; the orchestrator evaluates the staged digests and removes the
-refused entries; `promote` places the rest. A copied image is not staged: it is byte-identical
-to the source the first seam judged.
+refused entries; `promote` places the rest. Only a REMEDIATED image is staged: a copy is
+byte-identical to the source the first seam judged, and a transform-only rebuild is a placement
+invariant nobody judges again.
+
+A plan operation may carry a remediation order (`remediate: {epoch}`), added by the
+orchestrator: knock then applies the import's `remediate:` steps to that operation only. The
+order is outside the key, like `transformed`: knock learns WHAT to repair, never who decided.
 """
 
 from __future__ import annotations
@@ -23,9 +28,17 @@ from typing import Any, Literal
 from pydantic import AliasChoices, ConfigDict, Field
 
 from knock.domain.mirror_policy import _CamelModel
+from knock.domain.transforms.steps import EPOCH_PATTERN
 
 PlanKind = Literal["import", "update", "rebuild"]
 GateKey = tuple[str, str, str, str, str]
+
+
+class RemediationOrder(_CamelModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    # Interpolated into a RUN instruction: refused at load when outside this alphabet.
+    epoch: str = Field(pattern=EPOCH_PATTERN)
 
 
 class PlannedOperation(_CamelModel):
@@ -42,6 +55,12 @@ class PlannedOperation(_CamelModel):
     # or copies the source. Informative: not part of the key, so an approval stays bound to the
     # digest and a plan filtered by a tool that drops the field still applies.
     transformed: bool = False
+    # Written by the orchestrator, never by `--plan-out`: apply this import's `remediate:`
+    # steps to this operation, with this epoch. Outside the key, like `transformed`.
+    remediate: RemediationOrder | None = None
+    # Informative: the destination tag this operation replaces carries a remediation, so an
+    # orchestrator can renew the order instead of letting a rebuild undo the repair.
+    remediated: bool = False
 
     def key(self) -> GateKey:
         return (self.policy, self.destination, self.tag, self.kind, self.source_digest)
@@ -64,10 +83,18 @@ class Gate:
 
     approved: frozenset[GateKey] | None = None
     planned: list[PlannedOperation] = field(default_factory=list)
+    orders: dict[GateKey, RemediationOrder] = field(default_factory=dict)
 
     @classmethod
     def from_plan(cls, plan: ReconcilePlan) -> Gate:
-        return cls(approved=frozenset(op.key() for op in plan.operations))
+        return cls(
+            approved=frozenset(op.key() for op in plan.operations),
+            orders={op.key(): op.remediate for op in plan.operations if op.remediate},
+        )
+
+    def order(self, op: PlannedOperation) -> RemediationOrder | None:
+        """The remediation the approved plan orders for `op`, if any."""
+        return self.orders.get(op.key())
 
     def admits(self, op: PlannedOperation) -> bool:
         if self.approved is None:
@@ -98,6 +125,8 @@ class StagedEntry(_CamelModel):
     # Aliases reconcile resolved onto this tag. Recorded here so promote replays reconcile's
     # rule instead of computing a second one from whatever the destination holds.
     aliases: tuple[str, ...] = ()
+    # The epoch of the remediation order this image was built under.
+    epoch: str | None = None
 
 
 class StagedRebuilds(_CamelModel):
@@ -122,6 +151,6 @@ def staged_repository(destination: str, *, destination_host: str, staging_host: 
     return f"{staging_host}/{destination[len(prefix) :]}"
 
 
-def stages(*, transformed: bool) -> bool:
-    """Whether an operation is held in staging: only one that builds an image."""
-    return transformed
+def stages(*, remediated: bool) -> bool:
+    """Whether an operation is held in staging: only one the plan orders remediated."""
+    return remediated

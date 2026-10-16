@@ -28,6 +28,15 @@ class TransformStepFact(BaseModel):
     params: dict[str, Any] = Field(default_factory=dict)
 
 
+class RemediationFact(BaseModel):
+    """The remediation applied on the plan's order: its steps and the order's epoch."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    steps: list[TransformStepFact]
+    epoch: str
+
+
 class TransformPredicate(BaseModel):
     """knock's transform/hardening lineage — the novel fact BuildKit cannot know.
 
@@ -47,6 +56,9 @@ class TransformPredicate(BaseModel):
     created: str  # ISO-8601 build time
     transform_version: str  # content hash of the resolved transform (== io.knock.transform.version)
     steps: list[TransformStepFact] = Field(default_factory=list)
+    # Absent unless the plan ordered this operation remediated. Kept apart from `steps`, so
+    # `steps` is what `transform_version` hashes and a remediation never moves it.
+    remediation: RemediationFact | None = None
 
 
 def _subject_digest(digest: str) -> dict[str, str]:
@@ -71,6 +83,7 @@ def build_transform_statement(
     transform_version: str,
     steps: list[tuple[str, dict[str, Any]]],
     transformed: bool,
+    remediation: tuple[list[tuple[str, dict[str, Any]]], str] | None = None,
 ) -> dict[str, Any]:
     """Assemble the in-toto Statement whose subject is the rebuilt output digest.
 
@@ -89,13 +102,22 @@ def build_transform_statement(
             "created": created,
             "transform_version": transform_version,
             "steps": [TransformStepFact(name=n, params=p) for n, p in steps],
+            "remediation": (
+                None
+                if remediation is None
+                else RemediationFact(
+                    steps=[TransformStepFact(name=n, params=p) for n, p in remediation[0]],
+                    epoch=remediation[1],
+                )
+            ),
         }
     )
     return {
         "_type": STATEMENT_TYPE,
         "subject": [{"name": subject_name, "digest": _subject_digest(subject_digest)}],
         "predicateType": PREDICATE_TYPE,
-        "predicate": predicate.model_dump(by_alias=True),
+        # exclude_none: an unremediated predicate stays byte-identical to what /v1 always was
+        "predicate": predicate.model_dump(by_alias=True, exclude_none=True),
     }
 
 

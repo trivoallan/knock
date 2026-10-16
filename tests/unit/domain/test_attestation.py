@@ -246,3 +246,32 @@ def test_keyed_signers_keep_the_air_gapped_empty_config_and_contact_nothing() ->
         "rekorTlogConfig": {},
         "tsaConfig": {},
     }
+
+
+def test_an_unremediated_predicate_has_no_remediation_key() -> None:
+    # /v1 stays byte-identical for every image no order touched
+    assert "remediation" not in _statement()["predicate"]
+
+
+def test_a_remediation_is_recorded_apart_from_the_transform_steps() -> None:
+    s = build_transform_statement(
+        subject_name="reg.local/hardened/redis:7.2.5",
+        subject_digest="sha256:out123",
+        policy="redis-hardened",
+        import_name="v7",
+        variant="default",
+        source="docker.io/library/redis",
+        source_digest="sha256:src",
+        builder_id="https://knock.example/builders/main",
+        created="2026-06-11T00:00:00+00:00",
+        transform_version="",
+        steps=[],
+        transformed=True,
+        remediation=([("upgradePackages", {})], "20261016T020000Z"),
+    )
+    p = s["predicate"]
+    assert p["steps"] == []
+    assert p["remediation"] == {
+        "steps": [{"name": "upgradePackages", "params": {}}],
+        "epoch": "20261016T020000Z",
+    }

@@ -31,6 +31,9 @@ class Operation(BaseModel):
     transform_steps: list[str] | None = None  # applied step names (rebuild); None on a copy
     out_digest: str | None = None  # produced (post-annotate) digest; None unless applied
     pinned_digest: str | None = None  # the pin, set on a pin_mismatch (`digest` = observed)
+    # why an approved operation was withheld anyway: `remediation-undeclared` (the plan orders
+    # a remediation the import does not declare) or `remediation-unstaged` (no `--stage-to`)
+    reason: str | None = None
 
 
 class VariantReport(BaseModel):

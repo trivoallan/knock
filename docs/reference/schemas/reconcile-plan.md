@@ -12,6 +12,11 @@
     - [3.1.6. Property `sourceTag`](#operations_items_sourceTag)
     - [3.1.7. Property `sourceDigest`](#operations_items_sourceDigest)
     - [3.1.8. Property `transformed`](#operations_items_transformed)
+    - [3.1.9. Property `remediate`](#operations_items_remediate)
+      - [3.1.9.1. Property `RemediationOrder`](#operations_items_remediate_anyOf_i0)
+        - [3.1.9.1.1. Property `epoch`](#operations_items_remediate_anyOf_i0_epoch)
+      - [3.1.9.2. Property `item 1`](#operations_items_remediate_anyOf_i1)
+    - [3.1.10. Property `remediated`](#operations_items_remediated)
 
 **Title:** ReconcilePlan (the gate's plan file)
 
@@ -93,6 +98,8 @@ Specific value: `"ReconcilePlan"`
 | + [sourceTag](#operations_items_sourceTag )       | No      | string           | No         | -          | Sourcetag         |
 | + [sourceDigest](#operations_items_sourceDigest ) | No      | string           | No         | -          | Sourcedigest      |
 | - [transformed](#operations_items_transformed )   | No      | boolean          | No         | -          | Transformed       |
+| - [remediate](#operations_items_remediate )       | No      | Combination      | No         | -          | -                 |
+| - [remediated](#operations_items_remediated )     | No      | boolean          | No         | -          | Remediated        |
 
 #### <a name="operations_items_policy"></a>3.1.1. Property `policy`
 
@@ -165,6 +172,65 @@ Must be one of:
 #### <a name="operations_items_transformed"></a>3.1.8. Property `transformed`
 
 **Title:** Transformed
+
+|              |           |
+| ------------ | --------- |
+| **Type**     | `boolean` |
+| **Required** | No        |
+| **Default**  | `false`   |
+
+#### <a name="operations_items_remediate"></a>3.1.9. Property `remediate`
+
+|                           |                  |
+| ------------------------- | ---------------- |
+| **Type**                  | `combining`      |
+| **Required**              | No               |
+| **Additional properties** | Any type allowed |
+| **Default**               | `null`           |
+
+| Any of(Option)                                           |
+| -------------------------------------------------------- |
+| [RemediationOrder](#operations_items_remediate_anyOf_i0) |
+| [item 1](#operations_items_remediate_anyOf_i1)           |
+
+##### <a name="operations_items_remediate_anyOf_i0"></a>3.1.9.1. Property `RemediationOrder`
+
+**Title:** RemediationOrder
+
+|                           |                          |
+| ------------------------- | ------------------------ |
+| **Type**                  | `object`                 |
+| **Required**              | No                       |
+| **Additional properties** | Not allowed              |
+| **Defined in**            | #/$defs/RemediationOrder |
+
+| Property                                               | Pattern | Type   | Deprecated | Definition | Title/Description |
+| ------------------------------------------------------ | ------- | ------ | ---------- | ---------- | ----------------- |
+| + [epoch](#operations_items_remediate_anyOf_i0_epoch ) | No      | string | No         | -          | Epoch             |
+
+###### <a name="operations_items_remediate_anyOf_i0_epoch"></a>3.1.9.1.1. Property `epoch`
+
+**Title:** Epoch
+
+|              |          |
+| ------------ | -------- |
+| **Type**     | `string` |
+| **Required** | Yes      |
+
+| Restrictions                      |                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[A-Za-z0-9._-]{1,64}$``` [Test](https://regex101.com/?regex=%5E%5BA-Za-z0-9._-%5D%7B1%2C64%7D%24) |
+
+##### <a name="operations_items_remediate_anyOf_i1"></a>3.1.9.2. Property `item 1`
+
+|              |        |
+| ------------ | ------ |
+| **Type**     | `null` |
+| **Required** | No     |
+
+#### <a name="operations_items_remediated"></a>3.1.10. Property `remediated`
+
+**Title:** Remediated
 
 |              |           |
 | ------------ | --------- |
