@@ -1039,6 +1039,22 @@ def test_missing_cert_file_raises_config_error_before_mutation() -> None:
     assert registry.copied == [] and registry.deleted == [] and builder.requests == []
 
 
+def test_undecodable_cert_file_raises_config_error(tmp_path: Path) -> None:
+    src_repo = "docker.io/library/redis"
+    registry = FakeRegistryPort(
+        tags={src_repo: ["7.2.5"], "reg.local/hardened/redis": []},
+        infos={
+            f"{src_repo}:7.2.5": ImageInfo(
+                digest="sha256:src", created=HARDENED_NOW, annotations={}
+            )
+        },
+    )
+    cert = tmp_path / "corp.pem"
+    cert.write_bytes(b"\xff\xfe\x00not utf-8")
+    with pytest.raises(ConfigError, match="cannot read CA cert file"):
+        _run_hardened(registry, FakeImageBuilder(), ca_certs={"corp": CACertSource(path=str(cert))})
+
+
 def _copy_policy() -> MirrorPolicy:
     return parse_mirror_policy(
         """

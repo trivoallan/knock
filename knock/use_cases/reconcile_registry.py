@@ -126,7 +126,7 @@ def to_mirror_artifact(
 def _read_cert_file(path: str) -> str:
     try:
         return Path(path).read_text()
-    except OSError as e:
+    except (OSError, UnicodeDecodeError) as e:
         raise ConfigError(f"cannot read CA cert file {path!r}: {e}") from e
 
 
