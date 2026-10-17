@@ -12,3 +12,16 @@ Apache License 2.0, as section 5 of the [LICENSE](LICENSE) states. No CLA or sig
 - Report vulnerabilities privately: see [SECURITY.md](SECURITY.md).
 
 Conventions and architecture notes for this repository are in [CLAUDE.md](CLAUDE.md).
+
+## Development
+
+```bash
+uv sync                                          # install deps
+make lint                                        # ruff, mypy strict, docs/reference up to date
+make test                                        # full suite with the coverage gate
+make security                                    # pip-audit, blocking from HIGH
+make image                                       # build the runtime image and smoke-test it
+uv run python -m pytest --no-cov <path>          # a single test file or test, no coverage gate
+```
+
+The CI runs the same `make` targets. Coverage gate: **≥ 90 % global branch coverage**.

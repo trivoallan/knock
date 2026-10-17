@@ -14,3 +14,4 @@ Task-oriented guides — each solves one concrete problem against a running knoc
 - [Migrate off registry replication](migrate-from-replication.md) — replace a legacy CI + replication intake with knock destinations; OCI referrers survive placement where replication strips them.
 - [Drop knock into an existing Jenkins/skopeo/Harbor intake](brownfield-drop-in.md) — replace a skopeo→Harbor tag-only mirror with knock: same per-image policy, digest-pinned provenance, a declared owner label, and a signed SBOM inventory.
 - [Operate the scan pipeline](operate-scan-pipeline.md) — run, monitor, and triage the incremental Redis-Streams scan pipeline: first green scan, daily signals, and runbooks for a stuck queue, a growing dead-letter stream, and a coverage gap.
+- [Install and configure knock](install-and-configure.md) — install knock, set up its registries and run it beyond the README quick start.

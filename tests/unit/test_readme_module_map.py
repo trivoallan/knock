@@ -1,6 +1,7 @@
 """Drift test for the README layer module map.
 
-Parses the ``knock/`` tree block in README.md and asserts that each layer lists
+Parses the ``knock/`` tree block in docs/explanation/how-it-works.md and asserts
+that each layer lists
 exactly what exists on disk, and that ``cli/`` lists exactly the verbs the Typer
 app registers (``cli/`` also holds ``render`` and ``_di``, which are not verbs).
 """
@@ -19,13 +20,15 @@ PACKAGE_LAYERS = ("domain", "ports", "adapters", "use_cases")
 
 
 def _readme_module_map() -> dict[str, set[str]]:
-    """Parse README's ``knock/`` tree block into ``{layer: {entry, ...}}``."""
+    """Parse how-it-works.md's ``knock/`` tree block into ``{layer: {entry, ...}}``."""
     block = re.search(
         r"^```\nknock/\n(.*?)^```",
-        REPO_ROOT.joinpath("README.md").read_text(),
+        REPO_ROOT.joinpath("docs", "explanation", "how-it-works.md").read_text(),
         re.S | re.M,
     )
-    assert block is not None, "README.md no longer contains a ```knock/ ...``` tree block"
+    assert block is not None, (
+        "docs/explanation/how-it-works.md no longer contains a ```knock/ ...``` tree block"
+    )
 
     entries: dict[str, set[str]] = {}
     layer: str | None = None
