@@ -91,5 +91,5 @@ the failing test, run it red, write the minimal code, run it green, then commit.
 - [x] 8.2 Run `make test`; expected: pass, global branch coverage ≥ 90 %
 - [x] 8.3 Run `openspec validate lint-mirror-policies --type change --strict`; expected: `Change 'lint-mirror-policies' is valid`
 - [x] 8.4 Check every scenario of `specs/policy-lint/spec.md` against a test from tasks 2–5, and every finding of `review.md` against its treatment
-- [ ] 8.5 Push the branch and verify the CI passes on [trivoallan/knock#329](https://github.com/trivoallan/knock/pull/329) (`SDR-0011` accepted, GitHub workflows present); expected: every required check green
-- [ ] 8.6 Run `openspec archive lint-mirror-policies --yes` on the branch, then commit: `chore(openspec): archive lint-mirror-policies`
+- [x] 8.5 Push the branch and verify the CI passes on [trivoallan/knock#329](https://github.com/trivoallan/knock/pull/329) (`SDR-0011` accepted, GitHub workflows present); expected: every required check green
+- [x] 8.6 Run `openspec archive lint-mirror-policies --yes` on the branch, then commit: `chore(openspec): archive lint-mirror-policies`
