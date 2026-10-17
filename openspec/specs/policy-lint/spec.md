@@ -1,7 +1,9 @@
 # policy-lint Specification
 
 ## Purpose
-TBD - created by archiving change lint-mirror-policies. Update Purpose after archive.
+Lets a policy repository refuse a broken MirrorPolicy before merge: `knock lint` validates a whole
+policy tree offline, gives the same loading verdict as `knock reconcile`, and reports every finding
+in one versioned report.
 
 ## Requirements
 

@@ -27,7 +27,7 @@ the failing test, run it red, write the minimal code, run it green, then commit.
 - Read in body: 0001 (the Pydantic model is the single source of truth and the schema is derived; lint
   reuses the model), 0003 (two-stream output and published report; `LintReport` follows it), 0014
   (read-only reporting verb with a versioned report; the closest precedent).
-- Created: [0058 — `knock lint`, offline validation of a policy tree](../../../docs/architecture/decisions/0058-knock-lint-offline-policy-validation.md).
+- Created: [0058 — `knock lint`, offline validation of a policy tree](../../../../docs/architecture/decisions/0058-knock-lint-offline-policy-validation.md).
 
 ## 1. Located policy errors (D2)
 
