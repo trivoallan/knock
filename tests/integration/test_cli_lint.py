@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +10,7 @@ import pytest
 from pydantic_settings import SettingsError
 from typer.testing import CliRunner
 
-from knock.cli.main import app
+from knock.cli.main import _run, app
 from knock.errors import ConfigError
 from knock.use_cases.lint import lint_report_json_schema
 
@@ -163,3 +164,23 @@ def test_unknown_registry_with_roster_is_n3_error(
     data = json.loads(result.stdout)
     assert data["errors"][0]["level"] == "N3"
     assert data["skipped"] == []
+
+
+def test_run_maps_missing_directory_to_exit_3(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["knock", "lint", str(tmp_path / "nope")])
+    with pytest.raises(SystemExit) as exc:
+        _run()
+    assert exc.value.code == 3
+
+
+def test_run_maps_unreadable_configuration_to_exit_3(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write(tmp_path, "a.yaml", _policy())
+    monkeypatch.setenv("KNOCK_REGISTRIES", "not json")
+    monkeypatch.setattr(sys, "argv", ["knock", "lint", str(tmp_path)])
+    with pytest.raises(SystemExit) as exc:
+        _run()
+    assert exc.value.code == 3
