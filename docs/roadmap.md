@@ -68,7 +68,7 @@ no further than a design and an ADR. The rest are *Deferred* below or already ou
   publishes stamped, SBOM-carrying, keyless-signed images every week
   ([Verify a published stamp](how-to/verify-published-stamp.md), ADR 0046).
 
-CLI verbs: `reconcile · promote · purge · attach · audit · gc · verify · scan · version`.
+CLI verbs: `reconcile · promote · purge · attach · audit · gc · verify · lint · scan · version`.
 
 ## Now — admission: the door says no before it places
 

@@ -1,0 +1,132 @@
+{
+  "$defs": {
+    "Finding": {
+      "description": "One problem in the tree: its level, the file, where in it, and what.",
+      "properties": {
+        "level": {
+          "enum": [
+            "N1",
+            "N2",
+            "N3"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "path": {
+          "description": "Policy file, relative to the linted directory (POSIX).",
+          "title": "Path",
+          "type": "string"
+        },
+        "loc": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Location inside the policy document, when known.",
+          "title": "Loc"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "related": {
+          "description": "Other files involved (ownership collisions).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Related",
+          "type": "array"
+        }
+      },
+      "required": [
+        "level",
+        "path",
+        "message"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "Skipped": {
+      "description": "A level that did not run, and why.",
+      "properties": {
+        "level": {
+          "enum": [
+            "N1",
+            "N2",
+            "N3"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "level",
+        "reason"
+      ],
+      "title": "Skipped",
+      "type": "object"
+    }
+  },
+  "description": "The `knock lint` report. Compatibility rule: within one `apiVersion`, only optional\nfields are added; removing, renaming, retyping or changing the meaning of a field bumps it.",
+  "properties": {
+    "apiVersion": {
+      "const": "knock.io/v1alpha1",
+      "default": "knock.io/v1alpha1",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "kind": {
+      "const": "LintReport",
+      "default": "LintReport",
+      "title": "Kind",
+      "type": "string"
+    },
+    "errors": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "skipped": {
+      "items": {
+        "$ref": "#/$defs/Skipped"
+      },
+      "title": "Skipped",
+      "type": "array"
+    }
+  },
+  "required": [
+    "errors",
+    "warnings",
+    "skipped"
+  ],
+  "title": "LintReport (knock lint output)",
+  "type": "object"
+}

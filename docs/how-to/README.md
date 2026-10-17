@@ -8,6 +8,7 @@ Task-oriented guides — each solves one concrete problem against a running knoc
 - [GC superseded scan referrers](gc-scan-referrers.md) — reap stale scan referrers with `knock gc`, keeping the newest per (tool, format).
 - [Purge unused tags](purge-unused-tags.md) — usage-gate and hard-delete marked tags with `knock purge`; wire your own usage oracle.
 - [Audit coverage](audit-coverage.md) — find images that lack the stamp with `knock audit`; gate CI on coverage, signing, or SBOM presence.
+- [Lint a policy repository in CI](lint-policies-in-ci.md) — validate a whole tree of policies offline with `knock lint`, report every error at once, and gate merge requests on it.
 - [Inspect an image's SBOM](inspect-sbom.md) — find and fetch the SBOM referrer attached to a placed image; enable CycloneDX alongside SPDX.
 - [Run the reference deployment](reference-deployment.md) — run knock as a Kubernetes CronJob: git-synced policies, rootless buildkitd, a blast-radius consumer, and optional KEDA autoscaling.
 - [Rebuild and harden an image](rebuild-and-harden.md) — derive-and-stamp on the rebuild path: inject internal CAs, rewrite package sources to internal mirrors, and sign the result.

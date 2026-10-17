@@ -432,3 +432,18 @@ def test_parse_accepts_platform_with_variant() -> None:
 def test_defaults_reject_duplicate_platform() -> None:
     with pytest.raises(ValidationError):
         Defaults.model_validate({"platforms": ["linux/amd64", "linux/amd64"]})
+
+
+def test_parse_locates_validation_issues() -> None:
+    text = """
+apiVersion: knock.io/v1alpha1
+kind: MirrorPolicy
+metadata: { name: x }
+spec:
+  artifactType: image
+  source: { registry: docker.io, repository: library/x }
+  imports: [{ name: v, bogus: 1, tags: {}, destinations: [{ project: lib, repository: x }] }]
+"""
+    with pytest.raises(PolicyValidationError) as ei:
+        parse_mirror_policy(text)
+    assert any(loc[:3] == ("spec", "imports", 0) for loc, _ in ei.value.issues)

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from knock.domain.transforms.base import TransformStepCompiler
+from knock.domain.mirror_policy import TransformStep
+from knock.domain.transforms.base import ResourceRef, TransformStepCompiler
 from knock.domain.transforms.steps import (
     InjectCA,
     RewritePackageSources,
@@ -38,3 +39,16 @@ class Registry:
 
 
 DEFAULT_REGISTRY = Registry(BUILTIN_STEPS)
+
+
+def step_resource_refs(step: TransformStep, *, remediate: bool) -> tuple[ResourceRef, ...]:
+    """Validate one step's params and return the resources it references.
+
+    A `remediate` step is validated against what a policy may declare (`policy_model()`),
+    a `transform` step against what rendering needs (`params_model`). Raises
+    `PolicyValidationError` for an unknown step and `ValidationError` for bad params.
+    Shared by the reconcile plan and `knock lint`, so both judge a step the same way.
+    """
+    compiler = DEFAULT_REGISTRY.get(step.name)
+    model = compiler.policy_model() if remediate else compiler.params_model
+    return compiler.resource_refs(model.model_validate(step.params))

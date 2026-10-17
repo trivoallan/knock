@@ -15,6 +15,7 @@ from pydantic_settings import SettingsError
 from knock.cli.attach import attach as attach_cmd
 from knock.cli.audit import audit as audit_cmd
 from knock.cli.gc import gc as gc_cmd
+from knock.cli.lint import lint as lint_cmd
 from knock.cli.promote import promote as promote_cmd
 from knock.cli.purge import purge as purge_cmd
 from knock.cli.reconcile import reconcile as reconcile_cmd
@@ -32,6 +33,7 @@ app.command(name="attach")(attach_cmd)
 app.command(name="audit")(audit_cmd)
 app.command(name="gc")(gc_cmd)
 app.command(name="verify")(verify_cmd)
+app.command(name="lint")(lint_cmd)
 app.add_typer(scan_app, name="scan")
 
 

@@ -151,3 +151,16 @@ def test_promotion_refused_is_domain_error_exit_1() -> None:
 
     assert issubclass(PromotionRefusedError, DomainError)
     assert exit_code_for(PromotionRefusedError("undeclared destination")) == 1
+
+
+def test_policy_validation_error_default_issues() -> None:
+    exc = PolicyValidationError("x")
+    assert exc.issues == [((), "x")]
+    assert str(exc) == "x"
+    assert exit_code_for(exc) == 1
+
+
+def test_policy_validation_error_explicit_issues() -> None:
+    exc = PolicyValidationError("m", issues=[(("spec", 0), "bad")])
+    assert exc.issues == [(("spec", 0), "bad")]
+    assert str(exc) == "m"
