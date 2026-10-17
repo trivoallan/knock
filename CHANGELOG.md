@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.17.0](https://github.com/trivoallan/knock/compare/v0.16.0...v0.17.0) (2026-10-17)
+
+
+### Features
+
+* **lint:** add knock lint to validate a policy tree before merge ([#329](https://github.com/trivoallan/knock/issues/329)) ([8120087](https://github.com/trivoallan/knock/commit/81200875941d9f8ed494854c4abdd53e7238f4ff))
+
+
+### Bug Fixes
+
+* **reconcile:** report an undecodable CA file as a config error ([#330](https://github.com/trivoallan/knock/issues/330)) ([5bf7343](https://github.com/trivoallan/knock/commit/5bf7343b44fe925b06cf29fa969c33b5facd415a))
+
+
+### Documentation
+
+* **architecture:** track the inherited method ADRs, with their verdicts ([#328](https://github.com/trivoallan/knock/issues/328)) ([ad5ac6b](https://github.com/trivoallan/knock/commit/ad5ac6bc75f5c18dbf2bf4c077ff64709fc370b4))
+* **docs:** propose binding a keyless signature to its calling repository ([#331](https://github.com/trivoallan/knock/issues/331)) ([3cf2f0c](https://github.com/trivoallan/knock/commit/3cf2f0c90e6d3c491acbee497c33c6195dd677ec))
+* **docs:** record the copy-only remediation run in ADR 0054 ([#324](https://github.com/trivoallan/knock/issues/324)) ([79d6045](https://github.com/trivoallan/knock/commit/79d60450ea5049987e965e3ac5af0992b0a2a7e5))
+* **docs:** rewrite the README as a product page shared with regis and uske ([#326](https://github.com/trivoallan/knock/issues/326)) ([05d6637](https://github.com/trivoallan/knock/commit/05d6637fe0b2019106a301c2afdead8a1b7de80b))
+
 ## [0.16.0](https://github.com/trivoallan/knock/compare/v0.15.0...v0.16.0) (2026-10-16)
 
 
