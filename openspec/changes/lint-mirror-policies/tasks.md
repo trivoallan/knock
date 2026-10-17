@@ -80,10 +80,10 @@ the failing test, run it red, write the minimal code, run it green, then commit.
 
 ## 7. Prose
 
-- [ ] 7.1 `docs/how-to/lint-policies-in-ci.md` (how-to): run `knock lint policies/` in a merge-request job with `KNOCK_LOG_FORMAT=json`; what N3 needs and what its skip means; why to point at the policies directory; the offline collision limits (D3, D4) and that `reconcile` stays the backstop. Add its entry to `docs/how-to/README.md`
-- [ ] 7.2 `docs/explanation/how-it-works.md`: add `lint` to the `cli/` verbs and `lint` to `use_cases/` in the module map; add a `knock lint` bullet to the verb list. Run `uv run pytest tests/unit/test_readme_module_map.py -v --no-cov`; expected: pass
-- [ ] 7.3 `CLAUDE.md` and `docs/roadmap.md`: add `lint` to the CLI verbs line; in `CLAUDE.md`, name `load_policy_files` as the collecting loader that `load_policy_dir` wraps
-- [ ] 7.4 Commit: `docs(lint): explain how to lint a policy repository in CI`
+- [x] 7.1 `docs/how-to/lint-policies-in-ci.md` (how-to): run `knock lint policies/` in a merge-request job with `KNOCK_LOG_FORMAT=json`; what N3 needs and what its skip means; why to point at the policies directory; the offline collision limits (D3, D4) and that `reconcile` stays the backstop. Add its entry to `docs/how-to/README.md`
+- [x] 7.2 `docs/explanation/how-it-works.md`: add `lint` to the `cli/` verbs and `lint` to `use_cases/` in the module map; add a `knock lint` bullet to the verb list. Run `uv run pytest tests/unit/test_readme_module_map.py -v --no-cov`; expected: pass
+- [x] 7.3 `CLAUDE.md` and `docs/roadmap.md`: add `lint` to the CLI verbs line; in `CLAUDE.md`, name `load_policy_files` as the collecting loader that `load_policy_dir` wraps
+- [x] 7.4 Commit: `docs(lint): explain how to lint a policy repository in CI`
 
 ## 8. Gate and close
 

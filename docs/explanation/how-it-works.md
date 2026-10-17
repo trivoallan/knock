@@ -35,6 +35,11 @@ Beyond `reconcile`, the CLI offers:
   knock's stamp (`--fail-on-uncovered` makes it a CI gate); `--signed` adds a *signed*-vs-merely-stamped
   tier (`--fail-on-unsigned`), and `--sbom` a *has-SBOM*-vs-merely-stamped tier (observational). This
   is what makes the front door *verifiable* and *trustworthy*.
+- **`knock lint <policies-dir>`** — validate a policy tree offline and report every problem at once:
+  each file against the model (N1), the tree as a whole — steps, destination ownership, alias
+  overlaps (N2) — and, when `KNOCK_REGISTRIES` is set, references to the configuration (N3). It
+  calls nothing and changes nothing; `reconcile` stays the backstop for what it cannot see. See
+  [Lint a policy repository in CI](../how-to/lint-policies-in-ci.md).
 - **`knock purge`** — the reference reaper: hard-delete tags marked `pending-deletion` (by either
   the selection axis or retention) that a usage oracle confirms are unused (gated by
   `KNOCK_PURGE_MIN_IDLE_DAYS`; dry-run unless `--apply`).
@@ -77,10 +82,10 @@ knock/
 │                syft_cli, command_usage, redis_streams, structlog_reporter, system_clock,
 │                marketplace_json, zip_writer, tree_walker, local_archiver, git_cli
 ├── use_cases/   orchestration — loader, reconcile, policy_planner, reconcile_registry,
-│                reconcile_git, promote, purge, attach, audit, gc, verify, scan_worker,
-│                registry_session, report, intake
+│                reconcile_git, promote, purge, attach, audit, gc, verify, lint,
+│                scan_worker, registry_session, report, intake
 └── cli/         Typer entry points — reconcile, promote, purge, attach, audit, gc, verify,
-                 scan, version
+                 lint, scan, version
 ```
 
 **Golden rules**
