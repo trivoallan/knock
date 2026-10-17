@@ -14,7 +14,7 @@ Le JSON Schema publié (`docs/reference/schemas/mirror-policy.schema.json`) ne c
   - **N2**, sur l'arbre : fusion de `defaults` dans chaque import, étapes de transformation, un dépôt de destination par politique (comme `reconcile`), et, entre imports d'une même politique, collisions d'alias **certaines**, c'est-à-dire le même alias littéral (sans `{…}`, `latest` par exemple) écrit dans le même dépôt. Les gabarits qui visent un même dépôt sont rapportés en **avertissement**, car leur rendu dépend des tags amont, inconnus hors ligne.
   - **N3**, contre la configuration : registre de destination, `caCert` et miroir de paquets inconnus, fichier CA illisible. Ce niveau est **implicite**. Il s'exécute si `KNOCK_REGISTRIES` est défini, et sinon il est sauté. Le saut est tracé dans la sortie et ne fait pas échouer.
 - Sortie **JSON** sur stdout sous `KNOCK_LOG_FORMAT=json` (texte sinon, comme `knock audit`) : `errors`, `warnings` et `skipped`. Chaque entrée porte le chemin du fichier, la localisation dans la politique et le message. Le contrat est publié comme schéma sous `docs/reference/schemas/`, dans la même lignée que `coverage-report`.
-- Codes de sortie, dérivés de la hiérarchie existante : `0` si aucune erreur (avec ou sans avertissements), `1` si au moins une erreur de politique, `3` si la configuration fournie est illisible.
+- Codes de sortie, dérivés de la hiérarchie existante : `0` si aucune erreur (avec ou sans avertissements), `1` si au moins une erreur de politique, `3` si le répertoire manque ou si la configuration fournie est illisible.
 - `load_policy_dir` garde son comportement d'échec immédiat. Il s'appuie sur le nouveau chargeur collecteur, donc `reconcile` et `promote` ne changent pas.
 
 ## Alternatives écartées
@@ -51,7 +51,8 @@ Aucune. `reconcile` garde son chargement en échec immédiat, et aucune exigence
 ## Impact
 
 - `knock/cli/` : nouveau `lint.py`, enregistré dans `main.py`. `docs/reference/command-line-interface.md` est régénéré par `make reference`.
-- `knock/use_cases/` : chargeur collecteur (`loader.py`) et use case `lint`. Réutilisation pure de `resolve_imports`, `resolve_registry`, `resolve_ca_certs`, `resolve_mirror` et de la détection de collisions. Aucun port ni adaptateur nouveau.
+- `knock/use_cases/` : chargeur collecteur (`loader.py`) et use case `lint`. Réutilisation de `resolve_imports`, `expand_variants`, `validate_transform_steps`, `resolve_registry`, `resolve_ca_certs` et `resolve_mirror`. Aucun port ni adaptateur nouveau.
+- `knock/domain/` : `find_alias_overlaps` (collision.py) et `step_resource_refs` (transforms/registry.py), ce dernier partagé avec `reconcile_registry.py`, qui l'appelle désormais.
 - `docs/reference/schemas/` : nouveau schéma du rapport de lint, généré depuis le modèle Pydantic.
 - Consommateurs : la CI du dépôt de politiques. `docs/policies/` (dossier `docs`) pourra s'y valider. `uske` n'est pas touché.
 

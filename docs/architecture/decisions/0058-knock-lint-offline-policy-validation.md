@@ -28,13 +28,17 @@ tools or the DI container, and reports every finding in one run:
   and `reconcile` cannot disagree on whether a file loads. `reconcile` keeps failing on the first
   invalid file.
 - **Three levels.** Per-file model validation; tree-level checks (defaults merge, transform steps
-  against the step registry, alias collisions); configuration references, which run only when
-  `KNOCK_REGISTRIES` is set and are otherwise recorded as skipped.
-- **Alias collisions are judged on what is knowable offline.** The same literal alias (no `{…}`)
-  into the same destination repository is an error. Templates into the same repository are a warning.
+  against the step registry, one destination repository per policy, alias collisions); configuration
+  references, which run only when `KNOCK_REGISTRIES` is set and are otherwise recorded as skipped.
+- **One repository, one policy.** Two policies writing into the same destination repository is an
+  error, the same rule `reconcile` enforces before any mutation.
+- **Alias collisions are judged on what is knowable offline, between imports of one policy.** The
+  same literal alias (no `{…}`) into the same destination repository is an error. Templates into the
+  same repository are a warning.
 - **A versioned report.** `LintReport` (`knock.io/v1alpha1`) on stdout under `KNOCK_LOG_FORMAT=json`,
   text otherwise, with a schema derived from the model and published under `docs/reference/schemas/`.
-  Exit 0 means no error, 1 means at least one error, 3 means unreadable configuration.
+  Exit 0 means no error, 1 means at least one error, 3 means a missing directory or unreadable
+  configuration.
 
 ## Consequences
 
@@ -42,7 +46,7 @@ tools or the DI container, and reports every finding in one run:
 - Collision detection is weaker than `reconcile`'s, which works on rendered aliases: a template and a
   literal that may meet are not flagged, and two registry names for one host are only matched with
   configuration. `reconcile` stays the backstop, before any mutation.
-- A rule added to policy loading reaches `lint` and `reconcile` together. A check `lint` makes beyond
-  loading (step validation, collisions) has to stay aligned with the plan phase by tests, not by
-  shared code.
+- A rule added to policy loading reaches `lint` and `reconcile` together, and so does a rule added to
+  step validation, which both share. The ownership and alias checks are re-implemented in `lint` and
+  stay aligned with `reconcile` by tests.
 - The report is a public contract: within `v1alpha1`, changes are additive only.

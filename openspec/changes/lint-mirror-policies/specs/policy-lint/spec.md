@@ -69,7 +69,7 @@ root, the right `apiVersion` and `kind`, no unknown field, and every semantic ru
 ### Requirement: Imports are resolved against their defaults (N2)
 
 `knock lint` SHALL resolve `defaults` into each import of every valid policy, as `knock reconcile`
-does, and report as an error any import that does not resolve. For every resolved `transform` and
+does. For every resolved `transform` and
 `remediate` step, of each import and each variant, it SHALL check that the step name is a registered
 step and that its parameters satisfy that step's policy model, as the reconcile plan phase does.
 
