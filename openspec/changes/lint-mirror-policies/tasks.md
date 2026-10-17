@@ -47,10 +47,10 @@ the failing test, run it red, write the minimal code, run it green, then commit.
 
 ## 3. Offline alias overlaps (D3)
 
-- [ ] 3.1 `knock/domain/collision.py`: add `AliasClaim(dest_repo: str, alias: str, origin: str)`, `Overlap(dest_repo: str, alias: str, origins: tuple[str, str], certain: bool)` and `find_alias_overlaps(claims: list[AliasClaim]) -> list[Overlap]`. A claim is literal when `"{" not in alias`. Two literal claims with the same `(dest_repo, alias)` give a certain overlap. Two template claims on the same `dest_repo`, from different origins, give a possible overlap (`alias` holds the two templates joined by ` / `). Leave `detect_alias_collisions` untouched
-- [ ] 3.2 Tests in `tests/unit/domain/test_collision.py`: same `latest` into one repo is certain; `latest` into two repos gives nothing; `{major}` twice into one repo is possible; `{major}` and `1` give nothing (documented limit, D3); the same origin claiming twice gives nothing
-- [ ] 3.3 Run `uv run pytest tests/unit/domain/test_collision.py -v --no-cov`; expected: all pass
-- [ ] 3.4 Commit: `feat(policy): detect alias overlaps knowable without upstream tags`
+- [x] 3.1 `knock/domain/collision.py`: add `AliasClaim(dest_repo: str, alias: str, origin: str)`, `Overlap(dest_repo: str, alias: str, origins: tuple[str, str], certain: bool)` and `find_alias_overlaps(claims: list[AliasClaim]) -> list[Overlap]`. A claim is literal when `"{" not in alias`. Two literal claims with the same `(dest_repo, alias)` give a certain overlap. Two template claims on the same `dest_repo`, from different origins, give a possible overlap (`alias` holds the two templates joined by ` / `). Leave `detect_alias_collisions` untouched
+- [x] 3.2 Tests in `tests/unit/domain/test_collision.py`: same `latest` into one repo is certain; `latest` into two repos gives nothing; `{major}` twice into one repo is possible; `{major}` and `1` give nothing (documented limit, D3); the same origin claiming twice gives nothing
+- [x] 3.3 Run `uv run pytest tests/unit/domain/test_collision.py -v --no-cov`; expected: all pass
+- [x] 3.4 Commit: `feat(policy): detect alias overlaps knowable without upstream tags`
 
 ## 4. Lint use case and report (D4, D5, D7, D8, D9)
 
