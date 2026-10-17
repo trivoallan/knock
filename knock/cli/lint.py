@@ -31,7 +31,9 @@ def lint(
 
     With KNOCK_LOG_FORMAT=json, stdout is one JSON document: `apiVersion` (knock.io/v1alpha1),
     `kind` (LintReport), `errors`, `warnings` and `skipped`. Schema:
-    docs/reference/schemas/lint-report.schema.json. Exit 0 when there is no error
+    docs/reference/schemas/lint-report.schema.json.
+    Guide: docs/how-to/lint-policies-in-ci.md.
+    Exit 0 when there is no error
     (warnings do not fail), 1 otherwise, 3 on an invalid directory or configuration.
     """
     if not directory.is_dir():

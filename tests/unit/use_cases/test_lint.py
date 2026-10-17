@@ -10,6 +10,7 @@ import jsonschema
 import pytest
 
 from knock.config import CACertSource, PackageMirror, RegistryConfig
+from knock.domain.collision import detect_dest_repo_collisions
 from knock.domain.transforms.base import ResourceRef
 from knock.errors import InternalError, PolicyValidationError
 from knock.use_cases.lint import (
@@ -17,6 +18,7 @@ from knock.use_cases.lint import (
     LintReport,
     Skipped,
     _check_refs,
+    _ownership_errors,
     lint_exit_code,
     lint_policies,
     lint_report_json_schema,
@@ -295,6 +297,40 @@ def test_two_imports_of_one_policy_one_repository_is_fine(tmp_path: Path) -> Non
     (tmp_path / "a.yaml").write_text(_policy(imports=imports))
     report = _lint(tmp_path)
     assert report.errors == []
+
+
+# (repo, policy name, file) claims, in claim order.
+_CLAIM_SETS = {
+    "no-clash": [("r1", "a", "a.yaml"), ("r2", "b", "b.yaml")],
+    "two-imports-one-policy": [("r1", "a", "a.yaml"), ("r1", "a", "a.yaml")],
+    "two-policies-one-repo": [("r1", "a", "a.yaml"), ("r1", "b", "b.yaml")],
+    "three-policies-two-repos-one-clash": [
+        ("r1", "a", "a.yaml"),
+        ("r1", "b", "b.yaml"),
+        ("r2", "c", "c.yaml"),
+    ],
+    "same-name-two-files": [("r1", "a", "a.yaml"), ("r1", "a", "b.yaml")],
+}
+
+
+@pytest.mark.parametrize("claims", _CLAIM_SETS.values(), ids=_CLAIM_SETS.keys())
+def test_ownership_lint_agrees_with_reconcile_collision_check(
+    claims: list[tuple[str, str, str]],
+) -> None:
+    """Lint flags exactly the repositories for which reconcile's check raises."""
+    owners: dict[str, list[tuple[str, str]]] = {}
+    for repo, name, path in claims:
+        owners.setdefault(repo, []).append((name, path))
+    errors = _ownership_errors(owners)
+    linted = {repo for repo in owners if any(f"{repo!r}" in f.message for f in errors)}
+    raised = set()
+    for repo in owners:
+        try:
+            detect_dest_repo_collisions([(r, n) for r, n, _p in claims if r == repo])
+        except PolicyValidationError:
+            raised.add(repo)
+    assert linted == raised
+    assert len(errors) == len(raised)
 
 
 # --- N2: aliases -----------------------------------------------------------------------
