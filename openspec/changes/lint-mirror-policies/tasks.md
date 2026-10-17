@@ -39,11 +39,11 @@ the failing test, run it red, write the minimal code, run it green, then commit.
 
 ## 2. Collecting loader (D1)
 
-- [ ] 2.1 `knock/use_cases/loader.py`: add frozen dataclasses `LoadedPolicy(path: str, policy: MirrorPolicy)` and `LoadIssue(path: str, loc: tuple[str | int, ...], message: str)`, and `load_policy_files(directory: Path) -> tuple[list[LoadedPolicy], list[LoadIssue]]`. It uses the same walk as today (`sorted(directory.rglob("*"))`, suffix `.yml`/`.yaml`, `is_file()`), with `path` relative to `directory` in POSIX form, and records one `LoadIssue` per `PolicyValidationError.issues` entry instead of raising
-- [ ] 2.2 Rewrite `load_policy_dir` on top of `load_policy_files`: raise `PolicyValidationError(f"{directory / first.path}: {first.message}")` on the first issue, else return the policies. Verify the three existing tests in `tests/unit/use_cases/test_loader.py` pass unchanged
-- [ ] 2.3 Tests in `tests/unit/use_cases/test_loader.py`: two broken files (`a.yaml` with an unknown field, `b.yaml` invalid YAML) give issues for both paths, sorted, and no policy; `notes.txt` is ignored; a valid file next to a broken one is returned as a `LoadedPolicy`
-- [ ] 2.4 Run `uv run pytest tests/unit/use_cases/test_loader.py tests/integration/test_cli_reconcile.py -v --no-cov`; expected: all pass
-- [ ] 2.5 Commit: `feat(policy): load a policy tree collecting every error`
+- [x] 2.1 `knock/use_cases/loader.py`: add frozen dataclasses `LoadedPolicy(path: str, policy: MirrorPolicy)` and `LoadIssue(path: str, loc: tuple[str | int, ...], message: str)`, and `load_policy_files(directory: Path) -> tuple[list[LoadedPolicy], list[LoadIssue]]`. It uses the same walk as today (`sorted(directory.rglob("*"))`, suffix `.yml`/`.yaml`, `is_file()`), with `path` relative to `directory` in POSIX form, and records one `LoadIssue` per `PolicyValidationError.issues` entry instead of raising
+- [x] 2.2 Rewrite `load_policy_dir` on top of `load_policy_files`: raise `PolicyValidationError(f"{directory / first.path}: {first.message}")` on the first issue, else return the policies. Verify the three existing tests in `tests/unit/use_cases/test_loader.py` pass unchanged
+- [x] 2.3 Tests in `tests/unit/use_cases/test_loader.py`: two broken files (`a.yaml` with an unknown field, `b.yaml` invalid YAML) give issues for both paths, sorted, and no policy; `notes.txt` is ignored; a valid file next to a broken one is returned as a `LoadedPolicy`
+- [x] 2.4 Run `uv run pytest tests/unit/use_cases/test_loader.py tests/integration/test_cli_reconcile.py -v --no-cov`; expected: all pass
+- [x] 2.5 Commit: `feat(policy): load a policy tree collecting every error`
 
 ## 3. Offline alias overlaps (D3)
 
