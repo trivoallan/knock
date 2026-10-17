@@ -10,3 +10,4 @@ lives in [`docs/architecture/design.md`](../architecture/design.md), the roadmap
 - [Transforms & signed attestations](attestations.md) — the hardening primitives and the SLSA / in-toto signing model.
 - [Package-level SBOM](sbom.md) — the inventory knock attaches to every placed image (copy and rebuild) so a CVE becomes one query, and why presence precedes signing.
 - [Deletion & retention](deletion-and-retention.md) — the two removal axes, and why knock marks (usage-gated) instead of hard-deleting.
+- [How knock works](how-it-works.md) — what a `reconcile` run does step by step, and how the code is laid out.
