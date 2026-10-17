@@ -5,7 +5,7 @@ title: Record architecture decisions
 status: accepted
 revision: 1
 date: 2026-08-29
-authors: [TTC]
+authors: [surdesrails]
 supersedes: []
 traits:
     record-architecture-decisions:
