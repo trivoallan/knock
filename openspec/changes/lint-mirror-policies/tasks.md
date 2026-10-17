@@ -65,11 +65,11 @@ the failing test, run it red, write the minimal code, run it green, then commit.
 
 ## 5. CLI verb (D5, D6)
 
-- [ ] 5.1 `knock/cli/lint.py`: `lint(directory: Annotated[Path, typer.Argument(help=...)])`. If `directory` does not exist or is not a directory, raise `ConfigError` (exit 3). Build `Settings()` only, never `build_container()`, then `configure(format_=..., level=...)`. Call `lint_policies` with `settings.registries`, `settings.transform_ca_certs` and `settings.transform_package_mirrors`. Render JSON (`model_dump_json(by_alias=True)`) when `settings.log_format == "json"`; otherwise print a first line `skipped: N3 (KNOCK_REGISTRIES not set)` when skipped, then one `ERROR <path> <loc>: <message>` / `WARN <path> <loc>: <message>` line per finding, then `lint  errors=<n> warnings=<n>`. Finish with `raise typer.Exit(lint_exit_code(report))`. The docstring names `KNOCK_LOG_FORMAT=json` and says to point at the policies directory, not the repository root (review findings 5 and 6)
-- [ ] 5.2 `knock/cli/main.py`: `app.command(name="lint")(lint_cmd)` after `verify`
-- [ ] 5.3 `tests/integration/test_cli_lint.py` with `CliRunner`, without `fake_bin_path` (no tool may be called): valid tree exits 0; broken tree with `KNOCK_LOG_FORMAT=json` exits 1 and stdout validates against `lint_report_json_schema()` with `jsonschema`; missing dir exits 3; `KNOCK_REGISTRIES='not json'` exits 3; text mode without roster prints the skipped line first
-- [ ] 5.4 Run `uv run pytest tests/integration/test_cli_lint.py -v --no-cov`; expected: all pass
-- [ ] 5.5 Commit: `feat(cli): add knock lint`
+- [x] 5.1 `knock/cli/lint.py`: `lint(directory: Annotated[Path, typer.Argument(help=...)])`. If `directory` does not exist or is not a directory, raise `ConfigError` (exit 3). Build `Settings()` only, never `build_container()`, then `configure(format_=..., level=...)`. Call `lint_policies` with `settings.registries`, `settings.transform_ca_certs` and `settings.transform_package_mirrors`. Render JSON (`model_dump_json(by_alias=True)`) when `settings.log_format == "json"`; otherwise print a first line `skipped: N3 (KNOCK_REGISTRIES not set)` when skipped, then one `ERROR <path> <loc>: <message>` / `WARN <path> <loc>: <message>` line per finding, then `lint  errors=<n> warnings=<n>`. Finish with `raise typer.Exit(lint_exit_code(report))`. The docstring names `KNOCK_LOG_FORMAT=json` and says to point at the policies directory, not the repository root (review findings 5 and 6)
+- [x] 5.2 `knock/cli/main.py`: `app.command(name="lint")(lint_cmd)` after `verify`
+- [x] 5.3 `tests/integration/test_cli_lint.py` with `CliRunner`, without `fake_bin_path` (no tool may be called): valid tree exits 0; broken tree with `KNOCK_LOG_FORMAT=json` exits 1 and stdout validates against `lint_report_json_schema()` with `jsonschema`; missing dir exits 3; `KNOCK_REGISTRIES='not json'` exits 3; text mode without roster prints the skipped line first
+- [x] 5.4 Run `uv run pytest tests/integration/test_cli_lint.py -v --no-cov`; expected: all pass
+- [x] 5.5 Commit: `feat(cli): add knock lint`
 
 ## 6. Published schema and reference
 
