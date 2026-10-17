@@ -46,7 +46,7 @@ ADR en vigueur qui contraignent ce design : 0001 (modèles Pydantic comme source
 
 Un alias est **littéral** s'il ne contient aucun `{`. `latest` est donc littéral, bien que `resolve_aliases` le traite comme cas spécial : son *nom* est fixe, et c'est le nom qui collisionne. Pour une source git, l'alias est la `ref` de la source, donc littéral.
 
-La détection passe dans le domaine sous la forme d'une fonction collectrice, `find_alias_overlaps(entries) -> list[Overlap]`. Les entrées sont `(dest_repo, alias, origin)`, où `origin` est le chemin et l'import. Chaque overlap est classé `certain` (deux littéraux identiques) ou `possible` (deux gabarits). `detect_alias_collisions` reste inchangé pour reconcile, qui travaille sur des alias rendus.
+La détection passe dans le domaine sous la forme d'une fonction collectrice, `find_alias_overlaps(claims) -> list[AliasOverlap]`. Les entrées sont `(dest_repo, alias, origin)`, où `origin` est le nom de l'import. Chaque overlap est classé `certain` (deux littéraux identiques) ou `possible` (deux gabarits). `detect_alias_collisions` reste inchangé pour reconcile, qui travaille sur des alias rendus.
 
 *Alternative écartée :* rendre les gabarits sur un jeu de tags synthétique. On obtient des faux positifs et négatifs invérifiables, et une logique plus lourde que le contrôle qu'elle prétend affiner.
 
