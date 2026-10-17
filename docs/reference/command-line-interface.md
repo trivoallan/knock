@@ -19,6 +19,7 @@ $ knock [OPTIONS] COMMAND [ARGS]...
 * `audit`: Walk the registry and report images that...
 * `gc`: Garbage-collect superseded scan-result...
 * `verify`: Read knock's facts for a digest and gate...
+* `lint`: Validate a policy tree offline and report...
 * `version`: Print the CLI version.
 * `scan`: Platform scan-pipeline commands (requires...
 
@@ -179,6 +180,33 @@ $ knock verify [OPTIONS] {image_ref}
 * `--max-age <str>`: Scan freshness SLA (e.g. 7d, 12h, 30m).  [default: 7d]
 * `--registry <str>`: Roster entry to authenticate against.
 * `--output <str>`: Output format: 'text' (default) or 'json'.  [default: text]
+* `--help`: Show this message and exit.
+
+## `knock lint`
+
+Validate a policy tree offline and report every problem, not just the first.
+
+Point it at the policies directory, not the repository root. It calls no registry, git
+remote or tool. Levels: N1 (each file loads), N2 (steps, ownership and alias overlaps),
+N3 (references to the configuration; only when KNOCK_REGISTRIES is set).
+
+With KNOCK_LOG_FORMAT=json, stdout is one JSON document: `apiVersion` (knock.io/v1alpha1),
+`kind` (LintReport), `errors`, `warnings` and `skipped`. Schema:
+docs/reference/schemas/lint-report.schema.json. Exit 0 when there is no error
+(warnings do not fail), 1 otherwise, 3 on an invalid directory or configuration.
+
+**Usage**:
+
+```console
+$ knock lint [OPTIONS] {directory}
+```
+
+**Arguments**:
+
+* `directory`: Policies directory to lint (not the repository root): every .yaml/.yml under it.  [required]
+
+**Options**:
+
 * `--help`: Show this message and exit.
 
 ## `knock version`

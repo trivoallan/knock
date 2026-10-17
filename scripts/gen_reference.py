@@ -33,6 +33,7 @@ from knock.domain.gate import (
 from knock.domain.mirror_policy import mirror_policy_json_schema
 from knock.domain.scan.attestation import scan_predicate_json_schema
 from knock.use_cases.audit import coverage_report_json_schema
+from knock.use_cases.lint import lint_report_json_schema
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "reference"
 SCHEMAS_OUT = OUT / "schemas"
@@ -53,6 +54,7 @@ SCHEMAS: dict[str, tuple[Any, str]] = {
         "AppliedOperations (what --apply-plan did with each operation)",
     ),
     "coverage-report": (coverage_report_json_schema, "CoverageReport (knock audit JSON output)"),
+    "lint-report": (lint_report_json_schema, "LintReport (knock lint output)"),
 }
 
 

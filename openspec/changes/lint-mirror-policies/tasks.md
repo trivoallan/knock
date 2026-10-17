@@ -73,10 +73,10 @@ the failing test, run it red, write the minimal code, run it green, then commit.
 
 ## 6. Published schema and reference
 
-- [ ] 6.1 `scripts/gen_reference.py`: add `"lint-report": (lint_report_json_schema, "LintReport (knock lint output)")` to `SCHEMAS`
-- [ ] 6.2 Run `make reference`; expected: `git status --short docs/reference` lists `lint-report.schema.json`, `lint-report.md` (new) and `command-line-interface.md` (modified) only
-- [ ] 6.3 Run `uv run pytest tests/unit/test_published_schemas.py tests/unit/test_readme_module_map.py -v --no-cov`. Expected: the schema test passes. The module map test fails until task 7.2
-- [ ] 6.4 Commit: `docs(reference): publish the lint report schema and CLI reference`
+- [x] 6.1 `scripts/gen_reference.py`: add `"lint-report": (lint_report_json_schema, "LintReport (knock lint output)")` to `SCHEMAS`
+- [x] 6.2 Run `make reference`; expected: `git status --short docs/reference` lists `lint-report.schema.json`, `lint-report.md` (new) and `command-line-interface.md` (modified) only
+- [x] 6.3 Run `uv run pytest tests/unit/test_published_schemas.py tests/unit/test_readme_module_map.py -v --no-cov`. Expected: the schema test passes. The module map test fails until task 7.2
+- [x] 6.4 Commit: `docs(reference): publish the lint report schema and CLI reference`
 
 ## 7. Prose
 
