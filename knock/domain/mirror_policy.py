@@ -16,7 +16,7 @@ from pydantic.alias_generators import to_camel
 
 from knock.domain.deletion_mode import DeletionMode
 from knock.domain.platforms import PLATFORM_PATTERN
-from knock.errors import PolicyValidationError
+from knock.errors import Loc, PolicyValidationError
 
 
 class _CamelModel(BaseModel):
@@ -461,9 +461,8 @@ def parse_mirror_policy(text: str) -> MirrorPolicy:
     try:
         return MirrorPolicy.model_validate(raw)
     except ValidationError as e:
-        raise PolicyValidationError(
-            str(e), issues=[(tuple(err["loc"]), err["msg"]) for err in e.errors()]
-        ) from e
+        issues: list[tuple[Loc, str]] = [(tuple(err["loc"]), err["msg"]) for err in e.errors()]
+        raise PolicyValidationError(str(e), issues=issues) from e
 
 
 def mirror_policy_json_schema() -> dict[str, Any]:

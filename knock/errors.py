@@ -70,6 +70,10 @@ class ArtifactBlobPathError(DomainError):
     directory, which regctl otherwise pushes as a bogus layer at RC 0)."""
 
 
+Loc = tuple[str | int, ...]
+"""A location inside a policy document (mapping keys and list indexes)."""
+
+
 class PolicyValidationError(DomainError):
     """`MirrorPolicy` YAML invalid (schema, unknown field, inconsistent spec).
 
@@ -81,12 +85,10 @@ class PolicyValidationError(DomainError):
     def __init__(
         self,
         message: str,
-        issues: list[tuple[tuple[str | int, ...], str]] | None = None,
+        issues: list[tuple[Loc, str]] | None = None,
     ) -> None:
         super().__init__(message)
-        self.issues: list[tuple[tuple[str | int, ...], str]] = (
-            issues if issues is not None else [((), str(message))]
-        )
+        self.issues: list[tuple[Loc, str]] = issues if issues is not None else [((), str(message))]
 
 
 class UnsafeSourceUserError(DomainError):

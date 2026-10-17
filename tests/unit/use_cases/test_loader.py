@@ -69,3 +69,33 @@ def test_load_dir_message_unchanged(tmp_path: Path) -> None:
         load_policy_dir(tmp_path)
     assert str(ei.value).startswith(f"{tmp_path / 'bad.yml'}: ")
     assert "bogus" in str(ei.value)
+
+
+def test_load_dir_stops_at_first_failure_before_unreadable_file(tmp_path: Path) -> None:
+    (tmp_path / "a.yml").write_text("not: a: valid: policy")
+    (tmp_path / "z.yml").write_bytes(b"\xff\xfe\x00bad")
+    with pytest.raises(PolicyValidationError, match=r"a\.yml"):
+        load_policy_dir(tmp_path)
+
+
+def test_load_dir_names_lexically_first_invalid_file(tmp_path: Path) -> None:
+    (tmp_path / "b.yml").write_text("not: a: valid: policy")
+    (tmp_path / "a.yml").write_text("not: a: valid: policy")
+    with pytest.raises(PolicyValidationError) as ei:
+        load_policy_dir(tmp_path)
+    assert str(ei.value).startswith(f"{tmp_path / 'a.yml'}: ")
+
+
+def test_load_dir_reraises_unreadable_file_unchanged(tmp_path: Path) -> None:
+    (tmp_path / "z.yml").write_bytes(b"\xff\xfe\x00bad")
+    with pytest.raises(UnicodeDecodeError):
+        load_policy_dir(tmp_path)
+
+
+def test_load_files_reports_unreadable_file_and_keeps_valid(tmp_path: Path) -> None:
+    (tmp_path / "ok.yml").write_text(VALID % ("redis", "redis", "redis"))
+    (tmp_path / "z.yml").write_bytes(b"\xff\xfe\x00bad")
+    loaded, issues = load_policy_files(tmp_path)
+    assert [lp.path for lp in loaded] == ["ok.yml"]
+    assert [(i.path, i.loc) for i in issues] == [("z.yml", ())]
+    assert issues[0].message.startswith("cannot read file: ")

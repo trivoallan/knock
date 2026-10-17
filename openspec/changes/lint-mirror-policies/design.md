@@ -38,7 +38,7 @@ ADR en vigueur qui contraignent ce design : 0001 (modèles Pydantic comme source
 
 ### D2. `PolicyValidationError` porte ses localisations
 
-`parse_mirror_policy` garde sa signature et son comportement. L'exception gagne un attribut `issues: list[tuple[loc, message]]`, rempli depuis `ValidationError.errors()`. Pour YAML invalide ou racine non mapping, il contient un seul élément sans `loc`. Le `str()` reste celui d'aujourd'hui.
+`parse_mirror_policy` garde sa signature et son comportement. L'exception gagne un attribut `issues: list[tuple[loc, message]]`, rempli depuis `ValidationError.errors()`. Pour YAML invalide ou racine non mapping, il contient un seul élément sans `loc`. Le `str()` reste celui d'aujourd'hui. Les erreurs transversales levées par les validateurs de modèle de `Spec` sont des `PolicyValidationError` nus : elles ne portent aucune `loc`, seulement le message. Un fichier illisible devient une anomalie de lint, alors que `reconcile` le relève comme avant.
 
 *Alternative écartée :* que lint appelle `MirrorPolicy.model_validate` lui-même. Cela dupliquerait le prétraitement YAML et casserait l'unicité du chemin (D1).
 
