@@ -461,7 +461,9 @@ def parse_mirror_policy(text: str) -> MirrorPolicy:
     try:
         return MirrorPolicy.model_validate(raw)
     except ValidationError as e:
-        raise PolicyValidationError(str(e)) from e
+        raise PolicyValidationError(
+            str(e), issues=[(tuple(err["loc"]), err["msg"]) for err in e.errors()]
+        ) from e
 
 
 def mirror_policy_json_schema() -> dict[str, Any]:

@@ -31,11 +31,11 @@ the failing test, run it red, write the minimal code, run it green, then commit.
 
 ## 1. Located policy errors (D2)
 
-- [ ] 1.1 Branch from the latest `main`: `git switch main && git pull --rebase && git switch -c feat/lint-mirror-policies`
-- [ ] 1.2 `knock/errors.py`: give `PolicyValidationError` an `issues: list[tuple[tuple[str | int, ...], str]]` attribute, defaulting to `[((), str(message))]`, set through `__init__(self, message: str, issues: ... | None = None)`; its `str()` stays the message. Test in `tests/unit/test_errors.py`: `PolicyValidationError("x").issues == [((), "x")]`, and `exit_code_for` still returns 1
-- [ ] 1.3 `knock/domain/mirror_policy.py:parse_mirror_policy`: on `ValidationError`, pass `issues=[(tuple(err["loc"]), err["msg"]) for err in e.errors()]`. Test in `tests/unit/domain/test_mirror_policy.py`: a policy with an unknown field under `spec.imports[0]` raises with an issue whose `loc` starts with `("spec", "imports", 0)`
-- [ ] 1.4 Run `uv run pytest tests/unit -q --no-cov`; expected: all pass, no change to any existing message assertion
-- [ ] 1.5 Commit: `feat(policy): locate each policy validation issue`
+- [x] 1.1 Branch from the latest `main`: `git switch main && git pull --rebase && git switch -c feat/lint-mirror-policies`
+- [x] 1.2 `knock/errors.py`: give `PolicyValidationError` an `issues: list[tuple[tuple[str | int, ...], str]]` attribute, defaulting to `[((), str(message))]`, set through `__init__(self, message: str, issues: ... | None = None)`; its `str()` stays the message. Test in `tests/unit/test_errors.py`: `PolicyValidationError("x").issues == [((), "x")]`, and `exit_code_for` still returns 1
+- [x] 1.3 `knock/domain/mirror_policy.py:parse_mirror_policy`: on `ValidationError`, pass `issues=[(tuple(err["loc"]), err["msg"]) for err in e.errors()]`. Test in `tests/unit/domain/test_mirror_policy.py`: a policy with an unknown field under `spec.imports[0]` raises with an issue whose `loc` starts with `("spec", "imports", 0)`
+- [x] 1.4 Run `uv run pytest tests/unit -q --no-cov`; expected: all pass, no change to any existing message assertion
+- [x] 1.5 Commit: `feat(policy): locate each policy validation issue`
 
 ## 2. Collecting loader (D1)
 
