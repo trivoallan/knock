@@ -52,6 +52,8 @@ La détection passe dans le domaine sous la forme d'une fonction collectrice, `f
 
 *Limite assumée :* un gabarit et un littéral qui pourraient se rejoindre (`{major}` et `1`) ne sont pas signalés. Une collision réelle reste attrapée par `reconcile`, avant toute mutation.
 
+*Autres limites connues :* deux variantes d'un même import qui portent le même suffixe et écrivent le même alias, ou une même destination listée deux fois dans un import, ne sont pas signalées par lint ; `reconcile` les attrape avant toute mutation.
+
 *Portée, corrigée pendant l'implémentation :* `reconcile` refuse déjà que deux politiques de `metadata.name` différent écrivent dans le même dépôt (`detect_dest_repo_collisions`, appelée dans `use_cases/reconcile.py` ; c'est l'invariant qui rend le sharding sûr). Lint reprend cette règle telle quelle, en erreur N2, avec la même fonction sur des paires `(dépôt, nom de politique)` ; il la collecte au lieu de lever. Les chevauchements d'alias ne se comparent donc qu'**entre imports d'une même politique** : entre deux politiques, le partage du dépôt est déjà une erreur, et un avertissement de gabarit y serait du bruit. Avertir là où `reconcile` refuse aurait laissé passer en vert un arbre que le screening rejette.
 
 ### D4. La clé de dépôt dépend de N3

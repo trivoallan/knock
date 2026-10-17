@@ -38,10 +38,10 @@ from knock.domain.collision import AliasClaim, find_alias_overlaps
 from knock.domain.mirror_policy import Destination, GitSource, MirrorPolicy, TransformStep
 from knock.domain.policy_merge import ResolvedImport, resolve_imports
 from knock.domain.transforms.base import ResourceRef
-from knock.domain.transforms.registry import DEFAULT_REGISTRY
+from knock.domain.transforms.registry import step_resource_refs
 from knock.domain.transforms.render import validate_transform_steps
 from knock.domain.variants import expand_variants
-from knock.errors import ConfigError, PolicyValidationError
+from knock.errors import ConfigError, InternalError, PolicyValidationError
 from knock.use_cases.loader import LoadedPolicy, load_policy_files
 
 Level = Literal["N1", "N2", "N3"]
@@ -64,7 +64,7 @@ class Finding(BaseModel):
 class Skipped(BaseModel):
     """A level that did not run, and why."""
 
-    level: str
+    level: Level
     reason: str
 
 
@@ -159,13 +159,15 @@ def _lint_policy(
     claims: list[AliasClaim] = []
     is_git = isinstance(policy.spec.source, GitSource)
 
-    for resolved in resolve_imports(policy.spec):
+    for index, resolved in enumerate(resolve_imports(policy.spec)):
+        # Unique per import, so two imports sharing a name still meet (D3).
+        origin = f"imports[{index}] {resolved.name!r}"
         if not is_git:
             refs.extend(_check_steps(resolved, found))
         for dest in resolved.destinations or []:
             key = _repo_key(dest, roster, n3)
             owners.setdefault(key, []).append((policy.metadata.name, item.path))
-            claims.extend(_alias_claims(policy, resolved, key))
+            claims.extend(_alias_claims(policy, resolved, key, origin))
 
     for overlap in find_alias_overlaps(claims):
         first, second = overlap.origins
@@ -173,13 +175,13 @@ def _lint_policy(
             found.add(
                 "N2",
                 f"alias {overlap.alias!r} is written into {overlap.dest_repo!r} "
-                f"by imports {first!r} and {second!r}",
+                f"by {first} and {second}",
             )
         else:
             found.add(
                 "N2",
                 f"alias templates {overlap.alias!r} written into {overlap.dest_repo!r} "
-                f"by imports {first!r} and {second!r} may collide, depending on upstream tags",
+                f"by {first} and {second} may collide, depending on upstream tags",
                 warning=True,
             )
 
@@ -205,7 +207,9 @@ def _repo_key(dest: Destination, roster: dict[str, RegistryConfig], n3: list[str
     return f"{dest.registry or '<default>'}/{dest.project}/{dest.repository}"
 
 
-def _alias_claims(policy: MirrorPolicy, resolved: ResolvedImport, key: str) -> list[AliasClaim]:
+def _alias_claims(
+    policy: MirrorPolicy, resolved: ResolvedImport, key: str, origin: str
+) -> list[AliasClaim]:
     """The aliases this import writes into `key`, as the planners derive them.
 
     Registry source: each alias template plus each variant's suffix (RegistryPlanner).
@@ -213,9 +217,9 @@ def _alias_claims(policy: MirrorPolicy, resolved: ResolvedImport, key: str) -> l
     """
     src = policy.spec.source
     if isinstance(src, GitSource):
-        return [AliasClaim(key, src.ref, resolved.name)]
+        return [AliasClaim(key, src.ref, origin)]
     return [
-        AliasClaim(key, alias + variant.suffix, resolved.name)
+        AliasClaim(key, alias + variant.suffix, origin)
         for variant in expand_variants(resolved)
         for alias in resolved.tags.aliases
     ]
@@ -226,9 +230,9 @@ def _check_steps(resolved: ResolvedImport, found: _PolicyFindings) -> list[Resou
 
     A variant's `transform` / `remediate` replaces the import's when it declares one,
     else inherits it (`expand_variants`). Each step goes through the same checks as the
-    plan phase: `validate_transform_steps` (vocabulary, role, order), then the params
-    model `_resolve_transform` (`params_model`) or `_resolve_remediation`
-    (`policy_model()`) uses. Returns the resource references of the valid steps.
+    plan phase: `validate_transform_steps` (vocabulary, role, order), then
+    `step_resource_refs`, the params check `_resolve_transform` and
+    `_resolve_remediation` share. Returns the resource references of the valid steps.
     """
     own = {v.name: v for v in resolved.variants or []}
     refs: list[ResourceRef] = []
@@ -254,9 +258,7 @@ def _check_step(
     step: TransformStep, role: str, preceding: list[TransformStep]
 ) -> tuple[ResourceRef, ...]:
     validate_transform_steps([step], role=role, preceding=preceding)
-    compiler = DEFAULT_REGISTRY.get(step.name)
-    model = compiler.params_model if role == "transform" else compiler.policy_model()
-    return compiler.resource_refs(model.model_validate(step.params))
+    return step_resource_refs(step, remediate=role == "remediate")
 
 
 def _describe(exc: PolicyValidationError | ValidationError) -> str:
@@ -283,8 +285,10 @@ def _check_refs(
                 ((_name, src),) = resolve_ca_certs([ref.name], ca_certs)
                 if src.path is not None:
                     _read_ca(src.path)
-            else:
+            elif ref.kind == "packageMirror":
                 resolve_mirror(ref.name, package_mirrors)
+            else:
+                raise InternalError(f"no resolver for resource kind {ref.kind!r}")
         except ConfigError as e:
             messages.append(str(e))
     return messages
@@ -305,20 +309,27 @@ def _ownership_errors(owners: dict[str, list[tuple[str, str]]]) -> list[Finding]
     errors: list[Finding] = []
     for key in sorted(owners):
         claims = owners[key]
-        names = sorted({name for name, _path in claims})
-        if len(names) < 2:
+        first_file: dict[str, str] = {}
+        for name, path in claims:
+            first_file.setdefault(name, path)
+        if len(first_file) < 2:
             continue
         files = list(dict.fromkeys(path for _name, path in claims))
+        policies = _join([f"{name!r} ({path})" for name, path in first_file.items()])
         errors.append(
             Finding(
                 level="N2",
                 path=files[0],
                 message=(
-                    f"destination repository {key!r} is claimed by several policies "
-                    f"({names}, in {files}); each repository must be owned by exactly one "
-                    "policy"
+                    f"destination repository {key!r} is written by policies {policies}; "
+                    "a repository must be owned by exactly one policy"
                 ),
                 related=files[1:],
             )
         )
     return errors
+
+
+def _join(items: list[str]) -> str:
+    """`a and b`, `a, b and c`: a list for a sentence."""
+    return f"{', '.join(items[:-1])} and {items[-1]}"

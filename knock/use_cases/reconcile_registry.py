@@ -56,7 +56,7 @@ from knock.domain.sbom import build_sbom_annotations, build_sbom_statement, miss
 from knock.domain.scan.refs import is_referrers_fallback_tag
 from knock.domain.stamp import build_stamp_annotations
 from knock.domain.transforms.base import ResolvedResource, ResolvedStep, ResourceRef
-from knock.domain.transforms.registry import DEFAULT_REGISTRY
+from knock.domain.transforms.registry import step_resource_refs
 from knock.domain.transforms.render import render, transform_version, validate_transform_steps
 from knock.errors import ConfigError, InternalError, PlatformUnavailableError, exit_code_for
 from knock.ports.attestor import AttestorPort
@@ -163,10 +163,9 @@ def _resolve_transform(
 ) -> _ResolvedTransform:
     resolved_steps: list[ResolvedStep] = []
     for step in steps:
-        compiler = DEFAULT_REGISTRY.get(step.name)
-        params = compiler.params_model.model_validate(step.params)
         resources = tuple(
-            _resolve_ref(ref, ca_certs, package_mirrors) for ref in compiler.resource_refs(params)
+            _resolve_ref(ref, ca_certs, package_mirrors)
+            for ref in step_resource_refs(step, remediate=False)
         )
         resolved_steps.append(ResolvedStep(step=step, resources=resources))
     version = transform_version(resolved_steps)
@@ -181,10 +180,9 @@ def _resolve_remediation(
     """Resolve the remediation's resources now; its epoch only exists once an order arrives."""
     resolved: list[ResolvedStep] = []
     for step in steps:
-        compiler = DEFAULT_REGISTRY.get(step.name)
-        params = compiler.policy_model().model_validate(step.params)
         resources = tuple(
-            _resolve_ref(ref, ca_certs, package_mirrors) for ref in compiler.resource_refs(params)
+            _resolve_ref(ref, ca_certs, package_mirrors)
+            for ref in step_resource_refs(step, remediate=True)
         )
         resolved.append(ResolvedStep(step=step, resources=resources))
     return resolved

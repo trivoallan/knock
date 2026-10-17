@@ -10,11 +10,13 @@ import jsonschema
 import pytest
 
 from knock.config import CACertSource, PackageMirror, RegistryConfig
-from knock.errors import PolicyValidationError
+from knock.domain.transforms.base import ResourceRef
+from knock.errors import InternalError, PolicyValidationError
 from knock.use_cases.lint import (
     Finding,
     LintReport,
     Skipped,
+    _check_refs,
     lint_exit_code,
     lint_policies,
     lint_report_json_schema,
@@ -41,6 +43,7 @@ def _policy(name: str = "nginx", imports: list[dict[str, Any]] | None = None, **
         "imports": imports if imports is not None else [_import()],
     }
     body.update(spec)
+    # JSON is valid YAML, so a policy built as a dict is written as JSON text.
     return json.dumps(
         {
             "apiVersion": "knock.io/v1alpha1",
@@ -239,8 +242,24 @@ def test_two_policies_one_repository_is_an_ownership_error(tmp_path: Path) -> No
     assert err.level == "N2"
     assert err.path == "a.yaml"
     assert err.related == ["b.yaml"]
-    assert "harbor/lib/nginx" in err.message
+    assert err.message == (
+        "destination repository 'harbor/lib/nginx' is written by policies 'one' (a.yaml) "
+        "and 'two' (b.yaml); a repository must be owned by exactly one policy"
+    )
     assert lint_exit_code(report) == 1
+
+
+def test_three_policies_one_repository_are_listed_in_claim_order(tmp_path: Path) -> None:
+    dest = [_dest("nginx", "harbor")]
+    (tmp_path / "a.yaml").write_text(_policy("zed", [_import(destinations=dest)]))
+    (tmp_path / "b.yaml").write_text(_policy("alpha", [_import(destinations=dest)]))
+    (tmp_path / "c.yaml").write_text(_policy("zed", [_import(destinations=dest)]))
+    (tmp_path / "d.yaml").write_text(_policy("mid", [_import(destinations=dest)]))
+    report = _lint(tmp_path)
+    assert len(report.errors) == 1
+    err = report.errors[0]
+    assert err.related == ["b.yaml", "c.yaml", "d.yaml"]
+    assert "policies 'zed' (a.yaml), 'alpha' (b.yaml) and 'mid' (d.yaml);" in err.message
 
 
 def test_ownership_key_is_the_resolved_host_with_a_roster(tmp_path: Path) -> None:
@@ -295,6 +314,18 @@ def test_same_literal_alias_from_two_imports_is_an_error(tmp_path: Path) -> None
     assert "'latest'" in err.message
     assert report.warnings == []
     assert lint_exit_code(report) == 1
+
+
+def test_two_imports_with_one_name_still_overlap(tmp_path: Path) -> None:
+    imports = [
+        _import("v", tags={"aliases": ["latest"]}),
+        _import("v", tags={"aliases": ["latest"]}),
+    ]
+    (tmp_path / "a.yaml").write_text(_policy(imports=imports))
+    report = _lint(tmp_path)
+    assert [f.level for f in report.errors] == ["N2"]
+    assert "imports[0] 'v'" in report.errors[0].message
+    assert "imports[1] 'v'" in report.errors[0].message
 
 
 def test_overlapping_templates_are_a_warning_only(tmp_path: Path) -> None:
@@ -418,6 +449,11 @@ def test_unreadable_ca_path_is_an_n3_error(tmp_path: Path) -> None:
     assert str(missing) in err.message
 
 
+def test_unknown_resource_kind_is_an_internal_error() -> None:
+    with pytest.raises(InternalError, match="other"):
+        _check_refs([ResourceRef("other", "x")], {}, {})
+
+
 # --- order, report and exit code -------------------------------------------------------
 
 
@@ -441,9 +477,9 @@ def test_findings_are_ordered(tmp_path: Path) -> None:
 
 
 def test_exit_code_from_findings() -> None:
-    warning = Finding(level="N2", path="a.yaml", loc=None, message="w")
-    assert lint_exit_code(LintReport(errors=[], warnings=[warning], skipped=[])) == 0
-    assert lint_exit_code(LintReport(errors=[warning], warnings=[], skipped=[])) == 1
+    finding = Finding(level="N2", path="a.yaml", loc=None, message="w")
+    assert lint_exit_code(LintReport(errors=[], warnings=[finding], skipped=[])) == 0
+    assert lint_exit_code(LintReport(errors=[finding], warnings=[], skipped=[])) == 1
 
 
 def test_report_envelope_and_schema(tmp_path: Path) -> None:
