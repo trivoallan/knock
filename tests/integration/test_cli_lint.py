@@ -22,6 +22,7 @@ def _clean_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     for var in (
         "KNOCK_REGISTRIES",
         "KNOCK_LOG_FORMAT",
+        "KNOCK_LOG_LEVEL",
         "KNOCK_TRANSFORM_CA_CERTS",
         "KNOCK_TRANSFORM_PACKAGE_MIRRORS",
     ):
@@ -105,7 +106,7 @@ def test_text_mode_without_roster_prints_skipped_line_first(tmp_path: Path) -> N
     assert lines[-1] == "lint  errors=1 warnings=0"
 
 
-def test_text_mode_error_without_loc_and_with_related(tmp_path: Path) -> None:
+def test_text_mode_error_without_loc(tmp_path: Path) -> None:
     (tmp_path / "a.yaml").write_text("not: a: valid: policy")
     result = runner.invoke(app, ["lint", str(tmp_path)])
     assert result.exit_code == 1
@@ -184,3 +185,18 @@ def test_run_maps_unreadable_configuration_to_exit_3(
     with pytest.raises(SystemExit) as exc:
         _run()
     assert exc.value.code == 3
+
+
+def test_multiline_yaml_error_stays_on_one_line(tmp_path: Path) -> None:
+    (tmp_path / "a.yaml").write_text("key: [unclosed\n  - x\n: : :\n")
+    result = runner.invoke(app, ["lint", str(tmp_path)])
+    assert result.exit_code == 1
+    lines = result.stdout.splitlines()
+    assert len([ln for ln in lines if ln.startswith("ERROR")]) == 1
+    assert not any(ln[:1].isspace() for ln in lines)
+
+
+def test_empty_directory_exits_1(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["lint", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "no policy file found" in result.stdout

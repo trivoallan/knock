@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -51,7 +52,8 @@ def _line(label: str, finding: Finding) -> str:
     if finding.loc:
         where += " " + _loc(finding.loc)
     related = f" (also: {', '.join(finding.related)})" if finding.related else ""
-    return f"{label} {where}: {finding.message}{related}\n"
+    message = re.sub(r"\s*\n\s*", " ", finding.message).strip()
+    return f"{label} {where}: {message}{related}\n"
 
 
 def _loc(loc: list[str | int]) -> str:
