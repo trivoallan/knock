@@ -87,34 +87,54 @@ step and that its parameters satisfy that step's policy model, as the reconcile 
 - **WHEN** `knock lint <dir>` runs
 - **THEN** no error is reported for that import
 
-### Requirement: Certain alias collisions are errors, possible ones are warnings (N2)
+### Requirement: Each destination repository is owned by one policy (N2)
 
-An alias is **literal** when it holds no `{…}` placeholder. When two imports, in the same policy or in
-two policies, write the same literal alias into the same destination repository, `knock lint` SHALL
-report an error naming both files. When two imports write alias templates with placeholders into the
-same destination repository, `knock lint` SHALL report a warning naming both files, since whether they
-collide depends on upstream tags it does not read. Without configuration, the destination repository
-SHALL be identified by its logical registry name, project and repository; with configuration, by the
-resolved registry host, project and repository.
+As `knock reconcile` does, `knock lint` SHALL report an error when two policies with different
+`metadata.name` write into the same destination repository, naming the repository and both files.
+Without configuration, the destination repository SHALL be identified by its logical registry name,
+project and repository; with configuration, by the resolved registry host, project and repository.
+
+#### Scenario: Two policies, one repository
+
+- **GIVEN** `a.yaml` and `b.yaml` are two policies that both write into `harbor/lib/nginx`
+- **WHEN** `knock lint <dir>` runs
+- **THEN** the report holds an error naming `harbor/lib/nginx`, `a.yaml` and `b.yaml`
+- **AND** the command exits 1
+
+#### Scenario: Two imports of one policy, one repository
+
+- **GIVEN** one policy whose two imports both write into `harbor/lib/nginx`
+- **WHEN** `knock lint <dir>` runs
+- **THEN** no ownership error is reported for that repository
+
+### Requirement: Alias overlaps between imports of one policy (N2)
+
+An alias is **literal** when it holds no `{…}` placeholder. When two imports of the same policy write
+the same literal alias into the same destination repository, `knock lint` SHALL report an error naming
+both imports. When two imports of the same policy write alias templates with placeholders into the same
+destination repository, `knock lint` SHALL report a warning naming both imports, since whether they
+collide depends on upstream tags it does not read. Imports of different policies are not compared:
+sharing a repository is already an ownership error.
 
 #### Scenario: Same literal alias, same repository
 
-- **GIVEN** `a.yaml` and `b.yaml` both write the alias `latest` into `harbor/lib/nginx`
+- **GIVEN** one policy whose imports `v1` and `v2` both write the alias `latest` into `harbor/lib/nginx`
 - **WHEN** `knock lint <dir>` runs
-- **THEN** the report holds an error naming `a.yaml` and `b.yaml`
+- **THEN** the report holds an error naming both imports
 - **AND** the command exits 1
 
 #### Scenario: Overlapping templates, same repository
 
-- **GIVEN** `a.yaml` and `b.yaml` both write the alias template `{major}` into `harbor/lib/nginx`
+- **GIVEN** one policy whose imports `v1` and `v2` both write the alias template `{major}` into
+  `harbor/lib/nginx`
 - **WHEN** `knock lint <dir>` runs
-- **THEN** the report holds a warning naming `a.yaml` and `b.yaml`, and no error for them
+- **THEN** the report holds a warning naming both imports, and no error for them
 - **AND** the command exits 0 when nothing else is wrong
 
 #### Scenario: Same alias, different repositories
 
-- **GIVEN** `a.yaml` writes `latest` into `harbor/lib/nginx` and `b.yaml` writes `latest` into
-  `harbor/lib/redis`
+- **GIVEN** one policy whose import `v1` writes `latest` into `harbor/lib/nginx` and import `v2` writes
+  `latest` into `harbor/lib/redis`
 - **WHEN** `knock lint <dir>` runs
 - **THEN** no error and no warning is reported for that alias
 

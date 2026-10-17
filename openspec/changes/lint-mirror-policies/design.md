@@ -52,6 +52,8 @@ La détection passe dans le domaine sous la forme d'une fonction collectrice, `f
 
 *Limite assumée :* un gabarit et un littéral qui pourraient se rejoindre (`{major}` et `1`) ne sont pas signalés. Une collision réelle reste attrapée par `reconcile`, avant toute mutation.
 
+*Portée, corrigée pendant l'implémentation :* `reconcile` refuse déjà que deux politiques de `metadata.name` différent écrivent dans le même dépôt (`detect_dest_repo_collisions`, appelée dans `use_cases/reconcile.py` ; c'est l'invariant qui rend le sharding sûr). Lint reprend cette règle telle quelle, en erreur N2, avec la même fonction sur des paires `(dépôt, nom de politique)` ; il la collecte au lieu de lever. Les chevauchements d'alias ne se comparent donc qu'**entre imports d'une même politique** : entre deux politiques, le partage du dépôt est déjà une erreur, et un avertissement de gabarit y serait du bruit. Avertir là où `reconcile` refuse aurait laissé passer en vert un arbre que le screening rejette.
+
 ### D4. La clé de dépôt dépend de N3
 
 Une collision se juge par dépôt de destination. Sans roster, le registre logique ne peut pas se résoudre en hôte. La clé devient alors `(nom de registre ou "<défaut>", project, repository)`, à partir du nom logique. Avec la roster, la clé est l'hôte résolu, comme `_resolved_dest_repos` le fait déjà. Deux noms logiques qui désignent le même hôte ne sont donc rapprochés qu'avec N3.

@@ -28,6 +28,11 @@ Finding trouvé pendant le découpage en tâches, à la lecture du code :
 | --- | --- | --- | --- | --- |
 | 9 | Contrôle · faux passage | Le nom et les paramètres d'une étape `transform`/`remediate` ne sont vérifiés qu'au plan de `reconcile`. Un `injectCa` mal orthographié passerait N1 et N2 tels que la spec les décrivait. | Haute | **Corrigé** : spec (N2, scénario « Unknown or ill-formed transform step ») et `design.md` D9. |
 
+
+| # | Grille · dimension | Finding | Sévérité | Traitement |
+| --- | --- | --- | --- | --- |
+| 10 | Contrôle · faux passage | `reconcile` refuse déjà que deux politiques écrivent dans le même dépôt (`detect_dest_repo_collisions`). La spec n'avertissait que des gabarits partagés entre deux politiques, et laissait donc passer un arbre que le screening rejette. Trouvé pendant l'implémentation du groupe 3. | Haute | **Corrigé**, décision de la personne (2026-10-17) : une erreur N2 « un dépôt, une politique », et les chevauchements d'alias jugés entre imports d'une même politique seulement. Mis à jour dans la spec, `design.md` (D3) et les tâches 4.4 et 4.6. |
+
 ## Critère d'achèvement
 
 La revue est close quand trois conditions sont remplies :
